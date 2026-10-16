@@ -1,0 +1,17 @@
+{
+  "name": "spike-s5-remote-kysely",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@better-auth/kysely-adapter": "^1.7.10",
+    "kysely": "^0.29.6",
+    "mysql2": "^3.24.6",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.next/
+*.tsbuildinfo
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# spike 运行时生成的文件（S5 场景脚本写入的假凭据，用来验证插件进程读不到）
+spikes/s5-remote-kysely/secret/

@@ -1,0 +1,22 @@
+{
+  "name": "spike-s1-better-auth",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@better-auth/oauth-provider": "^1.7.10",
+    "bcryptjs": "^3.0.3",
+    "better-auth": "^1.7.10",
+    "better-sqlite3": "^13.0.3",
+    "jose": "^6.2.12",
+    "kysely": "^0.29.6",
+    "mysql2": "^3.24.6",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

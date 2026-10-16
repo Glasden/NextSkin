@@ -1,0 +1,92 @@
+# NextSkin
+
+用 TypeScript 全栈重写 Blessing Skin Server（以下简称 BS）。BS 是一个 Minecraft 皮肤托管与外置登录（Yggdrasil）站点，主要由服主自行部署。
+
+## 当前阶段
+
+设计阶段：仓库里只有设计文档、插件 SDK 的类型草案和几个技术验证（spike），应用代码还没有开始写。
+
+- 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
+- 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
+- 视觉与界面规范在 `DESIGN.md`。
+- 插件 API 草案在 `packages/plugin-sdk/`，该目录有自己的 AGENTS.md。
+- `spikes/` 是技术验证代码，结论写在各自的 README 和对应 ADR 里。这些代码不按产品标准维护，移植进正式代码时要重新审视。
+
+## 系统结构
+
+```
+nextskin 启动器（进程监管 + 命令行）
+ ├─ 核心进程：Next.js（只做页面）+ Hono（协议端点 / REST / 插件路由）+ 领域层
+ │            └─ Kysely → SQLite（默认）| MySQL/MariaDB | PostgreSQL
+ └─ plugin host 进程：运行安装插件，通过 RPC 调用核心，没有数据库凭据
+```
+
+## 命令
+
+> 名字已经约定，脚手架落地时按此实现；实现之前这些命令都不存在。
+
+| 命令 | 用途 |
+|---|---|
+| `pnpm dev` | 启动开发环境，不依赖任何外部服务（默认 SQLite + 种子数据） |
+| `pnpm check` | lint + 类型检查 + 单元测试；提交前必须通过 |
+| `pnpm test <path>` | 只跑指定文件或目录的测试 |
+| `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑数据库测试（需要 Docker） |
+| `pnpm test:contract` | 协议契约测试（用例录制自真实的 BS v6） |
+| `pnpm storybook` | 组件工作台 |
+| `pnpm e2e` | Playwright 端到端测试与截图回归 |
+
+## 不变量
+
+每一条都写明"为什么"以及"由什么守护"。破坏任何一条都等于引入线上事故。
+
+1. **Minecraft 协议（CSL / USM / Legacy / Yggdrasil）的路径、状态码、响应结构、响应头与 BS v6 一致。** 玩家的模组和启动器无法跟着升级。守护：`tests/contract`。
+2. **玩家 UUID 创建后永不改变，导入旧数据时原样保留。** 游戏服务器按 UUID 存储玩家的背包和权限，UUID 一变，这些数据全部对不上。守护：导入器测试、对账报告。
+3. **已存在的材质文件永不重新编码。新材质的 hash 是 sha256(规范化后的 PNG)。** hash 既是存储键，也是公开 URL 的一部分。
+4. **写操作只能经过领域用例。** Route handler 里不写 SQL，也不写业务规则；不用 Server Actions 写数据。见 ADR-0004。
+5. **积分、点赞数这类计数，在事务内原子更新。** 禁止"先读、再算、再写回"。
+6. **数据库代码必须在四种数据库上都通过。** `returning`、upsert、自增主键、`count` 只能通过 `packages/db` 的辅助函数使用。见 ADR-0005。
+7. **不使用 `NEXT_PUBLIC_*`，站点配置存在数据库里。** 同一份构建产物要分发给所有服主。
+8. **材质和任何用户上传的图片都不经过 `next/image`，Image Optimization 保持关闭。** 见 ADR-0003。
+9. **插件 SDK 的公开 API 一旦变化，必须附 changeset，并通过 `packages/plugin-sdk/type-tests`。** 它是对社区的契约。
+10. **UI 中不写原始色值和任意值类。** 需要组件时先在 `packages/ui` 里找；没有就先补组件和 story，再写页面。见 DESIGN.md。
+11. **日志里不得出现密码、令牌、Cookie、OAuth secret、数据库连接串。**
+
+## 目录（落地后的约定）
+
+| 路径 | 内容 |
+|---|---|
+| `apps/web` | Next.js 页面，只做 UI |
+| `packages/api` | Hono 应用：协议端点、REST API、插件路由网关 |
+| `packages/domain` | 领域用例与查询服务，按业务领域分目录（users、players、textures、closet……） |
+| `packages/db` | Kysely 实例、迁移、方言辅助函数 |
+| `packages/ui` | 组件库与设计 token（`src/theme.css` 是 token 的唯一来源） |
+| `packages/plugin-sdk`、`plugin-host`、`plugin-testing` | 插件 API、插件运行时、插件测试工具 |
+| `packages/importer` | 从 BS v6 只读导入 |
+| `plugins/*` | 官方插件，用公开 API 编写 |
+| `tests/contract` | 协议契约用例 |
+| `docs/adr` | 架构决策记录 |
+| `spikes/*` | 技术验证，见上文"当前阶段" |
+
+## 常见任务的固定顺序
+
+- **新功能**：领域用例（含事务、拦截器、事件）→ Hono 路由与 zod schema → UI。
+- **新数据表**：迁移 → 类型 → 仓储；跑 `pnpm test:db`。
+- **新事件或拦截点**：先改 SDK 的类型、`interceptorPolicies` 和 type-tests，再在核心实现。这属于插件 API 变更。
+- **新组件**：写进 `packages/ui`，配 story 和截图基线，并在 DESIGN.md 的组件清单里补一行。
+- **新设置项**：在设置注册表里声明类型和默认值，后台表单会自动生成，不要手写表单。
+
+## 已知的坑
+
+- Next 16：`middleware.ts` 已改名为 `proxy.ts`；页面的 `params` 和 `searchParams` 是 Promise；同一个路由段不能同时有 `page.tsx` 和 `route.ts`。
+- Next App Router 使用自带的 React 构建。插件组件要共享这份 React，只能通过 import map（ADR-0011）。
+- Kysely 0.29：`Migration` 等迁移相关类型要从 `kysely/migration` 导入。
+- MySQL 不支持 `returning`；`count()` 的返回值类型随数据库而变。
+- `node:sqlite` 的语句对象没有 `reader` 属性，适配层用 `stmt.columns().length > 0` 判断。
+- SQLite（node:sqlite）在主线程同步执行，Kysely 的 SQLite 方言只有一个连接：慢查询会阻塞整个进程，开着的事务会让其他数据库操作排队。
+- Better Auth：`database.transaction` 默认是 `false`，必须打开；用户表主键列名只能叫 `id`。
+- 术语：**材质**是皮肤和披风的统称；**角色**（player）是 Minecraft 里的玩家名，不是**用户**（user）。一个用户可以有多个角色。
+
+## 维护这份文件
+
+- 只写从代码里推断不出来的东西。agent 重复犯同一个错时才加一条；能改成 lint 或测试的规则，加上检查后就删掉文字。
+- 控制在 150 行以内。包内的局部规则写在各包自己的 AGENTS.md。
