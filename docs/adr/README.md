@@ -25,6 +25,7 @@
 | [0011](0011-plugin-ui.md) | 插件 UI：声明式为默认，运行时组件共享宿主 React | 已采纳（S3 通过） |
 | [0012](0012-frontend-foundation.md) | 前端基座：token 单一来源 + Base UI + 自有组件库 | 已采纳 |
 | [0013](0013-version-baseline.md) | 版本基线：Node 26 LTS、Next.js ≥16.4.1、TypeScript 7 | 已采纳 |
+| [0014](0014-toolchain.md) | 工具链：pnpm + Turborepo，TypeScript 7 做类型检查（TS 6 只给依赖编译器 API 的工具），ESLint、Prettier、Vitest、changesets | 已采纳 |
 
 ## 待做的 spike
 
