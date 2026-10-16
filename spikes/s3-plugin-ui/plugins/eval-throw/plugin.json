@@ -1,0 +1,1 @@
+{ "id": "eval-throw", "widgets": [{ "slot": "user.dashboard", "export": "default" }] }

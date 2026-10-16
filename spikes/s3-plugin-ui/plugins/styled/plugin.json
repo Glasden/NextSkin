@@ -1,0 +1,1 @@
+{ "id": "styled", "css": true, "widgets": [{ "slot": "user.dashboard", "export": "default" }] }

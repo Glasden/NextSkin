@@ -1,0 +1,1 @@
+{ "id": "missing-export", "widgets": [{ "slot": "user.dashboard", "export": "default" }] }

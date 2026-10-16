@@ -1,0 +1,6 @@
+/* source(none)：宿主只扫描自己的源码。真实部署里宿主构建时看不到运行时安装的插件 */
+@import 'tailwindcss' source(none);
+@import '../packages/ui/src/theme.css';
+@source '../app';
+@source '../src/host';
+@source '../packages/ui/src';

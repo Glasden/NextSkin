@@ -160,11 +160,13 @@
 ## 11. 插件 UI
 
 - 声明式视图（表格、表单、统计、设置页、表单追加字段）由核心用本规范的组件渲染，插件作者不需要关心视觉。
-- 申请了 `ui:script` 的运行时组件，只能使用 `@nextskin/ui` 和 token。审核时检查：没有原始色值；能切换暗色模式；可以用键盘操作；不修改插槽以外的 DOM。
+- 申请了 `ui.script` 的运行时组件，只能使用 `@nextskin/ui` 和 token。审核时检查：没有原始色值；能切换暗色模式；可以用键盘操作；不修改插槽以外的 DOM。
+- 运行时组件需要的 Tailwind 工具类由插件自带：插件构建工具引用本规范的 token，只输出插件用到的工具类，不含 preflight，不重新定义 token（ADR-0011）。
 
 ## 12. 执行机制
 
 - token 唯一来源：`packages/ui/src/theme.css`。本文 §3 的表由 `pnpm design:sync` 生成。
+- token 用 `@theme static` 全量输出：运行时插件的 CSS 引用宿主的 token 变量，宿主自己没用到的 token 也必须存在于宿主 CSS 里。
 - lint：在 `packages/ui` 以外，禁止原始色值、任意值类（`bg-[#…]`、`p-[13px]`）以及内联样式中的颜色。
 - 每个组件都有 story，并作为交互测试运行。
 - Playwright 截图回归，覆盖亮色、暗色和移动端宽度。

@@ -1,0 +1,1 @@
+{ "id": "tampered", "tamper": true, "widgets": [{ "slot": "user.dashboard", "export": "default" }] }

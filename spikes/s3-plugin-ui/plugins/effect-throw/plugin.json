@@ -1,0 +1,1 @@
+{ "id": "effect-throw", "widgets": [{ "slot": "user.dashboard", "export": "default" }] }

@@ -78,7 +78,8 @@ nextskin 启动器（进程监管 + 命令行）
 ## 已知的坑
 
 - Next 16：`middleware.ts` 已改名为 `proxy.ts`；页面的 `params` 和 `searchParams` 是 Promise；同一个路由段不能同时有 `page.tsx` 和 `route.ts`。
-- Next App Router 使用自带的 React 构建。插件组件要共享这份 React，只能通过 import map（ADR-0011）。
+- Next App Router 在浏览器里用的是它自带的 React（canary 版本），不是 `node_modules` 里的 `react`。插件组件要共享这份 React，只能通过 import map（ADR-0011）。
+- 页面里不要渲染 `<link rel="modulepreload">`：React 19 会把它提到 `<head>` 最前面、排在 import map 之前，Firefox 因此丢弃整个 import map，Chromium 跳过 integrity。需要预加载时调用 `ReactDOM.preloadModule()`。
 - Kysely 0.29：`Migration` 等迁移相关类型要从 `kysely/migration` 导入。
 - MySQL 不支持 `returning`；`count()` 的返回值类型随数据库而变。
 - SQLite 只能经过 `packages/db` 的方言访问，不要直接用 Kysely 自带的 `SqliteDialect` 或 Better Auth 的 `NodeSqliteDialect`。原因：node:sqlite 会把第一个对象参数当成命名参数表，开头是 `Date` 时后面的参数整体错位，而且不报错；数组作为单个参数传入也会被这样处理。

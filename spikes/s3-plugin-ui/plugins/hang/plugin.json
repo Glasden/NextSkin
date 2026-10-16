@@ -1,0 +1,1 @@
+{ "id": "hang", "widgets": [{ "slot": "user.dashboard", "export": "default" }] }

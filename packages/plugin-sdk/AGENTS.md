@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-设计草案，未发布，也还没有接入 monorepo 的工具链。验证方式：在装好 `kysely`、`zod`、`typescript@7`、`@types/node` 的目录里运行 `tsc -p packages/plugin-sdk/tsconfig.json --noEmit`，必须零错误。
+设计草案，未发布，也还没有接入 monorepo 的工具链。验证方式：在本目录运行 `npm install --no-package-lock`（不生成 lockfile，以免和将来的 pnpm workspace 冲突），然后运行 `npm run typecheck`，必须零错误。
 
 ## 改这个包之前
 

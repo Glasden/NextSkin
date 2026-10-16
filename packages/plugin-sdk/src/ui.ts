@@ -93,7 +93,12 @@ export type View =
       readonly source: PluginPath
     }
   | {
-      /** 需要 `ui.script`。组件必须使用 @nextskin/ui 和设计 token。 */
+      /**
+       * 需要 `ui.script`。组件必须使用 @nextskin/ui 和设计 token。
+       * 只在浏览器里、水合之后加载，不能是服务端组件；插槽传给它的 props 都可序列化。
+       * 由 `nextskin-plugin build` 打成单文件 ESM，react、react-dom、@nextskin/ui、@nextskin/plugin-client
+       * 用宿主的实例；入口只能静态导入这些模块，不能用 import()，安装时核心会检查（ADR-0011）。
+       */
       readonly kind: 'component'
       readonly module: ClientModuleRef
     }

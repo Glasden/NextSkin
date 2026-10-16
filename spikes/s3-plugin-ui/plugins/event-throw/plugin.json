@@ -1,0 +1,1 @@
+{ "id": "event-throw", "widgets": [{ "slot": "user.dashboard", "export": "default" }] }

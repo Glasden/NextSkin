@@ -1,0 +1,57 @@
+/*
+ * 设计 token（spike 用的最小子集，取值是占位）。
+ * 宿主用 @import 引入，会输出 CSS；插件构建用 @reference 引入，只取 token 和变体，不输出任何 CSS。
+ *
+ * `static`：不管宿主自己用没用到，都输出全部 token 变量。
+ * 插件的工具类引用的 var(--color-*) 必须在宿主 CSS 里有定义，否则插件里用到、宿主没用到的 token 会失效。
+ */
+@theme static {
+  --color-*: initial;
+  --color-bg: #f2f2ef;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #e7e7e3;
+  --color-border: #c9c9c3;
+  --color-border-strong: #2b2b28;
+  --color-text: #1d1d1b;
+  --color-text-muted: #5f5f5a;
+  --color-accent: #2f6df6;
+  --color-accent-fg: #ffffff;
+  --color-warning: #b86e00;
+  --color-warning-fg: #ffffff;
+  --color-danger: #c62f2f;
+  --color-danger-fg: #ffffff;
+  --color-focus: #2f6df6;
+  --color-shadow: #1d1d1b;
+
+  --radius-*: initial;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+
+  --shadow-*: initial;
+  --shadow-pixel: 2px 2px 0 0 var(--color-shadow);
+  --shadow-pixel-lg: 4px 4px 0 0 var(--color-shadow);
+}
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@layer base {
+  [data-theme='dark'] {
+    --color-bg: #121312;
+    --color-surface: #1b1c1b;
+    --color-surface-raised: #242524;
+    --color-surface-sunken: #0d0e0d;
+    --color-border: #3a3b39;
+    --color-border-strong: #d8d8d2;
+    --color-text: #ecece6;
+    --color-text-muted: #a3a39c;
+    --color-accent: #6f9bff;
+    --color-accent-fg: #0b0c0b;
+    --color-warning: #f0a53a;
+    --color-warning-fg: #0b0c0b;
+    --color-danger: #ff6b6b;
+    --color-danger-fg: #0b0c0b;
+    --color-focus: #6f9bff;
+    --color-shadow: #6a6b68;
+  }
+}

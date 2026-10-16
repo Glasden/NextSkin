@@ -1,0 +1,1 @@
+{ "id": "wrong-export", "widgets": [{ "slot": "user.dashboard", "export": "Widget" }] }

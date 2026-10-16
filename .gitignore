@@ -18,3 +18,8 @@ spikes/s4-image-pipeline/fixtures/synthetic/
 
 # S2 基准生成的数据库文件
 spikes/s2-node-sqlite/data/
+
+# S3 生成的 shim、插件构建产物、测试结果和日志
+spikes/s3-plugin-ui/data/
+spikes/s3-plugin-ui/test-results/
+spikes/s3-plugin-ui/next-env.d.ts

@@ -1,0 +1,63 @@
+{
+  "compilerOptions": {
+    "target": "ES2024",
+    "lib": [
+      "ES2024",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": [
+      "node"
+    ],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "incremental": false,
+    "paths": {
+      "@nextskin/ui": [
+        "./packages/ui/src/index.ts"
+      ],
+      "@nextskin/plugin-client": [
+        "./packages/plugin-client/src/index.ts"
+      ],
+      "@nextskin/plugin-client/internal": [
+        "./packages/plugin-client/src/internal.ts"
+      ],
+      "@/*": [
+        "./*"
+      ]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "allowJs": true
+  },
+  "include": [
+    "app",
+    "src",
+    "packages",
+    "plugins",
+    "scripts",
+    "tests",
+    "proxy.ts",
+    "next.config.ts",
+    "playwright.config.ts",
+    "next-env.d.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "data"
+  ]
+}

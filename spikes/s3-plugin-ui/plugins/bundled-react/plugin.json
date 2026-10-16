@@ -1,0 +1,1 @@
+{ "id": "bundled-react", "bundleShared": true, "widgets": [{ "slot": "user.dashboard", "export": "default" }] }

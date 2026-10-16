@@ -1,0 +1,9 @@
+{
+  "id": "hello",
+  "versions": ["1.0.0", "1.1.0"],
+  "widgets": [
+    { "slot": "user.dashboard", "export": "default" },
+    { "slot": "player.card.footer", "export": "PlayerFooter" },
+    { "slot": "user.profile.sections", "export": "default" }
+  ]
+}

@@ -1,0 +1,1 @@
+{ "id": "render-throw", "widgets": [{ "slot": "user.dashboard", "export": "default" }] }
