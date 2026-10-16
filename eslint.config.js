@@ -1,0 +1,69 @@
+// @ts-check
+import js from '@eslint/js'
+import nextPlugin from '@next/eslint-plugin-next'
+import nextskin from '@nextskin/eslint-plugin'
+import { defineConfig, globalIgnores } from 'eslint/config'
+import reactHooks from 'eslint-plugin-react-hooks'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
+
+// 各包的 lint 任务（`eslint .`）都用这一份配置；按目录的差异写在下面的 files 段里。
+export default defineConfig(
+  globalIgnores(['**/dist/', '**/.next/', '**/storybook-static/', '**/next-env.d.ts', 'spikes/']),
+  js.configs.recommended,
+  tseslint.configs.recommendedTypeChecked,
+  {
+    languageOptions: {
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+    },
+  },
+  {
+    files: ['**/*.{js,mjs,cjs}'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: { globals: globals.node },
+  },
+
+  // 不变量写成的规则（packages/eslint-plugin）
+  nextskin.configs.recommended,
+  {
+    // token 和组件在这里定义，可以写原始色值和任意值
+    files: ['packages/ui/**'],
+    rules: { 'nextskin/no-raw-color': 'off', 'nextskin/no-arbitrary-value': 'off' },
+  },
+  {
+    // SQLite 方言就在这里实现
+    files: ['packages/db/**'],
+    rules: { 'nextskin/no-sqlite-dialect': 'off' },
+  },
+  {
+    // 规则自己的测试用例里全是反例
+    files: ['packages/eslint-plugin/src/**/*.test.ts'],
+    rules: Object.fromEntries(Object.keys(nextskin.rules).map((name) => [`nextskin/${name}`, 'off'])),
+  },
+
+  {
+    // 插件提供的函数按 API 要求一律返回 Promise（可能跨进程调用），未必有 await
+    files: ['packages/plugin-sdk/{examples,type-tests}/**', 'plugins/**'],
+    rules: { '@typescript-eslint/require-await': 'off' },
+  },
+  {
+    // 类型契约测试：裸表达式用来挂 @ts-expect-error
+    files: ['packages/plugin-sdk/type-tests/**'],
+    rules: { '@typescript-eslint/no-unused-expressions': 'off' },
+  },
+
+  {
+    files: ['apps/web/**', 'packages/ui/**'],
+    extends: [reactHooks.configs.flat['recommended-latest']],
+  },
+  {
+    files: ['apps/web/**'],
+    extends: [nextPlugin.configs['core-web-vitals']],
+    rules: {
+      // 只用 App Router，没有 pages 目录
+      '@next/next/no-html-link-for-pages': 'off',
+      // 材质用普通 img 加 image-rendering: pixelated，不经过 next/image（不变量 8）
+      '@next/next/no-img-element': 'off',
+    },
+  },
+)

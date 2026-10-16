@@ -15,7 +15,7 @@ import type { Json } from './dto'
 export type MessageKey = string
 /** pixelarticons 图标名，例如 'ticket'、'user'、'image'。 */
 export type IconName = string
-/** 插件路由路径，相对于 /plugins/{id}。可以用 `:field` 引用表格行的字段。 */
+/** 插件路由路径，相对于 `/plugins/{id}`。可以用 `:field` 引用表格行的字段。 */
 export type PluginPath = `/${string}`
 
 /** 插件可以追加字段的核心表单。字段值通过拦截器/事件里的 `extra` 交给插件。 */
@@ -23,11 +23,7 @@ export type FormName = 'auth.register' | 'user.profile' | 'texture.upload'
 
 /** 插件可以放置挂件的位置。 */
 export type SlotName =
-  | 'user.dashboard'
-  | 'admin.dashboard'
-  | 'user.profile.sections'
-  | 'skinlib.detail.sidebar'
-  | 'player.card.footer'
+  'user.dashboard' | 'admin.dashboard' | 'user.profile.sections' | 'skinlib.detail.sidebar' | 'player.card.footer'
 
 export interface Field {
   readonly name: string
@@ -78,9 +74,13 @@ export type View =
   | {
       readonly kind: 'form'
       readonly fields: readonly Field[]
-      /** GET 该路由得到初始值（Record<string, Json>） */
+      /** GET 该路由得到初始值（`Record<string, Json>`） */
       readonly load?: PluginPath
-      readonly submit: { readonly route: PluginPath; readonly method: 'POST' | 'PUT' | 'PATCH'; readonly label: MessageKey }
+      readonly submit: {
+        readonly route: PluginPath
+        readonly method: 'POST' | 'PUT' | 'PATCH'
+        readonly label: MessageKey
+      }
     }
   | {
       readonly kind: 'stats'
@@ -94,9 +94,9 @@ export type View =
     }
   | {
       /**
-       * 需要 `ui.script`。组件必须使用 @nextskin/ui 和设计 token。
+       * 需要 `ui.script`。组件必须使用 `@nextskin/ui` 和设计 token。
        * 只在浏览器里、水合之后加载，不能是服务端组件；插槽传给它的 props 都可序列化。
-       * 由 `nextskin-plugin build` 打成单文件 ESM，react、react-dom、@nextskin/ui、@nextskin/plugin-client
+       * 由 `nextskin-plugin build` 打成单文件 ESM，`react`、`react-dom`、`@nextskin/ui`、`@nextskin/plugin-client`
        * 用宿主的实例；入口只能静态导入这些模块，不能用 import()，安装时核心会检查（ADR-0011）。
        */
       readonly kind: 'component'

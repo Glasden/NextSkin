@@ -1,0 +1,40 @@
+{
+  "name": "nextskin-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "check": "turbo run lint typecheck test format:check",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "vitest run",
+    "test:db": "turbo run test:db",
+    "test:contract": "turbo run test:contract",
+    "storybook": "turbo run storybook",
+    "e2e": "turbo run e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "changeset": "changeset"
+  },
+  "devDependencies": {
+    "@changesets/cli": "3.0.3",
+    "@eslint/js": "10.0.1",
+    "@next/eslint-plugin-next": "catalog:",
+    "@nextskin/eslint-plugin": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "turbo": "2.11.8",
+    "typescript": "6.0.3",
+    "typescript-eslint": "catalog:",
+    "typescript-native": "npm:typescript@7.0.2",
+    "vitest": "catalog:"
+  }
+}

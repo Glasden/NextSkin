@@ -1,0 +1,31 @@
+{
+  "name": "@nextskin/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Next.js 页面，只做 UI（ADR-0003）",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "next typegen && node ../../node_modules/typescript-native/bin/tsc -p .",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@nextskin/api": "workspace:*",
+    "@nextskin/domain": "workspace:*",
+    "@nextskin/ui": "workspace:*",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@tailwindcss/postcss": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "tailwindcss": "catalog:"
+  }
+}

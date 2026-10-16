@@ -1,21 +1,26 @@
 {
   "name": "@nextskin/plugin-sdk",
   "version": "0.0.0",
-  "private": true,
+  "private": false,
   "description": "NextSkin 插件 API（设计草案，未发布）",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "build": "node ../../node_modules/typescript-native/bin/tsc -p tsconfig.build.json",
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "api-extractor run",
+    "api:update": "pnpm run build && api-extractor run --local",
+    "prepublishOnly": "node -e \"console.error('插件 SDK 还是设计草案，尚未发布'); process.exit(1)\""
   },
   "dependencies": {
     "kysely": "^0.29.6",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
-    "typescript": "^7.0.2"
+    "@microsoft/api-extractor": "7.59.4",
+    "@types/node": "catalog:"
   }
 }

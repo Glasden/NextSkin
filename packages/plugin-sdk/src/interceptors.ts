@@ -92,9 +92,7 @@ export interface Patch<P> {
 type PatchOf<I extends InterceptorName> = CoreInterceptors[I]['patch']
 
 export type InterceptResult<I extends InterceptorName> =
-  | void
-  | Deny
-  | ([PatchOf<I>] extends [never] ? never : Patch<PatchOf<I>>)
+  void | Deny | ([PatchOf<I>] extends [never] ? never : Patch<PatchOf<I>>)
 
 export interface RequestScope {
   readonly requestId: string

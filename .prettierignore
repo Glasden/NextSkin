@@ -1,0 +1,4 @@
+pnpm-lock.yaml
+spikes/
+*.md
+packages/plugin-sdk/etc/

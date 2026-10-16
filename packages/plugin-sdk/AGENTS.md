@@ -4,11 +4,16 @@
 
 ## 当前状态
 
-设计草案，未发布，也还没有接入 monorepo 的工具链。验证方式：在本目录运行 `npm install --no-package-lock`（不生成 lockfile，以免和将来的 pnpm workspace 冲突），然后运行 `npm run typecheck`，必须零错误。
+设计草案，未发布（`prepublishOnly` 会拦住误发布）。`pnpm check` 覆盖本包：
+
+- `typecheck`：TS 7 检查 `src`、`examples`、`type-tests`；
+- `test`：用 TS 7 生成声明文件（`build`），再让 api-extractor 和 `etc/plugin-sdk.api.md` 比对，公开面有任何变化都会失败。
+
+公开面确实要变时：运行 `pnpm --filter @nextskin/plugin-sdk api:update` 更新报告，再运行 `pnpm changeset` 写变更记录，两者一起提交。
 
 ## 改这个包之前
 
-- **公开 API 是契约。** 新增事件、拦截点、能力、字段是次版本变更。删除或改名、收窄参数类型、放宽返回类型都是大版本变更。接入工具链后由 api-extractor 报告把关，任何公开面变化都必须附 changeset。
+- **公开 API 是契约。** 新增事件、拦截点、能力、字段是次版本变更。删除或改名、收窄参数类型、放宽返回类型都是大版本变更。任何公开面变化都必须附 changeset。
 - **一切都要能跨进程。** 插件可能运行在另一个进程里。所有插件提供的函数都返回 Promise。所有 DTO 都必须可结构化克隆、可无损转成 JSON：不放 Date（用 ISO 字符串），不放类实例和函数。
 - **只暴露 DTO，不暴露表结构。** `dto.ts` 里的类型和数据库列一一对应只是巧合，不能当成约定。
 - **能在类型层面拒绝的错误，就不要留到运行时。** 能力不足、权限名拼错、改了不允许改的字段、路由键格式错误，现在都会编译失败，见 `type-tests/contracts.ts`。新增约束时同步加一条 `@ts-expect-error` 用例。一个 `definePlugin` 调用里只放一个结构性错误，原因见该文件头部注释。

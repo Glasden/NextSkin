@@ -1,0 +1,55 @@
+import { tester } from '../rule-tester.ts'
+import rule from './no-arbitrary-value.ts'
+
+tester.run('no-arbitrary-value', rule, {
+  valid: [
+    ...[
+      'bg-surface p-4 md:flex data-open:block aria-selected:bg-accent group-hover:underline size-1/2',
+      'arr[0]',
+      'a - [b]',
+      'Array<string>',
+      'foo[bar]',
+      '中文句子',
+      'https://example.com/a[0]?x=1',
+      'https://example.com/bg-[red]',
+      'https://[::1]/path',
+      'color:red',
+      '[value]',
+      'p-[13px',
+      'p-13px]',
+    ].map((value) => `const text: string = ${JSON.stringify(value)}`),
+    'const classes = `bg-surface ${active ? "p-4" : "p-2"} md:flex`',
+    { code: 'const view = <div className="bg-surface p-4" />', filename: 'x.tsx' },
+    '// p-[13px]\nconst classes = "p-4"',
+  ],
+  invalid: [
+    ...[
+      'bg-[#123456]',
+      'p-[13px]',
+      'grid-cols-[1fr_2fr]',
+      '-mt-[3px]',
+      '!w-[10px]',
+      'hover:bg-[#fff]',
+      'md:p-[13px]',
+      'md:hover:!w-[10px]',
+      'hover:-mt-[3px]',
+      '[mask-type:luminance]',
+      'hover:[color:red]',
+      'min-[320px]:flex',
+      '[&>*]:p-4',
+      'md:[&:hover]:p-4',
+      'bg-(--brand)',
+      'p-(--gap)',
+      'fill-(color:--x)',
+      'hover:fill-(color:--x)',
+      'p-[13px]!',
+      'bg-[url(https://example.com/a.png)]',
+    ].flatMap((value) => [
+      { code: `const classes = ${JSON.stringify(value)}`, errors: [{ messageId: 'forbidden' }] },
+      { code: 'const classes = `p-4 ${active} ' + value + '`', errors: [{ messageId: 'forbidden' }] },
+    ]),
+    { code: 'const value = "p-[13px] bg-[#fff]"', errors: [{ messageId: 'forbidden' }, { messageId: 'forbidden' }] },
+    { code: 'const value = "p-4\tmd:p-[13px]\\nbg-surface"', errors: [{ messageId: 'forbidden' }] },
+    { code: 'const view = <div className="p-[13px]" />', filename: 'x.tsx', errors: [{ messageId: 'forbidden' }] },
+  ],
+})

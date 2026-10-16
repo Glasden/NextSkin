@@ -133,9 +133,7 @@ export default definePlugin({
       auth: 'user',
       permission: 'manage',
       async handler({ request, scope, ctx }) {
-        const { count } = z
-          .object({ count: z.coerce.number().int().min(1).max(100) })
-          .parse(await request.json())
+        const { count } = z.object({ count: z.coerce.number().int().min(1).max(100) }).parse(await request.json())
         const now = new Date().toISOString()
         const rows = Array.from({ length: count }, () => ({
           code: randomCode(),
@@ -153,7 +151,10 @@ export default definePlugin({
       auth: 'user',
       permission: 'manage',
       async handler({ params, ctx }) {
-        await ctx.db.deleteFrom('codes').where('code', '=', params.code ?? '').execute()
+        await ctx.db
+          .deleteFrom('codes')
+          .where('code', '=', params.code ?? '')
+          .execute()
         return new Response(null, { status: 204 })
       },
     },

@@ -1,0 +1,45 @@
+{
+  "$schema": "./node_modules/turbo/schema.json",
+  "globalDependencies": ["tsconfig.base.json"],
+  "tasks": {
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["transit"]
+    },
+    "lint": {
+      "dependsOn": ["transit"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/eslint.config.js", "$TURBO_ROOT$/packages/eslint-plugin/src/**"]
+    },
+    "test": {
+      "dependsOn": ["transit"]
+    },
+    "test:db": {
+      "dependsOn": ["transit"],
+      "cache": false
+    },
+    "test:contract": {
+      "dependsOn": ["transit"]
+    },
+    "e2e": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "storybook": {
+      "cache": false,
+      "persistent": true
+    },
+    "//#format:check": {
+      "cache": false
+    }
+  }
+}

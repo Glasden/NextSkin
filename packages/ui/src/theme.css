@@ -1,0 +1,103 @@
+/*
+ * 设计 token 的唯一来源（ADR-0012、DESIGN.md §3、§12）。
+ * 宿主样式用 @import 引入；插件构建用 @reference 引入，只取 token，不输出 CSS（ADR-0011）。
+ *
+ * `static`：不管宿主自己用没用到，都输出全部 token 变量。运行时插件的工具类引用 var(--color-*)，
+ * 宿主没用到的 token 也必须存在于宿主 CSS 里。
+ *
+ * 每个命名空间先用 `initial` 清空 Tailwind 的默认值，页面只能用这里定义的 token（例如没有 bg-red-500）。
+ *
+ * 颜色取值是占位，等 DESIGN.md §2 的配色方向选定后替换。
+ */
+@theme static {
+  --color-*: initial;
+  --color-bg: #f2f2ef;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #e7e7e3;
+  --color-border: #c9c9c3;
+  --color-border-strong: #2b2b28;
+  --color-text: #1d1d1b;
+  --color-text-muted: #5f5f5a;
+  --color-text-inverse: #ffffff;
+  --color-accent: #2f6df6;
+  --color-accent-fg: #ffffff;
+  --color-success: #2e7d32;
+  --color-success-fg: #ffffff;
+  --color-warning: #b86e00;
+  --color-warning-fg: #ffffff;
+  --color-danger: #c62f2f;
+  --color-danger-fg: #ffffff;
+  --color-focus: #2f6df6;
+  --color-shadow: #1d1d1b;
+  --color-checker-a: #ffffff;
+  --color-checker-b: #e7e7e3;
+
+  --radius-*: initial;
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+
+  --shadow-*: initial;
+  --shadow-pixel: 2px 2px 0 0 var(--color-shadow);
+  --shadow-pixel-lg: 4px 4px 0 0 var(--color-shadow);
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --blur-*: initial;
+
+  --font-*: initial;
+  --font-sans: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  --font-pixel: var(--font-sans);
+  --font-mono: ui-monospace, monospace;
+
+  --text-*: initial;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-base: 16px;
+  --text-base--line-height: 24px;
+  --text-lg: 20px;
+  --text-lg--line-height: 28px;
+  --text-xl: 24px;
+  --text-xl--line-height: 32px;
+  --text-2xl: 32px;
+  --text-2xl--line-height: 40px;
+  --text-3xl: 40px;
+  --text-3xl--line-height: 48px;
+
+  --ease-*: initial;
+  --ease-step: steps(4, end);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-fast: 80ms;
+  --duration-base: 160ms;
+  --duration-slow: 240ms;
+}
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@layer base {
+  [data-theme='dark'] {
+    --color-bg: #121312;
+    --color-surface: #1b1c1b;
+    --color-surface-raised: #242524;
+    --color-surface-sunken: #0d0e0d;
+    --color-border: #3a3b39;
+    --color-border-strong: #d8d8d2;
+    --color-text: #ecece6;
+    --color-text-muted: #a3a39c;
+    --color-text-inverse: #0b0c0b;
+    --color-accent: #6f9bff;
+    --color-accent-fg: #0b0c0b;
+    --color-success: #5cc463;
+    --color-success-fg: #0b0c0b;
+    --color-warning: #f0a53a;
+    --color-warning-fg: #0b0c0b;
+    --color-danger: #ff6b6b;
+    --color-danger-fg: #0b0c0b;
+    --color-focus: #6f9bff;
+    --color-shadow: #6a6b68;
+    --color-checker-a: #242524;
+    --color-checker-b: #1b1c1b;
+  }
+}

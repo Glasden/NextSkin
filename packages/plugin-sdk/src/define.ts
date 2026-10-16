@@ -66,6 +66,7 @@ export interface PluginDefinition<
   readonly setup?: (args: { ctx: Ctx<C, S, T> }) => Promise<void | (() => Promise<void>)>
 }
 
+/* eslint-disable @typescript-eslint/no-empty-object-type -- 这里的 {} 表示"一项都没有声明" */
 export function definePlugin<
   const C extends readonly Capability[],
   S extends SettingsSchema = z.ZodObject<{}>,
@@ -74,6 +75,7 @@ export function definePlugin<
 >(definition: PluginDefinition<C, S, T, P>): PluginDefinition<C, S, T, P> {
   return definition
 }
+/* eslint-enable @typescript-eslint/no-empty-object-type */
 
 /** 声明一张插件表的行类型，运行时只是一个标记。 */
 export function table<Row extends object>(): TableDef<Row> {

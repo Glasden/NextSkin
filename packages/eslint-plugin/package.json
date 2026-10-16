@@ -1,0 +1,24 @@
+{
+  "name": "@nextskin/eslint-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "把 NextSkin 的不变量写成 ESLint 规则",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "eslint": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  }
+}

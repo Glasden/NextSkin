@@ -40,12 +40,7 @@ export interface LoginProvider<Ctx> {
   readonly id: string
   readonly label: MessageKey
   readonly icon: IconName
-  authorizeUrl(args: {
-    state: string
-    codeChallenge: string
-    redirectUri: string
-    ctx: Ctx
-  }): Promise<string>
+  authorizeUrl(args: { state: string; codeChallenge: string; redirectUri: string; ctx: Ctx }): Promise<string>
   exchange(args: {
     /** 回调 URL 上的全部查询参数 */
     query: Readonly<Record<string, string>>

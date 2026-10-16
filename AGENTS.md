@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-设计阶段：仓库里只有设计文档、插件 SDK 的类型草案和几个技术验证（spike），应用代码还没有开始写。
+monorepo 骨架和工具链已经搭好（ADR-0014），各包里还只有占位代码，业务功能还没有开始写。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
@@ -23,32 +23,33 @@ nextskin 启动器（进程监管 + 命令行）
 
 ## 命令
 
-> 名字已经约定，脚手架落地时按此实现；实现之前这些命令都不存在。
-
 | 命令 | 用途 |
 |---|---|
 | `pnpm dev` | 启动开发环境，不依赖任何外部服务（默认 SQLite + 种子数据） |
-| `pnpm check` | lint + 类型检查 + 单元测试；提交前必须通过 |
+| `pnpm check` | lint + 类型检查 + 单元测试 + 格式检查；提交前必须通过 |
 | `pnpm test <path>` | 只跑指定文件或目录的测试 |
-| `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑数据库测试（需要 Docker） |
-| `pnpm test:contract` | 协议契约测试（用例录制自真实的 BS v6） |
+| `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑数据库测试（需要 Docker；还没有用例） |
+| `pnpm test:contract` | 协议契约测试（用例录制自真实的 BS v6；还没有用例） |
 | `pnpm storybook` | 组件工作台 |
 | `pnpm e2e` | Playwright 端到端测试与截图回归 |
+| `pnpm format` | Prettier 格式化 |
+
+单元测试和 story 测试跑在 Chromium 里，第一次运行前要装浏览器：`pnpm --filter @nextskin/web exec playwright install chromium`。
 
 ## 不变量
 
-每一条都写明"为什么"以及"由什么守护"。破坏任何一条都等于引入线上事故。
+每一条都写明"为什么"以及"由什么守护"；由 lint 守护的条目，原因写在规则的报错里。破坏任何一条都等于引入线上事故。
 
 1. **Minecraft 协议（CSL / USM / Legacy / Yggdrasil）的路径、状态码、响应结构、响应头与 BS v6 一致。** 玩家的模组和启动器无法跟着升级。守护：`tests/contract`。
 2. **玩家 UUID 创建后永不改变，导入旧数据时原样保留。** 游戏服务器按 UUID 存储玩家的背包和权限，UUID 一变，这些数据全部对不上。守护：导入器测试、对账报告。
 3. **已存在的材质文件永不重新编码。新材质的 hash 是像素 hash：sha256(u32be(宽) ‖ u32be(高) ‖ RGBA8 像素)，不是文件字节的 hash。** hash 既是存储键，也是公开 URL 的一部分；文件字节的 hash 会随 zlib 版本和 CPU 架构变化（ADR-0008）。
-4. **写操作只能经过领域用例。** Route handler 里不写 SQL，也不写业务规则；不用 Server Actions 写数据。见 ADR-0004。
+4. **写操作只能经过领域用例。** Route handler 里不写 SQL，也不写业务规则；不用 Server Actions 写数据。见 ADR-0004。守护：包依赖（`apps/web`、`packages/api` 不依赖 `@nextskin/db`）、lint `nextskin/no-use-server`。
 5. **积分、点赞数这类计数，在事务内原子更新。** 禁止"先读、再算、再写回"。
 6. **数据库代码必须在四种数据库上都通过。** `returning`、upsert、自增主键、`count` 只能通过 `packages/db` 的辅助函数使用。见 ADR-0005。
-7. **不使用 `NEXT_PUBLIC_*`，站点配置存在数据库里。** 同一份构建产物要分发给所有服主。
-8. **材质和任何用户上传的图片都不经过 `next/image`，Image Optimization 保持关闭。** 见 ADR-0003。
-9. **插件 SDK 的公开 API 一旦变化，必须附 changeset，并通过 `packages/plugin-sdk/type-tests`。** 它是对社区的契约。
-10. **UI 中不写原始色值和任意值类。** 需要组件时先在 `packages/ui` 里找；没有就先补组件和 story，再写页面。见 DESIGN.md。
+7. **不使用 `NEXT_PUBLIC_*`，站点配置存在数据库里。** 守护：lint。
+8. **材质和任何用户上传的图片都不经过 `next/image`，Image Optimization 保持关闭。** 守护：lint、`next.config.ts`。
+9. **插件 SDK 的公开 API 一旦变化，必须附 changeset，并通过 `packages/plugin-sdk/type-tests`。** 它是对社区的契约。守护：api-extractor 报告（见该包的 AGENTS.md）。
+10. **UI 中不写原始色值和任意值类。** 需要组件时先在 `packages/ui` 里找；没有就先补组件和 story，再写页面。见 DESIGN.md。守护：lint、`theme.css` 清空了 Tailwind 的默认调色板。
 11. **日志里不得出现密码、令牌、Cookie、OAuth secret、数据库连接串。**
 
 ## 目录（落地后的约定）
@@ -61,6 +62,7 @@ nextskin 启动器（进程监管 + 命令行）
 | `packages/db` | Kysely 实例、迁移、方言辅助函数 |
 | `packages/ui` | 组件库与设计 token（`src/theme.css` 是 token 的唯一来源） |
 | `packages/plugin-sdk`、`plugin-host`、`plugin-testing` | 插件 API、插件运行时、插件测试工具 |
+| `packages/eslint-plugin` | 把不变量写成的 lint 规则 |
 | `packages/importer` | 从 BS v6 只读导入 |
 | `plugins/*` | 官方插件，用公开 API 编写 |
 | `tests/contract` | 协议契约用例 |
@@ -74,17 +76,20 @@ nextskin 启动器（进程监管 + 命令行）
 - **新事件或拦截点**：先改 SDK 的类型、`interceptorPolicies` 和 type-tests，再在核心实现。这属于插件 API 变更。
 - **新组件**：写进 `packages/ui`，配 story 和截图基线，并在 DESIGN.md 的组件清单里补一行。
 - **新设置项**：在设置注册表里声明类型和默认值，后台表单会自动生成，不要手写表单。
+- **新包**：照抄现有包的 `package.json` 脚本和 `tsconfig.json`。包之间的依赖只用 `workspace:*` 声明；几个包共用的外部依赖，版本写进 `pnpm-workspace.yaml` 的 catalog。
 
 ## 已知的坑
 
 - Next 16：`middleware.ts` 已改名为 `proxy.ts`；页面的 `params` 和 `searchParams` 是 Promise；同一个路由段不能同时有 `page.tsx` 和 `route.ts`。
 - Next App Router 在浏览器里用的是它自带的 React（canary 版本），不是 `node_modules` 里的 `react`。插件组件要共享这份 React，只能通过 import map（ADR-0011）。
-- 页面里不要渲染 `<link rel="modulepreload">`：React 19 会把它提到 `<head>` 最前面、排在 import map 之前，Firefox 因此丢弃整个 import map，Chromium 跳过 integrity。需要预加载时调用 `ReactDOM.preloadModule()`。
 - Kysely 0.29：`Migration` 等迁移相关类型要从 `kysely/migration` 导入。
 - MySQL 不支持 `returning`；`count()` 的返回值类型随数据库而变。
-- SQLite 只能经过 `packages/db` 的方言访问，不要直接用 Kysely 自带的 `SqliteDialect` 或 Better Auth 的 `NodeSqliteDialect`。原因：node:sqlite 会把第一个对象参数当成命名参数表，开头是 `Date` 时后面的参数整体错位，而且不报错；数组作为单个参数传入也会被这样处理。
 - SQLite 是同步执行的，写锁是全局的：事务里不要 `await` 网络请求或其他慢操作，否则所有写操作都要排队（ADR-0008）。
 - Better Auth：`database.transaction` 默认是 `false`，必须打开；用户表主键列名只能叫 `id`。
+- 服务端的 worker 写成 `new Worker(new URL('./x.ts', import.meta.url), …)`，Turbopack 会把它打成单独的 chunk，`next dev` 和 standalone 产物里都能运行。`workerData` 只能传普通对象：Turbopack 会把它展开、再塞进自己的字段，传数字、数组、TypedArray 会丢失或变形。不要用 `next build --webpack`，worker chunk 的路径会错。
+- 脚本里不写裸的 `tsc`：`node_modules/.bin/tsc` 可能指向 TS 6 也可能指向 TS 7，类型检查按路径调用 TS 7（ADR-0014）。
+- Node 直接运行的代码（脚本、ESLint 插件，以及将来的启动器和 plugin host）里，相对导入要写 `.ts` 扩展名：Node 的类型剥离不补扩展名，类型检查却不会报错。
+- pnpm 12 拒绝安装发布不到 1 天的版本（`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`）。换一个早一点的版本，不要往 `pnpm-workspace.yaml` 里加 `minimumReleaseAgeExclude`。
 - 术语：**材质**是皮肤和披风的统称；**角色**（player）是 Minecraft 里的玩家名，不是**用户**（user）。一个用户可以有多个角色。
 
 ## 维护这份文件

@@ -1,0 +1,22 @@
+{
+  "name": "@nextskin/domain",
+  "version": "0.0.0",
+  "private": true,
+  "description": "领域用例与查询服务（ADR-0004）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p ."
+  },
+  "dependencies": {
+    "@nextskin/db": "workspace:*",
+    "@nextskin/plugin-sdk": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

@@ -23,3 +23,10 @@ spikes/s2-node-sqlite/data/
 spikes/s3-plugin-ui/data/
 spikes/s3-plugin-ui/test-results/
 spikes/s3-plugin-ui/next-env.d.ts
+
+# 工具链生成的文件
+.turbo/
+next-env.d.ts
+storybook-static/
+test-results/
+playwright-report/

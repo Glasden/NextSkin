@@ -2,7 +2,7 @@ import type { RequestScope } from './interceptors'
 import type { UserActor } from './dto'
 
 /**
- * 插件 HTTP 路由，统一挂在 /plugins/{id}/ 下。
+ * 插件 HTTP 路由，统一挂在 `/plugins/{id}/` 下。
  *
  * 键的格式是 'METHOD /path'，路径参数写 `:name`，例如 'DELETE /codes/:code'。
  * 核心统一处理：登录态、权限、CSRF（Cookie 登录的非 GET 请求校验 Origin）、限流、请求体大小。

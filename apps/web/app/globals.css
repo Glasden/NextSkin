@@ -1,0 +1,3 @@
+@import 'tailwindcss';
+@import '@nextskin/ui/theme.css';
+@source '../../../packages/ui/src';
