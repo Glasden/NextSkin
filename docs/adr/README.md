@@ -19,7 +19,7 @@
 | [0005](0005-kysely-three-dialects.md) | 数据访问用 Kysely，支持 SQLite / MySQL / PostgreSQL | 已采纳 |
 | [0006](0006-new-schema-and-importer.md) | 新 schema + 只读导入器，不沿用旧表结构 | 已采纳 |
 | [0007](0007-auth.md) | 认证：Better Auth + 自写 Yggdrasil 令牌体系 | 已采纳（S1 通过） |
-| [0008](0008-zero-native-deps.md) | 零原生依赖：node:sqlite + 纯 TS/WASM 图像管线 | 待验证（S2、S4） |
+| [0008](0008-zero-native-deps.md) | 零原生依赖：node:sqlite + 纯 TS/WASM 图像管线 | 已采纳（S2、S4 通过） |
 | [0009](0009-plugin-runtime.md) | 插件运行模型：官方插件在核心进程内，安装插件在 plugin host，整代切换 | 已采纳 |
 | [0010](0010-plugin-api.md) | 插件 API：声明式定义、六类扩展点、能力授权、独立版本 | 已采纳（S5 通过） |
 | [0011](0011-plugin-ui.md) | 插件 UI：声明式为默认，运行时组件共享宿主 React | 待验证（S3） |
@@ -33,9 +33,9 @@
 | 编号 | 要验证什么 | 不通过时的退路 | 状态 |
 |---|---|---|---|
 | S1 | Better Auth 的 `@better-auth/oauth-provider` 加设备授权插件，能否同时承载第三方 OAuth 应用和 Yggdrasil Connect；能否映射到整数 uid 的用户表 | Better Auth 只管网页登录，OAuth/OIDC 服务端单独实现 | ✅ 通过，见 `spikes/s1-better-auth/` |
-| S2 | Kysely 用 `node:sqlite` 驱动：功能、事务、并发写入表现 | better-sqlite3（原生依赖，需要按平台打包） | 部分：Better Auth 提供的 node:sqlite 方言在两个 spike 中可用；并发与阻塞问题待评估 |
+| S2 | Kysely 用 `node:sqlite` 驱动：功能、事务、并发写入表现 | better-sqlite3（原生依赖，需要按平台打包） | ✅ 通过；自写方言，一写一读两个连接，插件查询走专用 worker，见 `spikes/s2-node-sqlite/` |
 | S3 | 运行时加载的插件前端组件，通过 import map + shim 共享 Next 内置的那份 React | 安装插件只允许声明式 UI | 未开始 |
-| S4 | 纯 TS/WASM 图像管线：解码与编码性能、2D 头像和 3D 预览的效果 | sharp | 未开始 |
+| S4 | 纯 TS/WASM 图像管线：解码与编码性能、2D 头像和 3D 预览的效果 | sharp | ✅ 通过；新材质改用像素 hash，见 `spikes/s4-image-pipeline/` |
 | S5 | 远程 Kysely 驱动：校验操作节点树、表名映射、事务内执行 | 安装插件只提供 KV 存储，自有表仅限官方插件 | ✅ 通过，有遗留的 SQLite 风险，见 `spikes/s5-remote-kysely/` |
 
 ## 模板

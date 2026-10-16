@@ -41,7 +41,7 @@ nextskin 启动器（进程监管 + 命令行）
 
 1. **Minecraft 协议（CSL / USM / Legacy / Yggdrasil）的路径、状态码、响应结构、响应头与 BS v6 一致。** 玩家的模组和启动器无法跟着升级。守护：`tests/contract`。
 2. **玩家 UUID 创建后永不改变，导入旧数据时原样保留。** 游戏服务器按 UUID 存储玩家的背包和权限，UUID 一变，这些数据全部对不上。守护：导入器测试、对账报告。
-3. **已存在的材质文件永不重新编码。新材质的 hash 是 sha256(规范化后的 PNG)。** hash 既是存储键，也是公开 URL 的一部分。
+3. **已存在的材质文件永不重新编码。新材质的 hash 是像素 hash：sha256(u32be(宽) ‖ u32be(高) ‖ RGBA8 像素)，不是文件字节的 hash。** hash 既是存储键，也是公开 URL 的一部分；文件字节的 hash 会随 zlib 版本和 CPU 架构变化（ADR-0008）。
 4. **写操作只能经过领域用例。** Route handler 里不写 SQL，也不写业务规则；不用 Server Actions 写数据。见 ADR-0004。
 5. **积分、点赞数这类计数，在事务内原子更新。** 禁止"先读、再算、再写回"。
 6. **数据库代码必须在四种数据库上都通过。** `returning`、upsert、自增主键、`count` 只能通过 `packages/db` 的辅助函数使用。见 ADR-0005。
@@ -81,8 +81,8 @@ nextskin 启动器（进程监管 + 命令行）
 - Next App Router 使用自带的 React 构建。插件组件要共享这份 React，只能通过 import map（ADR-0011）。
 - Kysely 0.29：`Migration` 等迁移相关类型要从 `kysely/migration` 导入。
 - MySQL 不支持 `returning`；`count()` 的返回值类型随数据库而变。
-- `node:sqlite` 的语句对象没有 `reader` 属性，适配层用 `stmt.columns().length > 0` 判断。
-- SQLite（node:sqlite）在主线程同步执行，Kysely 的 SQLite 方言只有一个连接：慢查询会阻塞整个进程，开着的事务会让其他数据库操作排队。
+- SQLite 只能经过 `packages/db` 的方言访问，不要直接用 Kysely 自带的 `SqliteDialect` 或 Better Auth 的 `NodeSqliteDialect`。原因：node:sqlite 会把第一个对象参数当成命名参数表，开头是 `Date` 时后面的参数整体错位，而且不报错；数组作为单个参数传入也会被这样处理。
+- SQLite 是同步执行的，写锁是全局的：事务里不要 `await` 网络请求或其他慢操作，否则所有写操作都要排队（ADR-0008）。
 - Better Auth：`database.transaction` 默认是 `false`，必须打开；用户表主键列名只能叫 `id`。
 - 术语：**材质**是皮肤和披风的统称；**角色**（player）是 Minecraft 里的玩家名，不是**用户**（user）。一个用户可以有多个角色。
 

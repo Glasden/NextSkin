@@ -1,0 +1,20 @@
+{
+  "name": "spike-s2-node-sqlite",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "hono": "^4.13.13",
+    "kysely": "^0.29.6"
+  },
+  "devDependencies": {
+    "@better-auth/kysely-adapter": "^1.7.10",
+    "@types/autocannon": "^7.12.7",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^24.19.2",
+    "autocannon": "^8.0.0",
+    "better-sqlite3": "^13.0.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

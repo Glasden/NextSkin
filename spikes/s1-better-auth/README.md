@@ -25,7 +25,7 @@ npx tsc -p tsconfig.json
 | 需求 | 实现方式 | 结果 |
 |---|---|---|
 | 整数自增用户主键、自定义表名 | `advanced.database.generateId: 'serial'`；`user.modelName` | ✅ 三种数据库都通过。**主键列名不能改，只能叫 `id`** |
-| node:sqlite | `@better-auth/kysely-adapter/node-sqlite-dialect` 提供的 `NodeSqliteDialect` | ✅（也部分回答了 S2） |
+| node:sqlite | `@better-auth/kysely-adapter/node-sqlite-dialect` 提供的 `NodeSqliteDialect` | ✅（S2 的结论是核心不用这个方言，见 `spikes/s2-node-sqlite/`） |
 | 旧版 bcrypt（`$2y$`）登录并重新哈希 | `emailAndPassword.password.verify` 加 after 钩子 | ✅ 密码存在 `account` 表，不在用户表 |
 | RS256 签名的 ID 令牌、JWKS、`kid` | `jwt({ jwks: { keyPairConfig: { alg: 'RS256' } } })` | ✅ |
 | 发现文档：三个 Yggdrasil scope、`device_authorization_endpoint`、`shared_client_id` | `scopes` 加扩展的 `metadata` | ✅ |

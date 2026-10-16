@@ -51,7 +51,10 @@ export interface Texture {
   readonly tid: Tid
   readonly name: string
   readonly type: TextureType
-  /** sha256(规范化后的 PNG)，同时是存储键和公开 URL `/textures/{hash}` 的一部分。 */
+  /**
+   * 新材质是像素 hash：sha256(u32be(宽) ‖ u32be(高) ‖ RGBA8 像素)；从 BS 导入的旧材质保留原来的 hash。
+   * 同时是存储键和公开 URL `/textures/{hash}` 的一部分。插件不应自己计算或解析它。
+   */
   readonly hash: string
   readonly width: number
   readonly height: number

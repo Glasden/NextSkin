@@ -10,3 +10,11 @@ dist/
 
 # spike 运行时生成的文件（S5 场景脚本写入的假凭据，用来验证插件进程读不到）
 spikes/s5-remote-kysely/secret/
+
+# S4 运行时下载和生成的文件（真实材质按固定提交和 sha256 下载，不进仓库）
+spikes/s4-image-pipeline/out/
+spikes/s4-image-pipeline/fixtures/real/
+spikes/s4-image-pipeline/fixtures/synthetic/
+
+# S2 基准生成的数据库文件
+spikes/s2-node-sqlite/data/

@@ -20,11 +20,12 @@
 - 插件 id：`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`。表名、索引名、约束名：`^[a-z][a-z0-9]*(_[a-z0-9]+)*$`。物理名 `p_<id，连字符换成下划线>__<名字>` 不超过 63 字符。不要放宽这两个正则：它们保证不同插件的物理名不可能相同。
 - 一个 FROM 项加最多 4 个 inner/left JOIN；没有 INSERT…SELECT、CTE、窗口函数；RETURNING 只能用在 INSERT 上。
 - 运算符、函数、聚合、数据类型都有白名单（见 `spikes/s5-remote-kysely/src/sanitize.ts`）。SDK 文档里列出的能力必须与这些白名单一致。
+- SQLite 模式下，插件自己开的事务占住全局写锁，默认时限 100 ms，超时回滚。插件文档要写明：事务里不要发网络请求。插件的读查询在专用 worker 连接上执行，带期限，超时被中止（S2）。
 
 ## 写插件表迁移时的坑（同样要写进面向插件作者的文档）
 
 - 自增主键在三种数据库里写法不同（`autoIncrement()` 在 PostgreSQL 上不可用）。优先使用自然键或字符串键。
 - MySQL 的主键和索引列不能是 `text`，用 `varchar(n)`。
-- 日期列一律存 ISO 字符串：SQLite 没有原生日期类型，三种数据库的时区行为也不一致。查询参数传 `Date` 会被核心拒绝（node:sqlite 会把它静默绑定成 NULL）。
+- 日期列一律存 ISO 字符串：SQLite 没有原生日期类型，三种数据库的时区行为也不一致。查询参数传 `Date` 会被核心拒绝：node:sqlite 会把排在第一位的对象参数当成命名参数表，后面的参数整体错位，不报错（见 `spikes/s2-node-sqlite/README.md`）。
 - `count()` 返回值在不同数据库里可能是 number、string 或 bigint，一律套 `Number()`。
 - MySQL 不支持 `returning`。需要新行的 id 时，用 `insertId` 或改用自然键。

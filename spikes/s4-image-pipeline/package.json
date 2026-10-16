@@ -1,0 +1,32 @@
+{
+  "name": "s4-image-pipeline",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fixtures": "tsx src/fixtures.ts",
+    "test": "tsx --test --test-concurrency=1 src/*.test.ts",
+    "check": "tsc -p tsconfig.json",
+    "robustness": "tsx src/robustness.ts",
+    "experiments": "tsx src/experiments.ts",
+    "bench": "tsx src/bench.ts",
+    "golden": "tsx src/golden.ts",
+    "audit": "tsx src/audit.ts",
+    "report": "tsx src/report.ts"
+  },
+  "dependencies": {
+    "fast-png": "^8.0.0",
+    "pngjs": "^7.0.0",
+    "@jsquash/webp": "^1.5.0",
+    "wasm-feature-detect": "^1.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "tsx": "^4.20.0",
+    "@types/node": "^24.0.0",
+    "@types/pngjs": "^6.0.5",
+    "sharp": "^0.34.0",
+    "skinview-utils": "^0.7.1",
+    "skinview3d": "^3.4.1",
+    "tinybench": "^6.0.0"
+  }
+}
