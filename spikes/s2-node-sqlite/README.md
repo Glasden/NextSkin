@@ -83,7 +83,7 @@ Kysely 0.29 的 `SqliteDialect` 加上一个不到 100 行的适配层（`src/db
 
 每次查询大约有 45 µs 花在 Kysely 构建和编译查询上，驱动本身的耗时很小。放到 worker 的读查询，串行延迟多约 70 µs（一次消息往返），但并发时吞吐不降。写连接放进 worker 后，事务里每条语句都要多一次往返，写事务的延迟翻倍以上。
 
-**Node 26 的回归**：Node 26.12 内置的 SQLite 3.54.0 中，带 JOIN 的语句**每执行一次都会被重新编译**，单条 JOIN 查询从约 2 µs 变成约 9 µs。原因已用纯 C 程序定位：SQLite 3.54.x 遇到 `sqlite3_clear_bindings()` 后再绑定参数，就会重新编译 JOIN 语句（3.53.4 不会；去掉这个调用后，3.54.1 也正常）。node:sqlite 每次执行都会调用它。根因在 SQLite 源码里：3.54 新增了 `smimask` 规则，即参数在 0/1 和其他值之间切换时才重新编译；`sqlite3_bind_*` 遵守这条规则，`sqlite3_clear_bindings` 却仍然只要 `expmask` 非零就让语句过期。截至 2026-10-16，SQLite trunk 和 3.54.1 都没有修复，SQLite 论坛和 Node 的 issue 里也没有人报过。复现代码在 `repro/`。已向 Node 报告（[nodejs/node#66800](https://github.com/nodejs/node/issues/66800)），也已在 SQLite 论坛报告（[forumpost/e9fa3f80d5](https://sqlite.org/forum/forumpost/e9fa3f80d5)）。端到端影响很小，因为 Kysely 的开销远大于这几微秒，所以不影响结论。
+**Node 26 的回归**：Node 26.12 内置的 SQLite 3.54.0 中，带 JOIN 的语句**每执行一次都会被重新编译**，单条 JOIN 查询从约 2 µs 变成约 9 µs。原因已用纯 C 程序定位：SQLite 3.54.x 遇到 `sqlite3_clear_bindings()` 后再绑定参数，就会重新编译 JOIN 语句（3.53.4 不会；去掉这个调用后，3.54.1 也正常）。node:sqlite 每次执行都会调用它。根因在 SQLite 源码里：3.54 新增了 `smimask` 规则，即参数在 0/1 和其他值之间切换时才重新编译；`sqlite3_bind_*` 遵守这条规则，`sqlite3_clear_bindings` 却仍然只要 `expmask` 非零就让语句过期。复现代码在 `repro/`。已向 Node 报告（[nodejs/node#66800](https://github.com/nodejs/node/issues/66800)），也已在 SQLite 论坛报告（[forumpost/e9fa3f80d5](https://sqlite.org/forum/forumpost/e9fa3f80d5)）。SQLite 已在 branch-3.54 上修复（check-in [535a77cf5a](https://sqlite.org/src/info/535a77cf5a8e1a7b)，2026-10-17，[drh 的回复](https://sqlite.org/forum/forumpost/b4f0958dac)），并合入 trunk：`sqlite3_clear_bindings` 改为和 `sqlite3_bind_*` 遵守同一条 `smimask` 规则。把这个补丁打到 3.54.1 上跑 `repro/`，JOIN 查询回到 0.65 µs，重新编译次数从 200000 次降到 8 次。截至 2026-10-17，还没有发布包含这个修复的版本（最新是 3.54.1），Node 26 要等升级内置 SQLite 后才会恢复正常。端到端影响很小，因为 Kysely 的开销远大于这几微秒，所以不影响结论。
 
 ### 3. 并发压测
 
@@ -154,6 +154,6 @@ SQLite 把不带参数的函数放在最外层循环里求值，开销几乎为�
 ## 遗留风险
 
 - **worker 入口文件在 Next.js 构建后能否找到**：需要把 `packages/db` 设为 `serverExternalPackages`，或者由启动器负责加载，在搭脚手架时验证。
-- **Node 26 / SQLite 3.54 的重复编译问题**：报告上游后跟踪修复情况。在修复之前，Node 26 上的 JOIN 查询每次多约 7 µs。
+- **Node 26 / SQLite 3.54 的重复编译问题**：SQLite 已修复（check-in 535a77cf5a），还要等两件事：SQLite 发布包含修复的版本（预计是 3.54.2），Node 26 升级内置的 SQLite。在那之前，Node 26 上的 JOIN 查询每次多约 7 µs。
 - **插件事务 100 ms 的时限是否够用**：要用真实插件（例如邀请码、积分类插件）检验。
 - **压测机器是共享的**：数据只适合比较不同架构之间的差异，不能当作容量规划的依据。

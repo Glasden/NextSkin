@@ -8,6 +8,7 @@
  *   3.53.4  join 0.69us reprepare=0
  *   3.54.1  join 5.47us reprepare=200000
  *   3.54.1 去掉 clear_bindings 后：join 0.64us reprepare=8
+ *   3.54.1 + check-in 535a77cf5a（上游修复）：join 0.65us reprepare=8
  */
 #include <stdio.h>
 #include <time.h>
