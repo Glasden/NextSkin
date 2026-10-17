@@ -32,6 +32,7 @@
 | [0018](0018-registration-and-mail.md) | 注册走领域用例，规则和默认值取 BS；邮件在事务之外异步发送 | 已采纳（react-email 一条已被 ADR-0020 取代） |
 | [0019](0019-i18n.md) | 国际化：URL 不带语言前缀，消息集中在 `packages/i18n`，接口错误带 code 和本地化文案 | 已采纳 |
 | [0020](0020-email-templates-without-react.md) | 邮件模板不用 React，改用无依赖的 HTML 模板函数（取代 ADR-0012、ADR-0018 里 react-email 的部分） | 已采纳 |
+| [0021](0021-events-and-jobs.md) | 事件和后台任务共用数据库里的一张任务表，事件在业务事务里按订阅者展开成任务；积分只经过 `adjustScore` 修改（取代 ADR-0002 里队列的 Redis 驱动、ADR-0018 里进程内的邮件队列） | 提议 |
 
 ## 待做的 spike
 
