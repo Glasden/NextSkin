@@ -28,6 +28,7 @@ spikes/s3-plugin-ui/next-env.d.ts
 .turbo/
 next-env.d.ts
 storybook-static/
+.vitest/
 test-results/
 playwright-report/
 

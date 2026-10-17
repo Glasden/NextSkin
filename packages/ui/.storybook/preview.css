@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import '../src/theme.css';
+@import '../src/fonts/fonts.css';
 @source '../src';
 
 body {

@@ -52,7 +52,7 @@
   --font-sans:
     -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif; /* 正文、表单、按钮、用户产生的内容 */
   --font-pixel:
-    'Fusion Pixel 12', var(--font-sans); /* 标题、导航、数字、固定标签；只配 text-pixel-* 字号（字体文件尚未接入） */
+    'Fusion Pixel 12', 'Fusion Pixel 12 Ext', var(--font-sans); /* 标题、导航、数字、固定标签；只配 text-pixel-* 字号 */
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; /* hash、UID、邀请码、代码 */
 
   --text-*: initial;

@@ -20,6 +20,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "design:sync": "pnpm --filter @nextskin/ui design:sync",
+    "font:sync": "pnpm --filter @nextskin/ui font:sync",
     "changeset": "changeset"
   },
   "devDependencies": {

@@ -1,0 +1,200 @@
+/*
+ * 由 packages/ui/scripts/pixel-font.ts 生成，不要手改（DESIGN.md §4）。
+ * Fusion Pixel Font 2026.09.25，12px 比例宽度，简体中文版。SIL Open Font License 1.1，
+ * 许可证见 fusion-pixel/OFL.txt；每个分片的 name 表里也保留了版权和许可证信息。
+ */
+@font-face {
+  font-family: 'Fusion Pixel 12';
+  src: url('./fusion-pixel/latin.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0-FF, U+2000-206F, U+2100-21FF, U+25A0-26FF;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12';
+  src: url('./fusion-pixel/han.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+3000-303F, U+4E00-9FFF, U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/other-01.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+100-2861;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/other-02.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+2862-2C6F, U+2FF0-312F, U+3220-33FE, U+A726-A7FA, U+E000-F8FF, U+FE10-1FA3E;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-01.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+2E80-2FD5, U+3400-3D59;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-02.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+3D5A-4EDA;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-03.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+4EDB-5470;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-04.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+5471-5964;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-05.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+5966-5E71;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-06.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+5E75-63FE;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-07.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+6404-6945;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-08.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+6946-6E46;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-09.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+6E48-7321;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-10.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+7322-77F0;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-11.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+77F2-7CE5;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-12.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+7CE6-81E4;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-13.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+81E5-8727;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-14.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+8728-8BC7;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-15.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+8BCB-9100;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-16.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+9101-9574;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-17.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+9575-9A35;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-18.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+9A37-9EDB;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-19.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+9EDC-9FFC, U+F900-FAD9, U+20068-223FF;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/han-20.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+2244A-30F91;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/hangul-01.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+3131-318E, U+AC00-B6A2;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/hangul-02.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+B6A3-C1A3;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/hangul-03.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+C1A4-CCA4;
+}
+
+@font-face {
+  font-family: 'Fusion Pixel 12 Ext';
+  src: url('./fusion-pixel/hangul-04.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+CCA5-D7A3;
+}
