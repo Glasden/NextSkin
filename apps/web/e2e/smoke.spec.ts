@@ -1,9 +1,16 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 
 test('首页能打开', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'NextSkin' })).toBeVisible()
+})
+
+// ADR-0008：发行包里没有原生模块和动态库，同一个 ZIP 能在任何系统和架构上运行。sharp 这类可选依赖一装上，
+// 就会被 Turbopack 追踪进产物（见 pnpm-workspace.yaml 的 overrides）
+test('standalone 产物里没有原生模块和动态库', () => {
+  const files = readdirSync(new URL('../.next/standalone/', import.meta.url), { recursive: true, encoding: 'utf8' })
+  expect(files.filter((file) => /\.(?:node|so(?:\.\d+)*|dylib|dll)$/.test(file))).toEqual([])
 })
 
 // 语言按 Cookie → Accept-Language → 站点默认的顺序解析，URL 不带语言前缀（ADR-0019）

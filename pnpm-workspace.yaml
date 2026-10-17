@@ -41,3 +41,9 @@ catalog:
   vite: 8.3.4
   vitest: 5.0.5
   zod: 4.6.7
+
+overrides:
+  # Image Optimization 关着（不变量 8），用不到 sharp。它是 next 的可选依赖，装上就会连同 libvips 的原生库被
+  # Turbopack 追踪进 standalone，发行包只能在构建机的系统和架构上运行（ADR-0008）。Turbopack 不理会
+  # outputFileTracingExcludes，所以直接不装。e2e 的 smoke.spec.ts 检查产物里没有原生库
+  'next>sharp': '-'
