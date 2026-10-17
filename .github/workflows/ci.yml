@@ -1,0 +1,115 @@
+# 本地的 pnpm check、pnpm test:db、pnpm e2e 在这里原样再跑一遍，不用 Turborepo 缓存：类型检查以这里的 TS 7 为准（ADR-0014）。
+# 第三方 action 固定到提交 SHA，升级时连同注释里的版本号一起改。
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**', 'spikes/**']
+  pull_request:
+    paths-ignore: ['**/*.md', 'docs/**', 'spikes/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 只取消 PR 上被新提交取代的运行。推送到 main 的运行各占一组：同组里排队的运行会被后来者顶掉，
+# 共用一组就不能保证每次推送都有结果
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  check:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # Node 26 是基线，跑完整的 pnpm check；Node 24 是 engines 的下限（ADR-0013），只跑测试：
+        # lint、类型检查（TS 7 是原生程序，@types/node 固定为 24）和格式检查的结果与 Node 版本无关
+        include:
+          - { name: check (Node 26), node: 26, command: pnpm check }
+          - { name: test (Node 24), node: 24, command: pnpm turbo run test }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # 组件测试和 story 在 Chromium 里跑
+      - run: pnpm --filter @nextskin/web exec playwright install --with-deps --only-shell chromium
+      - run: ${{ matrix.command }}
+
+  test-db:
+    name: test:db（SQLite / MySQL / MariaDB / PostgreSQL）
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # 用 packages/db/compose.yaml 起三个数据库容器，与本地相同
+      - run: pnpm test:db
+
+  e2e:
+    name: build + e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @nextskin/web exec playwright install --with-deps --only-shell chromium
+      # e2e 依赖 build，build 又依赖构建涉及的每个包的 typecheck（turbo.json）：Next 关了构建期类型检查
+      - run: pnpm e2e
+
+  changeset:
+    # 不变量 9：插件 SDK 的 src 有改动就必须附 changeset（.changeset/config.json 的 changedFilePatterns）
+    name: changeset
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    if: github.event_name != 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # changeset status 要找 base 和 HEAD 的分叉点
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: pnpm changeset status
+        env:
+          # PR 与目标分支比较；推送到 main 时与推送前的 main 比较
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "::warning::找不到比较基准 $BASE（新建分支或强制推送），跳过 changeset 检查"
+            exit 0
+          fi
+          pnpm changeset status --since="$BASE"

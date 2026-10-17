@@ -23,6 +23,8 @@ const config: NextConfig = {
   images: { unoptimized: true },
   // 类型检查由 typecheck 任务用 TypeScript 7 负责（ADR-0014）
   typescript: { ignoreBuildErrors: true },
+  // typegen 生成严格的路由校验：默认版把页面的 props 当成 any，params 不写成 Promise 或参数名写错都不报错
+  experimental: { strictRouteTypes: true },
   // 不让 next dev 在项目目录生成 AGENTS.md
   agentRules: false,
   // 不把 /api/yggdrasil/ 308 跳转到不带斜杠的地址：authlib-injector 请求元数据时带斜杠，BS 直接返回 200，

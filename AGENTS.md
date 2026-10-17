@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-monorepo 骨架和工具链已经搭好（ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证和所有写操作还没有开始。
+monorepo 骨架、工具链和 CI（`.github/workflows/ci.yml`）已经搭好（ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证和所有写操作还没有开始。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
@@ -27,7 +27,8 @@ nextskin 启动器（进程监管 + 命令行）
 | 命令 | 用途 |
 |---|---|
 | `pnpm dev` | 启动开发环境，不依赖任何外部服务（默认 SQLite，数据在 `apps/web/data`；环境变量见 `packages/domain/src/bootstrap.ts`。种子数据还没有） |
-| `pnpm check` | lint + 类型检查 + 单元测试 + 格式检查；提交前必须通过 |
+| `pnpm check` | lint + 类型检查 + 单元测试 + 格式检查；提交前必须通过。CI 还会跑 `test:db` 和 `e2e`，改了数据库代码或 Next 配置时先在本地跑 |
+| `pnpm build` | 构建 Next standalone 产物和插件 SDK 的声明文件。Next 关了构建期类型检查，所以会先对构建涉及的每个包跑 `typecheck` |
 | `pnpm test <path>` | 只跑指定文件或目录的测试 |
 | `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑 `*.db.test.ts`（需要 Docker，测试库容器跑完后保留；`pnpm test` 只用 SQLite 跑） |
 | `pnpm test:contract` | 协议契约测试：回放从真实 BS v6 录制的用例，不需要 Docker，`pnpm check` 也会跑。录制见 `tests/contract/README.md` |
@@ -49,7 +50,7 @@ nextskin 启动器（进程监管 + 命令行）
 6. **数据库代码必须在四种数据库上都通过。** `returning`、upsert、自增主键、`count` 只能通过 `packages/db` 的辅助函数使用。见 ADR-0005。守护：`pnpm test:db`、lint。
 7. **不使用 `NEXT_PUBLIC_*`，站点配置存在数据库里。** 守护：lint。
 8. **材质和任何用户上传的图片都不经过 `next/image`，Image Optimization 保持关闭。** 守护：lint、`next.config.ts`。
-9. **插件 SDK 的公开 API 一旦变化，必须附 changeset，并通过 `packages/plugin-sdk/type-tests`。** 它是对社区的契约。守护：api-extractor 报告（见该包的 AGENTS.md）。
+9. **插件 SDK 的公开 API 一旦变化，必须附 changeset，并通过 `packages/plugin-sdk/type-tests`。** 它是对社区的契约。守护：api-extractor 报告、CI 的 `changeset status`（见该包的 AGENTS.md）。
 10. **UI 中不写原始色值和任意值类。** 需要组件时先在 `packages/ui` 里找；没有就先补组件和 story，再写页面。见 DESIGN.md。守护：lint、`theme.css` 清空了 Tailwind 的默认调色板。
 11. **日志里不得出现密码、令牌、Cookie、OAuth secret、数据库连接串。**
 

@@ -11,6 +11,8 @@
 
 公开面确实要变时：运行 `pnpm --filter @nextskin/plugin-sdk api:update` 更新报告，再运行 `pnpm changeset` 写变更记录，两者一起提交。
 
+CI 用 `changeset status` 检查：本包 `src` 有任何改动都要附 changeset（`.changeset/config.json` 的 `changedFilePatterns`）。不影响公开面的改动（注释、内部实现）用 `pnpm changeset --empty`。
+
 ## 改这个包之前
 
 - **公开 API 是契约。** 新增事件、拦截点、能力、字段是次版本变更。删除或改名、收窄参数类型、放宽返回类型都是大版本变更。任何公开面变化都必须附 changeset。
