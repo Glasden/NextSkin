@@ -34,6 +34,7 @@
 | [0020](0020-email-templates-without-react.md) | 邮件模板不用 React，改用无依赖的 HTML 模板函数（取代 ADR-0012、ADR-0018 里 react-email 的部分） | 已采纳 |
 | [0021](0021-events-and-jobs.md) | 事件和后台任务共用数据库里的一张任务表，事件在业务事务里按订阅者展开成任务；积分只经过 `adjustScore` 修改（取代 ADR-0002 里队列的 Redis 驱动、ADR-0018 里进程内的邮件队列） | 已采纳 |
 | [0022](0022-user-center-and-players.md) | 用户中心和角色管理：写接口认会话 Cookie，用例自己检查封禁和邮箱验证；删除角色退还当初实付的积分；签到用带条件的 UPDATE | 已采纳 |
+| [0023](0023-profile-and-security.md) | 个人资料和账号安全：改邮箱要核对密码并先确认新地址，删除账号走领域用例；两步验证（TOTP 加备用码）和通行密钥交给 Better Auth，添加通行密钥要求 10 分钟内登录过 | 已采纳 |
 
 ## 待做的 spike
 

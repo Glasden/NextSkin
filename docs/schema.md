@@ -155,7 +155,7 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | name | varchar(128) | 非空 | |
 | type | varchar(8) | 非空 | `steve`、`alex`、`cape` 之一，与 BS 和 SDK 相同 |
 | description | text | 可空 | 原 texture-description 插件的功能 |
-| uploader_id | integer | 可空；外键 → users，set null | 上传者删除账号后，公开材质保留 |
+| uploader_id | integer | 可空；外键 → users，set null | 上传者删除账号后，公开材质保留、这一列置空；私有材质随账号删除（ADR-0023） |
 | is_public | 开关 | 非空 | |
 | likes | integer | 非空，默认 0 | 收藏数，即有多少个衣柜里有它（包括上传者自己的）。和 `closet_items` 的增删在同一事务里原子增减（不变量 5） |
 | created_at | 时间 | 非空 | |
