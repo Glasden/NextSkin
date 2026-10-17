@@ -9,6 +9,7 @@ export interface CoreConfig {
   /** 本地材质存储目录 */
   textureDirectory: string
   secretKey: string
+  production: boolean
 }
 
 /** 只在开发环境使用的固定密钥：开发库里的机密设置用它加密，换到生产环境要重新设置 */
@@ -43,7 +44,7 @@ export function coreConfigFromEnv(
   }
   const secretKey = env.NEXTSKIN_SECRET || (options.production ? undefined : DEVELOPMENT_SECRET)
   if (!secretKey) throw new Error('没有设置 NEXTSKIN_SECRET；请在 .env 里写入至少 32 个字符的随机字符串')
-  return { database, textureDirectory: join(dataDirectory, 'textures'), secretKey }
+  return { database, textureDirectory: join(dataDirectory, 'textures'), secretKey, production: options.production }
 }
 
 /** 连接数据库、执行核心迁移，返回领域层的入口。启动器落地之前，由 Web 进程在第一次请求时调用。 */
@@ -56,6 +57,7 @@ export async function openCore(config: CoreConfig): Promise<{ core: Core; close(
       db,
       textureStorage: createLocalTextureStorage(config.textureDirectory),
       secretKey: config.secretKey,
+      production: config.production,
     })
     return { core, close: () => db.destroy() }
   } catch (error) {

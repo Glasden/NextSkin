@@ -396,6 +396,23 @@ export function authBooleanType<DB>(db: Kysely<DB>) {
   return dialectOf(db) === 'sqlite' ? sql`integer` : sql`boolean`
 }
 
+export function authJsonType<DB>(db: Kysely<DB>) {
+  const dialect = dialectOf(db)
+  return dialect === 'sqlite' ? sql`text` : dialect === 'mysql' ? sql`json` : sql`jsonb`
+}
+
+/**
+ * ascii：只存 ASCII 的列（例如 base64url）在 MySQL 上改用 ascii 字符集，每个字符 1 字节，
+ * 单列索引能到 3072 个字符，而 utf8mb4 只有 768 个。写入非 ASCII 字符时 MySQL 报错，不会静默截断
+ */
+export function authStringType<DB>(db: Kysely<DB>, length: number, options: { ascii?: boolean } = {}) {
+  const dialect = dialectOf(db)
+  if (dialect === 'sqlite') return sql`text`
+  return dialect === 'mysql' && options.ascii
+    ? sql`varchar(${sql.lit(length)}) character set ascii collate ascii_bin`
+    : sql`varchar(${sql.lit(length)})`
+}
+
 export function readAuthDate(value: unknown): IsoTimestamp {
   if (value instanceof Date) return toIsoTimestamp(value)
   if (typeof value === 'string' && isIsoTimestamp(value)) return value

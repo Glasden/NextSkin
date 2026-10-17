@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证和所有写操作还没有开始。
+monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制已经落地（`packages/domain/src/auth/`），Yggdrasil Connect、邮件、注册规则和页面还没有。其余写操作还没有开始。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。

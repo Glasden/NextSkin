@@ -41,6 +41,13 @@
       "schedule": ["* * * * *"]
     },
     {
+      "description": "Better Auth 锁定 1.7.x（ADR-0007）：几个包必须同一版本；升级前要跑 packages/domain 的认证测试和 spikes/s1-better-auth 的场景，设备流包装依赖它未公开的内部结构",
+      "matchPackageNames": ["better-auth", "@better-auth/**"],
+      "allowedVersions": "<1.8",
+      "groupName": "Better Auth",
+      "groupSlug": "better-auth"
+    },
+    {
       "description": "根目录的 typescript 是 TS 6，只给依赖编译器 API 的工具用（ADR-0014），typescript-eslint 8.71 只支持 6.1 以下；TS 7 是别名 typescript-native，不受这条限制",
       "matchDepNames": ["typescript"],
       "allowedVersions": "<6.1"

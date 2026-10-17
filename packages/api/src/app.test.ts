@@ -29,6 +29,9 @@ function mockCore(stored: Partial<Record<CoreSettingKey, unknown>> = {}) {
     settings: { read },
     players: { findByName, findByUuid },
     yggdrasil: { getSigningKey: vi.fn().mockResolvedValue(null) },
+    auth: {
+      handle: vi.fn((request: Request, root: string) => Promise.resolve(Response.json({ url: request.url, root }))),
+    },
   } as unknown as Core
   return { core, read, findByName, findByUuid }
 }
@@ -43,6 +46,20 @@ describe('createApp', () => {
     expect(res.headers.get('content-type')).toBe('application/json')
     expect(res.headers.get('cache-control')).toBe('no-cache, private')
     expect(res.headers.get('x-authlib-injector-api-location')).toBe('http://example.test/api/yggdrasil')
+  })
+
+  it('/api/auth/* 原样交给领域层，并带上客户端看到的站点地址', async () => {
+    const { core } = mockCore()
+    const res = await createApp({ core }).request('http://127.0.0.1:3000/api/auth/sign-in/email', {
+      method: 'POST',
+      headers: { host: 'skin.example.test', 'x-forwarded-proto': 'https' },
+    })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      url: 'http://127.0.0.1:3000/api/auth/sign-in/email',
+      root: 'https://skin.example.test',
+    })
+    expect((core.auth.handle as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1)
   })
 
   it('坏的 skinDomains 只影响元数据端点，CSL 照常 200', async () => {

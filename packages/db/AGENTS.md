@@ -13,7 +13,7 @@ Kysely 实例、SQLite 方言、迁移运行器，以及隔离四种数据库差
   - 时间用 `isoTimestampColumn`，值只能来自 `toIsoTimestamp`；
   - 0 / 1 开关用 `switchColumn`；
   - 可能超过 64 KB 的文本用 `longTextType`；
-  - Better Auth 声明的日期、布尔字段用 `authDateType`、`authBooleanType`，直接读写这些列时用 `readAuthDate`、`writeAuthDate`、`readAuthBoolean` 转换。
+  - Better Auth 声明的日期、布尔字段用 `authDateType`、`authBooleanType`，直接读写这些列时用 `readAuthDate`、`writeAuthDate`、`readAuthBoolean` 转换；JSON / 数组列用 `authJsonType`，需要索引或限长的字符串列用 `authStringType`，兼容 Better Auth 的方言类型比对。
 - 外键在建表时用表级的 `addForeignKeyConstraint`；给已有的表加外键列用 `addForeignKeyColumn`，只支持可空的整数列。不要用列定义里的 `.references()`：MySQL 会忽略它。
 - MySQL 写入 `varchar` 时，超长部分如果是末尾空白（包括换行），会先被截掉再检查 CHECK。所以 ISO 时间列的 CHECK 拦不住"合法时间加换行"这种输入，格式由写入时只用 `toIsoTimestamp` 来保证。
 - 核心迁移放在 `src/migrations/`。lint 在这个目录里重新生效：迁移里的方言差异同样只能通过辅助函数处理。

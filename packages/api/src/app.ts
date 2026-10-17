@@ -1,5 +1,6 @@
 import type { Core } from '@nextskin/domain'
 import { Hono } from 'hono'
+import { registerAuth } from './auth.ts'
 import { registerCsl } from './protocol/csl.ts'
 import { requestRoot, type ProtocolEnv } from './protocol/http.ts'
 import { registerLegacy } from './protocol/legacy.ts'
@@ -27,6 +28,7 @@ export function createApp(options: { core: Core }) {
     }
   })
   app.get('/api/health', (c) => c.json({ status: 'ok' }))
+  registerAuth(app, core)
   registerYggdrasil(app, core)
   registerTextures(app, core)
   registerLegacy(app, core)

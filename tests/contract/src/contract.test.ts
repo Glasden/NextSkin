@@ -28,7 +28,12 @@ beforeAll(async () => {
   const secretKey = 'nextskin-contract-secret-0123456789'
   const textureDirectory = join(directory, 'textures')
   await seedWorld(database.db, { textureDirectory, secretKey, signingKey: keys.privateKey })
-  const core = createCore({ db: database.db, textureStorage: createLocalTextureStorage(textureDirectory), secretKey })
+  const core = createCore({
+    db: database.db,
+    textureStorage: createLocalTextureStorage(textureDirectory),
+    secretKey,
+    production: false,
+  })
   const app = createApp({ core })
   send = async (request) => {
     const host = request.headers.host ?? DEFAULT_HEADERS.host!

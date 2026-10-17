@@ -11,6 +11,8 @@ export const coreSettingsRegistry = {
   'yggdrasil.apiLocationIndication': { schema: z.boolean(), default: true, secret: false },
   // PEM 是否是可用的 RSA 密钥由 yggdrasil 模块判断；坏密钥也必须返回协议规定的 400。
   'yggdrasil.signingKey': { schema: z.string().nullable(), default: null, secret: true },
+  // 旧站 .env 的 SALT：BS 的带盐摘要算法用它当全站 pepper，导入时写入（auth/legacy-passwords.ts）
+  'auth.legacyPasswordSalt': { schema: z.string(), default: '', secret: true },
 } as const
 
 export type CoreSettingKey = keyof typeof coreSettingsRegistry

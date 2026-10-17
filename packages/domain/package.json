@@ -14,13 +14,19 @@
     "test:db": "vitest run --config vitest.db.config.ts"
   },
   "dependencies": {
+    "@better-auth/oauth-provider": "catalog:",
+    "@better-auth/passkey": "catalog:",
     "@nextskin/db": "workspace:*",
     "@nextskin/plugin-sdk": "workspace:*",
-    "zod": "catalog:",
-    "kysely": "catalog:"
+    "better-auth": "catalog:",
+    "hash-wasm": "4.12.0",
+    "kysely": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
+    "@simplewebauthn/server": "13.3.3",
     "@types/node": "catalog:",
+    "jose": "6.2.12",
     "vitest": "catalog:"
   }
 }

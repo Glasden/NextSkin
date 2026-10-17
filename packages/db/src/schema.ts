@@ -69,10 +69,238 @@ export interface SettingsTable {
   updated_at: IsoTimestamp
 }
 
+export interface SessionsTable {
+  id: Generated<number>
+  expires_at: ColumnType<Date | string, Date | string, Date | string>
+  token: string
+  created_at: ColumnType<Date | string, Date | string, Date | string>
+  updated_at: ColumnType<Date | string, Date | string, Date | string>
+  ip_address: string | null
+  user_agent: string | null
+  user_id: number
+}
+
+export interface AccountsTable {
+  id: Generated<number>
+  account_id: string
+  provider_id: string
+  user_id: number
+  access_token: string | null
+  refresh_token: string | null
+  id_token: string | null
+  access_token_expires_at: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  refresh_token_expires_at: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  scope: string | null
+  password: string | null
+  created_at: ColumnType<Date | string, Date | string, Date | string>
+  updated_at: ColumnType<Date | string, Date | string, Date | string>
+}
+
+export interface VerificationsTable {
+  id: Generated<number>
+  identifier: string
+  value: string
+  expires_at: ColumnType<Date | string, Date | string, Date | string>
+  created_at: ColumnType<Date | string, Date | string, Date | string>
+  updated_at: ColumnType<Date | string, Date | string, Date | string>
+}
+
+export interface JwksTable {
+  id: Generated<number>
+  public_key: string
+  private_key: string
+  created_at: ColumnType<Date | string, Date | string, Date | string>
+  expires_at: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  alg: string | null
+  crv: string | null
+}
+
+export interface OAuthClientsTable {
+  id: Generated<number>
+  client_id: string
+  client_secret: string | null
+  client_discovery_id: string | null
+  disabled: ColumnType<boolean | number | null, boolean | null, boolean | null>
+  skip_consent: ColumnType<boolean | number | null, boolean | null, boolean | null>
+  enable_end_session: ColumnType<boolean | number | null, boolean | null, boolean | null>
+  subject_type: string | null
+  scopes: ColumnType<unknown, string | null, string | null>
+  client_credentials_scopes: ColumnType<unknown, string | null, string | null>
+  user_id: number | null
+  created_at: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  updated_at: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  name: string | null
+  uri: string | null
+  icon: string | null
+  contacts: ColumnType<unknown, string | null, string | null>
+  tos: string | null
+  policy: string | null
+  software_id: string | null
+  software_version: string | null
+  software_statement: string | null
+  redirect_uris: ColumnType<unknown, string, string>
+  post_logout_redirect_uris: ColumnType<unknown, string | null, string | null>
+  backchannel_logout_uri: string | null
+  backchannel_logout_session_required: ColumnType<boolean | number | null, boolean | null, boolean | null>
+  token_endpoint_auth_method: string | null
+  application_type: string | null
+  jwks: string | null
+  jwks_uri: string | null
+  grant_types: ColumnType<unknown, string | null, string | null>
+  response_types: ColumnType<unknown, string | null, string | null>
+  require_pkce: ColumnType<boolean | number | null, boolean | null, boolean | null>
+  dpop_bound_access_tokens: ColumnType<boolean | number | null, boolean | null, boolean | null>
+  reference_id: string | null
+  metadata: ColumnType<unknown, string | null, string | null>
+}
+
+export interface OAuthResourcesTable {
+  id: Generated<number>
+  identifier: string
+  name: string
+  access_token_ttl: number | null
+  refresh_token_ttl: number | null
+  signing_algorithm: string | null
+  signing_key_id: string | null
+  allowed_scopes: ColumnType<unknown, string | null, string | null>
+  custom_claims: ColumnType<unknown, string | null, string | null>
+  dpop_bound_access_tokens_required: ColumnType<boolean | number | null, boolean | null, boolean | null>
+  disabled: ColumnType<boolean | number | null, boolean | null, boolean | null>
+  created_at: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  updated_at: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  policy_version: number | null
+  metadata: ColumnType<unknown, string | null, string | null>
+}
+
+export interface OAuthClientResourcesTable {
+  id: Generated<number>
+  client_id: string
+  resource_id: string
+  metadata: ColumnType<unknown, string | null, string | null>
+  created_at: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+}
+
+export interface OAuthRefreshTokensTable {
+  id: Generated<number>
+  token: string
+  client_id: string
+  session_id: number | null
+  user_id: number
+  reference_id: string | null
+  authorization_code_id: string | null
+  resources: ColumnType<unknown, string | null, string | null>
+  requested_user_info_claims: ColumnType<unknown, string | null, string | null>
+  expires_at: ColumnType<Date | string, Date | string, Date | string>
+  created_at: ColumnType<Date | string, Date | string, Date | string>
+  revoked: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  rotated_at: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  rotation_replay_response: string | null
+  rotation_replay_expires_at: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  auth_time: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  confirmation: ColumnType<unknown, string | null, string | null>
+  scopes: ColumnType<unknown, string, string>
+}
+
+export interface OAuthAccessTokensTable {
+  id: Generated<number>
+  token: string
+  client_id: string
+  session_id: number | null
+  user_id: number | null
+  reference_id: string | null
+  authorization_code_id: string | null
+  resources: ColumnType<unknown, string | null, string | null>
+  requested_user_info_claims: ColumnType<unknown, string | null, string | null>
+  refresh_id: number | null
+  expires_at: ColumnType<Date | string, Date | string, Date | string>
+  created_at: ColumnType<Date | string, Date | string, Date | string>
+  revoked: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  confirmation: ColumnType<unknown, string | null, string | null>
+  scopes: ColumnType<unknown, string, string>
+}
+
+export interface OAuthConsentsTable {
+  id: Generated<number>
+  client_id: string
+  user_id: number | null
+  reference_id: string | null
+  resources: ColumnType<unknown, string | null, string | null>
+  requested_user_info_claims: ColumnType<unknown, string | null, string | null>
+  scopes: ColumnType<unknown, string, string>
+  created_at: ColumnType<Date | string, Date | string, Date | string>
+  updated_at: ColumnType<Date | string, Date | string, Date | string>
+}
+
+export interface OAuthClientAssertionsTable {
+  id: Generated<number>
+  expires_at: ColumnType<Date | string, Date | string, Date | string>
+}
+
+export interface DeviceCodesTable {
+  id: Generated<number>
+  device_code: string
+  user_code: string
+  user_id: string | null
+  expires_at: ColumnType<Date | string, Date | string, Date | string>
+  status: string
+  last_polled_at: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  polling_interval: number | null
+  client_id: string | null
+  scope: string | null
+  resources: ColumnType<unknown, string | null, string | null>
+  oauth_client_id: string | null
+}
+
+export interface TwoFactorsTable {
+  id: Generated<number>
+  secret: string
+  backup_codes: string
+  user_id: number
+  verified: ColumnType<boolean | number | null, boolean | null, boolean | null>
+  failed_verification_count: number | null
+  locked_until: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+}
+
+export interface PasskeysTable {
+  id: Generated<number>
+  name: string | null
+  public_key: string
+  user_id: number
+  credential_id: string
+  counter: number
+  device_type: string
+  backed_up: ColumnType<boolean | number, boolean, boolean>
+  transports: string | null
+  created_at: ColumnType<Date | string | null, Date | string | null, Date | string | null>
+  aaguid: string | null
+}
+
+export interface DeviceCodeSelectionsTable {
+  device_code: string
+  user_id: number
+  player_id: number
+  created_at: IsoTimestamp
+}
+
 export interface CoreDatabase {
   users: UsersTable
   texture_files: TextureFilesTable
   textures: TexturesTable
   players: PlayersTable
   settings: SettingsTable
+  sessions: SessionsTable
+  accounts: AccountsTable
+  verifications: VerificationsTable
+  jwks: JwksTable
+  oauth_clients: OAuthClientsTable
+  oauth_resources: OAuthResourcesTable
+  oauth_client_resources: OAuthClientResourcesTable
+  oauth_refresh_tokens: OAuthRefreshTokensTable
+  oauth_access_tokens: OAuthAccessTokensTable
+  oauth_consents: OAuthConsentsTable
+  oauth_client_assertions: OAuthClientAssertionsTable
+  device_codes: DeviceCodesTable
+  two_factors: TwoFactorsTable
+  passkeys: PasskeysTable
+  device_code_selections: DeviceCodeSelectionsTable
 }

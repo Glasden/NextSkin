@@ -46,7 +46,11 @@ Better Auth 的 user 模型加上我们的领域字段。领域字段都有默�
 
 ### Better Auth 的其他表
 
-字段由 Better Auth 决定，表名和列名按 ADR-0015 映射。随认证切片落地，届时以 Better Auth 的 schema 比对测试为准。
+字段由 Better Auth 决定，表名和列名按 ADR-0015 映射（`packages/domain/src/auth/naming.ts`），迁移 0007–0020。以 Better Auth 的 schema 比对测试（`auth/schema.db.test.ts`）为准：缺表、缺列、缺命名索引都算失败；类型警告不能超出 Better Auth 用自己的迁移建出的库（serial 主键下它对自己建的表也报类型警告）。
+
+- 列类型：日期 `authDateType`，布尔 `authBooleanType`，JSON 和数组 `authJsonType`，需要索引、外键或限长的字符串 `authStringType`（SQLite 上是 `text`：Better Auth 在 SQLite 上只认这个类型名），其余字符串 `text`。可空性与 Better Auth 一致，不加数据库默认值和 CHECK：取值由 Better Auth 决定，升级时可能新增。
+- 索引名按 Better Auth 的规则：`<表>_<列>_idx`、`<表>_<列>_uidx`。它会按名字核对多列的表级索引，名字不对就当作缺失。外键名按我们的规则 `<表>_<列>_fk`，删除行为照 Better Auth 的声明。
+- `passkeys.credential_id` 长 1364：WebAuthn 的 credential ID 最长 1023 字节，base64url 编码后 1364 个字符。MySQL 上这一列用 ascii 字符集（`authStringType` 的 `ascii` 选项），否则超过单列索引 3072 字节的上限。`passkeys.counter` 与 Better Auth 一样是 `integer`，规范允许的值最大到 2^32 - 1，超过 2^31 - 1 的认证器注册会失败。
 
 | 表 | 插件 | 备注 |
 |---|---|---|
@@ -285,7 +289,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | last_sign_at | last_check_in_at | |
 | register_at | created_at、updated_at | |
 | verified | email_verified | |
-| password | accounts 里 `provider_id = 'credential'` 的一行 | 哈希原样保存，登录成功后换成当前算法（ADR-0007）。BS 的哈希算法和盐取决于旧站 `.env` 的 `PWD_METHOD` 和 `SALT`，导入命令要拿到这两项。除 bcrypt 和 argon2 以外的哈希，存储时要标明算法，具体格式随认证切片定 |
+| password | accounts 里 `provider_id = 'credential'` 的一行 | `account_id` 写 uid 的字符串（Better Auth 按它找密码）。哈希登录成功后换成当前算法（ADR-0007）。BS 的算法和盐取决于旧站 `.env` 的 `PWD_METHOD` 和 `SALT`，导入命令要拿到这两项：bcrypt、argon2（`BCRYPT`、`ARGON2I`、`PHP_PASSWORD_HASH`）原样保存；十六进制摘要（`MD5`、`SALTED2SHA256` 等六种）存成 `$bs$<算法>$<小写摘要>`（`auth/legacy-passwords.ts` 的 `formatLegacyDigest`）。`SALT` 是全站的 pepper，不进哈希，存进机密设置 `auth.legacyPasswordSalt` |
 
 不导入：`is_dark_mode`、`verification_token`、`remember_token`。
 
@@ -342,7 +346,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | BS | NextSkin | 规则 |
 |---|---|---|
 | id | client_id | 转成字符串。第三方应用配置的 client_id 不用改 |
-| secret | client_secret、token_endpoint_auth_method | Passport 按 secret 是否为空区分客户端：为空的是公共客户端，认证方式设为 `none`，换令牌时必须带 PKCE，与 Passport 相同。其他客户端的 secret 是明文，按 Better Auth 配置的方式重新存储 |
+| secret | client_secret、token_endpoint_auth_method | Passport 按 secret 是否为空区分客户端：为空的是公共客户端，认证方式设为 `none`，换令牌时必须带 PKCE，与 Passport 相同。其他客户端的 secret 是明文，存成 sha256 的 base64url（与 `auth/auth.ts` 的 `storeClientSecret` 相同），认证方式设为 `client_secret_basic` |
 | name | name | |
 | redirect | redirect_uris | 逗号分隔转成数组 |
 | user_id | user_id | |
@@ -351,7 +355,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 
 - `personal_access_client` 或 `password_client` 为 1 的客户端不导入，这两种授权方式不再支持。
 - 授权类型设为授权码和刷新令牌，与 Passport 对第三方应用开放的一致。
-- **未解决**：Passport 的保密客户端在令牌端点既可以用 HTTP Basic 传 secret，也可以放在请求体里；Better Auth 只接受客户端登记的那一种（`client_secret_basic` 或 `client_secret_post`），用另一种会返回 `invalid_client`。导入器不知道每个第三方应用用的是哪一种。认证切片要让导入的保密客户端两种方式都能用，并写测试。
+- Passport 的保密客户端在令牌端点既可以用 HTTP Basic 传 secret，也可以放在请求体里；Better Auth 只接受客户端登记的那一种。核心在请求进入 Better Auth 之前，把另一种方式改写成登记的方式（`auth/client-authentication.ts`），对所有保密客户端生效，所以导入时不用猜第三方应用用的是哪一种。
 
 **options → settings**：只导入有对应设置项的键，对照表随设置注册表定。`ygg_uuid_algorithm` 决定以后新角色的 UUID 算法。已经有的项：
 

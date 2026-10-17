@@ -1,0 +1,147 @@
+import { createHash, hkdfSync } from 'node:crypto'
+import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-provider'
+import { passkey } from '@better-auth/passkey'
+import { dialectOf, type CoreDatabase } from '@nextskin/db'
+import { betterAuth, type BetterAuthOptions } from 'better-auth'
+import { createAuthMiddleware, isAPIError } from 'better-auth/api'
+import { hashPassword, verifyPassword } from 'better-auth/crypto'
+import { jwt, twoFactor } from 'better-auth/plugins'
+import type { Kysely } from 'kysely'
+import { isLegacyPasswordHash, verifyLegacyPassword } from './legacy-passwords.ts'
+import { coreModelNaming, withNamingConvention } from './naming.ts'
+import { serialSafety } from './serial-safety.ts'
+
+/** Better Auth 挂在这个路径下（Hono 的 /api/auth/*） */
+export const AUTH_BASE_PATH = '/api/auth'
+
+export const OAUTH_SCOPES = ['openid', 'profile', 'email', 'offline_access']
+
+export interface AuthConfig {
+  db: Kysely<CoreDatabase>
+  /** .env 里的 NEXTSKIN_SECRET；Better Auth 的密钥由它派生 */
+  secretKey: string
+  /** 站点根地址，例如 https://skin.example.com，不带末尾斜杠 */
+  siteUrl: string
+  siteName: string
+  /** BS 的全站盐（旧站 .env 的 SALT），只有校验旧摘要格式的密码时才读 */
+  legacyPasswordSalt: () => Promise<string>
+}
+
+/** sha256 + base64url。令牌只存这个值，会话服务器按同样的方式查表（ADR-0007） */
+export function sha256(value: string): string {
+  return createHash('sha256').update(value).digest('base64url')
+}
+
+/** 与设置加密用不同的派生参数，两者互不影响（settings/codec.ts） */
+function deriveSecret(secretKey: string): string {
+  return Buffer.from(hkdfSync('sha256', secretKey, 'NextSkin Better Auth v1', 'better-auth secret', 32)).toString('hex')
+}
+
+/**
+ * 日志里去掉 URL 的查询串和片段。Better Auth 会把请求里的地址原样写进日志，例如被拒绝的 callbackURL、
+ * Origin，查询串里可能带着令牌（不变量 11）
+ */
+export function redactLogMessage(message: string): string {
+  return message.replace(/([?#])[^\s"'<>]+/g, '$1[redacted]')
+}
+
+/** Better Auth 的日志只输出消息本身：附带的参数可能是请求体或带查询参数的错误（不变量 11） */
+const logger: BetterAuthOptions['logger'] = {
+  level: 'warn',
+  log: (level, message) => {
+    const line = `[auth] ${redactLogMessage(message)}`
+    if (level === 'error') console.error(line)
+    else console.warn(line)
+  },
+}
+
+async function isAdmin(db: Kysely<CoreDatabase>, userId: string | number): Promise<boolean> {
+  const id = Number(userId)
+  if (!Number.isSafeInteger(id)) return false
+  const row = await db.selectFrom('users').select('role').where('id', '=', id).executeTakeFirst()
+  return row?.role === 'admin' || row?.role === 'superadmin'
+}
+
+/** Better Auth 的完整配置。schema 比对测试直接用它，不创建实例（创建实例会在后台连库做 schema 检查） */
+export function authOptions(config: AuthConfig) {
+  const { db } = config
+  const site = new URL(config.siteUrl)
+  return {
+    appName: config.siteName,
+    baseURL: config.siteUrl,
+    basePath: AUTH_BASE_PATH,
+    secret: deriveSecret(config.secretKey),
+    // transaction 默认是 false：不打开的话，Better Auth 的多步写入不在同一个事务里（ADR-0007）
+    database: { db, type: dialectOf(db), transaction: true },
+    ...coreModelNaming(),
+    emailAndPassword: {
+      enabled: true,
+      password: {
+        hash: hashPassword,
+        // 从 BS 导入的旧哈希在这里校验，登录成功后由下面的 after 钩子换成当前算法
+        verify: async ({ hash, password }) =>
+          isLegacyPasswordHash(hash)
+            ? verifyLegacyPassword({ hash, password, salt: await config.legacyPasswordSalt() })
+            : verifyPassword({ hash, password }),
+      },
+    },
+    hooks: {
+      after: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== '/sign-in/email' || !ctx.context.newSession) return
+        // newSession 只在密码校验通过之后才有，所以这里的明文就是刚通过校验的那个
+        const password: unknown = (ctx.body as Record<string, unknown> | undefined)?.password
+        const userId = ctx.context.newSession.user.id
+        const accounts = await ctx.context.internalAdapter.findAccounts(userId)
+        const credential = accounts.find((account) => account.providerId === 'credential')
+        if (typeof password === 'string' && credential?.password && isLegacyPasswordHash(credential.password))
+          await ctx.context.internalAdapter.updatePassword(userId, await hashPassword(password))
+      }),
+    },
+    // /token：jwt 插件给会话签发 JWT，用不到；/update-user：昵称等字段改动要经过领域用例（不变量 4）
+    disabledPaths: ['/token', '/update-user'],
+    advanced: {
+      database: { generateId: 'serial' },
+      cookiePrefix: 'nextskin',
+    },
+    telemetry: { enabled: false },
+    logger,
+    // 默认的错误处理用 Better Auth 模块级的 logger 打印错误消息，绕过上面的 logger。客户端错误已经在响应里，
+    // 不再记录；服务端错误只记录类型，消息可能带着请求里的值或 SQL 参数（不变量 11）
+    onAPIError: {
+      onError: (error) => {
+        if (isAPIError(error) && error.status !== 'INTERNAL_SERVER_ERROR') return
+        console.error(`[auth] unhandled ${error instanceof Error ? error.name : typeof error}`)
+      },
+    },
+    plugins: [
+      // ID 令牌用 RS256（ADR-0007）；Yggdrasil Connect 规范要求至少有一把 RSA 密钥
+      withNamingConvention(
+        jwt({ jwks: { keyPairConfig: { alg: 'RS256', modulusLength: 2048 } }, disableSettingJwtHeader: true }),
+      ),
+      withNamingConvention(
+        oauthProvider({
+          loginPage: '/sign-in',
+          consentPage: '/oauth/consent',
+          scopes: OAUTH_SCOPES,
+          storeTokens: { hash: (token) => Promise.resolve(sha256(token)) },
+          storeClientSecret: { hash: (secret) => Promise.resolve(sha256(secret)) },
+          // 不接受 DPoP（ADR-0015：serial 下它的防重放不起作用）
+          dpop: { signingAlgorithms: [] },
+          // 管理 OAuth 客户端和资源需要管理员（ADR-0007）。资源的管理端点只能在服务端调用，同样限制，免得以后误用
+          clientPrivileges: async ({ user }) => (user ? isAdmin(db, user.id) : false),
+          resourcePrivileges: async ({ user }) => (user ? isAdmin(db, user.id) : false),
+        }),
+      ),
+      withNamingConvention(oauthDeviceAuthorization({ verificationUri: '/device' })),
+      withNamingConvention(twoFactor({ issuer: config.siteName })),
+      withNamingConvention(passkey({ rpID: site.hostname, rpName: config.siteName, origin: site.origin })),
+      serialSafety(),
+    ],
+  } satisfies BetterAuthOptions
+}
+
+export function createAuth(config: AuthConfig) {
+  return betterAuth(authOptions(config))
+}
+
+export type Auth = ReturnType<typeof createAuth>

@@ -106,7 +106,7 @@ beforeEach(async () => {
   await db.insertInto('settings').values(setting).execute()
 })
 
-test('六个核心迁移按顺序执行一次，重复执行返回空数组', async () => {
+test('核心迁移按顺序执行一次，重复执行返回空数组', async () => {
   expect(appliedMigrations).toEqual([
     '0001_create_users',
     '0002_create_texture_files',
@@ -114,6 +114,21 @@ test('六个核心迁移按顺序执行一次，重复执行返回空数组', as
     '0004_add_users_avatar_texture_id',
     '0005_create_players',
     '0006_create_settings',
+    '0007_create_sessions',
+    '0008_create_accounts',
+    '0009_create_verifications',
+    '0010_create_jwks',
+    '0011_create_oauth_clients',
+    '0012_create_oauth_resources',
+    '0013_create_oauth_client_resources',
+    '0014_create_oauth_refresh_tokens',
+    '0015_create_oauth_access_tokens',
+    '0016_create_oauth_consents',
+    '0017_create_oauth_client_assertions',
+    '0018_create_device_codes',
+    '0019_create_two_factors',
+    '0020_create_passkeys',
+    '0021_create_device_code_selections',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })

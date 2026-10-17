@@ -39,7 +39,12 @@ const bytes = Uint8Array.from([137, 80, 78, 71])
 beforeAll(async () => {
   database = await createTestDatabase<CoreDatabase>()
   await migrateToLatest(database.db, coreMigrations)
-  core = createCore({ db: database.db, secretKey, textureStorage: { read: () => Promise.resolve(bytes) } })
+  core = createCore({
+    db: database.db,
+    secretKey,
+    production: false,
+    textureStorage: { read: () => Promise.resolve(bytes) },
+  })
 })
 afterAll(async () => database?.cleanup())
 beforeEach(async () => {
@@ -162,7 +167,12 @@ test('文件键逐字比较，只允许 active，读文件保持字节', async (
     expect(await core.textures.readFile(hash)).toBeNull()
   }
   await database.db.updateTable('texture_files').set({ status: 'active' }).execute()
-  const missing = createCore({ db: database.db, secretKey, textureStorage: { read: () => Promise.resolve(null) } })
+  const missing = createCore({
+    db: database.db,
+    secretKey,
+    production: false,
+    textureStorage: { read: () => Promise.resolve(null) },
+  })
   expect(await missing.textures.readFile(hash)).toBeNull()
 })
 
@@ -215,6 +225,7 @@ test('机密设置加密后可读；随机 IV；错误密钥、明文和篡改�
   const wrongKey = createCore({
     db: database.db,
     secretKey: 'wrong-key'.repeat(8),
+    production: false,
     textureStorage: { read: () => Promise.resolve(null) },
   })
   await expect(wrongKey.settings.read([key])).rejects.toThrow(readFailure('yggdrasil.signingKey'))
@@ -259,7 +270,12 @@ test.each(['other:yggdrasil.signingKey', 'core:anotherKey'])('AAD 绑定 namespa
 
 test('createCore 和 encodeSettingValue 都立即拒绝过短的 secretKey', () => {
   expect(() =>
-    createCore({ db: database.db, secretKey: 'short', textureStorage: { read: () => Promise.resolve(null) } }),
+    createCore({
+      db: database.db,
+      secretKey: 'short',
+      production: false,
+      textureStorage: { read: () => Promise.resolve(null) },
+    }),
   ).toThrow('NEXTSKIN_SECRET 设为至少 32 个字符')
   expect(() => encodeSettingValue('site.name', 'valid', { secretKey: 'short' })).toThrow(
     'NEXTSKIN_SECRET 设为至少 32 个字符',
