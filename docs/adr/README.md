@@ -31,6 +31,7 @@
 | [0017](0017-skin-figure-rendering.md) | 皮肤的 2D 正背面由服务端出图，按显示倍数选分辨率，浏览器只做整数倍放大 | 已采纳 |
 | [0018](0018-registration-and-mail.md) | 注册走领域用例，规则和默认值取 BS；邮件在事务之外异步发送 | 已采纳 |
 | [0019](0019-i18n.md) | 国际化：URL 不带语言前缀，消息集中在 `packages/i18n`，接口错误带 code 和本地化文案 | 已采纳 |
+| [0020](0020-email-templates-without-react.md) | 邮件模板不用 React，改用无依赖的 HTML 模板函数（取代 ADR-0012、ADR-0018 里 react-email 的部分） | 提议 |
 
 ## 待做的 spike
 
