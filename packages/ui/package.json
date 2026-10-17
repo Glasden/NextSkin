@@ -16,11 +16,15 @@
     "design:sync": "node scripts/design-sync.ts",
     "font:sync": "node scripts/pixel-font.ts",
     "storybook": "storybook dev --port 6006 --no-open",
-    "storybook:build": "storybook build"
+    "storybook:build": "storybook build",
+    "test:visual": "playwright test"
   },
   "peerDependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.9.0"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",

@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:db": "docker compose -f packages/db/compose.yaml up -d --wait && turbo run test:db",
     "test:contract": "turbo run test:contract",
+    "test:visual": "turbo run test:visual",
     "storybook": "turbo run storybook",
     "e2e": "turbo run e2e",
     "format": "prettier --write .",

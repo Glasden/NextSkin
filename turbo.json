@@ -31,6 +31,14 @@
     "test:contract": {
       "dependsOn": ["transit"]
     },
+    "storybook:build": {
+      "dependsOn": ["transit"],
+      "outputs": ["storybook-static/**"]
+    },
+    "test:visual": {
+      "dependsOn": ["storybook:build"],
+      "cache": false
+    },
     "e2e": {
       "dependsOn": ["build"],
       "cache": false

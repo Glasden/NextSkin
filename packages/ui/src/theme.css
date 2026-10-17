@@ -85,6 +85,20 @@
   --duration-fast: 80ms; /* 按下、悬停 */
   --duration-base: 160ms; /* 开关 */
   --duration-slow: 240ms; /* 分段选择的选中块 */
+
+  --animate-*: initial;
+  --animate-loading: loading 900ms steps(1, end) infinite; /* 提交中：三个方块依次亮起 */
+}
+
+/* 不能写在 @theme 里：design:sync 按第一个右花括号截取 @theme 块 */
+@keyframes loading {
+  0% {
+    opacity: 1;
+  }
+  33.333%,
+  100% {
+    opacity: 0.3;
+  }
 }
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));

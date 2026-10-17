@@ -13,7 +13,12 @@ const preview: Preview = {
   decorators: [
     (Story, { globals }) => {
       document.documentElement.dataset.theme = globals.theme === 'dark' ? 'dark' : 'light'
-      return <Story />
+      // 截图回归按这个元素截取（visual/stories.spec.ts），四周留出硬边阴影和焦点框的位置
+      return (
+        <div data-screenshot className="inline-block p-2">
+          <Story />
+        </div>
+      )
     },
   ],
 }

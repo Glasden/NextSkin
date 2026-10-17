@@ -35,7 +35,8 @@ nextskin 启动器（进程监管 + 命令行）
 | `pnpm storybook` | 组件工作台 |
 | `pnpm design:sync` | 改了 `packages/ui/src/theme.css` 之后，重新生成 DESIGN.md §3 的 token 表（不同步时 ui 的测试会失败） |
 | `pnpm font:sync` | 重新生成像素字体的分片（DESIGN.md §4），需要联网；只在换字体版本或改切片规则时运行 |
-| `pnpm e2e` | Playwright 端到端测试与截图回归；也经过 Next standalone 回放全部契约用例 |
+| `pnpm e2e` | Playwright 端到端测试；也经过 Next standalone 回放全部契约用例 |
+| `pnpm test:visual` | 组件截图回归：给每个 story 拍亮暗两张截图，和基线比较（需要 Docker，浏览器跑在容器里）。外观改动是有意的，就加 `-- --update-snapshots` 更新基线，并检查新截图 |
 | `pnpm format` | Prettier 格式化 |
 
 单元测试和 story 测试跑在 Chromium 里，第一次运行前要装浏览器：`pnpm --filter @nextskin/web exec playwright install chromium`。
@@ -78,7 +79,7 @@ nextskin 启动器（进程监管 + 命令行）
 - **新功能**：领域用例（含事务、拦截器、事件）→ Hono 路由与 zod schema → UI。
 - **新数据表**：迁移 → 类型 → 仓储；跑 `pnpm test:db`。
 - **新事件或拦截点**：先改 SDK 的类型、`interceptorPolicies` 和 type-tests，再在核心实现。这属于插件 API 变更。
-- **新组件**：写进 `packages/ui`，配 story 和截图基线，并在 DESIGN.md 的组件清单里补一行。
+- **新组件**：写进 `packages/ui`，照 `src/button/` 的样子配 story（同时是交互测试）和截图基线，并在 DESIGN.md 的组件清单里补一行。
 - **新设置项**：在设置注册表（`packages/domain/src/settings/registry.ts`）里声明类型和默认值，后台表单会自动生成，不要手写表单。
 - **新的或改动的协议行为**：先在 `tests/contract/src/cases.ts` 加用例、从 BS v6 录制，再实现。
 - **新包**：照抄现有包的 `package.json` 脚本和 `tsconfig.json`。包之间的依赖只用 `workspace:*` 声明；几个包共用的外部依赖，版本写进 `pnpm-workspace.yaml` 的 catalog。
