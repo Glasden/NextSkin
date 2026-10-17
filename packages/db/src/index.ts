@@ -32,6 +32,9 @@ export { SqliteWriteLockTimeoutError } from './sqlite/dialect.ts'
 export { coreMigrations } from './migrations/index.ts'
 export type {
   CoreDatabase,
+  JobsTable,
+  FailedJobsTable,
+  ScoreTransactionsTable,
   UsersTable,
   TextureFilesTable,
   TexturesTable,

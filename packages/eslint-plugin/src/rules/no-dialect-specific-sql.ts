@@ -1,17 +1,5 @@
 import type { Rule } from 'eslint'
-
-type Expression = Extract<Rule.Node, { type: 'MemberExpression' }>['object']
-
-// 计算属性有意不识别，避免把动态成员名猜成 SQL 方法。
-function memberName(node: Expression): string | undefined {
-  if (node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier') {
-    return node.property.name
-  }
-}
-
-function unwrapChain(node: Expression): Expression {
-  return node.type === 'ChainExpression' ? unwrapChain(node.expression) : node
-}
+import { findQueryStart, memberName, unwrapChain, type Expression } from '../query-chain.ts'
 
 const queryStarts = new Set([
   'selectFrom',
@@ -22,22 +10,6 @@ const queryStarts = new Set([
   'replaceInto',
   'mergeInto',
 ])
-
-function hasQueryStart(node: Expression): boolean {
-  while (true) {
-    node = unwrapChain(node)
-    if (node.type === 'CallExpression') {
-      const callee = unwrapChain(node.callee)
-      if (callee.type !== 'MemberExpression') return false
-      if (queryStarts.has(memberName(callee) ?? '')) return true
-      node = callee.object
-    } else if (node.type === 'MemberExpression') {
-      node = node.object
-    } else {
-      return false
-    }
-  }
-}
 
 function isColumnDefinition(node: Rule.Node, object: Expression, context: Rule.RuleContext): boolean {
   let root = unwrapChain(object)
@@ -148,7 +120,8 @@ const rule: Rule.RuleModule = {
         if (!name) return
         const object = unwrapChain(callee.object)
 
-        const messageId = uniqueMethods.get(name) ?? (hasQueryStart(object) ? queryMethods.get(name) : undefined)
+        const messageId =
+          uniqueMethods.get(name) ?? (findQueryStart(object, queryStarts) ? queryMethods.get(name) : undefined)
         if (messageId) {
           context.report({ node, messageId })
         } else if (name === 'references' && isColumnDefinition(node, object, context)) {

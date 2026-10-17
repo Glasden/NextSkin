@@ -92,6 +92,8 @@ beforeAll(async () => {
 })
 afterAll(async () => database?.cleanup())
 beforeEach(async () => {
+  await db.deleteFrom('jobs').execute()
+  await db.deleteFrom('failed_jobs').execute()
   await db.deleteFrom('settings').execute()
   await db.deleteFrom('players').execute()
   await db.deleteFrom('users').execute()
@@ -129,6 +131,9 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0019_create_two_factors',
     '0020_create_passkeys',
     '0021_create_device_code_selections',
+    '0022_create_jobs',
+    '0023_create_failed_jobs',
+    '0024_create_score_transactions',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -348,4 +353,97 @@ test('settings.value 无损读写七万字节的字符串', async () => {
         .executeTakeFirstOrThrow()
     ).value,
   ).toBe(value)
+})
+
+test('任务、死信和积分流水的列与 schema 一致', async () => {
+  const tables = await db.introspection.getTables()
+  const columns = {
+    jobs: ['id', 'name', 'payload', 'dedupe_key', 'run_at', 'lease_id', 'attempts', 'last_error', 'created_at'],
+    failed_jobs: ['id', 'name', 'payload', 'dedupe_key', 'attempts', 'last_error', 'created_at', 'failed_at'],
+    score_transactions: ['id', 'user_id', 'delta', 'balance', 'reason', 'subject_type', 'subject_id', 'created_at'],
+  }
+  for (const [name, expected] of Object.entries(columns)) {
+    const table = tables.find((table) => table.name === name)!
+    expect(table.columns.map((column) => column.name).sort()).toEqual([...expected].sort())
+    const nullable =
+      name === 'jobs'
+        ? ['dedupe_key', 'lease_id', 'last_error']
+        : name === 'failed_jobs'
+          ? ['dedupe_key', 'last_error']
+          : ['subject_type', 'subject_id']
+    expect(
+      table.columns
+        .filter((column) => column.name !== 'id' && column.isNullable)
+        .map((column) => column.name)
+        .sort(),
+    ).toEqual(nullable.sort())
+  }
+})
+
+test('任务默认次数为零，去重仅限制相同任务名和非空键的组合', async () => {
+  const job = { name: 'core:test', payload: '{}', run_at: timestamp, created_at: timestamp }
+  const id = await insertReturningId(db, 'jobs', { ...job, dedupe_key: 'same' })
+  expect(await db.selectFrom('jobs').selectAll().where('id', '=', id).executeTakeFirstOrThrow()).toEqual({
+    ...job,
+    id,
+    dedupe_key: 'same',
+    lease_id: null,
+    last_error: null,
+    attempts: 0,
+  })
+  await expect(
+    db
+      .insertInto('jobs')
+      .values({ ...job, dedupe_key: 'same' })
+      .execute(),
+  ).rejects.toThrow()
+  await db
+    .insertInto('jobs')
+    .values([{ ...job, name: 'other', dedupe_key: 'same' }, job, job])
+    .execute()
+  expect(await db.selectFrom('jobs').select('id').execute()).toHaveLength(4)
+})
+
+test('死信不限制重复键，两张任务表都能存放超过 64 KB 的载荷', async () => {
+  const payload = '汉'.repeat(25_000)
+  const dead = {
+    name: 'core:test',
+    payload,
+    dedupe_key: 'same',
+    attempts: 3,
+    last_error: null,
+    created_at: timestamp,
+    failed_at: timestamp,
+  }
+  await db.insertInto('failed_jobs').values([dead, dead]).execute()
+  expect(
+    (await db.selectFrom('failed_jobs').selectAll().orderBy('id').execute()).map(({ id, ...row }) => {
+      expect(id).toBeGreaterThan(0)
+      return row
+    }),
+  ).toEqual([dead, dead])
+  await db.insertInto('jobs').values({ name: 'core:test', payload, run_at: timestamp, created_at: timestamp }).execute()
+  expect((await db.selectFrom('jobs').select('payload').executeTakeFirstOrThrow()).payload).toBe(payload)
+})
+
+test('积分流水保留非外键的关联对象，删除用户时级联删除流水', async () => {
+  const row = {
+    user_id: userId,
+    delta: 10,
+    balance: 10,
+    reason: 'score.reasons.initial',
+    subject_type: 'future_subject',
+    subject_id: 2147483647,
+    created_at: timestamp,
+  }
+  const id = await insertReturningId(db, 'score_transactions', row)
+  expect(await db.selectFrom('score_transactions').selectAll().executeTakeFirstOrThrow()).toEqual({ ...row, id })
+  await expect(
+    db
+      .insertInto('score_transactions')
+      .values({ ...row, user_id: 2147483647 })
+      .execute(),
+  ).rejects.toThrow()
+  await db.deleteFrom('users').where('id', '=', userId).execute()
+  expect(await db.selectFrom('score_transactions').selectAll().execute()).toEqual([])
 })

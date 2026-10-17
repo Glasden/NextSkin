@@ -44,6 +44,19 @@ export default defineConfig(
   // 不变量写成的规则（packages/eslint-plugin）
   nextskin.configs.recommended,
   {
+    files: [
+      // adjustScore 自身负责在同一事务里更新积分并写流水。
+      'packages/domain/src/score/adjust.ts',
+      // 导入器原样写入旧积分，并另写一条「导入」流水（docs/schema.md）。
+      'packages/importer/**',
+      // 迁移和数据库测试需要直接操作底层数据。
+      'packages/db/**',
+      // 测试直接构造积分数据。
+      '**/*.test.ts',
+    ],
+    rules: { 'nextskin/no-direct-score-write': 'off' },
+  },
+  {
     // token 和组件在这里定义，可以写原始色值和任意值
     files: ['packages/ui/**'],
     rules: { 'nextskin/no-raw-color': 'off', 'nextskin/no-arbitrary-value': 'off' },

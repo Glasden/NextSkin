@@ -282,7 +282,44 @@ export interface DeviceCodeSelectionsTable {
   created_at: IsoTimestamp
 }
 
+export interface JobsTable {
+  id: Generated<number>
+  name: string
+  payload: string
+  dedupe_key: string | null
+  run_at: IsoTimestamp
+  lease_id: string | null
+  attempts: Generated<number>
+  last_error: string | null
+  created_at: IsoTimestamp
+}
+
+export interface FailedJobsTable {
+  id: Generated<number>
+  name: string
+  payload: string
+  dedupe_key: string | null
+  attempts: number
+  last_error: string | null
+  created_at: IsoTimestamp
+  failed_at: IsoTimestamp
+}
+
+export interface ScoreTransactionsTable {
+  id: Generated<number>
+  user_id: number
+  delta: number
+  balance: number
+  reason: string
+  subject_type: string | null
+  subject_id: number | null
+  created_at: IsoTimestamp
+}
+
 export interface CoreDatabase {
+  jobs: JobsTable
+  failed_jobs: FailedJobsTable
+  score_transactions: ScoreTransactionsTable
   users: UsersTable
   texture_files: TextureFilesTable
   textures: TexturesTable

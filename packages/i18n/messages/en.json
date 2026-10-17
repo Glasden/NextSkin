@@ -42,7 +42,14 @@
     "player_name_taken": "This player name is already taken. Try another one.",
     "player_name_rule_misconfigured": "The player name rule on this site is misconfigured. Contact the administrator.",
     "ip_limit_reached": "This IP address has reached the account limit ({limit}). If you already have an account, sign in instead.",
-    "mail_not_configured": "This site hasn't set up email delivery, so emails can't be sent right now. Contact the site administrator."
+    "mail_not_configured": "This site hasn't set up email delivery, so emails can't be sent right now. Contact the site administrator.",
+    "score_insufficient": "Not enough points: you need {required}, but your current balance is {balance}."
+  },
+  "score": {
+    "reasons": {
+      "initial": "Sign-up bonus",
+      "import": "Imported from the old site"
+    }
   },
   "auth": {
     "illustration": "Skin by {name}",

@@ -21,6 +21,10 @@ import * as createTwoFactors from './0019_create_two_factors.ts'
 import * as createPasskeys from './0020_create_passkeys.ts'
 import * as createDeviceCodeSelections from './0021_create_device_code_selections.ts'
 
+import * as createJobs from './0022_create_jobs.ts'
+import * as createFailedJobs from './0023_create_failed_jobs.ts'
+import * as createScoreTransactions from './0024_create_score_transactions.ts'
+
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
   '0002_create_texture_files': createTextureFiles,
@@ -43,4 +47,7 @@ export const coreMigrations: Record<string, Migration> = {
   '0019_create_two_factors': createTwoFactors,
   '0020_create_passkeys': createPasskeys,
   '0021_create_device_code_selections': createDeviceCodeSelections,
+  '0022_create_jobs': createJobs,
+  '0023_create_failed_jobs': createFailedJobs,
+  '0024_create_score_transactions': createScoreTransactions,
 }

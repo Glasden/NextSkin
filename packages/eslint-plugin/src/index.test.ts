@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import plugin from './index.ts'
 
 describe('@nextskin/eslint-plugin', () => {
-  it('recommended 是注册自身并开启全部八条规则的 flat config 对象', () => {
+  it('recommended 是注册自身并开启全部九条规则的 flat config 对象', () => {
     expect(plugin.meta.name).toBe('@nextskin/eslint-plugin')
-    expect(Object.keys(plugin.rules)).toHaveLength(8)
+    expect(Object.keys(plugin.rules)).toHaveLength(9)
     expect(Array.isArray(plugin.configs.recommended)).toBe(false)
     expect(plugin.configs.recommended.plugins?.nextskin).toBe(plugin)
     expect(plugin.configs.recommended.rules).toEqual(

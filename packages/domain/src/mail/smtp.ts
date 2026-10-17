@@ -25,7 +25,7 @@ export function createSmtpTransport(settings: ReturnType<typeof createSettingQue
         logger: false,
         debug: false,
       })
-      // 连接和空闲超时由 SMTP 实现处理，整个尝试的时间上限由发送队列处理。
+      // 连接和空闲超时由 SMTP 实现处理，整个尝试的时间上限由任务执行器处理。
       try {
         const result = await transport.sendMail(message)
         return { messageId: result.messageId ?? null }

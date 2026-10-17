@@ -3,6 +3,7 @@ import noNextPublicEnv from './rules/no-next-public-env.ts'
 import noNextImage from './rules/no-next-image.ts'
 import noSqliteDialect from './rules/no-sqlite-dialect.ts'
 import noDialectSpecificSql from './rules/no-dialect-specific-sql.ts'
+import noDirectScoreWrite from './rules/no-direct-score-write.ts'
 import noRawColor from './rules/no-raw-color.ts'
 import noArbitraryValue from './rules/no-arbitrary-value.ts'
 import noUseServer from './rules/no-use-server.ts'
@@ -15,6 +16,7 @@ const plugin = {
     'no-next-image': noNextImage,
     'no-sqlite-dialect': noSqliteDialect,
     'no-dialect-specific-sql': noDialectSpecificSql,
+    'no-direct-score-write': noDirectScoreWrite,
     'no-raw-color': noRawColor,
     'no-arbitrary-value': noArbitraryValue,
     'no-use-server': noUseServer,

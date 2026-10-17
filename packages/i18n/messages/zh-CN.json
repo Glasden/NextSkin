@@ -42,7 +42,14 @@
     "player_name_taken": "这个角色名已被占用，换一个试试。",
     "player_name_rule_misconfigured": "本站的角色名规则设置有误，请联系管理员。",
     "ip_limit_reached": "这个 IP 地址注册的账号已经达到上限（{limit} 个）。已有账号的话，请直接登录。",
-    "mail_not_configured": "本站没有配置邮件发送，暂时无法发送邮件。请联系站点管理员。"
+    "mail_not_configured": "本站没有配置邮件发送，暂时无法发送邮件。请联系站点管理员。",
+    "score_insufficient": "积分不够：需要 {required}，当前只有 {balance}。"
+  },
+  "score": {
+    "reasons": {
+      "initial": "注册赠送",
+      "import": "从旧站导入"
+    }
   },
   "auth": {
     "illustration": "{name} 的皮肤",

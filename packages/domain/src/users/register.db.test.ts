@@ -9,6 +9,7 @@ import {
   type CoreDatabase,
 } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
+import type { EventEnvelope } from '@nextskin/plugin-sdk'
 import * as passwordCrypto from 'better-auth/crypto'
 import { afterAll, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import {
@@ -48,6 +49,7 @@ beforeAll(async () => {
 afterAll(async () => database?.cleanup())
 beforeEach(async () => {
   await database.db.deleteFrom('users').execute()
+  await database.db.deleteFrom('jobs').execute()
   await database.db.deleteFrom('settings').execute()
   messages.length = 0
   core = createCore({
@@ -167,6 +169,13 @@ test('注册写入与 Better Auth 相同的凭据行，可登录并读取会话�
     cape_texture_id: null,
   })
   expect(player.created_at).toBe(player.updated_at)
+  expect(
+    await database.db
+      .selectFrom('score_transactions')
+      .select(['delta', 'balance', 'reason'])
+      .where('user_id', '=', uid)
+      .execute(),
+  ).toEqual([{ delta: 1234, balance: 1234, reason: 'score.reasons.initial' }])
   const login = await request('/sign-in/email', { email: 'STEVE@example.test', password })
   expect(login.status).toBe(200)
   expect(await core.auth.getSessionUser(new Headers({ cookie: cookies(login) }), ROOT)).toEqual({
@@ -278,12 +287,38 @@ test('离线 UUID 已被改名角色占用时改用随机 v4；random 设置直�
     expect(row.uuid).toMatch(/^[a-f0-9]{12}4[a-f0-9]{3}[89ab][a-f0-9]{15}$/)
 })
 
+test('user.registered 随注册事务提交，注册失败时不留任务；初始积分为 0 不写流水', async () => {
+  const events: EventEnvelope<'user.registered'>[] = []
+  core.events.subscribe('user.registered', 'test:on:user.registered', {
+    run: ({ event }) => {
+      events.push(event)
+      return Promise.resolve()
+    },
+  })
+  await setting('user.initialScore', 0)
+  const { uid } = await core.users.register(input())
+  await expect(core.users.register(input({ playerName: 'Other' }))).rejects.toMatchObject({ code: 'email_taken' })
+  await core.jobs.drain()
+  expect(events).toHaveLength(1)
+  expect(events[0]).toMatchObject({
+    name: 'user.registered',
+    actor: { kind: 'user', uid, role: 'user' },
+    data: { user: { uid, nickname: 'Steve', role: 'user', avatarTid: null }, extra: {} },
+  })
+  expect(events[0]!.data.user.registeredAt).toBe(events[0]!.occurredAt)
+  expect(await countRows(database.db.selectFrom('jobs'))).toBe(0)
+  const user = await database.db.selectFrom('users').select('score').where('id', '=', uid).executeTakeFirstOrThrow()
+  expect(user.score).toBe(0)
+  expect(await countRows(database.db.selectFrom('score_transactions'))).toBe(0)
+})
+
 test('验证邮件在提交后入队，Better Auth 接受链接并验证邮箱；缓存实例读取当前邮件设置', async () => {
   // 先创建缓存实例，再启用邮件。
   await request('/get-session')
   await configureMail()
   const { uid } = await core.users.register(input())
-  await vi.waitFor(() => expect(messages).toHaveLength(1))
+  await core.jobs.drain()
+  expect(messages).toHaveLength(1)
   expect(messages[0]).toMatchObject({
     to: 'steve@example.test',
     subject: 'Verify your email for NextSkin',
@@ -315,9 +350,9 @@ test('验证邮件签发或入队失败不回滚注册；缺少站点地址不�
   expect(messages).toEqual([])
 })
 
-test('邮件队列入队失败仍然注册成功，日志不包含邮件或令牌', async () => {
+test('验证邮件入队失败仍然注册成功，日志不包含邮件或令牌', async () => {
   await configureMail()
-  const enqueue = vi.spyOn(core.mail.queue, 'enqueue').mockImplementation(() => {
+  const enqueue = vi.spyOn(core.mail, 'send').mockImplementation(() => {
     throw new Error('MAIL_TOKEN_CANARY')
   })
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -344,14 +379,17 @@ test.each([8, 128])('密码长度边界 %s 与 Better Auth 登录一致', async 
 test('找回密码入队收件人语言的邮件，令牌重设密码后旧会话失效，令牌不可重放', async () => {
   await configureMail()
   await core.users.register(input({ locale: 'zh-CN' }))
-  await vi.waitFor(() => expect(messages).toHaveLength(1))
+  await core.jobs.drain()
+  expect(messages).toHaveLength(1)
   const login = await request('/sign-in/email', { email: 'steve@example.test', password })
   expect(login.status).toBe(200)
   const cookie = cookies(login)
+  // Better Auth 的回调直接用 db 入队；哪次升级后回调进了它的事务，SQLite 上这里会以写锁超时失败（ADR-0021）
   expect(
     (await request('/request-password-reset', { email: 'steve@example.test', redirectTo: `${ROOT}/reset` })).status,
   ).toBe(200)
-  await vi.waitFor(() => expect(messages).toHaveLength(2))
+  await core.jobs.drain()
+  expect(messages).toHaveLength(2)
   expect(messages[1]?.subject).toBe('重设你在 NextSkin 的密码')
   expect(messages[1]?.text).toContain('1 小时内有效')
   const token = mailUrl(messages[1]!).pathname.split('/').at(-1)!
@@ -374,7 +412,9 @@ test('找回密码入队收件人语言的邮件，令牌重设密码后旧会�
 test('未配置发件人时不入队，找回密码明确报错；Better Auth 自带注册关闭', async () => {
   await setting('mail.transport', 'smtp')
   await core.users.register(input({ locale: null }))
+  await core.jobs.drain()
   expect(messages).toEqual([])
+  expect(await countRows(database.db.selectFrom('jobs'))).toBe(0)
   const reset = await request('/request-password-reset', { email: 'nobody@example.test' })
   expect(reset.status).toBe(503)
   expect(await reset.json()).toMatchObject({ code: 'mail_not_configured' })
