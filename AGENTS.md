@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-monorepo 骨架、工具链和 CI（`.github/workflows/ci.yml`）已经搭好（ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证和所有写操作还没有开始。
+monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证和所有写操作还没有开始。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
@@ -80,6 +80,7 @@ nextskin 启动器（进程监管 + 命令行）
 - **新设置项**：在设置注册表（`packages/domain/src/settings/registry.ts`）里声明类型和默认值，后台表单会自动生成，不要手写表单。
 - **新的或改动的协议行为**：先在 `tests/contract/src/cases.ts` 加用例、从 BS v6 录制，再实现。
 - **新包**：照抄现有包的 `package.json` 脚本和 `tsconfig.json`。包之间的依赖只用 `workspace:*` 声明；几个包共用的外部依赖，版本写进 `pnpm-workspace.yaml` 的 catalog。
+- **刻意不跟上游升级的依赖**（TS 6、`@types/node` 24、测试库镜像这类）：在 `renovate.json` 里加一条写明原因的 packageRule，否则 Renovate 会提 PR 升级它。
 
 ## 已知的坑
 

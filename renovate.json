@@ -1,0 +1,59 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "依赖升级（ADR-0013）。私有仓库在 Free 计划下每月只有 2000 分钟 CI：非大版本更新每周合成一个 PR，大版本要在 Dependency Dashboard 里勾选才开 PR，安全更新随时开",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    "security:minimumReleaseAgeNpm",
+    ":maintainLockFilesMonthly"
+  ],
+  "schedule": ["* * * * 1"],
+  "osvVulnerabilityAlerts": true,
+  "ignorePaths": ["**/node_modules/**", "spikes/**", "tests/contract/bs-v6/**"],
+  "packageRules": [
+    {
+      "description": "非大版本更新合成一个 PR，每周一次",
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "groupName": "非大版本更新",
+      "groupSlug": "non-major"
+    },
+    {
+      "description": "大版本升级要先读迁移说明，在 Dependency Dashboard 里勾选后才开 PR；勾选后不等每周的批次",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true,
+      "schedule": ["* * * * *"]
+    },
+    {
+      "description": "Next.js 锁定小版本（ADR-0013）：补丁常带安全修复，单独开 PR、不等每周的批次",
+      "matchPackageNames": ["next", "@next/**"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "Next.js 补丁",
+      "groupSlug": "next-patch",
+      "schedule": ["* * * * *"]
+    },
+    {
+      "description": "Next.js 锁定小版本（ADR-0013）：升小版本要在 Dependency Dashboard 里勾选，勾选后单独开 PR",
+      "matchPackageNames": ["next", "@next/**"],
+      "matchUpdateTypes": ["minor"],
+      "groupName": "Next.js",
+      "groupSlug": "next-minor",
+      "dependencyDashboardApproval": true,
+      "schedule": ["* * * * *"]
+    },
+    {
+      "description": "根目录的 typescript 是 TS 6，只给依赖编译器 API 的工具用（ADR-0014），typescript-eslint 8.71 只支持 6.1 以下；TS 7 是别名 typescript-native，不受这条限制",
+      "matchDepNames": ["typescript"],
+      "allowedVersions": "<6.1"
+    },
+    {
+      "description": "@types/node 跟着 engines.node 的下限 Node 24 走，免得用上 Node 24 没有的 API",
+      "matchPackageNames": ["@types/node"],
+      "allowedVersions": "<25"
+    },
+    {
+      "description": "测试矩阵的数据库版本是支持范围的下限（packages/db/AGENTS.md），升级等于改支持范围，手动决定",
+      "matchFileNames": ["packages/db/compose.yaml"],
+      "enabled": false
+    }
+  ]
+}
