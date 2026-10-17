@@ -7,97 +7,112 @@
  *
  * 每个命名空间先用 `initial` 清空 Tailwind 的默认值，页面只能用这里定义的 token（例如没有 bg-red-500）。
  *
- * 颜色取值是占位，等 DESIGN.md §2 的配色方向选定后替换。
+ * 每个 token 行尾的注释是它的用途，`pnpm design:sync` 把它们连同取值生成为 DESIGN.md §3 的表。
+ * 颜色是默认主题“钻石青”（DESIGN.md §2）；亮暗两套取值都要通过 tokens.test.ts 的对比度检查。
  */
 @theme static {
   --color-*: initial;
-  --color-bg: #f2f2ef;
-  --color-surface: #ffffff;
-  --color-surface-raised: #ffffff;
-  --color-surface-sunken: #e7e7e3;
-  --color-border: #c9c9c3;
-  --color-border-strong: #2b2b28;
-  --color-text: #1d1d1b;
-  --color-text-muted: #5f5f5a;
-  --color-text-inverse: #ffffff;
-  --color-accent: #2f6df6;
-  --color-accent-fg: #ffffff;
-  --color-success: #2e7d32;
-  --color-success-fg: #ffffff;
-  --color-warning: #b86e00;
-  --color-warning-fg: #ffffff;
-  --color-danger: #c62f2f;
-  --color-danger-fg: #ffffff;
-  --color-focus: #2f6df6;
-  --color-shadow: #1d1d1b;
-  --color-checker-a: #ffffff;
-  --color-checker-b: #e7e7e3;
+  --color-bg: #f2f3f5; /* 页面底色 */
+  --color-surface: #ffffff; /* 卡片、面板、页头 */
+  --color-surface-raised: #ffffff; /* 浮层：菜单、对话框、提示 */
+  --color-surface-sunken: #e9ebef; /* 凹陷区域：分段选择的底、hash 框、悬停行 */
+  --color-stage: #e1e4e9; /* 材质展台：亮暗两种模式都取中间调，深色和浅色皮肤都看得清 */
+  --color-border: #d5d8de; /* 常规分隔线、卡片边框 */
+  --color-border-strong: #3d434c; /* 输入框和次要按钮的边框、表头下沿 */
+  --color-text: #14171c; /* 正文 */
+  --color-text-muted: #5a616c; /* 次要文字 */
+  --color-text-inverse: #ffffff; /* 以 text 为底色时的文字（深色徽标、名牌） */
+  --color-accent: #08736b; /* 强调色：主要按钮、链接、选中态、标志的前脸 */
+  --color-accent-fg: #ffffff; /* 强调色上的文字 */
+  --color-accent-subtle: #e1eeed; /* 强调色淡底：选中的表格行、筛选标签、导航当前项、公告条 */
+  --color-success: #3a7a14; /* 成功；色相偏黄，和强调色拉开 */
+  --color-success-fg: #ffffff; /* 成功色上的文字 */
+  --color-warning: #985a00; /* 警告 */
+  --color-warning-fg: #ffffff; /* 警告色上的文字 */
+  --color-danger: #c32b2b; /* 危险、错误 */
+  --color-danger-fg: #ffffff; /* 危险色上的文字 */
+  --color-focus: #08736b; /* 焦点描边 */
+  --color-shadow: #1d2127; /* 硬边阴影；暗色模式下是比背景亮的位移色块 */
+  --color-checker-a: #ffffff; /* 透明区域棋盘格 */
+  --color-checker-b: #e3e6ea; /* 透明区域棋盘格 */
 
   --radius-*: initial;
-  --radius-none: 0;
-  --radius-sm: 2px;
-  --radius-md: 4px;
+  --radius-none: 0; /* 直角 */
+  --radius-sm: 2px; /* 控件、徽标 */
+  --radius-md: 4px; /* 卡片、面板；不提供更大的圆角 */
 
   --shadow-*: initial;
-  --shadow-pixel: 2px 2px 0 0 var(--color-shadow);
-  --shadow-pixel-lg: 4px 4px 0 0 var(--color-shadow);
+  --shadow-pixel: 2px 2px 0 0 var(--color-shadow); /* 按钮；按下时下沉 2px、阴影消失 */
+  --shadow-pixel-lg: 4px 4px 0 0 var(--color-shadow); /* 面板、对话框、悬停抬起的卡片 */
   --inset-shadow-*: initial;
   --drop-shadow-*: initial;
   --blur-*: initial;
 
   --font-*: initial;
-  --font-sans: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
-  --font-pixel: var(--font-sans);
-  --font-mono: ui-monospace, monospace;
+  --font-sans:
+    -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif; /* 正文、表单、按钮、用户产生的内容 */
+  --font-pixel:
+    'Fusion Pixel 12', var(--font-sans); /* 标题、导航、数字、固定标签；只配 text-pixel-* 字号（字体文件尚未接入） */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; /* hash、UID、邀请码、代码 */
 
   --text-*: initial;
-  --text-xs: 12px;
+  --text-xs: 12px; /* 辅助说明 */
   --text-xs--line-height: 16px;
-  --text-sm: 14px;
+  --text-sm: 14px; /* 后台正文、表格、标签 */
   --text-sm--line-height: 20px;
-  --text-base: 16px;
+  --text-base: 16px; /* 前台正文、按钮 */
   --text-base--line-height: 24px;
-  --text-lg: 20px;
+  --text-lg: 20px; /* 小标题 */
   --text-lg--line-height: 28px;
-  --text-xl: 24px;
+  --text-xl: 24px; /* 用户产生的标题（材质名） */
   --text-xl--line-height: 32px;
-  --text-2xl: 32px;
+  --text-2xl: 32px; /* 正文字体的大标题 */
   --text-2xl--line-height: 40px;
-  --text-3xl: 40px;
+  --text-3xl: 40px; /* 正文字体的特大标题 */
   --text-3xl--line-height: 48px;
+  --text-pixel-1: 12px; /* 像素字体 ×1：导航、表头、徽标、计数 */
+  --text-pixel-1--line-height: 16px;
+  --text-pixel-2: 24px; /* 像素字体 ×2：页面和区块标题、统计数字 */
+  --text-pixel-2--line-height: 32px;
+  --text-pixel-3: 36px; /* 像素字体 ×3：步骤序号、移动端主标题 */
+  --text-pixel-3--line-height: 48px;
+  --text-pixel-4: 48px; /* 像素字体 ×4：首页主标题 */
+  --text-pixel-4--line-height: 64px;
 
   --ease-*: initial;
-  --ease-step: steps(4, end);
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --duration-fast: 80ms;
-  --duration-base: 160ms;
-  --duration-slow: 240ms;
+  --ease-step: steps(4, end); /* 阶跃：按下、选中块移动、角色转身 */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); /* 少数需要平滑的过渡，例如面板展开 */
+  --duration-fast: 80ms; /* 按下、悬停 */
+  --duration-base: 160ms; /* 开关 */
+  --duration-slow: 240ms; /* 分段选择的选中块 */
 }
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 @layer base {
   [data-theme='dark'] {
-    --color-bg: #121312;
-    --color-surface: #1b1c1b;
-    --color-surface-raised: #242524;
-    --color-surface-sunken: #0d0e0d;
-    --color-border: #3a3b39;
-    --color-border-strong: #d8d8d2;
-    --color-text: #ecece6;
-    --color-text-muted: #a3a39c;
-    --color-text-inverse: #0b0c0b;
-    --color-accent: #6f9bff;
-    --color-accent-fg: #0b0c0b;
-    --color-success: #5cc463;
-    --color-success-fg: #0b0c0b;
-    --color-warning: #f0a53a;
-    --color-warning-fg: #0b0c0b;
+    --color-bg: #0e1013;
+    --color-surface: #16191d;
+    --color-surface-raised: #1f2328;
+    --color-surface-sunken: #0b0c0f;
+    --color-stage: #2a2f36;
+    --color-border: #2b3037;
+    --color-border-strong: #8b939e;
+    --color-text: #e7e9ec;
+    --color-text-muted: #9ba2ad;
+    --color-text-inverse: #0e1013;
+    --color-accent: #3dd6c4;
+    --color-accent-fg: #0e1013;
+    --color-accent-subtle: #1c3738;
+    --color-success: #8fce4f;
+    --color-success-fg: #0e1013;
+    --color-warning: #f0a63c;
+    --color-warning-fg: #0e1013;
     --color-danger: #ff6b6b;
-    --color-danger-fg: #0b0c0b;
-    --color-focus: #6f9bff;
-    --color-shadow: #6a6b68;
-    --color-checker-a: #242524;
-    --color-checker-b: #1b1c1b;
+    --color-danger-fg: #0e1013;
+    --color-focus: #3dd6c4;
+    --color-shadow: #3b424c;
+    --color-checker-a: #2a2f36;
+    --color-checker-b: #1f2328;
   }
 }

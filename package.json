@@ -19,6 +19,7 @@
     "e2e": "turbo run e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "design:sync": "pnpm --filter @nextskin/ui design:sync",
     "changeset": "changeset"
   },
   "devDependencies": {

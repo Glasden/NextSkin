@@ -12,6 +12,7 @@
     "lint": "eslint --max-warnings 0 .",
     "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
     "test": "vitest run",
+    "design:sync": "node scripts/design-sync.ts",
     "storybook": "storybook dev --port 6006 --no-open",
     "storybook:build": "storybook build"
   },

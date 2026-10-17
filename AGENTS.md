@@ -33,6 +33,7 @@ nextskin 启动器（进程监管 + 命令行）
 | `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑 `*.db.test.ts`（需要 Docker，测试库容器跑完后保留；`pnpm test` 只用 SQLite 跑） |
 | `pnpm test:contract` | 协议契约测试：回放从真实 BS v6 录制的用例，不需要 Docker，`pnpm check` 也会跑。录制见 `tests/contract/README.md` |
 | `pnpm storybook` | 组件工作台 |
+| `pnpm design:sync` | 改了 `packages/ui/src/theme.css` 之后，重新生成 DESIGN.md §3 的 token 表（不同步时 ui 的测试会失败） |
 | `pnpm e2e` | Playwright 端到端测试与截图回归；也经过 Next standalone 回放全部契约用例 |
 | `pnpm format` | Prettier 格式化 |
 
