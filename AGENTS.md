@@ -8,6 +8,7 @@ monorepo 骨架和工具链已经搭好（ADR-0014），各包里还只有占位
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
+- 核心表的设计在 `docs/schema.md`，跨表约定（时间、布尔、JSON、外键、UUID）见 ADR-0015。写迁移前先读。
 - 视觉与界面规范在 `DESIGN.md`。
 - 插件 API 草案在 `packages/plugin-sdk/`，该目录有自己的 AGENTS.md。
 - `spikes/` 是技术验证代码，结论写在各自的 README 和对应 ADR 里。这些代码不按产品标准维护，移植进正式代码时要重新审视。
