@@ -10,12 +10,12 @@
  * 一级字取自 Unihan 的 kTGH（字表序号 1–3500）。没有按字频细分：字频表来自 1980 年代的语料，
  * 界面用字（登录、注册、邮箱、页码……）散落在整个一级字表里，细分后一个页面照样要下载每一片。
  */
-import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { unzipSync } from 'fflate'
 import { Blob as HbBlob, Face } from 'harfbuzzjs'
 import subsetFont from 'subset-font'
 import { compress, decompress } from 'wawoff2'
+import { download } from './download.ts'
 
 const FONT = {
   version: '2026.09.25',
@@ -70,23 +70,6 @@ const cacheDir = new URL('../node_modules/.cache/pixel-font/', import.meta.url)
 
 const inRanges = (ranges: Range[], cp: number) => ranges.some(([from, to]) => cp >= from && cp <= to)
 const hex = (cp: number) => cp.toString(16).toUpperCase()
-
-async function fetchBytes(url: string) {
-  console.log(`下载 ${url}`)
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`下载失败：${res.status} ${url}`)
-  return new Uint8Array(await res.arrayBuffer())
-}
-
-async function download(source: { url: string; sha256: string }) {
-  const cached = new URL(source.sha256, cacheDir)
-  const data = existsSync(cached) ? readFileSync(cached) : await fetchBytes(source.url)
-  const actual = createHash('sha256').update(data).digest('hex')
-  if (actual !== source.sha256) throw new Error(`${source.url} 的 sha256 是 ${actual}，与记录的不符`)
-  mkdirSync(cacheDir, { recursive: true })
-  writeFileSync(cached, data)
-  return data
-}
 
 function unzip(zip: Uint8Array, select: (name: string) => boolean) {
   return unzipSync(zip, { filter: (file) => select(file.name) && !file.name.endsWith('/') })
@@ -198,13 +181,13 @@ function css(shards: Shard[]) {
 ${faces.join('\n')}`
 }
 
-const fontZip = await download(FONT)
+const fontZip = await download(FONT, new URL(FONT.sha256, cacheDir))
 const fontFiles = unzip(fontZip, (name) => name === FONT.file || name === 'OFL.txt' || name.startsWith('LICENSES/'))
 const font = Buffer.from(await decompress(fontFiles[FONT.file]!))
 const fontCodePoints = [...cmapOf(font)].sort((a, b) => a - b)
 
 const common = new Set([...EXTRA_COMMON].map((char) => char.codePointAt(0)!))
-const unihan = unzip(await download(UNIHAN), (name) => name === UNIHAN.file)
+const unihan = unzip(await download(UNIHAN, new URL(UNIHAN.sha256, cacheDir)), (name) => name === UNIHAN.file)
 const mappings = new TextDecoder().decode(unihan[UNIHAN.file])
 for (const [, cp, index] of mappings.matchAll(/^U\+([0-9A-F]+)\tkTGH\t2013:(\d+)$/gm)) {
   if (Number(index) <= 3500) common.add(parseInt(cp!, 16))

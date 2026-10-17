@@ -13,9 +13,10 @@ const preview: Preview = {
   decorators: [
     (Story, { globals }) => {
       document.documentElement.dataset.theme = globals.theme === 'dark' ? 'dark' : 'light'
-      // 截图回归按这个元素截取（visual/stories.spec.ts），四周留出硬边阴影和焦点框的位置
+      // 截图回归按这个元素截取（visual/stories.spec.ts），四周留出硬边阴影和焦点框的位置。
+      // 字体要在这里再设一次：Storybook 给外层的 .sb-wrapper 设了自己的字体
       return (
-        <div data-screenshot className="inline-block p-2">
+        <div data-screenshot className="inline-block p-2 font-sans text-text">
           <Story />
         </div>
       )

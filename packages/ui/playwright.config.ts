@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from '@playwright/test'
 
 // 组件截图回归（DESIGN.md §12）。浏览器跑在与 @playwright/test 同版本的官方镜像里，系统字体和渲染都与宿主机无关，
@@ -8,6 +9,8 @@ const { version } = createRequire(import.meta.url)('@playwright/test/package.jso
 const storybookPort = 6007
 const browserPort = 6008
 const container = 'nextskin-visual-browser'
+// 挂进容器的中文字体，见 visual/fonts.ts
+const fontsDir = fileURLToPath(new URL('node_modules/.cache/visual-fonts', import.meta.url))
 
 export default defineConfig({
   testDir: 'visual',
@@ -27,10 +30,12 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      // 上次异常退出时容器可能还在，先删掉；第一次运行要拉取镜像
+      // 上次异常退出时容器可能还在，先删掉；第一次运行要拉取镜像和字体
       command: [
-        `docker rm -f ${container} >/dev/null 2>&1;`,
+        `node visual/fonts.ts '${fontsDir}' &&`,
+        `{ docker rm -f ${container} >/dev/null 2>&1; true; } &&`,
         `docker run --rm --init --name ${container} -p 127.0.0.1:${browserPort}:${browserPort}`,
+        `-v '${fontsDir}:/usr/share/fonts/nextskin-visual:ro'`,
         `--user pwuser --workdir /home/pwuser mcr.microsoft.com/playwright:v${version}-noble`,
         `npx -y playwright@${version} run-server --port ${browserPort} --host 0.0.0.0`,
       ].join(' '),

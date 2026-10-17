@@ -1,5 +1,6 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { cx } from '../cx.ts'
+import { focusRing } from '../styles.ts'
 
 export interface ButtonProps extends Omit<
   BaseButton.Props,
@@ -18,7 +19,7 @@ export interface ButtonProps extends Omit<
 const base = cx(
   'relative inline-flex shrink-0 items-center justify-center rounded-sm border font-sans font-medium whitespace-nowrap select-none',
   'transition-[background-color,translate,box-shadow] duration-fast ease-step motion-reduce:transition-none',
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+  focusRing,
   // 移动端把点击区域扩到 44px（DESIGN.md §9）
   'pointer-coarse:after:absolute pointer-coarse:after:inset-x-0',
 )

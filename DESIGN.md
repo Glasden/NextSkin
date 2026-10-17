@@ -165,17 +165,20 @@
   - 使用最近邻过滤，画布背景透明，放在 `stage` 加网格的展台上；
   - 默认缓慢自动旋转，可以拖动；动作可选站立、行走、奔跑，可以隐藏外层；
   - 开启“减少动态效果”时停止自动旋转和动作。
-- 图标：以 pixelarticons 为底。它画在 24 格的网格上，很多 2 格宽的笔画落在奇数坐标，只有 24px、48px 时清晰，所以不缩到 16px 或 20px。控件高度按 §3 的 32 / 40 / 48px 安排。
+- 图标：以 pixelarticons 为底，按文件引入它的 React 组件（`pixelarticons/react/Check.js`）。它画在 24 格的网格上，很多 2 格宽的笔画落在奇数坐标，只有 24px、48px 时清晰，所以不缩到 16px 或 20px。控件高度按 §3 的 32 / 40 / 48px 安排。
 
 ## 6. 组件清单
 
-落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button。
+落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、Form、Field、Input、Checkbox、Alert、Link、Logo。
 
 | 组件 | 何时用 | 何时不用 |
 |---|---|---|
 | Button | primary 每个视图最多一个；danger 只用于不可逆操作；提交中用 `loading`，不要换成 `disabled` | 跳转到其他页面用 Link。按钮不接受 className，间距交给父元素 |
 | IconButton | 空间紧凑时的常见操作 | 含义不明显的操作；必须配 `aria-label` 和 Tooltip |
+| Form | 提交数据的表单：约束校验和服务端按字段名返回的错误显示在对应的 Field 下方 | — |
 | Field | 包裹所有表单控件，统一标签、帮助文字和错误信息的位置 | — |
+| Input | 单行文本，放在 Field 里；和同一行的 Button 取相同尺寸 | 多行文本改用 Textarea |
+| Checkbox | 需要点“保存”才生效的选项、同意条款；标签文字写在组件里 | 立即生效的开关，改用 Switch |
 | Switch | 立即生效的开关设置 | 需要点“保存”才生效的表单，改用 Checkbox |
 | SegmentedControl | 三到五个互斥选项的即时切换，例如材质类型、3D 预览的动作 | 选项多或需要说明时，改用 Tabs 或 Select |
 | Chip | 可以多选的筛选条件 | 互斥的选项，改用 SegmentedControl |
@@ -194,6 +197,7 @@
 | PlayerChip | 角色名加头像，例如“正在使用的角色” | 用户（账号），改用 PlayerHead 加昵称 |
 | Podium | 首页的“本周收藏最多” | 其他排行，改用列表 |
 | Logo | 页头、后台侧栏、页脚 | — |
+| Link | 跳转到其他页面；站内跳转用 `render` 换成框架的链接组件 | 执行操作，改用 Button |
 | EmptyState、Skeleton、Pagination、Menu、Tooltip、Badge | 见各自 story | |
 
 ## 7. 状态模式
@@ -253,7 +257,7 @@
 - token 用 `@theme static` 全量输出：运行时插件的 CSS 引用宿主的 token 变量，宿主自己没用到的 token 也必须存在于宿主 CSS 里。
 - lint：在 `packages/ui` 以外，禁止原始色值、任意值类（`bg-[#…]`、`p-[13px]`）以及内联样式中的颜色。
 - 每个组件都有 story，并作为交互测试运行（`pnpm test`）。
-- 截图回归：`pnpm test:visual` 给每个 story 拍亮色、暗色两张截图，和 `packages/ui/visual/__screenshots__` 里的基线比较。浏览器跑在与 `@playwright/test` 同版本的官方 Docker 镜像里，系统字体和渲染与宿主机无关，本地和 CI 共用一套基线。页面的截图（包括移动端宽度）以后放进 e2e。
+- 截图回归：`pnpm test:visual` 给每个 story 拍亮色、暗色两张截图，和 `packages/ui/visual/__screenshots__` 里的基线比较。浏览器跑在与 `@playwright/test` 同版本的官方 Docker 镜像里，系统字体和渲染与宿主机无关，本地和 CI 共用一套基线。镜像里的中文字体只有带点阵字形的文泉驿正黑，所以另外挂进 Noto Sans CJK SC（`packages/ui/visual/fonts.ts`），中文按 Linux 用户常见的字体渲染。页面的截图（包括移动端宽度）以后放进 e2e。
 - 正反示例：Storybook 落地后，用截图填充本节。
 
 ## 附录：备选主题的取值
