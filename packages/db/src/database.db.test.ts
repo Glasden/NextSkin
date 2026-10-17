@@ -92,3 +92,18 @@ test('MySQL 拒绝 LOCAL INFILE，不泄露文件参数且连接仍可使用', a
   expect((await sql<{ n: number }>`select count(*) as n from local_load`.execute(db)).rows).toEqual([{ n: 0 }])
   expect((await sql<{ n: number }>`select 1 as n`.execute(db)).rows).toEqual([{ n: 1 }])
 })
+
+test('非 UTC 进程写入 MySQL 日期仍保存 UTC 字面值且读回时间点不变', async () => {
+  // SQLite 不接受 Date，PG 使用 timestamptz；此回归专门检查 mysql2 的 datetime 编解码。
+  if (dialectOf(db) !== 'mysql') return
+  expect(new Date('2026-01-01T00:00:00.000Z').getTimezoneOffset()).toBe(-480)
+  await sql`create table timezone_dates (value datetime(3) not null)`.execute(db)
+  const value = new Date('2026-01-01T00:00:00.000Z')
+  await sql`insert into timezone_dates (value) values (${value})`.execute(db)
+  const {
+    rows: [row],
+  } = await sql<{ literal: string; value: Date }>`
+    select left(date_format(value, '%Y-%m-%d %H:%i:%s.%f'), 23) as literal, value from timezone_dates`.execute(db)
+  expect(row?.literal).toBe('2026-01-01 00:00:00.000')
+  expect(row?.value.toISOString()).toBe(value.toISOString())
+})

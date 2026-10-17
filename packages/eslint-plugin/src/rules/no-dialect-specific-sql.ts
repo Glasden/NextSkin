@@ -39,6 +39,29 @@ function hasQueryStart(node: Expression): boolean {
   }
 }
 
+function isColumnDefinition(node: Rule.Node, object: Expression, context: Rule.RuleContext): boolean {
+  let root = unwrapChain(object)
+  while (root.type === 'CallExpression') {
+    const callee = unwrapChain(root.callee)
+    if (callee.type !== 'MemberExpression') return false
+    root = unwrapChain(callee.object)
+  }
+  if (root.type !== 'Identifier') return false
+  // 用 ESLint 的词法绑定确认接收者，避免嵌套作用域里的同名对象被误认成列。
+  const variable = context.sourceCode
+    .getScope(node)
+    .references.find((reference) => reference.identifier === root)?.resolved
+  const definition = variable?.defs.find((definition) => definition.type === 'Parameter')
+  if (!definition || definition.type !== 'Parameter') return false
+  const callback = definition.node
+  if (callback.type !== 'ArrowFunctionExpression' && callback.type !== 'FunctionExpression') return false
+  if (callback.params[0] !== definition.name) return false
+  const call = context.sourceCode.getAncestors(callback).at(-1)
+  if (call?.type !== 'CallExpression' || call.arguments[2] !== callback) return false
+  const method = memberName(unwrapChain(call.callee))
+  return method === 'addColumn' || method === 'modifyColumn'
+}
+
 const uniqueMethods = new Map([
   ['onConflict', 'conflict'],
   ['onDuplicateKeyUpdate', 'upsert'],
@@ -77,6 +100,8 @@ const rule: Rule.RuleModule = {
     docs: { description: '禁止绕过 packages/db 辅助函数使用方言专属 SQL 或假定聚合返回类型' },
     schema: [],
     messages: {
+      references:
+        'ADR-0015：MySQL 会忽略列定义里的 references，导致外键未生效；建表时请用 addForeignKeyConstraint，给已有表加列时请用 packages/db 的 addForeignKeyColumn(db, options)。',
       conflict:
         '不变量 6：MySQL/MariaDB 不支持 onConflict；请用 packages/db 的 insertOrIgnore(db, table, values, conflictColumns) 或 upsert(db, table, { values, conflict, update })。',
       upsert:
@@ -126,6 +151,8 @@ const rule: Rule.RuleModule = {
         const messageId = uniqueMethods.get(name) ?? (hasQueryStart(object) ? queryMethods.get(name) : undefined)
         if (messageId) {
           context.report({ node, messageId })
+        } else if (name === 'references' && isColumnDefinition(node, object, context)) {
+          context.report({ node, messageId: 'references' })
         } else if (name === 'createTable' && memberName(object) === 'schema') {
           context.report({ node, messageId: 'createTable' })
         } else if (name === 'addColumn' || name === 'modifyColumn') {

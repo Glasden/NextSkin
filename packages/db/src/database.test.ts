@@ -46,6 +46,7 @@ test('MySQL 白名单 TLS 配置经过解析，不把原始 URL 交给驱动', (
     password: '',
     database: 'test',
     charset: 'utf8mb4',
+    timezone: 'Z',
     connectionLimit: 10,
     multipleStatements: false,
     resetOnRelease: false,

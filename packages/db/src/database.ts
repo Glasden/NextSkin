@@ -37,6 +37,7 @@ export function createDatabase<DB>(config: DatabaseConfig): Kysely<DB> {
       database: decodeCredential(url.pathname.slice(1)),
       connectionLimit: config.poolSize ?? 10,
       charset: 'utf8mb4',
+      timezone: 'Z',
       multipleStatements: false,
       resetOnRelease: false,
       flags: ['-LOCAL_FILES'],

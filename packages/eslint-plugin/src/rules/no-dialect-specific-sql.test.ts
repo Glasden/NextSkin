@@ -60,6 +60,25 @@ tester.run('no-dialect-specific-sql', rule, {
       `db['insertInto']('users').${name}()`,
       `db.insertInto('users')['${name}']()`,
     ]),
+    {
+      name: '嵌套函数的同名参数不是列定义',
+      code: 'table.addColumn("user_id", "integer", c => { function other(c) { return c.references("document") } return c })',
+    },
+    {
+      name: '内层变量遮蔽列定义时不误报',
+      code: 'table.addColumn("user_id", "integer", c => { { const c = other; c.references("document") } return c })',
+    },
+    {
+      name: '回调第二个参数不是列定义',
+      code: 'table.addColumn("user_id", "integer", (c, other) => other.references("document"))',
+    },
+    'other.references("document")',
+    'other.references("users.id")',
+    'table.addColumn("user_id", "integer", c => c.references)',
+    'table.addColumn("user_id", "integer", c => other.references("users.id"))',
+    'table.addColumn("user_id", "integer", c => c["references"]("users.id"))',
+    'table.addForeignKeyConstraint("fk_user", ["user_id"], "users", ["id"])',
+    'addForeignKeyColumn(db, options)',
     'foo.createTable("users")',
     'schema.createTable("users")',
     'db.schema().createTable("users")',
@@ -101,6 +120,13 @@ tester.run('no-dialect-specific-sql', rule, {
     '// db.insertInto("users").returningAll()\nconst value = "onConflict"',
   ],
   invalid: [
+    ...[
+      'table.addColumn("user_id", "integer", c => c.references("users.id"))',
+      'table.addColumn("user_id", "integer", col => col.notNull().references("users.id").onDelete("cascade"))',
+      'table.modifyColumn("user_id", "integer", function (column) { return column.references("users.id") })',
+      'table?.addColumn?.("user_id", "integer", c => c?.notNull?.()?.references?.("users.id"))',
+      'table.addColumn("user_id", "integer", c => { return c.references("users.id") })',
+    ].map((code) => ({ name: '列定义内联外键被禁止', code, errors: [{ messageId: 'references' }] })),
     ...uniqueMethods.flatMap(([name, messageId]) =>
       [`x.${name}()`, `x?.${name}()`, `x.${name}?.()`, `x?.${name}?.()`].map((code) => ({
         code,

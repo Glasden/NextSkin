@@ -295,3 +295,121 @@ export async function syncAutoIncrement<DB, TB extends keyof DB & string>(
 function isMysqlDuplicate(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'errno' in error && error.errno === 1062
 }
+
+// 品牌只存在于类型层；普通字符串必须先通过日期转换或格式校验。
+declare const isoTimestampBrand: unique symbol
+export type IsoTimestamp = string & { readonly [isoTimestampBrand]: true }
+export type SwitchValue = 0 | 1
+
+const ISO_TIMESTAMP_PATTERN = '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$'
+const ISO_TIMESTAMP_REGEXP = new RegExp(ISO_TIMESTAMP_PATTERN)
+
+export function isIsoTimestamp(value: string): value is IsoTimestamp {
+  if (value.length !== 24 || !ISO_TIMESTAMP_REGEXP.test(value)) return false
+  const date = new Date(value)
+  return Number.isFinite(date.getTime()) && date.toISOString() === value
+}
+
+export function toIsoTimestamp(date: Date): IsoTimestamp {
+  if (!Number.isFinite(date.getTime()) || date.getUTCFullYear() < 0 || date.getUTCFullYear() > 9999) {
+    throw new RangeError('ISO 时间必须是有效日期，且 UTC 年份在 0000–9999 之间')
+  }
+  return date.toISOString() as IsoTimestamp
+}
+
+/** CHECK 只检查格式；真实日历日期由 isIsoTimestamp / toIsoTimestamp 校验。 */
+export function isoTimestampColumn<DB, C extends string>(
+  db: Kysely<DB>,
+  column: C,
+  options: { nullable?: boolean } = {},
+) {
+  const ref = sql.ref(column)
+  const dialect = dialectOf(db)
+  const format =
+    dialect === 'sqlite'
+      ? sql<boolean>`${ref} glob ${sql.lit('dddd-dd-ddTdd:dd:dd.dddZ'.replaceAll('d', '[0-9]'))}`
+      : dialect === 'mysql'
+        ? // ICU 和 PCRE 都识别 (?-i)；不使用 BINARY（MySQL 8 的 ICU 拒绝二进制操作数）。
+          sql<boolean>`${ref} regexp ${sql.lit('(?-i)' + ISO_TIMESTAMP_PATTERN)}`
+        : sql<boolean>`${ref} ~ ${sql.lit(ISO_TIMESTAMP_PATTERN)}`
+  // SQLite 的文本 length / glob 遇到 NUL 就停止；按字节计长才能拒绝隐藏后缀。
+  const length = dialect === 'sqlite' ? sql`length(cast(${ref} as blob))` : sql`length(${ref})`
+  return <TB extends string, Columns extends string>(builder: CreateTableBuilder<TB, Columns>) =>
+    builder.addColumn(column, 'varchar(24)', (definition) => {
+      const checked = definition.check(sql<boolean>`${length} = 24 and ${format}`)
+      return options.nullable ? checked : checked.notNull()
+    })
+}
+
+export function switchColumn<DB, C extends string>(
+  db: Kysely<DB>,
+  column: C,
+  options: { defaultValue?: SwitchValue } = {},
+) {
+  // 保持所有列辅助函数一致的调用方式，并在构造时检查支持的方言。
+  dialectOf(db)
+  return <TB extends string, Columns extends string>(builder: CreateTableBuilder<TB, Columns>) =>
+    builder.addColumn(column, 'smallint', (definition) => {
+      const checked = definition.notNull().check(sql<boolean>`${sql.ref(column)} in (0, 1)`)
+      return options.defaultValue === undefined ? checked : checked.defaultTo(options.defaultValue)
+    })
+}
+
+export function longTextType<DB>(db: Kysely<DB>) {
+  return dialectOf(db) === 'mysql' ? sql`longtext` : sql`text`
+}
+
+export async function addForeignKeyColumn<DB>(
+  db: Kysely<DB>,
+  options: {
+    table: string
+    column: string
+    references: { table: string; column: string }
+    onDelete: 'cascade' | 'set null' | 'restrict' | 'no action'
+    constraintName: string
+  },
+): Promise<void> {
+  const actions = {
+    cascade: sql`cascade`,
+    'set null': sql`set null`,
+    restrict: sql`restrict`,
+    'no action': sql`no action`,
+  }
+  const action = actions[options.onDelete]
+  if (!action) throw new Error('外键删除行为无效；请使用 cascade、set null、restrict 或 no action')
+  const reference = sql`references ${sql.id(options.references.table)} (${sql.id(options.references.column)}) on delete ${action}`
+  const constraint = sql`constraint ${sql.id(options.constraintName)}`
+  const addition =
+    dialectOf(db) === 'sqlite'
+      ? sql` ${constraint} ${reference}`
+      : sql`, add ${constraint} foreign key (${sql.id(options.column)}) ${reference}`
+  // 没有 NOT NULL 或非 NULL 默认值；SQLite 外键开启时只允许以 NULL 回填旧行。
+  await sql`alter table ${sql.id(options.table)} add column ${sql.id(options.column)} integer${addition}`.execute(db)
+}
+
+export function authDateType<DB>(db: Kysely<DB>) {
+  const dialect = dialectOf(db)
+  return dialect === 'mysql' ? sql`datetime(3)` : dialect === 'postgres' ? sql`timestamptz(3)` : sql`date`
+}
+
+export function authBooleanType<DB>(db: Kysely<DB>) {
+  return dialectOf(db) === 'sqlite' ? sql`integer` : sql`boolean`
+}
+
+export function readAuthDate(value: unknown): IsoTimestamp {
+  if (value instanceof Date) return toIsoTimestamp(value)
+  if (typeof value === 'string' && isIsoTimestamp(value)) return value
+  throw new TypeError('认证日期必须是有效的 Date 或 UTC 毫秒 ISO 时间字符串')
+}
+
+export function writeAuthDate<DB>(db: Kysely<DB>, value: IsoTimestamp): string | Date {
+  // 品牌不能保护 JavaScript 调用方或被断言的值，写入前仍需校验。
+  const timestamp = readAuthDate(value)
+  return dialectOf(db) === 'sqlite' ? timestamp : new Date(timestamp)
+}
+
+export function readAuthBoolean(value: unknown): boolean {
+  if (typeof value === 'boolean') return value
+  if (value === 0 || value === 1) return value === 1
+  throw new TypeError('认证布尔值必须是 boolean 或数字 0 / 1')
+}

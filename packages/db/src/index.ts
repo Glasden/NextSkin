@@ -1,5 +1,18 @@
 export { createDatabase, type DatabaseConfig } from './database.ts'
 export {
+  isIsoTimestamp,
+  toIsoTimestamp,
+  isoTimestampColumn,
+  switchColumn,
+  longTextType,
+  addForeignKeyColumn,
+  authDateType,
+  authBooleanType,
+  readAuthDate,
+  writeAuthDate,
+  readAuthBoolean,
+  type IsoTimestamp,
+  type SwitchValue,
   dialectOf,
   insertReturningId,
   insertOrIgnore,

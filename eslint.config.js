@@ -36,6 +36,11 @@ export default defineConfig(
     rules: { 'nextskin/no-sqlite-dialect': 'off', 'nextskin/no-dialect-specific-sql': 'off' },
   },
   {
+    // 核心迁移只能通过辅助函数处理方言差异（ADR-0005、ADR-0015），所以重新打开
+    files: ['packages/db/src/migrations/**'],
+    rules: { 'nextskin/no-dialect-specific-sql': 'error' },
+  },
+  {
     // 规则自己的测试用例里全是反例
     files: ['packages/eslint-plugin/src/**/*.test.ts'],
     rules: Object.fromEntries(Object.keys(nextskin.rules).map((name) => [`nextskin/${name}`, 'off'])),

@@ -9,6 +9,14 @@ Kysely 实例、SQLite 方言、迁移运行器，以及隔离四种数据库差
   - 需要不区分大小写的字段（角色名、邮箱）要在 schema 里显式处理，例如另存一列规范化后的值，并在这列上建唯一索引；
   - `utf8mb4_bin` 比较时会忽略结尾空格，PG 和 SQLite 不会，所以输入要在领域层去掉首尾空格；
   - 有索引或唯一约束的字符串列要用 `varchar(n)`：MySQL 不能直接给 `text` 建索引，并且单个索引最长 3072 字节，即 `varchar(768)`。
+- 列类型按 ADR-0015 和 `docs/schema.md` 的类型记号选辅助函数：
+  - 时间用 `isoTimestampColumn`，值只能来自 `toIsoTimestamp`；
+  - 0 / 1 开关用 `switchColumn`；
+  - 可能超过 64 KB 的文本用 `longTextType`；
+  - Better Auth 声明的日期、布尔字段用 `authDateType`、`authBooleanType`，直接读写这些列时用 `readAuthDate`、`writeAuthDate`、`readAuthBoolean` 转换。
+- 外键在建表时用表级的 `addForeignKeyConstraint`；给已有的表加外键列用 `addForeignKeyColumn`，只支持可空的整数列。不要用列定义里的 `.references()`：MySQL 会忽略它。
+- MySQL 写入 `varchar` 时，超长部分如果是末尾空白（包括换行），会先被截掉再检查 CHECK。所以 ISO 时间列的 CHECK 拦不住"合法时间加换行"这种输入，格式由写入时只用 `toIsoTimestamp` 来保证。
+- 核心迁移放在 `src/migrations/`。lint 在这个目录里重新生效：迁移里的方言差异同样只能通过辅助函数处理。
 - MySQL 的 DDL 不在事务里，迁移中途失败会留下一半的改动，重跑时还会因为表已存在而失败。一个迁移只做一件事；迁移合入之后不再修改。
 - SQLite 和 PG 的迁移在事务里执行。SQLite 重建表时，用 `pragma defer_foreign_keys = on`，不要用 `pragma foreign_keys = off`：后者在事务里不生效。
 - 迁移按名字的字典序执行，名字用 `0001_xxx` 的格式。
@@ -24,6 +32,7 @@ Kysely 实例、SQLite 方言、迁移运行器，以及隔离四种数据库差
 ## 测试
 
 - `*.db.test.ts` 会在四种数据库上各跑一遍。用 `@nextskin/db/testing` 的 `createTestDatabase()` 在 `beforeAll` 里拿到一个独立的空库（SQLite 是临时文件，其他三种是随机命名的库），在 `afterAll` 里调用 `cleanup()`。
+- 测试进程跑在 `Asia/Shanghai` 时区（见两个 vitest 配置），故意让依赖本地时区的写法失败。
 - 用例里不按方言分支断言。确实是有意的差异（例如上面 `insertOrIgnore` 的冲突范围）时，写明原因。
 - `pnpm test` 只用 SQLite 跑这些用例，不需要 Docker；`pnpm test:db` 会先起 `compose.yaml` 里的 MySQL 8.4、MariaDB 10.11、PostgreSQL 15，再跑四种数据库。容器跑完后保留，方便重跑。停掉容器：`docker compose -f packages/db/compose.yaml down`。
 - 只跑一种数据库：`pnpm --filter @nextskin/db exec vitest run --config vitest.db.config.ts --project db:mysql`。连接别的服务器时，用 `NEXTSKIN_TEST_{MYSQL,MARIADB,POSTGRES}_URL` 覆盖，账号要有建库和删库的权限。
