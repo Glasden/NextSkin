@@ -1,0 +1,29 @@
+{
+  "rendererVersion": 1,
+  "figures": {
+    "haka": {
+      "type": "steve",
+      "textureScale": 1
+    },
+    "hatsune_miku": {
+      "type": "alex",
+      "textureScale": 1
+    },
+    "sethbling": {
+      "type": "steve",
+      "textureScale": 1
+    },
+    "ironman_hd": {
+      "type": "steve",
+      "textureScale": 8
+    },
+    "mojang_cape": {
+      "type": "cape",
+      "textureScale": 1
+    },
+    "legacy_cape": {
+      "type": "cape",
+      "textureScale": 1
+    }
+  }
+}

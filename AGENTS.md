@@ -66,6 +66,7 @@ nextskin 启动器（进程监管 + 命令行）
 | `packages/domain` | 领域用例与查询服务，按业务领域分目录（users、players、textures、closet……） |
 | `packages/db` | Kysely 实例、迁移、方言辅助函数 |
 | `packages/ui` | 组件库与设计 token（`src/theme.css` 是 token 的唯一来源） |
+| `packages/skin` | 材质的前处理和 2D 渲染，纯函数，服务端出图和浏览器上传页共用（ADR-0017） |
 | `packages/plugin-sdk`、`plugin-host`、`plugin-testing` | 插件 API、插件运行时、插件测试工具 |
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |
 | `packages/importer` | 从 BS v6 只读导入 |

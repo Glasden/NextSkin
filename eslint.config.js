@@ -23,6 +23,24 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
 
+  {
+    files: ['packages/skin/src/**/*.ts'],
+    ignores: ['packages/skin/src/**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [{ group: ['node:*'], message: '这个包要在浏览器里运行（ADR-0017）' }],
+        },
+      ],
+      'no-restricted-globals': [
+        'error',
+        { name: 'Buffer', message: '这个包要在浏览器里运行（ADR-0017）' },
+        { name: 'process', message: '这个包要在浏览器里运行（ADR-0017）' },
+      ],
+    },
+  },
+
   // 不变量写成的规则（packages/eslint-plugin）
   nextskin.configs.recommended,
   {

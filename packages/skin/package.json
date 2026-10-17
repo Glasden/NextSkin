@@ -1,0 +1,22 @@
+{
+  "name": "@nextskin/skin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "纯 RGBA 材质前处理与 2D 渲染（ADR-0017）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run",
+    "golden": "node scripts/golden.ts"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/pngjs": "6.0.5",
+    "pngjs": "7.0.0",
+    "vitest": "catalog:"
+  }
+}
