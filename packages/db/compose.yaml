@@ -1,0 +1,43 @@
+name: nextskin-test-db
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: nextskin-test
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - '127.0.0.1:33306:3306'
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ['CMD-SHELL', 'mysql -h127.0.0.1 -uroot -p"$$MYSQL_ROOT_PASSWORD" -e "SELECT 1"']
+      interval: 2s
+      timeout: 5s
+      retries: 60
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: nextskin-test
+      MARIADB_ROOT_HOST: '%'
+    ports:
+      - '127.0.0.1:33307:3306'
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: 2s
+      timeout: 5s
+      retries: 60
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: nextskin-test
+    ports:
+      - '127.0.0.1:35432:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U postgres -d postgres']
+      interval: 2s
+      timeout: 5s
+      retries: 60

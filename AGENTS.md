@@ -28,7 +28,7 @@ nextskin 启动器（进程监管 + 命令行）
 | `pnpm dev` | 启动开发环境，不依赖任何外部服务（默认 SQLite + 种子数据） |
 | `pnpm check` | lint + 类型检查 + 单元测试 + 格式检查；提交前必须通过 |
 | `pnpm test <path>` | 只跑指定文件或目录的测试 |
-| `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑数据库测试（需要 Docker；还没有用例） |
+| `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑 `*.db.test.ts`（需要 Docker，测试库容器跑完后保留；`pnpm test` 只用 SQLite 跑） |
 | `pnpm test:contract` | 协议契约测试（用例录制自真实的 BS v6；还没有用例） |
 | `pnpm storybook` | 组件工作台 |
 | `pnpm e2e` | Playwright 端到端测试与截图回归 |
@@ -45,7 +45,7 @@ nextskin 启动器（进程监管 + 命令行）
 3. **已存在的材质文件永不重新编码。新材质的 hash 是像素 hash：sha256(u32be(宽) ‖ u32be(高) ‖ RGBA8 像素)，不是文件字节的 hash。** hash 既是存储键，也是公开 URL 的一部分；文件字节的 hash 会随 zlib 版本和 CPU 架构变化（ADR-0008）。
 4. **写操作只能经过领域用例。** Route handler 里不写 SQL，也不写业务规则；不用 Server Actions 写数据。见 ADR-0004。守护：包依赖（`apps/web`、`packages/api` 不依赖 `@nextskin/db`）、lint `nextskin/no-use-server`。
 5. **积分、点赞数这类计数，在事务内原子更新。** 禁止"先读、再算、再写回"。
-6. **数据库代码必须在四种数据库上都通过。** `returning`、upsert、自增主键、`count` 只能通过 `packages/db` 的辅助函数使用。见 ADR-0005。
+6. **数据库代码必须在四种数据库上都通过。** `returning`、upsert、自增主键、`count` 只能通过 `packages/db` 的辅助函数使用。见 ADR-0005。守护：`pnpm test:db`。
 7. **不使用 `NEXT_PUBLIC_*`，站点配置存在数据库里。** 守护：lint。
 8. **材质和任何用户上传的图片都不经过 `next/image`，Image Optimization 保持关闭。** 守护：lint、`next.config.ts`。
 9. **插件 SDK 的公开 API 一旦变化，必须附 changeset，并通过 `packages/plugin-sdk/type-tests`。** 它是对社区的契约。守护：api-extractor 报告（见该包的 AGENTS.md）。

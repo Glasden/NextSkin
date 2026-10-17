@@ -1,3 +1,15 @@
-// 数据库方言、迁移和四种数据库的辅助函数放在这里（ADR-0005、ADR-0008）。
-// 只有 @nextskin/domain 依赖本包：页面和 HTTP 层写不出直接查库的代码（不变量 4）。
-export {}
+export { createDatabase, type DatabaseConfig } from './database.ts'
+export {
+  dialectOf,
+  insertReturningId,
+  insertOrIgnore,
+  upsert,
+  countRows,
+  toNumber,
+  createTable,
+  autoIncrementId,
+  syncAutoIncrement,
+  type DatabaseDialect,
+} from './helpers.ts'
+export { migrateToLatest, type MigrationOptions } from './migrations.ts'
+export { SqliteWriteLockTimeoutError } from './sqlite/dialect.ts'

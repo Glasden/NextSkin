@@ -21,7 +21,8 @@
     },
     "test:db": {
       "dependsOn": ["transit"],
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["NEXTSKIN_TEST_*"]
     },
     "test:contract": {
       "dependsOn": ["transit"]

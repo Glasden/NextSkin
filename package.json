@@ -13,7 +13,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "vitest run",
-    "test:db": "turbo run test:db",
+    "test:db": "docker compose -f packages/db/compose.yaml up -d --wait && turbo run test:db",
     "test:contract": "turbo run test:contract",
     "storybook": "turbo run storybook",
     "e2e": "turbo run e2e",

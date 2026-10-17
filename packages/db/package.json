@@ -5,16 +5,23 @@
   "description": "Kysely 实例、迁移、方言辅助函数（ADR-0005、ADR-0008）",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "lint": "eslint --max-warnings 0 .",
-    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p ."
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run",
+    "test:db": "vitest run --config vitest.db.config.ts"
   },
   "dependencies": {
-    "kysely": "catalog:"
+    "kysely": "catalog:",
+    "mysql2": "catalog:",
+    "pg": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "catalog:"
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "vitest": "catalog:"
   }
 }
