@@ -27,7 +27,7 @@ export const Grid: Story = {
   render: () => (
     <div className="h-88 w-80">
       <Stage grid>
-        <SkinFigure {...fixture('default-skin')} scale={8} alt="默认皮肤" loading="eager" />
+        <SkinFigure {...fixture('default-skin')} scale={8} alt="cxchency 的皮肤" loading="eager" />
       </Stage>
     </div>
   ),
