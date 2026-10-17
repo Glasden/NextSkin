@@ -9,14 +9,18 @@
   },
   "scripts": {
     "lint": "eslint --max-warnings 0 .",
-    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p ."
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run",
+    "test:db": "vitest run --config vitest.db.config.ts"
   },
   "dependencies": {
     "@nextskin/db": "workspace:*",
     "@nextskin/plugin-sdk": "workspace:*",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "kysely": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "catalog:"
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
   }
 }

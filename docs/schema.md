@@ -104,7 +104,7 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | width | integer | `active` 时非空 | |
 | height | integer | `active` 时非空 | |
 | size_bytes | integer | `active` 时非空 | |
-| ref_count | integer | 非空 | 引用这个文件的 `textures` 条数。增删材质条目时，在同一事务里原子增减 |
+| ref_count | integer | 非空，不小于 0 | 引用这个文件的 `textures` 条数。增删材质条目时，在同一事务里原子增减 |
 | status | varchar(16) | 非空 | `pending`（上传中）、`active`、`deleting` 之一 |
 | claim_id | varchar(36) | 可空 | 当前认领的随机标识。认领、开始删除时换新值 |
 | status_changed_at | 时间 | 非空 | 进入当前状态的时间，用来判断认领是否过期、删除中的行能否开始删 |
@@ -217,8 +217,8 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | value | 长文本 | 非空 | JSON |
 | updated_at | 时间 | 非空 | |
 
-- 每个设置项的类型和默认值在设置注册表里声明，表里只存和默认值不同的项。
-- 机密项（例如 Yggdrasil 的签名私钥）用 `.env` 里的密钥加密后存储，导出诊断包时排除。代价：丢了 `.env` 里的密钥，这些值也就找不回来了，与 Better Auth 存 `jwks` 私钥的方式相同。
+- 每个设置项的类型和默认值在设置注册表（`packages/domain/src/settings/registry.ts`）里声明，表里只存和默认值不同的项。核心的键名用点分隔，例如 `site.url`、`yggdrasil.signingKey`。
+- 机密项（例如 Yggdrasil 的签名私钥）用 `.env` 里的 `NEXTSKIN_SECRET` 加密后存储（AES-256-GCM，附加数据绑定 namespace 和 key，信封带版本号，见 `settings/codec.ts`），导出诊断包时排除。代价：丢了 `.env` 里的密钥，这些值也就找不回来了，与 Better Auth 存 `jwks` 私钥的方式相同。
 
 ## 以下各表只定了要点，随对应切片细化
 
@@ -353,7 +353,17 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 - 授权类型设为授权码和刷新令牌，与 Passport 对第三方应用开放的一致。
 - **未解决**：Passport 的保密客户端在令牌端点既可以用 HTTP Basic 传 secret，也可以放在请求体里；Better Auth 只接受客户端登记的那一种（`client_secret_basic` 或 `client_secret_post`），用另一种会返回 `invalid_client`。导入器不知道每个第三方应用用的是哪一种。认证切片要让导入的保密客户端两种方式都能用，并写测试。
 
-**options → settings**：只导入有对应设置项的键，对照表随设置注册表定。其中 `ygg_private_key` 存为 Yggdrasil 签名私钥，`ygg_uuid_algorithm` 决定以后新角色的 UUID 算法。
+**options → settings**：只导入有对应设置项的键，对照表随设置注册表定。`ygg_uuid_algorithm` 决定以后新角色的 UUID 算法。已经有的项：
+
+| BS | NextSkin | 规则 |
+|---|---|---|
+| site_url | site.url | |
+| site_name | site.name | |
+| cache_expire_time | cache.publicMaxAge | 转成整数 |
+| ygg_skin_domain | yggdrasil.skinDomains | 按逗号拆开，每项 trim，去掉空项 |
+| ygg_search_profile_max | yggdrasil.profileSearchLimit | 转成整数 |
+| ygg_enable_ali | yggdrasil.apiLocationIndication | `'true'` / `'false'` 转成布尔 |
+| ygg_private_key | yggdrasil.signingKey | 机密项，原样加密保存 |
 
 ### UUID
 

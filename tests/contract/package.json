@@ -1,0 +1,29 @@
+{
+  "name": "@nextskin/contract-tests",
+  "version": "0.0.0",
+  "private": true,
+  "description": "协议契约测试：用例录制自真实的 BS v6（ADR-0001）",
+  "type": "module",
+  "exports": {
+    "./cases": "./src/cases.ts",
+    "./replay": "./src/replay.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run",
+    "test:contract": "vitest run",
+    "record": "node scripts/record.ts"
+  },
+  "dependencies": {
+    "@nextskin/api": "workspace:*",
+    "@nextskin/db": "workspace:*",
+    "@nextskin/domain": "workspace:*",
+    "kysely": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "mysql2": "catalog:",
+    "vitest": "catalog:"
+  }
+}

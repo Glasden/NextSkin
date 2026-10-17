@@ -21,6 +21,7 @@
     "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@nextskin/contract-tests": "workspace:*",
     "@playwright/test": "catalog:",
     "@tailwindcss/postcss": "catalog:",
     "@types/node": "catalog:",

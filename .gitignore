@@ -30,3 +30,6 @@ next-env.d.ts
 storybook-static/
 test-results/
 playwright-report/
+
+# 开发环境的数据目录（SQLite 和材质）
+apps/web/data/

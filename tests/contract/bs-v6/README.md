@@ -23,6 +23,10 @@ docker compose -f tests/contract/bs-v6/compose.yaml down                   # 数
 - 第一次启动时由 `entrypoint.sh` 执行 `bs:install` 并启用插件。数据库在 tmpfs 里，上传的材质在容器里，所以 `down` 之后再 `up` 就是一个全新的实例。不要只重启 `db`：那样数据库会被清空，app 却仍然认为已经安装过。
 - 录制 Yggdrasil Connect 插件的行为：`down` 之后用 `BS_YGGDRASIL_PLUGIN=yggdrasil-connect docker compose … up -d --wait` 启动。它的 OpenID Connect 部分还需要另外部署 Janus（bs-community/janus），这里没有。
 
+## 录制
+
+`pnpm --filter @nextskin/contract-tests record` 会清空这个实例里除超级管理员以外的数据，写入契约用例的固定数据后录制，见 `../README.md`。
+
 ## 录制时要注意
 
 - yggdrasil-api 的 UUID 算法默认是 `v3`，由角色名决定，所以重建实例后 UUID 不变。RSA 签名密钥则是每次启用插件时随机生成的，带签名的响应要用 `/api/yggdrasil` 返回的公钥验证，不能逐字节比对。

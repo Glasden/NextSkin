@@ -1,0 +1,2833 @@
+{
+  "source": {
+    "bs": "6.0.2",
+    "plugins": {
+      "yggdrasil-api": "5.2.1",
+      "usm-api": "1.2.3",
+      "legacy-api": "1.1.3"
+    },
+    "recordedAt": "2026-10-17T12:16:47.403Z"
+  },
+  "cases": {
+    "csl/root": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Tue, 03 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Steve",
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "csl/prefixed": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Tue, 03 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Steve",
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "csl/lowercase": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Tue, 03 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Steve",
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "csl/uppercase-root": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Tue, 03 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Steve",
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "csl/trailing-space": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Tue, 03 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Steve",
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "csl/leading-space": {
+      "status": 404,
+      "headers": {
+        "cache-control": "max-age=86400, no-cache, public",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1597
+      }
+    },
+    "csl/alex": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Wed, 04 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Alex_01",
+          "skins": {
+            "slim": "932a0132bfe108e9d7ac7734aca755192a3e35b6ed236b5d0090c4000520ecd5"
+          },
+          "cape": null
+        }
+      }
+    },
+    "csl/legacy-skin": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Thu, 05 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "OldSkin",
+          "skins": {
+            "default": "5333abaee6c0ab3d9aaea4fa897070671a68409565a98884b08b2e2b76f6c141"
+          },
+          "cape": null
+        }
+      }
+    },
+    "csl/hd": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Fri, 06 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "HDSkin",
+          "skins": {
+            "slim": "52598bac67e7d2b4fb40b0333b43b547fe35ff2e5576b839c4e92f9543743054"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "csl/cape-only": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Sat, 07 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "CapeOnly",
+          "skins": {
+            "default": null
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "csl/no-textures": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Sun, 08 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "NoTextures",
+          "skins": {
+            "default": null
+          },
+          "cape": null
+        }
+      }
+    },
+    "csl/ghost": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Mon, 09 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Ghost",
+          "skins": {
+            "default": "ff25f3aa9d3383fb8dd6697ff95a6e64bc924d4d796687256314830f79e05a15"
+          },
+          "cape": null
+        }
+      }
+    },
+    "csl/dangling": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Tue, 10 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Dangling",
+          "skins": {
+            "default": null
+          },
+          "cape": null
+        }
+      }
+    },
+    "csl/shared-file": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Sat, 14 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Renamed",
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": null
+        }
+      }
+    },
+    "csl/cjk": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Wed, 11 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "角色",
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": null
+        }
+      }
+    },
+    "csl/dot-name": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1563
+      }
+    },
+    "csl/dot-name-root": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1543
+      }
+    },
+    "csl/empty-name": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1523
+      }
+    },
+    "csl/banned": {
+      "status": 403,
+      "headers": {
+        "cache-control": "max-age=86400, no-cache, public",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1581
+      }
+    },
+    "csl/missing": {
+      "status": 404,
+      "headers": {
+        "cache-control": "max-age=86400, no-cache, public",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1587
+      }
+    },
+    "csl/missing-root": {
+      "status": 404,
+      "headers": {
+        "cache-control": "max-age=86400, no-cache, public",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1567
+      }
+    },
+    "csl/if-modified-since-equal": {
+      "status": 304,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "csl/if-modified-since-later": {
+      "status": 304,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "csl/if-modified-since-earlier": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Tue, 03 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Steve",
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "csl/if-modified-since-invalid": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Tue, 03 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Steve",
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "csl/if-none-match-star": {
+      "status": 304,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "csl/if-none-match-and-modified-since": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Tue, 03 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Steve",
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "csl/if-modified-since-rfc850": {
+      "status": 304,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "csl/if-modified-since-asctime": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-type": "application/json",
+        "last-modified": "Tue, 03 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "username": "Steve",
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "csl/if-modified-since-missing-player": {
+      "status": 404,
+      "headers": {
+        "cache-control": "max-age=86400, no-cache, public",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1587
+      }
+    },
+    "usm/steve": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "player_name": "Steve",
+          "last_update": 1770093296,
+          "model_preference": [
+            "default"
+          ],
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "usm/uppercase": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "player_name": "Steve",
+          "last_update": 1770093296,
+          "model_preference": [
+            "default"
+          ],
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "usm/trailing-space": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "player_name": "Steve",
+          "last_update": 1770093296,
+          "model_preference": [
+            "default"
+          ],
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "usm/alex": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "player_name": "Alex_01",
+          "last_update": 1770179696,
+          "model_preference": [
+            "slim"
+          ],
+          "skins": {
+            "slim": "932a0132bfe108e9d7ac7734aca755192a3e35b6ed236b5d0090c4000520ecd5"
+          },
+          "cape": null
+        }
+      }
+    },
+    "usm/cape-only": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "player_name": "CapeOnly",
+          "last_update": 1770438896,
+          "model_preference": [
+            "default"
+          ],
+          "skins": {
+            "default": null
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "usm/no-textures": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "player_name": "NoTextures",
+          "last_update": 1770525296,
+          "model_preference": [
+            "default"
+          ],
+          "skins": {
+            "default": null
+          },
+          "cape": null
+        }
+      }
+    },
+    "usm/dangling": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "player_name": "Dangling",
+          "last_update": 1770698096,
+          "model_preference": [
+            "default"
+          ],
+          "skins": {
+            "default": null
+          },
+          "cape": null
+        }
+      }
+    },
+    "usm/cjk": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "player_name": "角色",
+          "last_update": 1770784496,
+          "model_preference": [
+            "default"
+          ],
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": null
+        }
+      }
+    },
+    "usm/dot-name": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1563
+      }
+    },
+    "usm/banned": {
+      "status": 403,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1583
+      }
+    },
+    "usm/missing": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "errno": 1,
+          "msg": "Player not found."
+        }
+      }
+    },
+    "usm/if-modified-since": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "player_name": "Steve",
+          "last_update": 1770093296,
+          "model_preference": [
+            "default"
+          ],
+          "skins": {
+            "default": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf"
+          },
+          "cape": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12"
+        }
+      }
+    },
+    "legacy/skin": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "image/png",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf",
+        "size": 13001
+      }
+    },
+    "legacy/cape": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "image/png",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12",
+        "size": 6447
+      }
+    },
+    "legacy/lowercase": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "image/png",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf",
+        "size": 13001
+      }
+    },
+    "legacy/trailing-space": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "image/png",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf",
+        "size": 13001
+      }
+    },
+    "legacy/alex": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "image/png",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "932a0132bfe108e9d7ac7734aca755192a3e35b6ed236b5d0090c4000520ecd5",
+        "size": 13008
+      }
+    },
+    "legacy/hd": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "image/png",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "52598bac67e7d2b4fb40b0333b43b547fe35ff2e5576b839c4e92f9543743054",
+        "size": 52584
+      }
+    },
+    "legacy/no-cape": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1563
+      }
+    },
+    "legacy/cape-only-skin": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1568
+      }
+    },
+    "legacy/no-textures": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1578
+      }
+    },
+    "legacy/ghost": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1553
+      }
+    },
+    "legacy/dangling": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1568
+      }
+    },
+    "legacy/cjk": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "image/png",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf",
+        "size": 13001
+      }
+    },
+    "legacy/dot-name": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1563
+      }
+    },
+    "legacy/banned": {
+      "status": 403,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1583
+      }
+    },
+    "legacy/banned-cape": {
+      "status": 403,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1583
+      }
+    },
+    "legacy/missing": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1587
+      }
+    },
+    "legacy/if-modified-since": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "image/png",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf",
+        "size": 13001
+      }
+    },
+    "textures/skin": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-length": "13001",
+        "content-type": "image/png",
+        "etag": "\"48be9b1b753d9f028b0400d0343e80a7\"",
+        "last-modified": "Fri, 02 Jan 2026 03:04:05 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf",
+        "size": 13001
+      }
+    },
+    "textures/cape": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-length": "6447",
+        "content-type": "image/png",
+        "etag": "\"e0765e852f63032455bb5e87238262b1\"",
+        "last-modified": "Tue, 06 Jan 2026 03:04:05 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12",
+        "size": 6447
+      }
+    },
+    "textures/hd": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-length": "52584",
+        "content-type": "image/png",
+        "etag": "\"51fa60fd8e746c3ba3e32882455c864d\"",
+        "last-modified": "Mon, 05 Jan 2026 03:04:05 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "52598bac67e7d2b4fb40b0333b43b547fe35ff2e5576b839c4e92f9543743054",
+        "size": 52584
+      }
+    },
+    "textures/csl-prefix": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-length": "13008",
+        "content-type": "image/png",
+        "etag": "\"9a6150162a237316be80cfaed36c3fff\"",
+        "last-modified": "Sat, 03 Jan 2026 03:04:05 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "932a0132bfe108e9d7ac7734aca755192a3e35b6ed236b5d0090c4000520ecd5",
+        "size": 13008
+      }
+    },
+    "textures/legacy": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-length": "6351",
+        "content-type": "image/png",
+        "etag": "\"57493935649f7de98e7d5620232a7634\"",
+        "last-modified": "Sun, 04 Jan 2026 03:04:05 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "5333abaee6c0ab3d9aaea4fa897070671a68409565a98884b08b2e2b76f6c141",
+        "size": 6351
+      }
+    },
+    "textures/usm-prefix": {
+      "status": 500,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1922
+      }
+    },
+    "textures/uppercase": {
+      "status": 404,
+      "headers": {
+        "cache-control": "max-age=86400, no-cache, public",
+        "content-type": "text/html; charset=UTF-8",
+        "etag": "\"f69a4e9583dc4da595507409184dcaaf\"",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1843
+      }
+    },
+    "textures/unknown": {
+      "status": 404,
+      "headers": {
+        "cache-control": "max-age=86400, no-cache, public",
+        "content-type": "text/html; charset=UTF-8",
+        "etag": "\"8bdff17d9e8e3a1a74bf2285c93db48a\"",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1843
+      }
+    },
+    "textures/malformed": {
+      "status": 404,
+      "headers": {
+        "cache-control": "max-age=86400, no-cache, public",
+        "content-type": "text/html; charset=UTF-8",
+        "etag": "\"827a45c501bcf20a8b9e3e6dd83ea1e6\"",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1573
+      }
+    },
+    "textures/ghost": {
+      "status": 404,
+      "headers": {
+        "cache-control": "max-age=86400, no-cache, public",
+        "content-type": "text/html; charset=UTF-8",
+        "etag": "\"a58d62cfb6483bf3b0756da6c3b7d7a3\"",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1843
+      }
+    },
+    "textures/if-modified-since-equal": {
+      "status": 304,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "etag": "\"48be9b1b753d9f028b0400d0343e80a7\"",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "textures/if-modified-since-earlier": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-length": "13001",
+        "content-type": "image/png",
+        "etag": "\"48be9b1b753d9f028b0400d0343e80a7\"",
+        "last-modified": "Fri, 02 Jan 2026 03:04:05 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf",
+        "size": 13001
+      }
+    },
+    "textures/if-none-match-star": {
+      "status": 304,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "etag": "\"48be9b1b753d9f028b0400d0343e80a7\"",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "textures/if-none-match-weak-star": {
+      "status": 304,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "etag": "\"48be9b1b753d9f028b0400d0343e80a7\"",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "textures/if-none-match-other": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-length": "13001",
+        "content-type": "image/png",
+        "etag": "\"48be9b1b753d9f028b0400d0343e80a7\"",
+        "last-modified": "Fri, 02 Jan 2026 03:04:05 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf",
+        "size": 13001
+      }
+    },
+    "textures/if-none-match-other-and-modified-since": {
+      "status": 200,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "content-length": "13001",
+        "content-type": "image/png",
+        "etag": "\"48be9b1b753d9f028b0400d0343e80a7\"",
+        "last-modified": "Fri, 02 Jan 2026 03:04:05 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "binary",
+        "sha256": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf",
+        "size": 13001
+      }
+    },
+    "textures/if-modified-since-missing": {
+      "status": 404,
+      "headers": {
+        "cache-control": "max-age=86400, no-cache, public",
+        "content-type": "text/html; charset=UTF-8",
+        "etag": "\"8bdff17d9e8e3a1a74bf2285c93db48a\"",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1843
+      }
+    },
+    "textures/if-none-match-exact": {
+      "status": 304,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "etag": "\"48be9b1b753d9f028b0400d0343e80a7\"",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "textures/if-none-match-weak": {
+      "status": 304,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "etag": "\"48be9b1b753d9f028b0400d0343e80a7\"",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "textures/if-none-match-list": {
+      "status": 304,
+      "headers": {
+        "cache-control": "max-age=86400, public",
+        "etag": "\"48be9b1b753d9f028b0400d0343e80a7\"",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "ygg/meta": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "meta": {
+            "serverName": "NextSkin 契约测试站",
+            "implementationName": "Yggdrasil API for Blessing Skin",
+            "implementationVersion": "5.2.1",
+            "links": {
+              "homepage": "http://127.0.0.1:38080",
+              "register": "http://127.0.0.1:38080/auth/register"
+            },
+            "feature.non_email_login": true
+          },
+          "skinDomains": [
+            "cdn.example.test",
+            "127.0.0.1"
+          ],
+          "signaturePublickey": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtBMkPWomKM9SqEsPTPaF\n8mIq25pOi2roo/uYZ/fyUxsUphrynjIS5kZHU5qMezE1waqEYzBSfSvANvz0X+VK\nW92hHqbGUkOWgxnAaIkBlP0dQ3US3YQkeB0PHPVYD7Lyi4d76urm+KmH4cKHp9jP\nespEAN47GzvVj4M0a7vM94UXkhZhgW4VHgHN98H+Db1sPLmbTcVE6aCYW5j7/jYd\n3O96mLvI0wFY5ussrWfrQomfjQhkFAnO1rixYlhMFGBygNStRJdI1tWHiwAwru0O\nBy/lzTvSEcFQxZreAFeC4KMUKnZ3RFIfUsBmMdFZZSYyT5TwLC1u04ZVbMfxL7Cg\n9++dzrO5S0UFrUH/A03VzOed45FLkDjIM/slGDArba07FakxS7pzzQ3JoNOBCi7I\nLIApvvGvdu+rNPwecfRg7CjqYhHK/Ldb/GFlwKBTfvybqCXzylrCouKWnDiNecU/\nPa6ImqsZ32A1bTuE6XjL3iVOTMaEpNEiDYO93mvF0ShTtPvffJw7ghQ4AlsvXy+M\npOAW5MpOiVmpoWbH/rUum/jgdokxx14EFR5eLLedqrT3aGWE6MCF0TQrFrlbk0kK\nvXzeazYdMz2bpfXK8NBfmMUiLeHejrIoDg+tWAW1xkmG1+8KQvnfmOztIr25KVCY\nJL3hoz6NJyLkzvQsyxGe/fsCAwEAAQ==\n-----END PUBLIC KEY-----\n"
+        }
+      }
+    },
+    "ygg/meta-post": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "meta": {
+            "serverName": "NextSkin 契约测试站",
+            "implementationName": "Yggdrasil API for Blessing Skin",
+            "implementationVersion": "5.2.1",
+            "links": {
+              "homepage": "http://127.0.0.1:38080",
+              "register": "http://127.0.0.1:38080/auth/register"
+            },
+            "feature.non_email_login": true
+          },
+          "skinDomains": [
+            "cdn.example.test",
+            "127.0.0.1"
+          ],
+          "signaturePublickey": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtBMkPWomKM9SqEsPTPaF\n8mIq25pOi2roo/uYZ/fyUxsUphrynjIS5kZHU5qMezE1waqEYzBSfSvANvz0X+VK\nW92hHqbGUkOWgxnAaIkBlP0dQ3US3YQkeB0PHPVYD7Lyi4d76urm+KmH4cKHp9jP\nespEAN47GzvVj4M0a7vM94UXkhZhgW4VHgHN98H+Db1sPLmbTcVE6aCYW5j7/jYd\n3O96mLvI0wFY5ussrWfrQomfjQhkFAnO1rixYlhMFGBygNStRJdI1tWHiwAwru0O\nBy/lzTvSEcFQxZreAFeC4KMUKnZ3RFIfUsBmMdFZZSYyT5TwLC1u04ZVbMfxL7Cg\n9++dzrO5S0UFrUH/A03VzOed45FLkDjIM/slGDArba07FakxS7pzzQ3JoNOBCi7I\nLIApvvGvdu+rNPwecfRg7CjqYhHK/Ldb/GFlwKBTfvybqCXzylrCouKWnDiNecU/\nPa6ImqsZ32A1bTuE6XjL3iVOTMaEpNEiDYO93mvF0ShTtPvffJw7ghQ4AlsvXy+M\npOAW5MpOiVmpoWbH/rUum/jgdokxx14EFR5eLLedqrT3aGWE6MCF0TQrFrlbk0kK\nvXzeazYdMz2bpfXK8NBfmMUiLeHejrIoDg+tWAW1xkmG1+8KQvnfmOztIr25KVCY\nJL3hoz6NJyLkzvQsyxGe/fsCAwEAAQ==\n-----END PUBLIC KEY-----\n"
+        }
+      }
+    },
+    "ygg/meta-other-host": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://skin.example.test/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "meta": {
+            "serverName": "NextSkin 契约测试站",
+            "implementationName": "Yggdrasil API for Blessing Skin",
+            "implementationVersion": "5.2.1",
+            "links": {
+              "homepage": "http://skin.example.test",
+              "register": "http://skin.example.test/auth/register"
+            },
+            "feature.non_email_login": true
+          },
+          "skinDomains": [
+            "cdn.example.test",
+            "127.0.0.1",
+            "skin.example.test"
+          ],
+          "signaturePublickey": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtBMkPWomKM9SqEsPTPaF\n8mIq25pOi2roo/uYZ/fyUxsUphrynjIS5kZHU5qMezE1waqEYzBSfSvANvz0X+VK\nW92hHqbGUkOWgxnAaIkBlP0dQ3US3YQkeB0PHPVYD7Lyi4d76urm+KmH4cKHp9jP\nespEAN47GzvVj4M0a7vM94UXkhZhgW4VHgHN98H+Db1sPLmbTcVE6aCYW5j7/jYd\n3O96mLvI0wFY5ussrWfrQomfjQhkFAnO1rixYlhMFGBygNStRJdI1tWHiwAwru0O\nBy/lzTvSEcFQxZreAFeC4KMUKnZ3RFIfUsBmMdFZZSYyT5TwLC1u04ZVbMfxL7Cg\n9++dzrO5S0UFrUH/A03VzOed45FLkDjIM/slGDArba07FakxS7pzzQ3JoNOBCi7I\nLIApvvGvdu+rNPwecfRg7CjqYhHK/Ldb/GFlwKBTfvybqCXzylrCouKWnDiNecU/\nPa6ImqsZ32A1bTuE6XjL3iVOTMaEpNEiDYO93mvF0ShTtPvffJw7ghQ4AlsvXy+M\npOAW5MpOiVmpoWbH/rUum/jgdokxx14EFR5eLLedqrT3aGWE6MCF0TQrFrlbk0kK\nvXzeazYdMz2bpfXK8NBfmMUiLeHejrIoDg+tWAW1xkmG1+8KQvnfmOztIr25KVCY\nJL3hoz6NJyLkzvQsyxGe/fsCAwEAAQ==\n-----END PUBLIC KEY-----\n"
+        }
+      }
+    },
+    "ygg/meta-forwarded-https": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "https://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "meta": {
+            "serverName": "NextSkin 契约测试站",
+            "implementationName": "Yggdrasil API for Blessing Skin",
+            "implementationVersion": "5.2.1",
+            "links": {
+              "homepage": "https://127.0.0.1:38080",
+              "register": "https://127.0.0.1:38080/auth/register"
+            },
+            "feature.non_email_login": true
+          },
+          "skinDomains": [
+            "cdn.example.test",
+            "127.0.0.1"
+          ],
+          "signaturePublickey": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtBMkPWomKM9SqEsPTPaF\n8mIq25pOi2roo/uYZ/fyUxsUphrynjIS5kZHU5qMezE1waqEYzBSfSvANvz0X+VK\nW92hHqbGUkOWgxnAaIkBlP0dQ3US3YQkeB0PHPVYD7Lyi4d76urm+KmH4cKHp9jP\nespEAN47GzvVj4M0a7vM94UXkhZhgW4VHgHN98H+Db1sPLmbTcVE6aCYW5j7/jYd\n3O96mLvI0wFY5ussrWfrQomfjQhkFAnO1rixYlhMFGBygNStRJdI1tWHiwAwru0O\nBy/lzTvSEcFQxZreAFeC4KMUKnZ3RFIfUsBmMdFZZSYyT5TwLC1u04ZVbMfxL7Cg\n9++dzrO5S0UFrUH/A03VzOed45FLkDjIM/slGDArba07FakxS7pzzQ3JoNOBCi7I\nLIApvvGvdu+rNPwecfRg7CjqYhHK/Ldb/GFlwKBTfvybqCXzylrCouKWnDiNecU/\nPa6ImqsZ32A1bTuE6XjL3iVOTMaEpNEiDYO93mvF0ShTtPvffJw7ghQ4AlsvXy+M\npOAW5MpOiVmpoWbH/rUum/jgdokxx14EFR5eLLedqrT3aGWE6MCF0TQrFrlbk0kK\nvXzeazYdMz2bpfXK8NBfmMUiLeHejrIoDg+tWAW1xkmG1+8KQvnfmOztIr25KVCY\nJL3hoz6NJyLkzvQsyxGe/fsCAwEAAQ==\n-----END PUBLIC KEY-----\n"
+        }
+      }
+    },
+    "ygg/meta-forwarded-https-port-80": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "https://skin.example.test/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "meta": {
+            "serverName": "NextSkin 契约测试站",
+            "implementationName": "Yggdrasil API for Blessing Skin",
+            "implementationVersion": "5.2.1",
+            "links": {
+              "homepage": "https://skin.example.test",
+              "register": "https://skin.example.test/auth/register"
+            },
+            "feature.non_email_login": true
+          },
+          "skinDomains": [
+            "cdn.example.test",
+            "127.0.0.1",
+            "skin.example.test"
+          ],
+          "signaturePublickey": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtBMkPWomKM9SqEsPTPaF\n8mIq25pOi2roo/uYZ/fyUxsUphrynjIS5kZHU5qMezE1waqEYzBSfSvANvz0X+VK\nW92hHqbGUkOWgxnAaIkBlP0dQ3US3YQkeB0PHPVYD7Lyi4d76urm+KmH4cKHp9jP\nespEAN47GzvVj4M0a7vM94UXkhZhgW4VHgHN98H+Db1sPLmbTcVE6aCYW5j7/jYd\n3O96mLvI0wFY5ussrWfrQomfjQhkFAnO1rixYlhMFGBygNStRJdI1tWHiwAwru0O\nBy/lzTvSEcFQxZreAFeC4KMUKnZ3RFIfUsBmMdFZZSYyT5TwLC1u04ZVbMfxL7Cg\n9++dzrO5S0UFrUH/A03VzOed45FLkDjIM/slGDArba07FakxS7pzzQ3JoNOBCi7I\nLIApvvGvdu+rNPwecfRg7CjqYhHK/Ldb/GFlwKBTfvybqCXzylrCouKWnDiNecU/\nPa6ImqsZ32A1bTuE6XjL3iVOTMaEpNEiDYO93mvF0ShTtPvffJw7ghQ4AlsvXy+M\npOAW5MpOiVmpoWbH/rUum/jgdokxx14EFR5eLLedqrT3aGWE6MCF0TQrFrlbk0kK\nvXzeazYdMz2bpfXK8NBfmMUiLeHejrIoDg+tWAW1xkmG1+8KQvnfmOztIr25KVCY\nJL3hoz6NJyLkzvQsyxGe/fsCAwEAAQ==\n-----END PUBLIC KEY-----\n"
+        }
+      }
+    },
+    "ygg/meta-forwarded-proto-list": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "meta": {
+            "serverName": "NextSkin 契约测试站",
+            "implementationName": "Yggdrasil API for Blessing Skin",
+            "implementationVersion": "5.2.1",
+            "links": {
+              "homepage": "http://127.0.0.1:38080",
+              "register": "http://127.0.0.1:38080/auth/register"
+            },
+            "feature.non_email_login": true
+          },
+          "skinDomains": [
+            "cdn.example.test",
+            "127.0.0.1"
+          ],
+          "signaturePublickey": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtBMkPWomKM9SqEsPTPaF\n8mIq25pOi2roo/uYZ/fyUxsUphrynjIS5kZHU5qMezE1waqEYzBSfSvANvz0X+VK\nW92hHqbGUkOWgxnAaIkBlP0dQ3US3YQkeB0PHPVYD7Lyi4d76urm+KmH4cKHp9jP\nespEAN47GzvVj4M0a7vM94UXkhZhgW4VHgHN98H+Db1sPLmbTcVE6aCYW5j7/jYd\n3O96mLvI0wFY5ussrWfrQomfjQhkFAnO1rixYlhMFGBygNStRJdI1tWHiwAwru0O\nBy/lzTvSEcFQxZreAFeC4KMUKnZ3RFIfUsBmMdFZZSYyT5TwLC1u04ZVbMfxL7Cg\n9++dzrO5S0UFrUH/A03VzOed45FLkDjIM/slGDArba07FakxS7pzzQ3JoNOBCi7I\nLIApvvGvdu+rNPwecfRg7CjqYhHK/Ldb/GFlwKBTfvybqCXzylrCouKWnDiNecU/\nPa6ImqsZ32A1bTuE6XjL3iVOTMaEpNEiDYO93mvF0ShTtPvffJw7ghQ4AlsvXy+M\npOAW5MpOiVmpoWbH/rUum/jgdokxx14EFR5eLLedqrT3aGWE6MCF0TQrFrlbk0kK\nvXzeazYdMz2bpfXK8NBfmMUiLeHejrIoDg+tWAW1xkmG1+8KQvnfmOztIr25KVCY\nJL3hoz6NJyLkzvQsyxGe/fsCAwEAAQ==\n-----END PUBLIC KEY-----\n"
+        }
+      }
+    },
+    "ygg/meta-forwarded-ssl": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "https://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "meta": {
+            "serverName": "NextSkin 契约测试站",
+            "implementationName": "Yggdrasil API for Blessing Skin",
+            "implementationVersion": "5.2.1",
+            "links": {
+              "homepage": "https://127.0.0.1:38080",
+              "register": "https://127.0.0.1:38080/auth/register"
+            },
+            "feature.non_email_login": true
+          },
+          "skinDomains": [
+            "cdn.example.test",
+            "127.0.0.1"
+          ],
+          "signaturePublickey": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtBMkPWomKM9SqEsPTPaF\n8mIq25pOi2roo/uYZ/fyUxsUphrynjIS5kZHU5qMezE1waqEYzBSfSvANvz0X+VK\nW92hHqbGUkOWgxnAaIkBlP0dQ3US3YQkeB0PHPVYD7Lyi4d76urm+KmH4cKHp9jP\nespEAN47GzvVj4M0a7vM94UXkhZhgW4VHgHN98H+Db1sPLmbTcVE6aCYW5j7/jYd\n3O96mLvI0wFY5ussrWfrQomfjQhkFAnO1rixYlhMFGBygNStRJdI1tWHiwAwru0O\nBy/lzTvSEcFQxZreAFeC4KMUKnZ3RFIfUsBmMdFZZSYyT5TwLC1u04ZVbMfxL7Cg\n9++dzrO5S0UFrUH/A03VzOed45FLkDjIM/slGDArba07FakxS7pzzQ3JoNOBCi7I\nLIApvvGvdu+rNPwecfRg7CjqYhHK/Ldb/GFlwKBTfvybqCXzylrCouKWnDiNecU/\nPa6ImqsZ32A1bTuE6XjL3iVOTMaEpNEiDYO93mvF0ShTtPvffJw7ghQ4AlsvXy+M\npOAW5MpOiVmpoWbH/rUum/jgdokxx14EFR5eLLedqrT3aGWE6MCF0TQrFrlbk0kK\nvXzeazYdMz2bpfXK8NBfmMUiLeHejrIoDg+tWAW1xkmG1+8KQvnfmOztIr25KVCY\nJL3hoz6NJyLkzvQsyxGe/fsCAwEAAQ==\n-----END PUBLIC KEY-----\n"
+        }
+      }
+    },
+    "ygg/meta-host-port": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://skin.example.test:8443/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "meta": {
+            "serverName": "NextSkin 契约测试站",
+            "implementationName": "Yggdrasil API for Blessing Skin",
+            "implementationVersion": "5.2.1",
+            "links": {
+              "homepage": "http://skin.example.test:8443",
+              "register": "http://skin.example.test:8443/auth/register"
+            },
+            "feature.non_email_login": true
+          },
+          "skinDomains": [
+            "cdn.example.test",
+            "127.0.0.1",
+            "skin.example.test"
+          ],
+          "signaturePublickey": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtBMkPWomKM9SqEsPTPaF\n8mIq25pOi2roo/uYZ/fyUxsUphrynjIS5kZHU5qMezE1waqEYzBSfSvANvz0X+VK\nW92hHqbGUkOWgxnAaIkBlP0dQ3US3YQkeB0PHPVYD7Lyi4d76urm+KmH4cKHp9jP\nespEAN47GzvVj4M0a7vM94UXkhZhgW4VHgHN98H+Db1sPLmbTcVE6aCYW5j7/jYd\n3O96mLvI0wFY5ussrWfrQomfjQhkFAnO1rixYlhMFGBygNStRJdI1tWHiwAwru0O\nBy/lzTvSEcFQxZreAFeC4KMUKnZ3RFIfUsBmMdFZZSYyT5TwLC1u04ZVbMfxL7Cg\n9++dzrO5S0UFrUH/A03VzOed45FLkDjIM/slGDArba07FakxS7pzzQ3JoNOBCi7I\nLIApvvGvdu+rNPwecfRg7CjqYhHK/Ldb/GFlwKBTfvybqCXzylrCouKWnDiNecU/\nPa6ImqsZ32A1bTuE6XjL3iVOTMaEpNEiDYO93mvF0ShTtPvffJw7ghQ4AlsvXy+M\npOAW5MpOiVmpoWbH/rUum/jgdokxx14EFR5eLLedqrT3aGWE6MCF0TQrFrlbk0kK\nvXzeazYdMz2bpfXK8NBfmMUiLeHejrIoDg+tWAW1xkmG1+8KQvnfmOztIr25KVCY\nJL3hoz6NJyLkzvQsyxGe/fsCAwEAAQ==\n-----END PUBLIC KEY-----\n"
+        }
+      }
+    },
+    "ygg/profile": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkwMDksInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-signed": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkwNzcsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "QH1ZXBPCDlW9hqUvEsoIwarhVoncQjXz3CSs6ohhAr+OAkcpcOXs6orVN61Cl6cx20lziTZd+YZ8C+ddGmd2E4sKOcfadplzfL8HHJS/m4vLxh8k0fgLKNIa7TPE2LQVM9rpGjuMgNXehH54NXgpYrL3foP646eGL3/wKNZAZdH/tu8u0noQVUJIqI1OggHhYze78wSqTbC1mZe1YPNMWq1x1+jT+6M0grLaISa8oBHAfyzgc5lvraCl36YWWh2IbA2E5eNCUHwygN9fow6xf1hJL4isVuKjXguWYuWxu1fUybqUcf6JwFtYCEc7Nw/h3w9TMmi7uk+j3vQDNIwdtd4YW8M1CNLCcPJKEMelLW1ztUcaVMxYJTpFER0ruOFajEaQe7F3DgvlzhbXX7kD3HWX/e0u/7B79xtn6/XPk8YkT8GacARkjZ6G7V+K4ekKWYYppeDyRCPGV75FvtTmUM0AY0DXPMNoJGjN1hXwCKgPQdCMdS936IRVp8gL/HAHltDQbdZOXIHie75TknJdC9MwdNrZgMeqYk9yjNY2crTA+qYBCdx5zb+/YD1B9DkQpSPfsiyx4j/LuWvxKczIdfDDulFt5IuS7k1vsWrxbKhO48+D+J3BiBvZewXMTV11dWHXyiNosu2fPW8hDHk0WOyJLoUb6difZcohJw6QLDY="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape",
+              "signature": "sUCpZQprappvqKqk8kSs/wPCtYmMoNTEUxqiyIwagpM5gOvhs0IFZsjEckBTDVB6qc8sDuL6SS3IzslWh5Gvo+QQQIcuSaJ80ETmP0cutz2DfXiLBtvEr4wBKiZSKOpLJCo0tRmikDUFuwVd4h6arlsjTZG6F6pYyUYuwQYhCMjIDHCLtlu38EwV74jvJIDSm91GHbRyg4Fmzh1KBTb2eYr+vazTqPuWR0W1s2JQO2pxaMN5pnS2QSqwGMf6IaWT507HR+PqLmPFIuGfY559XlaPVeaQoFPdfUTmZM/pJ47LcZWlvrwbpxrebRW5ZX1sBOSvZlgMlHWpyxakW9lOVgOkfeHecj2aJweg/9pQg0N7jBz6PKiw+tiUHZe/bobM0YhDjL4Tsv4Uv6LS4SEziIKUwbpWh21hwwAKmtSAH2BqBUg+LWtjd9KKhGgTTWPNxI3zKdx+mtUniiAlc4m28jAjx5tg9DqGSmm/oLpt+I2tEmXf8Onl87Ge7xxu6/L5BvjQllrLClWqW4K6RfT68JtDwLFndDDgO0A6elJQg6DYJt9A0S1q5tLILRTKy9olm4L2M4NFSgmKG6OjJHkxoSBtKFj7bkghxQ0gRGdm4k5VTuuDWiKz9BHvm0PzXap91d35EdopU3icXW+s2o39zT0HFWdVQX9iOhVjA31GiZQ="
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-unsigned-true": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkxNDIsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-unsigned-zero": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkyMDQsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "LYdZtzspmqrPOUa7l2Y993O6I/yWwWxmhq/ju/VU7fyx17h0UqpQipYb0GQe81N2aXP03xB5cLrldZf1Z/8wwU8Kg4W/Y2kKyYPD7EACyTcdM72ez26TTjkuMz0M6ig3WbgiR1zqlGq4U3D5U7UVB7ORA27MkBJQ4laifmsTCY8h/g4qyq+zPPBLBaUp7mO4zJtypYwreyV3aVZscXUi4JA0mKcB0qr92mjb7Dzlo+BQLiLYDIpVNthygPACeFfARNoLrGckV8Of7llnuQwIOOcHJFc9eX7fWzbLi52oY3q7AnmS4p4TXga5pGoXtrSbpb3dI3RG0yYUNVUhvZaaRqXjDFE4I/eMmlyn4JX6g75NJ2aYZ3GAPkRZflsHKLK/k+rtCoVW547zR/4El0C3+6XpejOrRrK4ofdQENHDW1Qm0D8dV56O9aSAJG8fwU4YTbRjoXsduAtlLU8nViem6q40H27YXBChDNwrkP8GHeDov3KXKdNQF5lS7/mqm89FZdGIgnGCQEnukwbC+Vq06LuTE9ktoqYZIESayrBaWQTaSa3NMt7ri2lAbBMICp/ufCLx90iw5Px04zg5jY5DtqPNfsY/XDf0rt/DWHaWtu3LmftG5LxghFezpooszf07d5U2kYuG7zi7bgQhOsDTj23FYRwQ2TVyVtwGlCgvKxU="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape",
+              "signature": "sUCpZQprappvqKqk8kSs/wPCtYmMoNTEUxqiyIwagpM5gOvhs0IFZsjEckBTDVB6qc8sDuL6SS3IzslWh5Gvo+QQQIcuSaJ80ETmP0cutz2DfXiLBtvEr4wBKiZSKOpLJCo0tRmikDUFuwVd4h6arlsjTZG6F6pYyUYuwQYhCMjIDHCLtlu38EwV74jvJIDSm91GHbRyg4Fmzh1KBTb2eYr+vazTqPuWR0W1s2JQO2pxaMN5pnS2QSqwGMf6IaWT507HR+PqLmPFIuGfY559XlaPVeaQoFPdfUTmZM/pJ47LcZWlvrwbpxrebRW5ZX1sBOSvZlgMlHWpyxakW9lOVgOkfeHecj2aJweg/9pQg0N7jBz6PKiw+tiUHZe/bobM0YhDjL4Tsv4Uv6LS4SEziIKUwbpWh21hwwAKmtSAH2BqBUg+LWtjd9KKhGgTTWPNxI3zKdx+mtUniiAlc4m28jAjx5tg9DqGSmm/oLpt+I2tEmXf8Onl87Ge7xxu6/L5BvjQllrLClWqW4K6RfT68JtDwLFndDDgO0A6elJQg6DYJt9A0S1q5tLILRTKy9olm4L2M4NFSgmKG6OjJHkxoSBtKFj7bkghxQ0gRGdm4k5VTuuDWiKz9BHvm0PzXap91d35EdopU3icXW+s2o39zT0HFWdVQX9iOhVjA31GiZQ="
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-unsigned-empty": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkyNjgsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-unsigned-repeated": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkzMzIsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "UF/E+5YqZBVY0y/u8cGdmOMugRZenOSfes/qoKMJpZ4eZnBzllNQCwqkCOkIMirqu8EmvWBguMGM9ARsdPpfQzrlwGde+Uu1NsR8o0hrCB8YONRAoAKFhuVfjhNLBBEHEwqAYd7Ppc1UBaiWkZSyEs/bzCmYGC+Q4lAcHkcd3rL9dGVPkdTn8Q2JEcYmsCEaYTGvVQBwTQlUc4xrTy3UvyytqrwFlNNo8lzca04tW66g2PI2sTQ0cmj4TKxd7GSG983L7KpeJXEH1/25HirRrRpzW8JrLM+AGCjoOwZO/OpGPtZZZgZ5iINvLgQqJmky6G/LMLzYWOOU9vN4cIGk9UN1PVATr2EDecD3saG3hcNgGX5+St277Wc/49iqFus6KYfDjrje4+OhnjtKgHx8lKweAvD3REbPbrBCbXckZRZVlipZZbs0THrx5Vs0rqo/OO2lqsQewonqF4w7wJOOiQpgnbu34mu3yH7RkAI2xmqLkS0kHGCNQiLswTj+OCeNul2DO2AfHWf98EK0/+sdqbJabpIgvYwVOszCTAK1ki0SB/bhE2s3KrRIbdhoU3NObVOkCj/mY9nNoPsNt+0JHt5frhEmomeSBWZAFrFZvTPrtvGrwpsqR9ohcYctwenDIiBrwNWBbybtv73JMxGbnQPoelhNDMRG0Zn4PJ3uClA="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape",
+              "signature": "sUCpZQprappvqKqk8kSs/wPCtYmMoNTEUxqiyIwagpM5gOvhs0IFZsjEckBTDVB6qc8sDuL6SS3IzslWh5Gvo+QQQIcuSaJ80ETmP0cutz2DfXiLBtvEr4wBKiZSKOpLJCo0tRmikDUFuwVd4h6arlsjTZG6F6pYyUYuwQYhCMjIDHCLtlu38EwV74jvJIDSm91GHbRyg4Fmzh1KBTb2eYr+vazTqPuWR0W1s2JQO2pxaMN5pnS2QSqwGMf6IaWT507HR+PqLmPFIuGfY559XlaPVeaQoFPdfUTmZM/pJ47LcZWlvrwbpxrebRW5ZX1sBOSvZlgMlHWpyxakW9lOVgOkfeHecj2aJweg/9pQg0N7jBz6PKiw+tiUHZe/bobM0YhDjL4Tsv4Uv6LS4SEziIKUwbpWh21hwwAKmtSAH2BqBUg+LWtjd9KKhGgTTWPNxI3zKdx+mtUniiAlc4m28jAjx5tg9DqGSmm/oLpt+I2tEmXf8Onl87Ge7xxu6/L5BvjQllrLClWqW4K6RfT68JtDwLFndDDgO0A6elJQg6DYJt9A0S1q5tLILRTKy9olm4L2M4NFSgmKG6OjJHkxoSBtKFj7bkghxQ0gRGdm4k5VTuuDWiKz9BHvm0PzXap91d35EdopU3icXW+s2o39zT0HFWdVQX9iOhVjA31GiZQ="
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-unsigned-repeated-reverse": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkzOTcsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-unsigned-array": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk0NjAsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "BEXkvrK6I+/Ac5rn5W+GNhDKLmwGcndiQA2mZwTQNjMoyjkNJ4U6PKZgYx6KScoUOGjWkbwfI+bl9WSBlkDv1OkljIQ0+WTKxSugZoxlChcs0ecUtcKzVa7Z/FsGjxE1diw9LjraAeZieWskCq/eUiL4HVzaOAtKpOqK6VD7d9BGQqRRToEqmurVYviqQER6fzbdu8wp9tQ9BemvHcNCQp7gTRsm+3kUxo7DpRHTd51V4BiIAKogaOOVwz3PeVd8IruJROUZs2TmbM0XYj8CNSdiLkv0eJMFjClbY8X2KYj5bdmuhNRiRRjOpsnkL0TGeHQ+WbCG92CyFPFZMDEs1UDEi9UUFeZYm3R9CsQuo9eHupQ2NapkRGjshl/+RMK+IYjZZypRI37GlqbHiJxZoQpLdtaH1I8ByqQMRu/lHTVNquSxFizeVDN2rYrDTtVgjOmj8lgVCLI4fafAUI1yUCQohGWDeDCEuiMUxuuey4uCrNmgU5XyuM9uhoZQCufcrez7djVDGKZJYjwHpDYR/uXspzptC/xCMgk8lFvLR5jRkU8/3vQT9WOf+Q4J/CV3MAvkJY4+oHH52abZmUeW4RUiS88azM966aKmeUQsGmDqJNxisrle/wDaWvwx90DsqRzGLCPxtmDsnkOTo/wDBMrIv2Ha7DbHzGaCp/BWjog="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape",
+              "signature": "sUCpZQprappvqKqk8kSs/wPCtYmMoNTEUxqiyIwagpM5gOvhs0IFZsjEckBTDVB6qc8sDuL6SS3IzslWh5Gvo+QQQIcuSaJ80ETmP0cutz2DfXiLBtvEr4wBKiZSKOpLJCo0tRmikDUFuwVd4h6arlsjTZG6F6pYyUYuwQYhCMjIDHCLtlu38EwV74jvJIDSm91GHbRyg4Fmzh1KBTb2eYr+vazTqPuWR0W1s2JQO2pxaMN5pnS2QSqwGMf6IaWT507HR+PqLmPFIuGfY559XlaPVeaQoFPdfUTmZM/pJ47LcZWlvrwbpxrebRW5ZX1sBOSvZlgMlHWpyxakW9lOVgOkfeHecj2aJweg/9pQg0N7jBz6PKiw+tiUHZe/bobM0YhDjL4Tsv4Uv6LS4SEziIKUwbpWh21hwwAKmtSAH2BqBUg+LWtjd9KKhGgTTWPNxI3zKdx+mtUniiAlc4m28jAjx5tg9DqGSmm/oLpt+I2tEmXf8Onl87Ge7xxu6/L5BvjQllrLClWqW4K6RfT68JtDwLFndDDgO0A6elJQg6DYJt9A0S1q5tLILRTKy9olm4L2M4NFSgmKG6OjJHkxoSBtKFj7bkghxQ0gRGdm4k5VTuuDWiKz9BHvm0PzXap91d35EdopU3icXW+s2o39zT0HFWdVQX9iOhVjA31GiZQ="
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-unsigned-padded-true": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk1MjQsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-unsigned-blank": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk1NDMsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-unsigned-uppercase": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk2MDYsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "FJBrIw5aJ3gFrNzpjbwQyzNfAaR0rifWjRgxl1/oQEkv6brrhaZNuYhhbh53pe6uoKSUBDY/RsnloAHjIec+8E4QtSaNwGzhTGT7UQVFtNuqHS0nn7aAYruDt0W0gCcK0x7l7qLdKEBXXpxXqpexH0dyInnosOqdv0fudgM0T14Cbc5VZXAVdNHQpkL79G9d0g4png5gnPwtP8dOgP0ydCZIVMjA3O4aE1R9Vj7MCFehjwf1w1w6MwfNHRZjSLz7rzUN2OzJ3Suq8gwnwHixXIKIn3d1W39cNRMELA+DZyv/W+nzJSWgWsktonlYSKsIMDewqkh5DVT2h+voRJofsp/5KJVulvzNL3OtqTrpwaSydyDDfLccxczPC+ZjlkbMWqnd7d5pqweSa01agIJWbclOunJDuNtodKUoV+Ex3EC/tU8bZ0hLgM6dVLLVSoZwt+/OUJvbjcNrI12fbOs4fIZ6NBm3pNCN3dwXQfelIbDaCskkjns7Uy9stpA1xv1mieGJR7da8dxGrhF1z6FsEUSRnPImxsmFGwEeM1sOXIRtFZ+NGEU9kRyVQs1cnt4YsSdQVUrMK2wO+F4OfD3S+gwJooepmSiafuAoQr+p8wlbvx4cH+KULHSavjrZWX1m+Q4z+Iy6cUnqbt7zp3yo/bQ9iamROqbmPTT09qRP99k="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape",
+              "signature": "sUCpZQprappvqKqk8kSs/wPCtYmMoNTEUxqiyIwagpM5gOvhs0IFZsjEckBTDVB6qc8sDuL6SS3IzslWh5Gvo+QQQIcuSaJ80ETmP0cutz2DfXiLBtvEr4wBKiZSKOpLJCo0tRmikDUFuwVd4h6arlsjTZG6F6pYyUYuwQYhCMjIDHCLtlu38EwV74jvJIDSm91GHbRyg4Fmzh1KBTb2eYr+vazTqPuWR0W1s2JQO2pxaMN5pnS2QSqwGMf6IaWT507HR+PqLmPFIuGfY559XlaPVeaQoFPdfUTmZM/pJ47LcZWlvrwbpxrebRW5ZX1sBOSvZlgMlHWpyxakW9lOVgOkfeHecj2aJweg/9pQg0N7jBz6PKiw+tiUHZe/bobM0YhDjL4Tsv4Uv6LS4SEziIKUwbpWh21hwwAKmtSAH2BqBUg+LWtjd9KKhGgTTWPNxI3zKdx+mtUniiAlc4m28jAjx5tg9DqGSmm/oLpt+I2tEmXf8Onl87Ge7xxu6/L5BvjQllrLClWqW4K6RfT68JtDwLFndDDgO0A6elJQg6DYJt9A0S1q5tLILRTKy9olm4L2M4NFSgmKG6OjJHkxoSBtKFj7bkghxQ0gRGdm4k5VTuuDWiKz9BHvm0PzXap91d35EdopU3icXW+s2o39zT0HFWdVQX9iOhVjA31GiZQ="
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-alex": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "a818c0db482a377881ffd3df54c7a926",
+          "name": "Alex_01",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk2NzIsInByb2ZpbGVJZCI6ImE4MThjMGRiNDgyYTM3Nzg4MWZmZDNkZjU0YzdhOTI2IiwicHJvZmlsZU5hbWUiOiJBbGV4XzAxIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-alex-signed": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "a818c0db482a377881ffd3df54c7a926",
+          "name": "Alex_01",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk3MzcsInByb2ZpbGVJZCI6ImE4MThjMGRiNDgyYTM3Nzg4MWZmZDNkZjU0YzdhOTI2IiwicHJvZmlsZU5hbWUiOiJBbGV4XzAxIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "qkUcYjRIrAxR+aKHcbMnf80yQhdPWPtoCbOa7lHnEyVl2rlJpKk8P/Egmm34EeIRX/QZI6cEH9td2Dww9uRGkXYZqjSVpiyXb2kq3S9zYGczrAw/uwj4zWXWVLd5iznEAw24BluTYpCpwFkn6dSuDi+A23/zv0fv9BYGi2Inf3+izzbF6BYOpR7IVs49RfA2KnWfgdScNK7XqVX8FgPyzwDaDhUlbWPrOQhd2Z2fg/xBo8WUfgO9jKbF/lXKt0bk9LvLZstMLyzYRiWBZpWr4/HpBU+P0wdvcKVJ9AnDGEQRU4z7QL+fcY8g+GQL3CzjtUUSZzJlKu92P7eUXJlf1z7aPWiURqHQgyBHpirtmNLrbO3zyMK1LfOaoOlvAkY5rRXnlU3SDzForsLmK8bvnvuXl3i12PdKIPQn07a+lpIWmXanhd4LkqLbse708ltZPIKzV0iuCIkaIF9vnRk98tLaiX4VbazLNAT5t/SL6BqkHnuLig0CSHFdXL3F9A01Mk3Xss83v+lBrX9kqUdgMG4qTApckGhGqnhanyBBvvxKwcH8+RAaN5O3UHXhEOkify3BT1MPmBWZjk/nXkB0rfdX30AWry2sOtkraaBAG3jc8IpzzQYt2d1I2FHT2+LCBd+zT6lR1GCbHeuBg2pjVoRy0KbNW6M4QuqkGGk0m1k="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape",
+              "signature": "sUCpZQprappvqKqk8kSs/wPCtYmMoNTEUxqiyIwagpM5gOvhs0IFZsjEckBTDVB6qc8sDuL6SS3IzslWh5Gvo+QQQIcuSaJ80ETmP0cutz2DfXiLBtvEr4wBKiZSKOpLJCo0tRmikDUFuwVd4h6arlsjTZG6F6pYyUYuwQYhCMjIDHCLtlu38EwV74jvJIDSm91GHbRyg4Fmzh1KBTb2eYr+vazTqPuWR0W1s2JQO2pxaMN5pnS2QSqwGMf6IaWT507HR+PqLmPFIuGfY559XlaPVeaQoFPdfUTmZM/pJ47LcZWlvrwbpxrebRW5ZX1sBOSvZlgMlHWpyxakW9lOVgOkfeHecj2aJweg/9pQg0N7jBz6PKiw+tiUHZe/bobM0YhDjL4Tsv4Uv6LS4SEziIKUwbpWh21hwwAKmtSAH2BqBUg+LWtjd9KKhGgTTWPNxI3zKdx+mtUniiAlc4m28jAjx5tg9DqGSmm/oLpt+I2tEmXf8Onl87Ge7xxu6/L5BvjQllrLClWqW4K6RfT68JtDwLFndDDgO0A6elJQg6DYJt9A0S1q5tLILRTKy9olm4L2M4NFSgmKG6OjJHkxoSBtKFj7bkghxQ0gRGdm4k5VTuuDWiKz9BHvm0PzXap91d35EdopU3icXW+s2o39zT0HFWdVQX9iOhVjA31GiZQ="
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-cape-only": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "113b6fe9ccfb3414916db0f850c8b104",
+          "name": "CapeOnly",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk4MDQsInByb2ZpbGVJZCI6IjExM2I2ZmU5Y2NmYjM0MTQ5MTZkYjBmODUwYzhiMTA0IiwicHJvZmlsZU5hbWUiOiJDYXBlT25seSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-no-textures": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "d4801b6ca3c6333fa909264a6056ce2f",
+          "name": "NoTextures",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk4NjksInByb2ZpbGVJZCI6ImQ0ODAxYjZjYTNjNjMzM2ZhOTA5MjY0YTYwNTZjZTJmIiwicHJvZmlsZU5hbWUiOiJOb1RleHR1cmVzIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "rteBzb7YY8igOpHck5A5gbV6SOjOnOk/CwwpQKm0REgYGG+mIQl+x9dXiWLfVHrW4BTW1VXOicPRF4HzLvGEdYWbmMXqm0gdsOjFjT4MO0R0ozzSV58FZPOt4vPnpk95mSuRXOQQk0jRdmh/nPgNQYGiDsuWNg8UvFeAU1dGlZomAtU8AASbFeX6Lk+Tgkiy5jPxBqLSZ2GeAGGA4CUuh3hqBpPsUk4+zv2OSVQ7f5jITShZsRoTZJVfOfK4QJp13KqeULnwJPe+H794mDT4pxEd+rFJikMg/M0yBm4/gPTfoUMvj6kArScdbqvXHIYq+3fNNW3Pe3KvUPGRAFgWD06noLEbf+yreqIH3Z0NLxYab3xG6vu8XiQD8TeeqECTv1MhlPW/ybWteAYSOOvklmfkiDsNdPGRmYRptYecR3FgJWFBZjQ5D/NKABWwkCj7CGLv6qbDyCj+PiL5GaNAUcNWef7jvCYEVr2bFpHOOX1hxIEV1OSnfL6hpPj4OfrO7NYGOhO2+N5DA87nXTq9M0wDhwesQ72VEzGi/k4HxdapZ2DTaDJKgptYDcLKduybESUbol769vwv7uZM8XDFkBvNgdUOJiZa2p0y7s4YN08bxKur2dWxqq+TaNBmMDsljvKU3rqHAz5K12LapbB18blu/EcJXiGPAB7UjS95bVk="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape",
+              "signature": "sUCpZQprappvqKqk8kSs/wPCtYmMoNTEUxqiyIwagpM5gOvhs0IFZsjEckBTDVB6qc8sDuL6SS3IzslWh5Gvo+QQQIcuSaJ80ETmP0cutz2DfXiLBtvEr4wBKiZSKOpLJCo0tRmikDUFuwVd4h6arlsjTZG6F6pYyUYuwQYhCMjIDHCLtlu38EwV74jvJIDSm91GHbRyg4Fmzh1KBTb2eYr+vazTqPuWR0W1s2JQO2pxaMN5pnS2QSqwGMf6IaWT507HR+PqLmPFIuGfY559XlaPVeaQoFPdfUTmZM/pJ47LcZWlvrwbpxrebRW5ZX1sBOSvZlgMlHWpyxakW9lOVgOkfeHecj2aJweg/9pQg0N7jBz6PKiw+tiUHZe/bobM0YhDjL4Tsv4Uv6LS4SEziIKUwbpWh21hwwAKmtSAH2BqBUg+LWtjd9KKhGgTTWPNxI3zKdx+mtUniiAlc4m28jAjx5tg9DqGSmm/oLpt+I2tEmXf8Onl87Ge7xxu6/L5BvjQllrLClWqW4K6RfT68JtDwLFndDDgO0A6elJQg6DYJt9A0S1q5tLILRTKy9olm4L2M4NFSgmKG6OjJHkxoSBtKFj7bkghxQ0gRGdm4k5VTuuDWiKz9BHvm0PzXap91d35EdopU3icXW+s2o39zT0HFWdVQX9iOhVjA31GiZQ="
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-ghost": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "48f83307567a33d786043b22ee4c1b84",
+          "name": "Ghost",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk5MzYsInByb2ZpbGVJZCI6IjQ4ZjgzMzA3NTY3YTMzZDc4NjA0M2IyMmVlNGMxYjg0IiwicHJvZmlsZU5hbWUiOiJHaG9zdCIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvZmYyNWYzYWE5ZDMzODNmYjhkZDY2OTdmZjk1YTZlNjRiYzkyNGQ0ZDc5NjY4NzI1NjMxNDgzMGY3OWUwNWExNSJ9fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-dangling": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "36b57fa96d363a0389c065717c41cd87",
+          "name": "Dangling",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk5NTcsInByb2ZpbGVJZCI6IjM2YjU3ZmE5NmQzNjNhMDM4OWMwNjU3MTdjNDFjZDg3IiwicHJvZmlsZU5hbWUiOiJEYW5nbGluZyIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6e319"
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-cjk": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+          "name": "角色",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk5NzgsInByb2ZpbGVJZCI6ImM0YTVlZjc1MjgxYTNhN2Y5ZWRjOTFkMDIwM2E3ZGE4IiwicHJvZmlsZU5hbWUiOiJcdTg5ZDJcdTgyNzIiLCJpc1B1YmxpYyI6dHJ1ZSwidGV4dHVyZXMiOnsiU0tJTiI6eyJ1cmwiOiJodHRwOi8vMTI3LjAuMC4xOjM4MDgwL3RleHR1cmVzLzk5ZjFiZjg0YzhiOGFkNzJhOGZjMzI2YmI0MmQwMmQ4NmM5N2IyZTRkN2VmZDJkNWVmYWQzYTU3ZTAyODMzY2YifX19"
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-banned": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "375aeb7517e73800bc1e0e47a704624b",
+          "name": "Banned",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk5OTgsInByb2ZpbGVJZCI6IjM3NWFlYjc1MTdlNzM4MDBiYzFlMGU0N2E3MDQ2MjRiIiwicHJvZmlsZU5hbWUiOiJCYW5uZWQiLCJpc1B1YmxpYyI6dHJ1ZSwidGV4dHVyZXMiOnsiU0tJTiI6eyJ1cmwiOiJodHRwOi8vMTI3LjAuMC4xOjM4MDgwL3RleHR1cmVzLzk5ZjFiZjg0YzhiOGFkNzJhOGZjMzI2YmI0MmQwMmQ4NmM5N2IyZTRkN2VmZDJkNWVmYWQzYTU3ZTAyODMzY2YifSwiQ0FQRSI6eyJ1cmwiOiJodHRwOi8vMTI3LjAuMC4xOjM4MDgwL3RleHR1cmVzL2M1OTEzZDI4Yjk3YzhiYjI1OTY1Njc4ODYyZTU2ZTUyYjkwMTI1YjU1YWNiZjQ3N2M5OTY1MzU3MzBkNTllMTIifX19"
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-renamed": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "0f8d2c4b6a1e4f3d8c7b9a6e5d4c3b2a",
+          "name": "Renamed",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MTAwMjAsInByb2ZpbGVJZCI6IjBmOGQyYzRiNmExZTRmM2Q4YzdiOWE2ZTVkNGMzYjJhIiwicHJvZmlsZU5hbWUiOiJSZW5hbWVkIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85OWYxYmY4NGM4YjhhZDcyYThmYzMyNmJiNDJkMDJkODZjOTdiMmU0ZDdlZmQyZDVlZmFkM2E1N2UwMjgzM2NmIn19fQ=="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-random": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "7c1e9a3b5d2f4e6a8b0c1d2e3f4a5b6c",
+          "name": "RandomUuid",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MTAwNDEsInByb2ZpbGVJZCI6IjdjMWU5YTNiNWQyZjRlNmE4YjBjMWQyZTNmNGE1YjZjIiwicHJvZmlsZU5hbWUiOiJSYW5kb21VdWlkIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-uppercase": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MTAwNjAsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-trailing-space": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MTAwNzksInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-hyphenated": {
+      "status": 204,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "ygg/profile-encoded-slash": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1923
+      }
+    },
+    "ygg/profile-unknown": {
+      "status": 204,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "ygg/profile-orphan": {
+      "status": 204,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "ygg/profile-offline-unknown": {
+      "status": 204,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "ygg/profile-other-host": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MTAxODMsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/profile-forwarded-https": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "https://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "Steve",
+          "properties": [
+            {
+              "name": "textures",
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MTAyMDIsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHBzOi8vMTI3LjAuMC4xOjM4MDgwL3RleHR1cmVzLzk5ZjFiZjg0YzhiOGFkNzJhOGZjMzI2YmI0MmQwMmQ4NmM5N2IyZTRkN2VmZDJkNWVmYWQzYTU3ZTAyODMzY2YifSwiQ0FQRSI6eyJ1cmwiOiJodHRwczovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy9jNTkxM2QyOGI5N2M4YmIyNTk2NTY3ODg2MmU1NmU1MmI5MDEyNWI1NWFjYmY0NzdjOTk2NTM1NzMwZDU5ZTEyIn19fQ=="
+            },
+            {
+              "name": "uploadableTextures",
+              "value": "skin,cape"
+            }
+          ]
+        }
+      }
+    },
+    "ygg/bulk": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": [
+          {
+            "id": "5627dd98e6be3c21b8a8e92344183641",
+            "name": "steve"
+          },
+          {
+            "id": "a818c0db482a377881ffd3df54c7a926",
+            "name": "Alex_01"
+          }
+        ]
+      }
+    },
+    "ygg/bulk-empty": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": []
+      }
+    },
+    "ygg/bulk-duplicates": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": [
+          {
+            "id": "5627dd98e6be3c21b8a8e92344183641",
+            "name": "Steve"
+          },
+          {
+            "id": "5627dd98e6be3c21b8a8e92344183641",
+            "name": "steve"
+          }
+        ]
+      }
+    },
+    "ygg/bulk-at-limit": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": [
+          {
+            "id": "5627dd98e6be3c21b8a8e92344183641",
+            "name": "Steve"
+          },
+          {
+            "id": "a818c0db482a377881ffd3df54c7a926",
+            "name": "Alex_01"
+          },
+          {
+            "id": "edef1271837136ac893d2023624ffbd3",
+            "name": "HDSkin"
+          }
+        ]
+      }
+    },
+    "ygg/bulk-over-limit": {
+      "status": 403,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "ForbiddenOperationException",
+          "errorMessage": "You can query up to 3 players in one request."
+        }
+      }
+    },
+    "ygg/bulk-over-limit-before-dedupe": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": [
+          {
+            "id": "5627dd98e6be3c21b8a8e92344183641",
+            "name": "Steve"
+          },
+          {
+            "id": "a818c0db482a377881ffd3df54c7a926",
+            "name": "Alex_01"
+          },
+          {
+            "id": "edef1271837136ac893d2023624ffbd3",
+            "name": "HDSkin"
+          }
+        ]
+      }
+    },
+    "ygg/bulk-banned-and-special": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": [
+          {
+            "id": "375aeb7517e73800bc1e0e47a704624b",
+            "name": "Banned"
+          },
+          {
+            "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+            "name": "角色"
+          },
+          {
+            "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+            "name": "Dot.Name"
+          }
+        ]
+      }
+    },
+    "ygg/bulk-trailing-space": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": [
+          {
+            "id": "5627dd98e6be3c21b8a8e92344183641",
+            "name": "Steve"
+          }
+        ]
+      }
+    },
+    "ygg/bulk-not-json": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": []
+      }
+    },
+    "ygg/bulk-null-counts": {
+      "status": 403,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "ForbiddenOperationException",
+          "errorMessage": "You can query up to 3 players in one request."
+        }
+      }
+    },
+    "ygg/bulk-numbers-count": {
+      "status": 403,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "ForbiddenOperationException",
+          "errorMessage": "You can query up to 3 players in one request."
+        }
+      }
+    },
+    "ygg/bulk-object": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": [
+          {
+            "id": "5627dd98e6be3c21b8a8e92344183641",
+            "name": "Steve"
+          },
+          {
+            "id": "a818c0db482a377881ffd3df54c7a926",
+            "name": "Alex_01"
+          }
+        ]
+      }
+    },
+    "ygg/bulk-scalar": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": [
+          {
+            "id": "5627dd98e6be3c21b8a8e92344183641",
+            "name": "Steve"
+          }
+        ]
+      }
+    },
+    "ygg/bulk-leading-space": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": [
+          {
+            "id": "5627dd98e6be3c21b8a8e92344183641",
+            "name": "Steve"
+          }
+        ]
+      }
+    },
+    "ygg/bulk-dedupe-after-trim": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": [
+          {
+            "id": "5627dd98e6be3c21b8a8e92344183641",
+            "name": "Steve"
+          }
+        ]
+      }
+    },
+    "ygg/bulk-limit-after-trim": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": [
+          {
+            "id": "a818c0db482a377881ffd3df54c7a926",
+            "name": "Alex_01"
+          },
+          {
+            "id": "edef1271837136ac893d2023624ffbd3",
+            "name": "HDSkin"
+          }
+        ]
+      }
+    },
+    "ygg/bulk-empty-string": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": [
+          {
+            "id": "5627dd98e6be3c21b8a8e92344183641",
+            "name": "Steve"
+          }
+        ]
+      }
+    },
+    "ygg/bulk-text-content-type": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": []
+      }
+    },
+    "ygg/single": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "5627dd98e6be3c21b8a8e92344183641",
+          "name": "steve"
+        }
+      }
+    },
+    "ygg/single-exact": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "a818c0db482a377881ffd3df54c7a926",
+          "name": "Alex_01"
+        }
+      }
+    },
+    "ygg/single-dot-name": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+          "name": "Dot.Name"
+        }
+      }
+    },
+    "ygg/single-banned": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "375aeb7517e73800bc1e0e47a704624b",
+          "name": "Banned"
+        }
+      }
+    },
+    "ygg/single-cjk": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+          "name": "角色"
+        }
+      }
+    },
+    "ygg/single-missing": {
+      "status": 204,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "ygg/single-encoded-slash": {
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 1733
+      }
+    },
+    "methods/csl-post": {
+      "status": 405,
+      "headers": {
+        "allow": "GET, HEAD",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/csl-root-delete": {
+      "status": 405,
+      "headers": {
+        "allow": "GET, HEAD",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/csl-options": {
+      "status": 200,
+      "headers": {
+        "allow": "GET,HEAD",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "methods/usm-delete": {
+      "status": 405,
+      "headers": {
+        "allow": "GET, HEAD",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/legacy-put": {
+      "status": 405,
+      "headers": {
+        "allow": "GET, HEAD",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/textures-post": {
+      "status": 405,
+      "headers": {
+        "allow": "GET, HEAD",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/textures-options": {
+      "status": 200,
+      "headers": {
+        "allow": "GET,HEAD",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "methods/bulk-get": {
+      "status": 405,
+      "headers": {
+        "allow": "POST",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/bulk-options": {
+      "status": 200,
+      "headers": {
+        "allow": "POST",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "methods/profile-post": {
+      "status": 405,
+      "headers": {
+        "allow": "GET, HEAD",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/single-delete": {
+      "status": 405,
+      "headers": {
+        "allow": "GET, HEAD",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/meta-options": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "meta": {
+            "serverName": "NextSkin 契约测试站",
+            "implementationName": "Yggdrasil API for Blessing Skin",
+            "implementationVersion": "5.2.1",
+            "links": {
+              "homepage": "http://127.0.0.1:38080",
+              "register": "http://127.0.0.1:38080/auth/register"
+            },
+            "feature.non_email_login": true
+          },
+          "skinDomains": [
+            "cdn.example.test",
+            "127.0.0.1"
+          ],
+          "signaturePublickey": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtBMkPWomKM9SqEsPTPaF\n8mIq25pOi2roo/uYZ/fyUxsUphrynjIS5kZHU5qMezE1waqEYzBSfSvANvz0X+VK\nW92hHqbGUkOWgxnAaIkBlP0dQ3US3YQkeB0PHPVYD7Lyi4d76urm+KmH4cKHp9jP\nespEAN47GzvVj4M0a7vM94UXkhZhgW4VHgHN98H+Db1sPLmbTcVE6aCYW5j7/jYd\n3O96mLvI0wFY5ussrWfrQomfjQhkFAnO1rixYlhMFGBygNStRJdI1tWHiwAwru0O\nBy/lzTvSEcFQxZreAFeC4KMUKnZ3RFIfUsBmMdFZZSYyT5TwLC1u04ZVbMfxL7Cg\n9++dzrO5S0UFrUH/A03VzOed45FLkDjIM/slGDArba07FakxS7pzzQ3JoNOBCi7I\nLIApvvGvdu+rNPwecfRg7CjqYhHK/Ldb/GFlwKBTfvybqCXzylrCouKWnDiNecU/\nPa6ImqsZ32A1bTuE6XjL3iVOTMaEpNEiDYO93mvF0ShTtPvffJw7ghQ4AlsvXy+M\npOAW5MpOiVmpoWbH/rUum/jgdokxx14EFR5eLLedqrT3aGWE6MCF0TQrFrlbk0kK\nvXzeazYdMz2bpfXK8NBfmMUiLeHejrIoDg+tWAW1xkmG1+8KQvnfmOztIr25KVCY\nJL3hoz6NJyLkzvQsyxGe/fsCAwEAAQ==\n-----END PUBLIC KEY-----\n"
+        }
+      }
+    },
+    "head/csl": {
+      "status": 200,
+      "headers": {
+        "cache-control": "private, must-revalidate",
+        "content-type": "application/json",
+        "last-modified": "Tue, 03 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "head/csl-missing": {
+      "status": 404,
+      "headers": {
+        "cache-control": "max-age=86400, no-cache, public",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "head/csl-if-modified-since": {
+      "status": 200,
+      "headers": {
+        "cache-control": "private, must-revalidate",
+        "content-type": "application/json",
+        "last-modified": "Tue, 03 Feb 2026 04:34:56 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "head/usm": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "head/legacy": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "image/png",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "head/textures": {
+      "status": 200,
+      "headers": {
+        "cache-control": "private, must-revalidate",
+        "content-length": "13001",
+        "content-type": "image/png",
+        "last-modified": "Fri, 02 Jan 2026 03:04:05 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "head/textures-if-none-match": {
+      "status": 200,
+      "headers": {
+        "cache-control": "private, must-revalidate",
+        "content-length": "13001",
+        "content-type": "image/png",
+        "last-modified": "Fri, 02 Jan 2026 03:04:05 GMT",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "head/textures-missing": {
+      "status": 404,
+      "headers": {
+        "cache-control": "max-age=86400, no-cache, public",
+        "content-type": "text/html; charset=UTF-8",
+        "etag": "\"8bdff17d9e8e3a1a74bf2285c93db48a\"",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "head/meta": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "head/profile": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    }
+  }
+}

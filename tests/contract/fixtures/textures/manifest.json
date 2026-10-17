@@ -1,0 +1,50 @@
+[
+  {
+    "file": "steve-64x64.png",
+    "width": 64,
+    "height": 64,
+    "sizeBytes": 13001,
+    "hash": "99f1bf84c8b8ad72a8fc326bb42d02d86c97b2e4d7efd2d5efad3a57e02833cf",
+    "pixelHash": "41738e8c2f26895a9f93c82ab43fd7aa87034d0f0750ef482b3abf65a15ca445"
+  },
+  {
+    "file": "alex-64x64.png",
+    "width": 64,
+    "height": 64,
+    "sizeBytes": 13008,
+    "hash": "932a0132bfe108e9d7ac7734aca755192a3e35b6ed236b5d0090c4000520ecd5",
+    "pixelHash": "244f5dd6442cfdee5e7016df6f4c0db909c9d6eb5c4134d03b512432f9da3e62"
+  },
+  {
+    "file": "legacy-64x32.png",
+    "width": 64,
+    "height": 32,
+    "sizeBytes": 6351,
+    "hash": "5333abaee6c0ab3d9aaea4fa897070671a68409565a98884b08b2e2b76f6c141",
+    "pixelHash": "2ffcbcea9ddef49a15468dbe04fd3ff28c375623543b493d32889ac81ab42e34"
+  },
+  {
+    "file": "hd-128x128.png",
+    "width": 128,
+    "height": 128,
+    "sizeBytes": 52584,
+    "hash": "52598bac67e7d2b4fb40b0333b43b547fe35ff2e5576b839c4e92f9543743054",
+    "pixelHash": "fe7313e3e77df747b7d9636cc1efb3693aaaac41bd2c5342f6650ea486baafe2"
+  },
+  {
+    "file": "cape-64x32.png",
+    "width": 64,
+    "height": 32,
+    "sizeBytes": 6447,
+    "hash": "c5913d28b97c8bb25965678862e56e52b90125b55acbf477c996535730d59e12",
+    "pixelHash": "7093a50bbf74c6100d6f9cd2094b6264bf155e89398f99d19461c653592c8843"
+  },
+  {
+    "file": "ghost-64x64.png",
+    "width": 64,
+    "height": 64,
+    "sizeBytes": 13042,
+    "hash": "ff25f3aa9d3383fb8dd6697ff95a6e64bc924d4d796687256314830f79e05a15",
+    "pixelHash": "5211b6083b3490dc3b2f19e789c96fda4d311da177cea10f5ba29c48250a85f8"
+  }
+]

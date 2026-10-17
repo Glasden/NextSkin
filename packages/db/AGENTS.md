@@ -7,7 +7,7 @@ Kysely 实例、SQLite 方言、迁移运行器，以及隔离四种数据库差
 - 方言差异只能写在本包里。包外直接用 `returning`、`onConflict`、`autoIncrement`、`schema.createTable` 等会被 lint 拦下，报错会指向对应的辅助函数。缺少某个跨数据库的能力时，在这里补辅助函数，配上 `*.db.test.ts`。
 - 建表一律用 `createTable(db, name)`，整数主键用 `.$call(autoIncrementId(db))`。MySQL 上的表统一使用 `utf8mb4_bin`，所以三种数据库的字符串相等比较都区分大小写：
   - 需要不区分大小写的字段（角色名、邮箱）要在 schema 里显式处理，例如另存一列规范化后的值，并在这列上建唯一索引；
-  - `utf8mb4_bin` 比较时会忽略结尾空格，PG 和 SQLite 不会，所以输入要在领域层去掉首尾空格；
+  - `utf8mb4_bin` 比较时会忽略结尾空格，PG 和 SQLite 不会，所以输入要在领域层去掉首尾空格。CHECK 里的 `in (...)` 在 MySQL 上同样挡不住 `'active '`，枚举列的值只能来自代码里的常量；按唯一键查到行之后，要用 JS 再逐字比较一次键（见 `@nextskin/domain` 的角色、材质、设置查询）；
   - 有索引或唯一约束的字符串列要用 `varchar(n)`：MySQL 不能直接给 `text` 建索引，并且单个索引最长 3072 字节，即 `varchar(768)`。
 - 列类型按 ADR-0015 和 `docs/schema.md` 的类型记号选辅助函数：
   - 时间用 `isoTimestampColumn`，值只能来自 `toIsoTimestamp`；

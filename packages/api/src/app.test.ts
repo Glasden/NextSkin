@@ -1,10 +1,120 @@
-import { describe, expect, it } from 'vitest'
+import { coreSettingsRegistry, type Core, type CoreSettingKey, type PlayerView } from '@nextskin/domain'
+import { describe, expect, it, test, vi } from 'vitest'
 import { createApp } from './app.ts'
 
+const player: PlayerView = {
+  pid: 1,
+  name: 'Alice',
+  uuid: 'a'.repeat(32),
+  updatedAt: '2026-01-02T03:04:05.000Z',
+  ownerBanned: false,
+  skin: null,
+  cape: null,
+}
+
+function mockCore(stored: Partial<Record<CoreSettingKey, unknown>> = {}) {
+  const read = vi.fn((keys: readonly CoreSettingKey[]) => {
+    const values: Record<string, unknown> = {}
+    for (const key of keys) {
+      const definition = coreSettingsRegistry[key]
+      const parsed = definition.schema.safeParse(key in stored ? stored[key] : definition.default)
+      if (!parsed.success) throw new Error(`设置项 ${key} 读取失败`)
+      values[key] = parsed.data
+    }
+    return Promise.resolve(values)
+  })
+  const findByName = vi.fn().mockResolvedValue(player)
+  const findByUuid = vi.fn().mockResolvedValue(player)
+  const core = {
+    settings: { read },
+    players: { findByName, findByUuid },
+    yggdrasil: { getSigningKey: vi.fn().mockResolvedValue(null) },
+  } as unknown as Core
+  return { core, read, findByName, findByUuid }
+}
+
 describe('createApp', () => {
-  it('不启动 Next 也能直接测端点', async () => {
-    const res = await createApp().request('/api/health')
+  it('健康端点应用默认缓存和 ALI；全局只读 ALI 开关', async () => {
+    const { core, read } = mockCore()
+    const res = await createApp({ core }).request('http://example.test/api/health')
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ status: 'ok' })
+    expect(read.mock.calls).toEqual([[['yggdrasil.apiLocationIndication']]])
+    expect(res.headers.get('content-type')).toBe('application/json')
+    expect(res.headers.get('cache-control')).toBe('no-cache, private')
+    expect(res.headers.get('x-authlib-injector-api-location')).toBe('http://example.test/api/yggdrasil')
+  })
+
+  it('坏的 skinDomains 只影响元数据端点，CSL 照常 200', async () => {
+    const { core, read } = mockCore({ 'yggdrasil.skinDomains': [1] })
+    const app = createApp({ core })
+    const csl = await app.request('http://example.test/Alice.json')
+    expect(csl.status).toBe(200)
+    expect(await csl.json()).toEqual({ username: 'Alice', skins: { default: null }, cape: null })
+    expect(read.mock.calls).toEqual([[['yggdrasil.apiLocationIndication']], [['cache.publicMaxAge']]])
+    const metadata = await app.request('http://example.test/api/yggdrasil')
+    expect(metadata.status).toBe(500)
+    expect(await metadata.text()).toBe('Internal Server Error')
+    expect(metadata.headers.get('cache-control')).toBe('no-cache, private')
+    expect(metadata.headers.get('x-authlib-injector-api-location')).toBe('http://example.test/api/yggdrasil')
+  })
+
+  it('超限时返回 ForbiddenOperationException 并说明上限，不带 ALI，也不执行角色查询', async () => {
+    const { core, findByName } = mockCore({ 'yggdrasil.profileSearchLimit': 3 })
+    const response = await createApp({ core }).request('http://example.test/api/yggdrasil/api/profiles/minecraft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '[1,2,3,4]',
+    })
+    expect(response.status).toBe(403)
+    const body: unknown = await response.json()
+    expect(body).toEqual({
+      error: 'ForbiddenOperationException',
+      errorMessage: 'You can query up to 3 players in one request.',
+    })
+    expect(response.headers.has('x-authlib-injector-api-location')).toBe(false)
+    expect(findByName).not.toHaveBeenCalled()
+  })
+
+  it('ALI 开关为 false 时不添加响应头', async () => {
+    const { core } = mockCore({ 'yggdrasil.apiLocationIndication': false })
+    const response = await createApp({ core }).request('http://example.test/api/health')
+    expect(response.headers.has('x-authlib-injector-api-location')).toBe(false)
+  })
+})
+
+describe('路由边界', () => {
+  it('末尾带斜杠的路径与不带斜杠的相同', async () => {
+    const { core } = mockCore()
+    const res = await createApp({ core }).request('http://example.test/api/health/')
+    expect(res.status).toBe(200)
+  })
+
+  test.each([
+    '/api/yggdrasil/sessionserver/session/minecraft/profile/abc%2F',
+    '/api/yggdrasil/api/users/profiles/minecraft/Alice%2F',
+    '/csl/Dot.Name.json',
+    '/csl/Alice%2F.json',
+    '/not-a-protocol',
+  ])('不匹配的路由 %s 不返回 405，也不查询角色', async (path) => {
+    const { core, findByName, findByUuid } = mockCore()
+    for (const method of ['GET', 'POST', 'OPTIONS']) {
+      const response = await createApp({ core }).request(`http://example.test${path}`, { method })
+      expect(response.status).toBe(404)
+      expect(response.headers.get('cache-control')).toBe('no-cache, private')
+      expect(response.headers.has('allow')).toBe(false)
+    }
+    expect(findByName).not.toHaveBeenCalled()
+    expect(findByUuid).not.toHaveBeenCalled()
+  })
+
+  it('405 带 ALI，且只读全局设置，不触发角色查询或端点设置', async () => {
+    const { core, read, findByName } = mockCore()
+    const response = await createApp({ core }).request('http://example.test/csl/Alice.json', { method: 'POST' })
+    expect(response.status).toBe(405)
+    expect(response.headers.get('allow')).toBe('GET, HEAD')
+    expect(response.headers.get('x-authlib-injector-api-location')).toBe('http://example.test/api/yggdrasil')
+    expect(read.mock.calls).toEqual([[['yggdrasil.apiLocationIndication']]])
+    expect(findByName).not.toHaveBeenCalled()
   })
 })

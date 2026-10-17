@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-monorepo 骨架和工具链已经搭好（ADR-0014），各包里还只有占位代码，业务功能还没有开始写。
+monorepo 骨架和工具链已经搭好（ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证和所有写操作还没有开始。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
@@ -26,13 +26,13 @@ nextskin 启动器（进程监管 + 命令行）
 
 | 命令 | 用途 |
 |---|---|
-| `pnpm dev` | 启动开发环境，不依赖任何外部服务（默认 SQLite + 种子数据） |
+| `pnpm dev` | 启动开发环境，不依赖任何外部服务（默认 SQLite，数据在 `apps/web/data`；环境变量见 `packages/domain/src/bootstrap.ts`。种子数据还没有） |
 | `pnpm check` | lint + 类型检查 + 单元测试 + 格式检查；提交前必须通过 |
 | `pnpm test <path>` | 只跑指定文件或目录的测试 |
 | `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑 `*.db.test.ts`（需要 Docker，测试库容器跑完后保留；`pnpm test` 只用 SQLite 跑） |
-| `pnpm test:contract` | 协议契约测试（用例录制自真实的 BS v6；还没有用例） |
+| `pnpm test:contract` | 协议契约测试：回放从真实 BS v6 录制的用例，不需要 Docker，`pnpm check` 也会跑。录制见 `tests/contract/README.md` |
 | `pnpm storybook` | 组件工作台 |
-| `pnpm e2e` | Playwright 端到端测试与截图回归 |
+| `pnpm e2e` | Playwright 端到端测试与截图回归；也经过 Next standalone 回放全部契约用例 |
 | `pnpm format` | Prettier 格式化 |
 
 单元测试和 story 测试跑在 Chromium 里，第一次运行前要装浏览器：`pnpm --filter @nextskin/web exec playwright install chromium`。
@@ -66,7 +66,7 @@ nextskin 启动器（进程监管 + 命令行）
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |
 | `packages/importer` | 从 BS v6 只读导入 |
 | `plugins/*` | 官方插件，用公开 API 编写 |
-| `tests/contract` | 协议契约用例 |
+| `tests/contract` | 协议契约用例：从 BS v6 录制，回放比较（见该目录 README） |
 | `docs/adr` | 架构决策记录 |
 | `spikes/*` | 技术验证，见上文"当前阶段" |
 
@@ -76,12 +76,16 @@ nextskin 启动器（进程监管 + 命令行）
 - **新数据表**：迁移 → 类型 → 仓储；跑 `pnpm test:db`。
 - **新事件或拦截点**：先改 SDK 的类型、`interceptorPolicies` 和 type-tests，再在核心实现。这属于插件 API 变更。
 - **新组件**：写进 `packages/ui`，配 story 和截图基线，并在 DESIGN.md 的组件清单里补一行。
-- **新设置项**：在设置注册表里声明类型和默认值，后台表单会自动生成，不要手写表单。
+- **新设置项**：在设置注册表（`packages/domain/src/settings/registry.ts`）里声明类型和默认值，后台表单会自动生成，不要手写表单。
+- **新的或改动的协议行为**：先在 `tests/contract/src/cases.ts` 加用例、从 BS v6 录制，再实现。
 - **新包**：照抄现有包的 `package.json` 脚本和 `tsconfig.json`。包之间的依赖只用 `workspace:*` 声明；几个包共用的外部依赖，版本写进 `pnpm-workspace.yaml` 的 catalog。
 
 ## 已知的坑
 
 - Next 16：`middleware.ts` 已改名为 `proxy.ts`；页面的 `params` 和 `searchParams` 是 Promise；同一个路由段不能同时有 `page.tsx` 和 `route.ts`。
+- 根路径上的协议端点由 `next.config.ts` 的 rewrite 转进 `app/api/[...path]`，Route Handler 拿到的仍是改写前的 URL，所以 Hono 按公开路径注册路由。`request.url` 的 host 是 Next 自己的监听地址，需要客户端看到的站点地址时读 `Host` 头。
+- Next 默认把末尾带斜杠的路径 308 跳转，已用 `skipTrailingSlashRedirect` 关掉：启动器会请求 `/api/yggdrasil/`，旧版 Java 不跟随 308。
+- 协议端点里有些看起来像 bug 的 BS 行为（按名字查角色忽略末尾空格、批量查询返回请求里的名字……）是契约的一部分，改之前读 `tests/contract/README.md`。
 - Next App Router 在浏览器里用的是它自带的 React（canary 版本），不是 `node_modules` 里的 `react`。插件组件要共享这份 React，只能通过 import map（ADR-0011）。
 - Kysely 0.29：`Migration` 等迁移相关类型要从 `kysely/migration` 导入。
 - SQLite 是同步执行的，写锁是全局的：事务里不要 `await` 网络请求或其他慢操作，否则所有写操作都要排队（ADR-0008）。

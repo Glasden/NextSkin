@@ -26,3 +26,15 @@ export {
 } from './helpers.ts'
 export { migrateToLatest, type MigrationOptions } from './migrations.ts'
 export { SqliteWriteLockTimeoutError } from './sqlite/dialect.ts'
+export { coreMigrations } from './migrations/index.ts'
+export type {
+  CoreDatabase,
+  UsersTable,
+  TextureFilesTable,
+  TexturesTable,
+  PlayersTable,
+  SettingsTable,
+  UserRole,
+  TextureType,
+  TextureFileStatus,
+} from './schema.ts'
