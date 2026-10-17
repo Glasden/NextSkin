@@ -1,0 +1,52 @@
+# 录制协议契约用例用的 BS v6，用法见同目录的 README.md。
+# 数据库在 tmpfs 里、上传的材质在容器里：down 之后再 up 就是一个全新的实例。
+name: nextskin-bs-v6
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: blessingskin
+      MYSQL_USER: blessingskin
+      MYSQL_PASSWORD: blessingskin
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+    ports:
+      - '127.0.0.1:38306:3306'
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h127.0.0.1 -ublessingskin -pblessingskin --silent']
+      interval: 2s
+      timeout: 5s
+      retries: 60
+  app:
+    build:
+      context: .
+      target: app
+    environment:
+      BS_ADMIN_EMAIL: admin@nextskin.test
+      BS_ADMIN_PASSWORD: nextskin-test
+      BS_ADMIN_NICKNAME: admin
+      # 换成 yggdrasil-connect 录制 Yggdrasil Connect：BS_YGGDRASIL_PLUGIN=yggdrasil-connect docker compose … up
+      BS_YGGDRASIL_PLUGIN: ${BS_YGGDRASIL_PLUGIN:-yggdrasil-api}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'test', '-f', '/tmp/bs-ready']
+      interval: 2s
+      timeout: 5s
+      retries: 90
+  web:
+    build:
+      context: .
+      target: web
+    ports:
+      - '127.0.0.1:38080:80'
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/']
+      interval: 2s
+      timeout: 5s
+      retries: 30
