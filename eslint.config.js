@@ -31,9 +31,9 @@ export default defineConfig(
     rules: { 'nextskin/no-raw-color': 'off', 'nextskin/no-arbitrary-value': 'off' },
   },
   {
-    // SQLite 方言就在这里实现
+    // SQLite 方言和跨数据库 SQL 辅助函数就在这里实现，需要使用底层方言 API
     files: ['packages/db/**'],
-    rules: { 'nextskin/no-sqlite-dialect': 'off' },
+    rules: { 'nextskin/no-sqlite-dialect': 'off', 'nextskin/no-dialect-specific-sql': 'off' },
   },
   {
     // 规则自己的测试用例里全是反例
@@ -45,6 +45,12 @@ export default defineConfig(
     // 插件提供的函数按 API 要求一律返回 Promise（可能跨进程调用），未必有 await
     files: ['packages/plugin-sdk/{examples,type-tests}/**', 'plugins/**'],
     rules: { '@typescript-eslint/require-await': 'off' },
+  },
+  {
+    // 插件拿到的 Kysely 不直连数据库：核心网关按白名单重建操作树、再用自己的方言编译（ADR-0010），
+    // 跨数据库的差异在网关里处理；插件也用不到 packages/db 的辅助函数
+    files: ['packages/plugin-sdk/**', 'plugins/**'],
+    rules: { 'nextskin/no-dialect-specific-sql': 'off' },
   },
   {
     // 类型契约测试：裸表达式用来挂 @ts-expect-error

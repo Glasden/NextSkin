@@ -45,7 +45,7 @@ nextskin 启动器（进程监管 + 命令行）
 3. **已存在的材质文件永不重新编码。新材质的 hash 是像素 hash：sha256(u32be(宽) ‖ u32be(高) ‖ RGBA8 像素)，不是文件字节的 hash。** hash 既是存储键，也是公开 URL 的一部分；文件字节的 hash 会随 zlib 版本和 CPU 架构变化（ADR-0008）。
 4. **写操作只能经过领域用例。** Route handler 里不写 SQL，也不写业务规则；不用 Server Actions 写数据。见 ADR-0004。守护：包依赖（`apps/web`、`packages/api` 不依赖 `@nextskin/db`）、lint `nextskin/no-use-server`。
 5. **积分、点赞数这类计数，在事务内原子更新。** 禁止"先读、再算、再写回"。
-6. **数据库代码必须在四种数据库上都通过。** `returning`、upsert、自增主键、`count` 只能通过 `packages/db` 的辅助函数使用。见 ADR-0005。守护：`pnpm test:db`。
+6. **数据库代码必须在四种数据库上都通过。** `returning`、upsert、自增主键、`count` 只能通过 `packages/db` 的辅助函数使用。见 ADR-0005。守护：`pnpm test:db`、lint。
 7. **不使用 `NEXT_PUBLIC_*`，站点配置存在数据库里。** 守护：lint。
 8. **材质和任何用户上传的图片都不经过 `next/image`，Image Optimization 保持关闭。** 守护：lint、`next.config.ts`。
 9. **插件 SDK 的公开 API 一旦变化，必须附 changeset，并通过 `packages/plugin-sdk/type-tests`。** 它是对社区的契约。守护：api-extractor 报告（见该包的 AGENTS.md）。
@@ -83,7 +83,6 @@ nextskin 启动器（进程监管 + 命令行）
 - Next 16：`middleware.ts` 已改名为 `proxy.ts`；页面的 `params` 和 `searchParams` 是 Promise；同一个路由段不能同时有 `page.tsx` 和 `route.ts`。
 - Next App Router 在浏览器里用的是它自带的 React（canary 版本），不是 `node_modules` 里的 `react`。插件组件要共享这份 React，只能通过 import map（ADR-0011）。
 - Kysely 0.29：`Migration` 等迁移相关类型要从 `kysely/migration` 导入。
-- MySQL 不支持 `returning`；`count()` 的返回值类型随数据库而变。
 - SQLite 是同步执行的，写锁是全局的：事务里不要 `await` 网络请求或其他慢操作，否则所有写操作都要排队（ADR-0008）。
 - Better Auth：`database.transaction` 默认是 `false`，必须打开；用户表主键列名只能叫 `id`。
 - 服务端的 worker 写成 `new Worker(new URL('./x.ts', import.meta.url), …)`，Turbopack 会把它打成单独的 chunk，`next dev` 和 standalone 产物里都能运行。`workerData` 只能传普通对象：Turbopack 会把它展开、再塞进自己的字段，传数字、数组、TypedArray 会丢失或变形。不要用 `next build --webpack`，worker chunk 的路径会错。
