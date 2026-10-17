@@ -13,7 +13,7 @@
 | 编号 | 决定 | 状态 |
 |---|---|---|
 | [0001](0001-rewrite-boundary.md) | 重写边界：Minecraft 协议严格兼容，网页 API 与插件 ABI 重新设计 | 已采纳 |
-| [0002](0002-deployment-baseline.md) | 部署基线：单进程、单数据库起步，Redis/S3/容器为可选档位 | 已采纳 |
+| [0002](0002-deployment-baseline.md) | 部署基线：单进程、单数据库起步，Redis/S3/容器为可选档位 | 已采纳（队列的 Redis 驱动一条已被 ADR-0021 取代） |
 | [0003](0003-next-as-ui-shell.md) | Next.js 只做 UI 壳，HTTP 契约层用 Hono | 已采纳 |
 | [0004](0004-single-write-path.md) | 写操作唯一入口：领域用例；Web UI 走公开 API | 已采纳 |
 | [0005](0005-kysely-three-dialects.md) | 数据访问用 Kysely，支持 SQLite / MySQL / PostgreSQL | 已采纳 |
@@ -29,10 +29,10 @@
 | [0015](0015-core-schema-conventions.md) | 核心 schema 约定：时间存 ISO 字符串、角色名靠规范化列、UUID 绑定角色；逐表设计见 `docs/schema.md` | 已采纳 |
 | [0016](0016-protocol-contract.md) | 协议契约以录制结果为判据；客户端可能依赖的 BS 行为照样复现，只有异常输入才触发的 Laravel/PHP 副产品不复现 | 已采纳 |
 | [0017](0017-skin-figure-rendering.md) | 皮肤的 2D 正背面由服务端出图，按显示倍数选分辨率，浏览器只做整数倍放大 | 已采纳 |
-| [0018](0018-registration-and-mail.md) | 注册走领域用例，规则和默认值取 BS；邮件在事务之外异步发送 | 已采纳（react-email 一条已被 ADR-0020 取代） |
+| [0018](0018-registration-and-mail.md) | 注册走领域用例，规则和默认值取 BS；邮件在事务之外异步发送 | 已采纳（react-email 一条已被 ADR-0020 取代，进程内的邮件队列一条已被 ADR-0021 取代） |
 | [0019](0019-i18n.md) | 国际化：URL 不带语言前缀，消息集中在 `packages/i18n`，接口错误带 code 和本地化文案 | 已采纳 |
 | [0020](0020-email-templates-without-react.md) | 邮件模板不用 React，改用无依赖的 HTML 模板函数（取代 ADR-0012、ADR-0018 里 react-email 的部分） | 已采纳 |
-| [0021](0021-events-and-jobs.md) | 事件和后台任务共用数据库里的一张任务表，事件在业务事务里按订阅者展开成任务；积分只经过 `adjustScore` 修改（取代 ADR-0002 里队列的 Redis 驱动、ADR-0018 里进程内的邮件队列） | 提议 |
+| [0021](0021-events-and-jobs.md) | 事件和后台任务共用数据库里的一张任务表，事件在业务事务里按订阅者展开成任务；积分只经过 `adjustScore` 修改（取代 ADR-0002 里队列的 Redis 驱动、ADR-0018 里进程内的邮件队列） | 已采纳 |
 
 ## 待做的 spike
 

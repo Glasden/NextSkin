@@ -210,6 +210,39 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 
 另建 `(user_id, id)` 索引。改余额和写流水在同一事务里：先用 `score = score + ?` 原子更新（扣减时带上"余额足够"的条件），再读回余额写流水。
 
+`users.score` 只经过领域层的 `adjustScore` 修改，导入器例外（ADR-0021）。每个用户流水的 `delta` 之和恒等于 `score`。
+
+## 后台任务
+
+事件投递、插件任务和核心自己的任务（例如发邮件）都是 `jobs` 里的一行。认领、重试、死信的规则见 ADR-0021。
+
+### jobs
+
+只放还没完成的任务：完成就删除，彻底失败就移到 `failed_jobs`。事件在业务事务里按订阅者展开成任务，不另建事件表。
+
+| 列 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | 自增 | 主键 | |
+| name | varchar(128) | 非空 | 处理函数的键，例如 `core:mail`、`plugin:<id>:job:<任务名>`、`plugin:<id>:on:<事件名>` |
+| payload | 长文本 | 非空 | JSON；事件投递时是完整的事件信封 |
+| dedupe_key | varchar(255) | 可空 | |
+| run_at | 时间 | 非空 | 最早执行时间；执行期间是租约到期时间 |
+| lease_id | varchar(36) | 可空 | 本次认领生成的随机值，收尾时按它确认租约还是自己的 |
+| attempts | integer | 非空，默认 0 | 已经开始执行过几次，认领时加一 |
+| last_error | varchar(500) | 可空 | 核心的任务只记固定的错误码 |
+| created_at | 时间 | 非空 | |
+
+- `(name, dedupe_key)` 唯一。表里只有未完成的任务，所以去重只针对还没执行完的同名任务；不带去重键的任务是 NULL，互不冲突。
+- 另建 `(run_at, id)` 索引，供执行器取到期的任务。
+
+### failed_jobs
+
+死信。列：`id`（自增）、`name`、`payload`、`dedupe_key`（不建唯一索引）、`attempts`、`last_error`，类型同 `jobs`；`created_at`（原任务的入队时间）、`failed_at`（时间，建索引）。
+
+- 保留 30 天：每次写入时，在同一事务里删掉 `failed_at` 早于 30 天的行。
+- 邮件任务进死信时，载荷里去掉链接（带着令牌）。
+- 诊断包不导出载荷和 `last_error`。
+
 ## 站点设置
 
 ### settings
@@ -226,13 +259,9 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 
 ## 以下各表只定了要点，随对应切片细化
 
-### 事件与任务
+### 定时任务
 
-- **outbox_events**：领域用例在同一事务里写入，提交后由分发器投递给订阅者（ADR-0010 的 Event）。列：自增 `id`、`event_id`（UUIDv7，唯一，即 SDK 信封里的 `id`，订阅者用它去重）、`name`、`actor`（JSON）、`payload`（长文本 JSON）、`occurred_at`、`dispatched_at`（可空，建索引）。
-  - 分发器取 `dispatched_at` 为空的行，按 `id` 排序，认领后投递。**不能**记一个"已分发到的最大 id"、下次只取比它大的：自增 id 的分配顺序不等于提交顺序，先分配、后提交的事件会被永久漏掉。
-  - 每个订阅者各自重试，所以分发时为每个订阅者生成一个任务，与标记 `dispatched_at` 在同一事务里。
-- **jobs**：后台任务和定时任务。SDK 的 `enqueue` 支持 `delaySec` 和 `dedupeKey`。去重只针对还没执行完的任务：完成的任务直接删掉，彻底失败的任务清掉去重键，这样唯一索引才能只覆盖进行中的任务（MySQL 没有部分索引）。
-- 定时任务"上次执行时间"需要持久化，避免重启后漏跑或重跑。
+- **job_schedules**：随第一个定时任务落地。列：`name`（varchar(128)，主键）、`next_run_at`（时间）。执行器用条件 UPDATE 把 `next_run_at` 从旧值推到下一次，影响 1 行才入队，去重键用 `name`（ADR-0021）。
 
 ### 审计与通知
 
@@ -255,7 +284,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 - **plugin_migrations**：插件自有表的迁移记录。主键 `(plugin_id, name)`。
 - 插件自有表的物理名是 `p_<id>__<名字>`，不能引用核心表（ADR-0010）。
 - 插件的设置存在 `settings` 里，namespace 是 `plugin:<id>`。
-- 卸载插件时删除它的表、KV、设置和迁移记录。
+- 卸载插件时删除它的表、KV、设置、迁移记录和还没完成的任务。
 
 ## 从 BS 导入
 
@@ -281,7 +310,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | uid | id | |
 | email | email | 去首尾空格、转小写 |
 | nickname | nickname | |
-| score | score | 另写一条原因为"导入"的积分流水，余额等于导入的积分 |
+| score | score | 积分不为 0 时另写一条原因为"导入"的积分流水，余额等于导入的积分 |
 | permission | role | -1 → `banned`，0 → `user`，1 → `admin`，2 → `superadmin` |
 | avatar | avatar_texture_id | 0、材质不存在或被跳过时为空 |
 | locale | locale | |
@@ -407,8 +436,10 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 |---|---|
 | 只读协议端点（第 3 步） | users（Better Auth 的字段先建好，此时还不接 Better Auth）、texture_files、textures、users.avatar_texture_id、players、settings |
 | 认证 | Better Auth 的其余各表、device_code_selections |
-| 第一个写入用例 | outbox_events、jobs、audit_logs、score_transactions |
+| 后台任务和积分 | jobs、failed_jobs、score_transactions |
 | 材质上传、衣柜、举报 | closet_items、reports |
+| 第一个管理操作 | audit_logs |
+| 第一个定时任务 | job_schedules |
 | Yggdrasil | authserver 令牌表 |
 | 插件 | plugins、plugin_kv、plugin_migrations |
 | 通知 | notifications |
