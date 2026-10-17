@@ -25,6 +25,8 @@ import * as createJobs from './0022_create_jobs.ts'
 import * as createFailedJobs from './0023_create_failed_jobs.ts'
 import * as createScoreTransactions from './0024_create_score_transactions.ts'
 
+import * as addPlayersScorePaid from './0025_add_players_score_paid.ts'
+
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
   '0002_create_texture_files': createTextureFiles,
@@ -50,4 +52,5 @@ export const coreMigrations: Record<string, Migration> = {
   '0022_create_jobs': createJobs,
   '0023_create_failed_jobs': createFailedJobs,
   '0024_create_score_transactions': createScoreTransactions,
+  '0025_add_players_score_paid': addPlayersScorePaid,
 }

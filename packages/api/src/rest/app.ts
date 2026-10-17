@@ -6,6 +6,8 @@ import { csrf } from 'hono/csrf'
 import { createMiddleware } from 'hono/factory'
 import type { AppEnv } from '../env.ts'
 import { createErrorResponse, logError, restErrorCode } from './errors.ts'
+import { registerPlayers } from './players.ts'
+import { registerCheckIn } from './check-in.ts'
 import { registerRegistration } from './register.ts'
 
 export function createRestApp(core: Core) {
@@ -26,7 +28,18 @@ export function createRestApp(core: Core) {
   app.onError((error, c) => {
     const code = restErrorCode(error)
     if (code === 'internal_error') logError(error)
-    return errorResponse(c, code, error instanceof DomainError ? error.params : undefined)
+    const respond = createErrorResponse(
+      core,
+      /\/players(?:\/|$)/.test(c.req.path)
+        ? {
+            player_name_required: 'name',
+            player_name_invalid: 'name',
+            player_name_length: 'name',
+            player_name_taken: 'name',
+          }
+        : {},
+    )
+    return respond(c, code, error instanceof DomainError ? error.params : undefined)
   })
   app.use('*', bodyLimit({ maxSize: 16 * 1024 }))
   app.use(
@@ -44,13 +57,17 @@ export function createRestApp(core: Core) {
     createMiddleware<AppEnv>(async (c, next) => {
       if (
         !['GET', 'HEAD', 'OPTIONS'].includes(c.req.method) &&
-        !/^application\/(?:[\w.-]+\+)?json(?:\s*;|$)/i.test(c.req.header('content-type') ?? '')
+        !/^application\/(?:[\w.-]+\+)?json(?:\s*;|$)/i.test(c.req.header('content-type') ?? '') &&
+        c.req.raw.body !== null &&
+        (await c.req.raw.clone().arrayBuffer()).byteLength > 0
       )
         return errorResponse(c, 'invalid_request', undefined, undefined, 415)
       await next()
     }),
   )
   registerRegistration(app, core)
+  registerPlayers(app, core)
+  registerCheckIn(app, core)
   app.doc('/openapi.json', {
     openapi: '3.0.0',
     info: { title: 'NextSkin REST API', version: '1.0.0' },

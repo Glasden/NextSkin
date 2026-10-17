@@ -1,4 +1,4 @@
-import type { CoreDatabase, TextureType } from '@nextskin/db'
+import type { CoreDatabase, IsoTimestamp, TextureType } from '@nextskin/db'
 import type { Kysely } from 'kysely'
 
 export const toNameKey = (name: string): string => name.toLowerCase()
@@ -21,6 +21,18 @@ export interface PlayerView {
   ownerBanned: boolean
   skin: { tid: number; hash: string; type: TextureType } | null
   cape: { tid: number; hash: string } | null
+}
+
+export interface OwnedPlayer {
+  pid: number
+  name: string
+  uuid: string
+  skin: { tid: number; hash: string; type: 'steve' | 'alex' } | null
+  cape: { tid: number; hash: string } | null
+  /** 创建时实际扣的积分，删除时按它退还（ADR-0022） */
+  scorePaid: number
+  createdAt: IsoTimestamp
+  updatedAt: IsoTimestamp
 }
 
 export function createPlayerQueries(db: Kysely<CoreDatabase>) {
@@ -61,6 +73,36 @@ export function createPlayerQueries(db: Kysely<CoreDatabase>) {
     }
   }
   return {
+    async listOwned(uid: number): Promise<OwnedPlayer[]> {
+      const rows = await db
+        .selectFrom('players')
+        .leftJoin('textures as skin', 'skin.id', 'players.skin_texture_id')
+        .leftJoin('textures as cape', 'cape.id', 'players.cape_texture_id')
+        .select([
+          'players.id as pid',
+          'players.name',
+          'players.uuid',
+          'players.score_paid as scorePaid',
+          'players.created_at as createdAt',
+          'players.updated_at as updatedAt',
+          'skin.id as skinId',
+          'skin.hash as skinHash',
+          'skin.type as skinType',
+          'cape.id as capeId',
+          'cape.hash as capeHash',
+        ])
+        .where('players.user_id', '=', uid)
+        .orderBy('players.id', 'asc')
+        .execute()
+      return rows.map(({ skinId, skinHash, skinType, capeId, capeHash, ...player }) => ({
+        ...player,
+        skin:
+          skinId !== null && skinHash !== null && (skinType === 'steve' || skinType === 'alex')
+            ? { tid: skinId, hash: skinHash, type: skinType }
+            : null,
+        cape: capeId !== null && capeHash !== null ? { tid: capeId, hash: capeHash } : null,
+      }))
+    },
     findByName: (name: string) => find('players.name_key', normalizeNameLookup(name)),
     findByUuid: (uuid: string) => find('players.uuid', normalizeUuidLookup(uuid)),
   }

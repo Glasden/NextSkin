@@ -7,6 +7,7 @@ import {
   dialectOf,
   insertOrIgnore,
   insertReturningId,
+  isUniqueViolation,
   toNumber,
 } from './index.ts'
 import { createTestDatabase, testDialect, type TestDatabase } from './testing.ts'
@@ -28,7 +29,7 @@ beforeAll(async () => {
   await createTable(db, 'items')
     .$call(autoIncrementId(db))
     .addColumn('name', 'varchar(100)', (c) => c.notNull().unique())
-    .addColumn('n', 'integer', (c) => c.notNull())
+    .addColumn('n', 'integer', (c) => c.notNull().check(sql`n >= 0`))
     .addColumn('alternate', 'varchar(100)', (c) => c.unique())
     .execute()
 })
@@ -128,4 +129,21 @@ test('countRows 保留过滤条件并支持空结果，toNumber 能转换实际�
 
 test('insertOrIgnore 拒绝空的冲突列数组', async () => {
   await expect(insertOrIgnore(db, 'items', item('a'), [])).rejects.toThrow(/缺少冲突列/)
+})
+
+test('isUniqueViolation 只认唯一键和主键冲突，拒绝其他约束和非对象', async () => {
+  const id = await insertReturningId(db, 'items', item('existing'))
+  const cases = [
+    [db.insertInto('items').values(item('existing')), true],
+    [db.insertInto('items').values({ ...item('primary'), id }), true],
+    [db.insertInto('items').values({ ...item('null'), n: null as unknown as number }), false],
+    [db.insertInto('items').values(item('check', -1)), false],
+  ] as const
+  for (const [query, expected] of cases) {
+    const error = await query.execute().catch((error: unknown) => error)
+    expect(error).toBeInstanceOf(Error)
+    expect(isUniqueViolation(db, error)).toBe(expected)
+  }
+  for (const error of [new Error('普通错误'), null, undefined, '23505', 1062, false, {}])
+    expect(isUniqueViolation(db, error)).toBe(false)
 })

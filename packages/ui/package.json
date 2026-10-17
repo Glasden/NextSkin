@@ -27,7 +27,7 @@
   "dependencies": {
     "@base-ui/react": "1.9.0",
     "@nextskin/skin": "workspace:*",
-    "pixelarticons": "2.4.2"
+    "pixelarticons": "catalog:"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",

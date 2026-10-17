@@ -1,7 +1,9 @@
 {
   "common": {
     "close": "Close",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "cancel": "Cancel",
+    "sentences": "{first} {second}"
   },
   "mail": {
     "greeting": "Hi {nickname},",
@@ -43,12 +45,19 @@
     "player_name_rule_misconfigured": "The player name rule on this site is misconfigured. Contact the administrator.",
     "ip_limit_reached": "This IP address has reached the account limit ({limit}). If you already have an account, sign in instead.",
     "mail_not_configured": "This site hasn't set up email delivery, so emails can't be sent right now. Contact the site administrator.",
-    "score_insufficient": "Not enough points: you need {required}, but your current balance is {balance}."
+    "score_insufficient": "Not enough points: you need {required}, but your current balance is {balance}.",
+    "unauthenticated": "Sign in first.",
+    "user_banned": "Your account has been banned. Contact the site administrator if you have questions.",
+    "player_not_found": "This player doesn't exist. It may have been deleted.",
+    "check_in_too_early": "It's not time for your next check-in yet. Come back later."
   },
   "score": {
     "reasons": {
       "initial": "Sign-up bonus",
-      "import": "Imported from the old site"
+      "import": "Imported from the old site",
+      "playerCreated": "Added a player",
+      "playerDeleted": "Refund for a deleted player",
+      "checkIn": "Check-in"
     }
   },
   "auth": {
@@ -107,6 +116,89 @@
       "done": "Thanks for verifying. You can now use every feature.",
       "invalidLink": "This verification link has expired or has already been used. Sign in to send a new one.",
       "home": "Go to home page"
+    }
+  },
+  "user": {
+    "nav": {
+      "label": "User center",
+      "dashboard": "Dashboard",
+      "players": "Players"
+    },
+    "menu": {
+      "signOut": "Sign out",
+      "signOutFailed": "Couldn't sign out. Try again later."
+    },
+    "banned": {
+      "title": "Account banned",
+      "description": "Your account has been banned on this site, so you can't use the user center. Contact the site administrator if you have questions.",
+      "signOut": "Sign out"
+    },
+    "verifyEmail": {
+      "title": "Verify your email",
+      "description": "Verify {email} before adding, renaming or deleting players.",
+      "resend": "Resend verification email",
+      "sent": "The verification email is on its way. If it doesn't arrive, check your spam folder.",
+      "tooManyAttempts": "Too many emails sent. Try again in a few minutes.",
+      "failed": "Couldn't send the verification email. Try again later.",
+      "mailNotConfigured": "This site hasn't set up email delivery, so you can't verify your email right now. Contact the site administrator."
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "greeting": "Hi, {nickname}",
+      "score": "Points",
+      "scoreUsage": "{cost, plural, =0 {Adding a player is free.} one {Adding a player costs # point.} other {Adding a player costs # points.}}",
+      "checkIn": "Check in",
+      "checkedIn": "Checked in",
+      "checkInHint": "{same, select, true {Each check-in gives you {min} points.} other {Each check-in gives you {min} to {max} points.}}",
+      "nextCheckIn": "Next check-in: {time}",
+      "checkInSuccess": "Checked in. You got {delta} points",
+      "checkInFailed": "Couldn't check in. Try again later.",
+      "players": "Your players",
+      "playerCount": "{count, plural, one {# player} other {# players}}",
+      "managePlayers": "Manage players",
+      "morePlayers": "{count} more",
+      "noPlayers": "No players yet. Add a player to get a name to use in the game.",
+      "addPlayer": "Add player",
+      "history": "Recent point changes",
+      "noHistory": "No point changes yet.",
+      "balance": "Balance {balance}"
+    },
+    "players": {
+      "title": "Players",
+      "description": "A player is your name in the game. Each player has its own UUID, skin and cape.",
+      "count": "{count}",
+      "add": "Add player",
+      "cost": "Adding a player costs {cost} points. You have {score} points.",
+      "free": "Adding a player doesn't cost any points.",
+      "insufficient": "Not enough points: adding a player costs {cost} points, but you only have {score}.",
+      "refundPolicy": "{refund, select, true {Deleting a player refunds the points you paid for it.} other {Deleting a player does not refund any points.}}",
+      "name": "Player name",
+      "nameHint": "{rule, select, official {Use letters, numbers and underscores} cjk {Use letters, numbers, underscores, § and Chinese characters} utf8 {No spaces} other {Must match the rules of this site}}, {min} to {max} characters.",
+      "added": "Added player {name}",
+      "rename": "Rename",
+      "renameTitle": "Rename {name}",
+      "renameHint": "The UUID stays the same after renaming, so data saved by UUID on game servers is not affected.",
+      "renamed": "{previous} is now {name}",
+      "delete": "Delete",
+      "deleteTitle": "Delete player {name}?",
+      "deleteRefund": "You'll get {refund} points back. This can't be undone.",
+      "deleteNoRefund": "No points will be refunded. This can't be undone.",
+      "deleteConfirm": "Delete player",
+      "deleted": "Deleted player {name}",
+      "deletedRefund": "Deleted player {name} and refunded {refund} points",
+      "copyUuid": "Copy UUID",
+      "copied": "Copied the UUID of {name}",
+      "copyFailed": "Couldn't copy. Select the UUID and copy it yourself.",
+      "updatedAt": "Updated {time}",
+      "noSkin": "No skin yet. The game shows a default skin",
+      "hasSkin": "Skin set",
+      "hasCape": "Cape set",
+      "figureEmpty": "{name} has no skin yet",
+      "figure": "{name}'s skin",
+      "emptyTitle": "You don't have any players",
+      "emptyDescription": "Add a player to get a name to use in the game.",
+      "verifyFirst": "Verify your email before adding, renaming or deleting players.",
+      "failed": "That didn't work. Try again later."
     }
   }
 }

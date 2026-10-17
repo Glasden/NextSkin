@@ -5,24 +5,14 @@ import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { apiError, formErrors, postJson } from '../../../lib/api-client'
-
-type PlayerNameRule = 'official' | 'cjk' | 'utf8' | 'custom'
+import { playerNameInputProps, type PlayerNameRules } from '../../../lib/player-name'
 
 export interface SignUpFormProps {
   password: { min: number; max: number }
   /** 注册时填写角色名（auth.registration.withPlayerName）；关闭时填昵称 */
-  playerName: { rule: PlayerNameRule; min: number; max: number } | null
+  playerName: PlayerNameRules | null
   /** 配置了邮件发送：注册后会发验证邮件 */
   verificationNotice: boolean
-}
-
-// 浏览器先按角色名规则拦一道，提示看说明文字；自定义规则是管理员写的正则，只由服务端检查。
-// pattern 按 v 标志解析，匹配整个值
-const playerNamePatterns: Record<PlayerNameRule, string | undefined> = {
-  official: '[A-Za-z0-9_]+',
-  cjk: '[A-Za-z0-9_§\\u4e00-\\u9fff]+',
-  utf8: '\\S+',
-  custom: undefined,
 }
 
 export function SignUpForm({ password, playerName, verificationNotice }: SignUpFormProps) {
@@ -40,7 +30,7 @@ export function SignUpForm({ password, playerName, verificationNotice }: SignUpF
     if (status === 201) {
       // 会话没建成（极少见）时去登录页，账号已经注册好了
       const signedIn = (data as { signedIn?: unknown } | null)?.signedIn === true
-      router.replace(signedIn ? '/' : '/sign-in')
+      router.replace(signedIn ? '/user' : '/sign-in')
       router.refresh()
       return
     }
@@ -65,15 +55,7 @@ export function SignUpForm({ password, playerName, verificationNotice }: SignUpF
       </Field>
       {playerName ? (
         <Field label={t('signUp.playerName')} name="playerName" description={t('signUp.playerNameHint', playerName)}>
-          <Input
-            autoComplete="username"
-            autoCapitalize="none"
-            spellCheck={false}
-            required
-            minLength={playerName.min}
-            maxLength={playerName.max}
-            pattern={playerNamePatterns[playerName.rule]}
-          />
+          <Input {...playerNameInputProps(playerName)} autoComplete="username" />
         </Field>
       ) : (
         <Field label={t('signUp.nickname')} name="nickname" description={t('signUp.nicknameHint')}>

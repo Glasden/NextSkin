@@ -51,6 +51,7 @@ export interface TexturesTable {
 }
 
 export interface PlayersTable {
+  score_paid: Generated<number>
   id: Generated<number>
   user_id: number
   name: string

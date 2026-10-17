@@ -169,7 +169,7 @@
 
 ## 6. 组件清单
 
-落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、Form、Field、Input、Checkbox、Toast、Alert、Link、Logo、Stage、SkinFigure。
+落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、IconButton、Form、Field、Input、Checkbox、Dialog、Toast、Alert、Stage、SkinFigure、FigurePlaceholder、NameTag、PlayerCard、Nav、Logo、Link、Menu、Tooltip、EmptyState。
 
 | 组件 | 何时用 | 何时不用 |
 |---|---|---|
@@ -183,7 +183,7 @@
 | SegmentedControl | 三到五个互斥选项的即时切换，例如材质类型、3D 预览的动作 | 选项多或需要说明时，改用 Tabs 或 Select |
 | Chip | 可以多选的筛选条件 | 互斥的选项，改用 SegmentedControl |
 | Tabs | 页面内的分组切换，可以带数量 | 只有两三个即时切换的选项，改用 SegmentedControl |
-| Dialog | 需要用户做决定、并且应当打断当前流程 | 展示大量内容或编辑详情，改用 Sheet |
+| Dialog | 需要用户做决定、并且应当打断当前流程。不可逆操作的确认加 `alert`：点外面不关闭，焦点先落在“取消”上 | 展示大量内容或编辑详情，改用 Sheet |
 | Sheet | 侧边查看和编辑详情 | 二选一的确认，改用 Dialog |
 | Popover | 轻量、不打断流程的补充内容 | 包含表单提交 |
 | Toast | 操作结果的简短反馈，例如“设置已保存”。最多同时显示 3 条，5 秒后自动关闭，鼠标停在上面或焦点在里面时暂停；可以带一个操作，例如“撤销”。警告和错误会立即读出 | 需要用户操作或必须读到的内容，改用 Alert |
@@ -194,12 +194,18 @@
 | Stage | 摆放材质的展台：登录页插图、3D 预览、领奖台；大展台加 `grid` | — |
 | SkinFigure | 2D 正面和背面，带转身和脚下投影；用在材质卡片、领奖台和插图里。祖先元素带 `group/turn` 时，鼠标移上去或键盘聚焦它就转身 | 需要拖动看各个角度时，改用 SkinViewer |
 | SkinViewer | 材质详情、角色预览 | 列表中的缩略图，改用 SkinFigure，3D 太重 |
+| FigurePlaceholder | 还没有皮肤时，在 SkinFigure 的位置放一个同样尺寸的人形剪影 | 不用 Steve、Alex 代替：它们是 Mojang 的材质 |
+| NameTag | 站在展台上的角色头顶的名牌，例如仪表盘的“你的角色”、领奖台 | 列表里的角色名，直接写文字 |
+| PlayerCard | 角色管理里的一个角色：展台、名字、UUID 和操作 | 材质改用 TextureCard |
 | PlayerHead | 用户和角色的头像 | — |
 | PlayerChip | 角色名加头像，例如“正在使用的角色” | 用户（账号），改用 PlayerHead 加昵称 |
 | Podium | 首页的“本周收藏最多” | 其他排行，改用列表 |
 | Logo | 页头、后台侧栏、页脚；链接到首页时用 `render` 换成框架的链接组件 | — |
 | Link | 跳转到其他页面；站内跳转用 `render` 换成框架的链接组件 | 执行操作，改用 Button |
-| EmptyState、Skeleton、Pagination、Menu、Tooltip、Badge | 见各自 story | |
+| Nav | 用户中心、后台的分区导航：宽屏是侧栏，窄屏是页头下的一排；当前项除了底色还有一条强调色的色块 | 页面内的分组切换，改用 Tabs |
+| Menu | 一组跳转和操作，例如页头的用户菜单 | 少于两项时直接放按钮或链接 |
+| Tooltip | 图标按钮的名称这类补充说明。触屏设备上不显示 | 必须读到的内容 |
+| EmptyState、Skeleton、Pagination、Badge | 见各自 story | |
 
 ## 7. 状态模式
 

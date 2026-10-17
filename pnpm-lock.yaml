@@ -230,6 +230,9 @@ catalogs:
     pg:
       specifier: 8.23.1
       version: 8.23.1
+    pixelarticons:
+      specifier: 2.4.2
+      version: 2.4.2
     react:
       specifier: 19.3.1
       version: 19.3.1
@@ -331,6 +334,9 @@ importers:
       next-intl:
         specifier: 'catalog:'
         version: 4.14.9(@swc/helpers@0.5.23)(@types/react@19.3.0)(next@16.4.2(@babel/core@7.29.7(supports-color@8.1.1))(@playwright/test@1.64.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)
+      pixelarticons:
+        specifier: 'catalog:'
+        version: 2.4.2(react@19.3.1)
       react:
         specifier: 'catalog:'
         version: 19.3.1
@@ -543,7 +549,7 @@ importers:
         specifier: workspace:*
         version: link:../skin
       pixelarticons:
-        specifier: 2.4.2
+        specifier: 'catalog:'
         version: 2.4.2(react@19.3.1)
     devDependencies:
       '@playwright/test':

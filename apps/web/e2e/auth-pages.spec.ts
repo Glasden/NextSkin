@@ -8,7 +8,7 @@ test.use({ locale: 'zh-CN', extraHTTPHeaders: { 'x-forwarded-for': '203.0.113.50
 
 const t = createTranslator('zh-CN')
 
-test('注册页注册成功后带着会话回到首页', async ({ page }) => {
+test('注册页注册成功后带着会话进入用户中心', async ({ page }) => {
   const email = `page-${Date.now()}@example.test`
   await page.goto('/sign-up')
   // 标题是“页面名 · 站点名”，站点名取自播种数据
@@ -18,14 +18,14 @@ test('注册页注册成功后带着会话回到首页', async ({ page }) => {
   await page.getByLabel(t('auth.password')).fill('correct horse battery staple')
   await page.getByLabel(t('auth.signUp.playerName')).fill('E2EPage')
   await page.getByRole('button', { name: t('auth.signUp.submit') }).click()
-  await page.waitForURL('/')
+  await page.waitForURL('/user')
   const session = (await page.evaluate(() => fetch('/api/auth/get-session').then((res) => res.json()))) as {
     user: { email: string }
   }
   expect(session.user.email).toBe(email)
-  // 已登录时打开注册页回首页
+  // 已登录时打开注册页进入用户中心
   await page.goto('/sign-up')
-  await expect(page).toHaveURL('/')
+  await expect(page).toHaveURL('/user')
 })
 
 test('注册失败时错误显示在对应的输入框下方', async ({ page }) => {

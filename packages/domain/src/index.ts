@@ -19,3 +19,12 @@ export {
   type CoreSettings,
 } from './settings/registry.ts'
 export type { SigningKey } from './yggdrasil/signing-key.ts'
+
+export type { SessionUser } from './auth/service.ts'
+export type { UserActor } from './users/lock.ts'
+export type { CheckInRules, CheckInResult } from './users/check-in.ts'
+export type { UserOverview } from './users/queries.ts'
+export type { OwnedPlayer } from './players/queries.ts'
+export type { ScoreEntry } from './score/queries.ts'
+export type { Player, UserRole } from '@nextskin/plugin-sdk'
+export type { IsoTimestamp } from '@nextskin/db'

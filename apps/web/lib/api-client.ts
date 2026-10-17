@@ -11,12 +11,24 @@ export interface ApiError extends FieldError {
 }
 
 /** 发一个 JSON 请求。网络断开、服务端没有返回 JSON 时，status 为 0 或 data 为 null */
-export async function postJson(path: string, body: unknown): Promise<{ status: number; data: unknown }> {
+export function postJson(path: string, body: unknown): Promise<{ status: number; data: unknown }> {
+  return sendJson('POST', path, body)
+}
+
+/**
+ * 没有请求体的 DELETE 和 POST 也带上 JSON 的 Content-Type：跨站的页面发不出这种请求（要先过 CORS 预检），
+ * 不带的话接口按表单请求检查 Origin（hono/csrf）
+ */
+export async function sendJson(
+  method: 'POST' | 'PATCH' | 'DELETE',
+  path: string,
+  body?: unknown,
+): Promise<{ status: number; data: unknown }> {
   try {
     const response = await fetch(path, {
-      method: 'POST',
+      method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: body === undefined ? undefined : JSON.stringify(body),
     })
     return { status: response.status, data: await response.json().catch(() => null) }
   } catch {

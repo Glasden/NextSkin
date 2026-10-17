@@ -296,6 +296,23 @@ function isMysqlDuplicate(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'errno' in error && error.errno === 1062
 }
 
+/** 只识别唯一键和主键冲突，不吞掉其他约束错误。 */
+export function isUniqueViolation<DB>(db: Kysely<DB>, error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false
+  switch (dialectOf(db)) {
+    case 'mysql':
+      return isMysqlDuplicate(error)
+    case 'postgres':
+      return 'code' in error && error.code === '23505'
+    case 'sqlite':
+      return (
+        ('errcode' in error && (error.errcode === 2067 || error.errcode === 1555)) ||
+        ('code' in error &&
+          (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || error.code === 'SQLITE_CONSTRAINT_PRIMARYKEY'))
+      )
+  }
+}
+
 // 品牌只存在于类型层；普通字符串必须先通过日期转换或格式校验。
 declare const isoTimestampBrand: unique symbol
 export type IsoTimestamp = string & { readonly [isoTimestampBrand]: true }

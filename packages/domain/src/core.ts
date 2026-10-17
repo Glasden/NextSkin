@@ -5,6 +5,10 @@ import { createEvents } from './events/emit.ts'
 import { createJobRunner, type JobHandler, type JobRunnerOptions } from './jobs/runner.ts'
 import { createMailService, MAIL_JOB } from './mail/service.ts'
 import type { MailTransport } from './mail/types.ts'
+import { createPlayerManagement } from './players/manage.ts'
+import { createCheckIn } from './users/check-in.ts'
+import { createUserQueries } from './users/queries.ts'
+import { createScoreQueries } from './score/queries.ts'
 import { createRegister } from './users/register.ts'
 import { createPlayerQueries } from './players/queries.ts'
 import { validateSecretKey } from './settings/codec.ts'
@@ -42,14 +46,19 @@ export function createCore(options: CoreOptions) {
     mail,
   })
   return {
-    players: createPlayerQueries(options.db),
+    players: { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events) },
     textures: createTextureQueries(options.db, options.textureStorage),
     settings,
     auth,
     mail,
     jobs,
     events: { subscribe: events.subscribe },
-    users: { register: createRegister(options.db, settings, auth, mail, events) },
+    users: {
+      register: createRegister(options.db, settings, auth, mail, events),
+      checkIn: createCheckIn(options.db, settings),
+      ...createUserQueries(options.db, settings),
+    },
+    score: createScoreQueries(options.db),
     yggdrasil: { getSigningKey: createSigningKeyQuery(settings) },
   }
 }

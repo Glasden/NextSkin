@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { authErrorCode, postJson } from '../../../lib/api-client'
 
-export function SignInForm() {
+/** next：登录后去的站内路径，页面已经检查过（lib/session.ts 的 safeNextPath） */
+export function SignInForm({ next }: { next: string }) {
   const t = useTranslations('auth')
   const router = useRouter()
   const [pending, setPending] = useState(false)
@@ -24,7 +25,7 @@ export function SignInForm() {
     })
     // 两步验证的页面还没有做；现在还没有地方开启两步验证，不会出现 twoFactorRedirect
     if (status === 200) {
-      router.replace('/')
+      router.replace(next)
       router.refresh()
       return
     }

@@ -1,6 +1,7 @@
 export { createDatabase, type DatabaseConfig } from './database.ts'
 export { transactionWithRetry } from './transaction-retry.ts'
 export {
+  isUniqueViolation,
   isIsoTimestamp,
   toIsoTimestamp,
   isoTimestampColumn,

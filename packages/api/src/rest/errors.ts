@@ -8,6 +8,12 @@ import type { AppEnv } from '../env.ts'
 
 type ErrorCode = keyof Messages['errors']
 const statuses = {
+  unauthenticated: 401,
+  user_banned: 403,
+  email_not_verified: 403,
+  score_insufficient: 403,
+  player_not_found: 404,
+  check_in_too_early: 409,
   invalid_request: 400,
   invalid_origin: 403,
   request_too_large: 413,
@@ -46,13 +52,13 @@ export const errorSchema = z.object({
   error: fieldErrorSchema.extend({ fields: z.record(z.string(), fieldErrorSchema).optional() }),
 })
 
-export function createErrorResponse(core: Core) {
-  return async (
+export function createErrorResponse(core: Core, fieldOverrides: Partial<Record<ResponseCode, string>> = {}) {
+  return async <Code extends ResponseCode>(
     c: Context<AppEnv>,
-    code: ResponseCode,
+    code: Code,
     params?: Readonly<Record<string, string | number>>,
     invalidFields?: readonly string[],
-    status: (typeof statuses)[ResponseCode] | 415 = statuses[code],
+    status: (typeof statuses)[Code] | 415 = statuses[code],
   ) => {
     // 即使设置读取本身失败，也仍能返回无敏感信息的 JSON 错误。
     const settings = await core.settings.read(['site.locale']).catch(() => ({ 'site.locale': 'zh-CN' as const }))
@@ -63,8 +69,9 @@ export function createErrorResponse(core: Core) {
         siteDefault: settings['site.locale'],
       }),
     )
-    const error = { code, message: translate(`errors.${code}`, params) }
-    const field = fieldNames[code]
+    const messageKey: `errors.${ResponseCode}` = `errors.${code}`
+    const error = { code, message: translate(messageKey, params) }
+    const field = fieldOverrides[code] ?? fieldNames[code]
     const fields = invalidFields
       ? Object.fromEntries(
           invalidFields.map((name) => [name, { code: 'invalid_value', message: translate('errors.invalid_value') }]),

@@ -22,6 +22,7 @@ import {
   type MailMessage,
 } from '../index.ts'
 import { offlineUuid } from '../players/create.ts'
+import { missUuidPrecheckOnce } from '../players/uuid-race.test-helper.ts'
 import { assertEmailVerified } from './email-verification.ts'
 import type { RegisterInput } from './register.ts'
 
@@ -167,6 +168,7 @@ test('注册写入与 Better Auth 相同的凭据行，可登录并读取会话�
     uuid: offlineUuid('Steve'),
     skin_texture_id: null,
     cape_texture_id: null,
+    score_paid: 0,
   })
   expect(player.created_at).toBe(player.updated_at)
   expect(
@@ -287,7 +289,33 @@ test('离线 UUID 已被改名角色占用时改用随机 v4；random 设置直�
     expect(row.uuid).toMatch(/^[a-f0-9]{12}4[a-f0-9]{3}[89ab][a-f0-9]{15}$/)
 })
 
+test('离线 UUID 在预查之后才被改名的角色占上：注册重来一次，改用随机 UUID', async () => {
+  await core.users.register(input())
+  await database.db.updateTable('players').set({ name: 'Renamed', name_key: 'renamed' }).execute()
+  core = createCore({
+    db: database.db.withPlugin(missUuidPrecheckOnce()),
+    secretKey,
+    production: false,
+    textureStorage: { read: () => Promise.resolve(null) },
+  })
+  const { uid } = await core.users.register(input({ email: 'second@example.test' }))
+  const player = await database.db
+    .selectFrom('players')
+    .select('uuid')
+    .where('user_id', '=', uid)
+    .executeTakeFirstOrThrow()
+  expect(player.uuid).not.toBe(offlineUuid('Steve'))
+  expect(await countRows(database.db.selectFrom('users'))).toBe(2)
+})
+
 test('user.registered 随注册事务提交，注册失败时不留任务；初始积分为 0 不写流水', async () => {
+  const players: EventEnvelope<'player.created'>[] = []
+  core.events.subscribe('player.created', 'test:on:player.created', {
+    run: ({ event }) => {
+      players.push(event)
+      return Promise.resolve()
+    },
+  })
   const events: EventEnvelope<'user.registered'>[] = []
   core.events.subscribe('user.registered', 'test:on:user.registered', {
     run: ({ event }) => {
@@ -306,6 +334,16 @@ test('user.registered 随注册事务提交，注册失败时不留任务；初�
     data: { user: { uid, nickname: 'Steve', role: 'user', avatarTid: null }, extra: {} },
   })
   expect(events[0]!.data.user.registeredAt).toBe(events[0]!.occurredAt)
+  expect(players).toHaveLength(1)
+  expect(players[0]).toMatchObject({
+    name: 'player.created',
+    actor: events[0]!.actor,
+    occurredAt: events[0]!.occurredAt,
+    data: { player: { uid, name: 'Steve', skin: null, cape: null, updatedAt: events[0]!.occurredAt } },
+  })
+  const owned = await core.players.listOwned(uid)
+  expect(players[0]!.data.player).toMatchObject({ pid: owned[0]!.pid, uuid: owned[0]!.uuid })
+  expect(await core.players.delete({ uid }, owned[0]!.pid)).toEqual({ refunded: 0 })
   expect(await countRows(database.db.selectFrom('jobs'))).toBe(0)
   const user = await database.db.selectFrom('users').select('score').where('id', '=', uid).executeTakeFirstOrThrow()
   expect(user.score).toBe(0)

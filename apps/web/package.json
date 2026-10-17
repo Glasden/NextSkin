@@ -20,6 +20,7 @@
     "@nextskin/ui": "workspace:*",
     "next": "catalog:",
     "next-intl": "catalog:",
+    "pixelarticons": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },

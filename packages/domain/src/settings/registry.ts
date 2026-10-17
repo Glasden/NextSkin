@@ -45,6 +45,17 @@ export const coreSettingsRegistry = {
     secret: false,
   },
   'auth.requireEmailVerification': { schema: z.boolean(), default: false, secret: false },
+  'score.perPlayer': { schema: z.int().min(0).max(2147483647), default: 100, secret: false },
+  'score.refundOnDelete': { schema: z.boolean(), default: true, secret: false },
+  'checkIn.score': {
+    schema: z
+      .object({ min: z.int().min(0).max(2147483647), max: z.int().min(0).max(2147483647) })
+      .refine(({ min, max }) => min <= max),
+    default: { min: 10, max: 100 },
+    secret: false,
+  },
+  'checkIn.gapHours': { schema: z.int().nonnegative(), default: 24, secret: false },
+  'checkIn.resetAtMidnight': { schema: z.boolean(), default: false, secret: false },
   'user.initialScore': { schema: z.int().min(0).max(2147483647), default: 1000, secret: false },
   'player.nameRule': { schema: z.enum(['official', 'cjk', 'utf8', 'custom']), default: 'official', secret: false },
   'player.nameRegex': { schema: z.string(), default: '', secret: false },

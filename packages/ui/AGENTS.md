@@ -14,4 +14,5 @@
 - story 的 play 函数里用模拟点击时，结束前把焦点移开：模拟的点击会留下焦点框，真实的鼠标点击不会，截图会误导。
 - 改了外观要更新基线：`pnpm test:visual -- --update-snapshots`，然后逐张看新截图，确认改动都是有意的。
 - 截图按 `.storybook/preview.tsx` 里带 `data-screenshot` 的外框截取，正文字体也设在这一层：Storybook 给外层的 `.sb-wrapper` 设了自己的字体。
+- 悬停打开的 Tooltip 在 play 函数里看得见，到截图时却已经关掉了。要截到提示，story 里用键盘聚焦打开（`userEvent.tab()`）。
 - 渲染在 body 下、按视口定位的浮层（Toast，以后的 Dialog、Popover）在外框之外：给它们的 story 加 `screenshot-viewport` 标签，截图改截 720×480 的整个视口。浮层组件自己设 `font-sans`，不依赖外框。

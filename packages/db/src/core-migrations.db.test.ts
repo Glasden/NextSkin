@@ -134,6 +134,7 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0022_create_jobs',
     '0023_create_failed_jobs',
     '0024_create_score_transactions',
+    '0025_add_players_score_paid',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -160,7 +161,7 @@ test('类型化写入完整引用关系，读回各列、默认值和认证字�
     { ...texture('alex'), id: skinId, likes: 0 },
     { ...texture('cape'), id: capeId, likes: 0 },
   ])
-  expect(await db.selectFrom('players').selectAll().execute()).toEqual([{ ...player(), id: playerId }])
+  expect(await db.selectFrom('players').selectAll().execute()).toEqual([{ ...player(), id: playerId, score_paid: 0 }])
   expect(await db.selectFrom('settings').selectAll().where('key', '=', setting.key).execute()).toEqual([setting])
 
   expectTypeOf(row.created_at).toEqualTypeOf<Date | string>()
@@ -309,7 +310,7 @@ test('被材质引用的文件不能删除（restrict）', async () => {
 test('删除材质将角色皮肤、披风及用户头像外键置空', async () => {
   await db.deleteFrom('textures').where('id', 'in', [skinId, capeId]).execute()
   expect(await db.selectFrom('players').selectAll().execute()).toEqual([
-    { ...player(), id: playerId, skin_texture_id: null, cape_texture_id: null },
+    { ...player(), id: playerId, score_paid: 0, skin_texture_id: null, cape_texture_id: null },
   ])
   expect(
     await db.selectFrom('users').select('avatar_texture_id').where('id', '=', userId).executeTakeFirstOrThrow(),
@@ -446,4 +447,18 @@ test('积分流水保留非外键的关联对象，删除用户时级联删除�
   ).rejects.toThrow()
   await db.deleteFrom('users').where('id', '=', userId).execute()
   expect(await db.selectFrom('score_transactions').selectAll().execute()).toEqual([])
+})
+
+test('角色实付积分列默认 0，且拒绝 null', async () => {
+  expect(
+    (await db.selectFrom('players').select('score_paid').where('id', '=', playerId).executeTakeFirstOrThrow())
+      .score_paid,
+  ).toBe(0)
+  await expect(
+    db
+      .updateTable('players')
+      .set({ score_paid: null as unknown as number })
+      .where('id', '=', playerId)
+      .execute(),
+  ).rejects.toThrow()
 })

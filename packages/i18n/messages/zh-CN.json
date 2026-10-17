@@ -1,7 +1,9 @@
 {
   "common": {
     "close": "关闭",
-    "notifications": "通知"
+    "notifications": "通知",
+    "cancel": "取消",
+    "sentences": "{first}{second}"
   },
   "mail": {
     "greeting": "{nickname}，你好：",
@@ -43,12 +45,19 @@
     "player_name_rule_misconfigured": "本站的角色名规则设置有误，请联系管理员。",
     "ip_limit_reached": "这个 IP 地址注册的账号已经达到上限（{limit} 个）。已有账号的话，请直接登录。",
     "mail_not_configured": "本站没有配置邮件发送，暂时无法发送邮件。请联系站点管理员。",
-    "score_insufficient": "积分不够：需要 {required}，当前只有 {balance}。"
+    "score_insufficient": "积分不够：需要 {required}，当前只有 {balance}。",
+    "unauthenticated": "请先登录。",
+    "user_banned": "你的账号已被封禁，有疑问请联系站点管理员。",
+    "player_not_found": "找不到这个角色，它可能已经被删除了。",
+    "check_in_too_early": "还没到下次签到的时间，晚点再来。"
   },
   "score": {
     "reasons": {
       "initial": "注册赠送",
-      "import": "从旧站导入"
+      "import": "从旧站导入",
+      "playerCreated": "添加角色",
+      "playerDeleted": "删除角色退还",
+      "checkIn": "签到"
     }
   },
   "auth": {
@@ -107,6 +116,89 @@
       "done": "感谢验证，现在可以使用全部功能了。",
       "invalidLink": "这个验证链接已经失效或用过了。登录后可以重新发送验证邮件。",
       "home": "前往首页"
+    }
+  },
+  "user": {
+    "nav": {
+      "label": "用户中心",
+      "dashboard": "仪表盘",
+      "players": "角色"
+    },
+    "menu": {
+      "signOut": "退出登录",
+      "signOutFailed": "没能退出登录，请稍后重试。"
+    },
+    "banned": {
+      "title": "账号已被封禁",
+      "description": "你的账号已被本站封禁，不能使用用户中心。有疑问请联系站点管理员。",
+      "signOut": "退出登录"
+    },
+    "verifyEmail": {
+      "title": "请验证邮箱",
+      "description": "验证 {email} 之后，才能添加、改名和删除角色。",
+      "resend": "重新发送验证邮件",
+      "sent": "验证邮件已发出，请查收。没收到的话，看看垃圾邮件文件夹。",
+      "tooManyAttempts": "发送得太频繁了，请过几分钟再试。",
+      "failed": "没能发送验证邮件，请稍后重试。",
+      "mailNotConfigured": "本站没有配置邮件发送，暂时无法验证邮箱。请联系站点管理员。"
+    },
+    "dashboard": {
+      "title": "仪表盘",
+      "greeting": "你好，{nickname}",
+      "score": "积分",
+      "scoreUsage": "{cost, plural, =0 {添加角色不需要积分。} other {添加一个角色要 # 积分。}}",
+      "checkIn": "签到",
+      "checkedIn": "已签到",
+      "checkInHint": "{same, select, true {每次签到得到 {min} 积分。} other {每次签到可以得到 {min} 到 {max} 积分。}}",
+      "nextCheckIn": "下次签到：{time}",
+      "checkInSuccess": "签到成功，得到 {delta} 积分",
+      "checkInFailed": "没能签到，请稍后重试。",
+      "players": "你的角色",
+      "playerCount": "{count, plural, other {# 个角色}}",
+      "managePlayers": "管理角色",
+      "morePlayers": "还有 {count} 个",
+      "noPlayers": "还没有角色。添加一个角色，就有了在游戏里用的名字。",
+      "addPlayer": "添加角色",
+      "history": "最近的积分变动",
+      "noHistory": "还没有积分变动。",
+      "balance": "余额 {balance}"
+    },
+    "players": {
+      "title": "角色",
+      "description": "角色就是你在游戏里的名字，每个角色有自己的 UUID、皮肤和披风。",
+      "count": "{count} 个",
+      "add": "添加角色",
+      "cost": "添加一个角色要 {cost} 积分，你现在有 {score} 积分。",
+      "free": "添加角色不需要积分。",
+      "insufficient": "积分不够：添加一个角色要 {cost} 积分，你现在只有 {score} 积分。",
+      "refundPolicy": "{refund, select, true {删除角色时退还当初付的积分。} other {删除角色不退还积分。}}",
+      "name": "角色名",
+      "nameHint": "{rule, select, official {可以用英文字母、数字和下划线} cjk {可以用英文字母、数字、下划线、§ 和汉字} utf8 {不能有空格} other {需要符合本站的规则}}，{min} 到 {max} 个字符。",
+      "added": "已添加角色 {name}",
+      "rename": "改名",
+      "renameTitle": "给 {name} 改名",
+      "renameHint": "改名后 UUID 不变，游戏服务器里按 UUID 保存的数据不受影响。",
+      "renamed": "{previous} 已改名为 {name}",
+      "delete": "删除",
+      "deleteTitle": "删除角色 {name}？",
+      "deleteRefund": "删除后退还 {refund} 积分，无法恢复。",
+      "deleteNoRefund": "删除后不退还积分，无法恢复。",
+      "deleteConfirm": "删除角色",
+      "deleted": "已删除角色 {name}",
+      "deletedRefund": "已删除角色 {name}，退还 {refund} 积分",
+      "copyUuid": "复制 UUID",
+      "copied": "已复制 {name} 的 UUID",
+      "copyFailed": "没能复制，请手动选中 UUID 复制。",
+      "updatedAt": "更新于 {time}",
+      "noSkin": "还没有皮肤，游戏里显示默认皮肤",
+      "hasSkin": "已设置皮肤",
+      "hasCape": "已设置披风",
+      "figureEmpty": "{name} 还没有皮肤",
+      "figure": "{name} 的皮肤",
+      "emptyTitle": "你还没有角色",
+      "emptyDescription": "添加一个角色，就有了在游戏里用的名字。",
+      "verifyFirst": "验证邮箱之后，才能添加、改名和删除角色。",
+      "failed": "没有成功，请稍后重试。"
     }
   }
 }

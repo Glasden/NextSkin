@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SignUpPage() {
-  if (await getSessionUser()) redirect('/')
+  if (await getSessionUser()) redirect('/user')
   const [{ core }, t] = await Promise.all([getServer(), getTranslations('auth.signUp')])
   const [settings, mailConfigured] = await Promise.all([
     core.settings.read([
