@@ -23,15 +23,15 @@
 | [0009](0009-plugin-runtime.md) | 插件运行模型：官方插件在核心进程内，安装插件在 plugin host，整代切换 | 已采纳 |
 | [0010](0010-plugin-api.md) | 插件 API：声明式定义、六类扩展点、能力授权、独立版本 | 已采纳（S5 通过） |
 | [0011](0011-plugin-ui.md) | 插件 UI：声明式为默认，运行时组件共享宿主 React | 已采纳（S3 通过） |
-| [0012](0012-frontend-foundation.md) | 前端基座：token 单一来源 + Base UI + 自有组件库 | 已采纳 |
+| [0012](0012-frontend-foundation.md) | 前端基座：token 单一来源 + Base UI + 自有组件库 | 已采纳（react-email 一条已被 ADR-0020 取代） |
 | [0013](0013-version-baseline.md) | 版本基线：Node 26 LTS、Next.js ≥16.4.1、TypeScript 7 | 已采纳 |
 | [0014](0014-toolchain.md) | 工具链：pnpm + Turborepo，TypeScript 7 做类型检查（TS 6 只给依赖编译器 API 的工具），ESLint、Prettier、Vitest、changesets | 已采纳 |
 | [0015](0015-core-schema-conventions.md) | 核心 schema 约定：时间存 ISO 字符串、角色名靠规范化列、UUID 绑定角色；逐表设计见 `docs/schema.md` | 已采纳 |
 | [0016](0016-protocol-contract.md) | 协议契约以录制结果为判据；客户端可能依赖的 BS 行为照样复现，只有异常输入才触发的 Laravel/PHP 副产品不复现 | 已采纳 |
 | [0017](0017-skin-figure-rendering.md) | 皮肤的 2D 正背面由服务端出图，按显示倍数选分辨率，浏览器只做整数倍放大 | 已采纳 |
-| [0018](0018-registration-and-mail.md) | 注册走领域用例，规则和默认值取 BS；邮件在事务之外异步发送 | 已采纳 |
+| [0018](0018-registration-and-mail.md) | 注册走领域用例，规则和默认值取 BS；邮件在事务之外异步发送 | 已采纳（react-email 一条已被 ADR-0020 取代） |
 | [0019](0019-i18n.md) | 国际化：URL 不带语言前缀，消息集中在 `packages/i18n`，接口错误带 code 和本地化文案 | 已采纳 |
-| [0020](0020-email-templates-without-react.md) | 邮件模板不用 React，改用无依赖的 HTML 模板函数（取代 ADR-0012、ADR-0018 里 react-email 的部分） | 提议 |
+| [0020](0020-email-templates-without-react.md) | 邮件模板不用 React，改用无依赖的 HTML 模板函数（取代 ADR-0012、ADR-0018 里 react-email 的部分） | 已采纳 |
 
 ## 待做的 spike
 
