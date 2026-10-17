@@ -24,6 +24,10 @@
     "legacy_cape": {
       "type": "cape",
       "textureScale": 1
+    },
+    "default-skin": {
+      "type": "alex",
+      "textureScale": 1
     }
   }
 }
