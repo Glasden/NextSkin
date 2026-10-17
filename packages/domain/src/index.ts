@@ -2,6 +2,8 @@
 // 写操作只能经过这里的用例：在一个事务内完成状态变更、触发拦截器、把事件写入 outbox（ADR-0004）。
 export { createCore, type Core, type CoreOptions } from './core.ts'
 export { DomainError } from './errors.ts'
+export { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './auth/password-policy.ts'
+export { resolveClientIp } from './network/client-ip.ts'
 export { assertEmailVerified } from './users/email-verification.ts'
 export type { RegisterInput } from './users/register.ts'
 export type { MailMessage, MailTransport } from './mail/types.ts'

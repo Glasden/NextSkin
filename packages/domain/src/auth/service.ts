@@ -2,7 +2,7 @@ import type { CoreDatabase, UserRole } from '@nextskin/db'
 import type { Kysely } from 'kysely'
 import type { MailService } from '../mail/service.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
-import { AUTH_BASE_PATH, createAuth, type Auth } from './auth.ts'
+import { AUTH_BASE_PATH, CLIENT_IP_HEADER, createAuth, type Auth } from './auth.ts'
 import { normalizeClientAuthentication } from './client-authentication.ts'
 import { withoutSerialUnsafeMetadata } from './serial-safety.ts'
 
@@ -26,6 +26,8 @@ export interface SessionUser {
   locale: string | null
 }
 
+/** 验证邮件里的链接校验完令牌后回到网页的结果页；失败时 Better Auth 再加上 error 参数 */
+const VERIFY_EMAIL_CALLBACK = '/verify-email?status=verified'
 const DISCOVERY_PATH = `${AUTH_BASE_PATH}/.well-known/openid-configuration`
 const METADATA_CACHE_CONTROL = 'public, max-age=15, stale-while-revalidate=15, stale-if-error=86400'
 
@@ -68,13 +70,26 @@ export function createAuthService(options: AuthServiceOptions) {
     async sendVerificationEmail(email: string): Promise<void> {
       const auth = await instance('')
       if (!auth) throw new Error('site_url_required')
-      await auth.api.sendVerificationEmail({ body: { email } })
+      await auth.api.sendVerificationEmail({ body: { email, callbackURL: VERIFY_EMAIL_CALLBACK } })
     },
     /**
      * 处理 /api/auth/* 的请求。
      * @param requestRoot 客户端看到的站点地址（Next 里 request.url 的 host 是它自己的监听地址）
      */
-    async handle(request: Request, requestRoot: string): Promise<Response> {
+    async handle(request: Request, requestRoot: string, clientIp: string | null): Promise<Response> {
+      const headers = new Headers(request.headers)
+      headers.delete(CLIENT_IP_HEADER)
+      if (clientIp !== null) headers.set(CLIENT_IP_HEADER, clientIp)
+      // Next 的 Request 是 Proxy，不能传给 Node Request 构造器做品牌检查。
+      // 显式传 URL、方法和原始 body 流；Node 的流请求需要 duplex，再交给 OAuth 认证改写。
+      const init = {
+        method: request.method,
+        headers,
+        body: request.body,
+        signal: request.signal,
+        duplex: 'half' as const,
+      }
+      request = new Request(request.url, init)
       const auth = await instance(requestRoot)
       if (!auth)
         return Response.json(
@@ -92,8 +107,29 @@ export function createAuthService(options: AuthServiceOptions) {
       return auth.handler(await normalizeClientAuthentication(request, AUTH_BASE_PATH, registeredAuthMethod))
     },
 
+    async createSession(input: {
+      email: string
+      password: string
+      clientIp: string
+      userAgent: string | null
+      requestRoot: string
+    }): Promise<string[]> {
+      const auth = await instance(input.requestRoot)
+      if (!auth) throw new Error('site_url_required')
+      const headers = new Headers({ [CLIENT_IP_HEADER]: input.clientIp })
+      if (input.userAgent !== null) headers.set('user-agent', input.userAgent)
+      const result = await auth.api.signInEmail({
+        body: { email: input.email.trim().toLowerCase(), password: input.password, rememberMe: true },
+        headers,
+        returnHeaders: true,
+      })
+      return result.headers.getSetCookie()
+    },
+
     /** 当前请求的登录用户；没有登录或会话失效时返回 null */
     async getSessionUser(headers: Headers, requestRoot: string): Promise<SessionUser | null> {
+      headers = new Headers(headers)
+      headers.delete(CLIENT_IP_HEADER)
       const auth = await instance(requestRoot)
       if (!auth) return null
       const session = await auth.api.getSession({ headers })

@@ -1,8 +1,9 @@
+import type { AppEnv } from '../env.ts'
 import type { Core } from '@nextskin/domain'
 import type { Hono } from 'hono'
-import { errorPage, protocolMethodResponse, suffixPlayer, type ProtocolEnv } from './http.ts'
+import { errorPage, protocolMethodResponse, suffixPlayer } from './http.ts'
 
-export function registerUsm(app: Hono<ProtocolEnv>, core: Core): void {
+export function registerUsm(app: Hono<AppEnv>, core: Core): void {
   app.all('/usm/:file', async (c) => {
     const name = suffixPlayer(c.req.param('file'), '.json')
     if (name === null) return errorPage(404)

@@ -22,26 +22,84 @@
     }
   },
   "errors": {
-    "invalid_request": "The request is malformed.",
-    "invalid_value": "This value is invalid.",
+    "invalid_request": "The request is malformed. Refresh the page and try again.",
+    "invalid_value": "This value is in the wrong format.",
     "invalid_origin": "The request came from an untrusted origin. Refresh the page and try again.",
-    "request_too_large": "The submitted content is too large.",
+    "request_too_large": "The submitted content is too long. Shorten it and try again.",
     "internal_error": "Something went wrong on the server. Try again later.",
     "service_unavailable": "The service is temporarily unavailable. Try again later.",
-    "registration_disabled": "Registration is closed on this site.",
+    "registration_disabled": "Registration is currently closed on this site. Contact the site administrator if you have questions.",
     "email_invalid": "Enter a valid email address.",
-    "email_domain_not_allowed": "This site doesn't accept sign-ups from this email domain.",
-    "email_taken": "This email is already registered.",
-    "email_not_verified": "Verify your email first.",
+    "email_domain_not_allowed": "This site doesn't accept sign-ups from this email domain. Try a different email.",
+    "email_taken": "This email is already registered. Sign in, or reset your password.",
+    "email_not_verified": "Verify your email before doing this.",
     "password_too_short": "Password must be at least {min} characters.",
     "password_too_long": "Password must be at most {max} characters.",
     "nickname_invalid": "Nickname must be between {min} and {max} characters.",
     "player_name_required": "Enter a player name.",
     "player_name_invalid": "Player name {rule, select, official {can only contain letters, numbers and underscores} cjk {can only contain letters, numbers, underscores, § and Chinese characters} utf8 {cannot contain spaces or other whitespace} other {does not match the rules of this site}}.",
     "player_name_length": "Player name must be between {min} and {max} characters.",
-    "player_name_taken": "This player name is already taken.",
+    "player_name_taken": "This player name is already taken. Try another one.",
     "player_name_rule_misconfigured": "The player name rule on this site is misconfigured. Contact the administrator.",
-    "ip_limit_reached": "Only {limit} accounts can be registered from the same IP address.",
-    "mail_not_configured": "This site hasn't set up email delivery, so emails can't be sent right now."
+    "ip_limit_reached": "This IP address has reached the account limit ({limit}). If you already have an account, sign in instead.",
+    "mail_not_configured": "This site hasn't set up email delivery, so emails can't be sent right now. Contact the site administrator."
+  },
+  "auth": {
+    "illustration": "Skin by {name}",
+    "email": "Email",
+    "password": "Password",
+    "backToSignIn": "Back to sign in",
+    "signIn": {
+      "title": "Sign in",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up",
+      "remember": "Remember me",
+      "forgot": "Forgot password?",
+      "submit": "Sign in",
+      "invalidCredentials": "The email or password isn't right. Check them and try again.",
+      "tooManyAttempts": "Too many attempts. Wait a few minutes and try again.",
+      "failed": "Couldn't sign in. Try again later."
+    },
+    "signUp": {
+      "title": "Sign up",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "passwordHint": "{min} to {max} characters. A phrase only you know is safer.",
+      "playerName": "Player name",
+      "playerNameHint": "The name you use in game, and your nickname on this site. {rule, select, official {Letters, numbers and underscores} cjk {Letters, numbers, underscores, § and Chinese characters} utf8 {No spaces} other {Must match the rules of this site}}, {min} to {max} characters.",
+      "nickname": "Nickname",
+      "nicknameHint": "The name shown on this site. You can add players after signing up.",
+      "verificationNotice": "After signing up, we'll send a verification email to this address.",
+      "submit": "Sign up",
+      "closed": "Registration is currently closed on this site. If you already have an account, sign in.",
+      "failed": "Couldn't sign up. Try again later."
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "description": "Enter the email you signed up with and we'll send you a link to reset your password.",
+      "submit": "Send email",
+      "sentTitle": "Email sent",
+      "sent": "If {email} is registered on this site, we've sent it a password reset link. The link expires in 1 hour. If you can't find it, check your spam folder.",
+      "mailNotConfigured": "This site hasn't set up email delivery, so passwords can't be reset by email. Contact the site administrator to reset your password.",
+      "tooManyAttempts": "Too many requests. Wait a few minutes and try again.",
+      "failed": "Couldn't send the email. Try again later."
+    },
+    "resetPassword": {
+      "title": "Choose a new password",
+      "newPassword": "New password",
+      "submit": "Reset password",
+      "doneTitle": "Password reset",
+      "done": "You've been signed out on all devices. Sign in again with your new password.",
+      "invalidLink": "This link has expired or has already been used. Request a new one.",
+      "requestAgain": "Request a new link",
+      "failed": "Couldn't reset your password. Try again later."
+    },
+    "verifyEmail": {
+      "title": "Verify email",
+      "doneTitle": "Email verified",
+      "done": "Thanks for verifying. You can now use every feature.",
+      "invalidLink": "This verification link has expired or has already been used. Sign in to send a new one.",
+      "home": "Go to home page"
+    }
   }
 }

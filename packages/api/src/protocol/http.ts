@@ -1,13 +1,7 @@
 import type { Context } from 'hono'
+import type { AppEnv } from '../env.ts'
 
-export type ProtocolEnv = {
-  Variables: {
-    requestRoot: string
-    profileRoot?: string
-    omitAli: boolean
-  }
-}
-export type ProtocolContext = Context<ProtocolEnv>
+export type ProtocolContext = Context<AppEnv>
 
 export function requestRoot(request: Request): string {
   const url = new URL(request.url)

@@ -1,3 +1,4 @@
+import type { AppEnv } from '../env.ts'
 import type { Core, PlayerView, SigningKey } from '@nextskin/domain'
 import type { Hono } from 'hono'
 import {
@@ -10,7 +11,6 @@ import {
   requiresSignature,
   skinDomains,
   type ProtocolContext,
-  type ProtocolEnv,
 } from './http.ts'
 
 /** BS 的 YggdrasilException 直接输出响应并退出，绕过了所有中间件，所以不带 ALI 头。 */
@@ -52,7 +52,7 @@ function profileProperties(player: PlayerView, root: string, key: SigningKey | n
   ].map((property) => (key ? { ...property, signature: key.sign(property.value) } : property))
 }
 
-export function registerYggdrasil(app: Hono<ProtocolEnv>, core: Core): void {
+export function registerYggdrasil(app: Hono<AppEnv>, core: Core): void {
   const prefix = '/api/yggdrasil'
   app.all(prefix, async (c) => {
     const settings = await core.settings.read(['site.name', 'site.url', 'yggdrasil.skinDomains'])

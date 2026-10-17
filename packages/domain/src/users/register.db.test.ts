@@ -9,6 +9,7 @@ import {
   type CoreDatabase,
 } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
+import * as passwordCrypto from 'better-auth/crypto'
 import { afterAll, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import {
   createCore,
@@ -22,6 +23,8 @@ import {
 import { offlineUuid } from '../players/create.ts'
 import { assertEmailVerified } from './email-verification.ts'
 import type { RegisterInput } from './register.ts'
+
+vi.mock('better-auth/crypto', { spy: true })
 
 const secretKey = 'test-only-secret-key-with-at-least-32-characters'
 const ROOT = 'http://localhost:3000'
@@ -92,6 +95,7 @@ async function request(path: string, body?: unknown, cookie?: string) {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     }),
     ROOT,
+    null,
   )
 }
 function cookies(response: Response) {
@@ -227,10 +231,19 @@ test('唯一索引拒绝大小写不同的邮箱和角色名，角色冲突回�
 test('同一 IP 达到上限拒绝，0 不限', async () => {
   await setting('auth.registration.perIpLimit', 1)
   await core.users.register(input())
-  await expect(core.users.register(input({ email: 'other@example.test', playerName: 'Other' }))).rejects.toMatchObject({
-    code: 'ip_limit_reached',
-    params: { limit: 1 },
-  })
+  const hash = vi.mocked(passwordCrypto.hashPassword)
+  hash.mockClear()
+  try {
+    await expect(
+      core.users.register(input({ email: 'other@example.test', playerName: 'Other' })),
+    ).rejects.toMatchObject({
+      code: 'ip_limit_reached',
+      params: { limit: 1 },
+    })
+    expect(hash).not.toHaveBeenCalled()
+  } finally {
+    hash.mockClear()
+  }
   await setting('auth.registration.perIpLimit', 0)
   await core.users.register(input({ email: 'other@example.test', playerName: 'Other' }))
   expect(await countRows(database.db.selectFrom('users'))).toBe(2)
@@ -279,7 +292,7 @@ test('验证邮件在提交后入队，Better Auth 接受链接并验证邮箱�
   // 按收件人的语言渲染，验证链接 24 小时有效
   expect(messages[0]!.text).toContain('24 hours')
   const url = mailUrl(messages[0]!)
-  expect((await core.auth.handle(new Request(url), ROOT)).status).toBeLessThan(400)
+  expect((await core.auth.handle(new Request(url), ROOT, null)).status).toBeLessThan(400)
   const user = await database.db
     .selectFrom('users')
     .select('email_verified')

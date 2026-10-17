@@ -1,9 +1,10 @@
+import type { AppEnv } from '../env.ts'
 import { createHash } from 'node:crypto'
 import type { Core } from '@nextskin/domain'
 import type { Hono } from 'hono'
-import { publicCacheResponse, protocolMethodResponse, errorPage, httpDate, type ProtocolEnv } from './http.ts'
+import { publicCacheResponse, protocolMethodResponse, errorPage, httpDate } from './http.ts'
 
-export function registerTextures(app: Hono<ProtocolEnv>, core: Core): void {
+export function registerTextures(app: Hono<AppEnv>, core: Core): void {
   app.on('ALL', ['/textures/:hash', '/csl/textures/:hash', '/usm/textures/:hash'], async (c) => {
     if (c.req.param('hash').includes('/')) return errorPage(404)
     const methodResponse = protocolMethodResponse(c.req.method, 'GET')

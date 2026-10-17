@@ -5,13 +5,15 @@
   "description": "纯 RGBA 材质前处理与 2D 渲染（ADR-0017）",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./assets/figures/*": "./assets/figures/*"
   },
   "scripts": {
     "lint": "eslint --max-warnings 0 .",
     "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
     "test": "vitest run",
-    "golden": "node scripts/golden.ts"
+    "golden": "node scripts/golden.ts",
+    "assets": "node scripts/assets.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",

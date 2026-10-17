@@ -197,7 +197,7 @@
 | PlayerHead | 用户和角色的头像 | — |
 | PlayerChip | 角色名加头像，例如“正在使用的角色” | 用户（账号），改用 PlayerHead 加昵称 |
 | Podium | 首页的“本周收藏最多” | 其他排行，改用列表 |
-| Logo | 页头、后台侧栏、页脚 | — |
+| Logo | 页头、后台侧栏、页脚；链接到首页时用 `render` 换成框架的链接组件 | — |
 | Link | 跳转到其他页面；站内跳转用 `render` 换成框架的链接组件 | 执行操作，改用 Button |
 | EmptyState、Skeleton、Pagination、Menu、Tooltip、Badge | 见各自 story | |
 

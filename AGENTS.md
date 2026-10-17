@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制、注册用例和注册规则、邮件发送队列已经落地（`packages/domain/src/auth/`、`users/`、`mail/`，ADR-0018），注册的 HTTP 接口、Yggdrasil Connect 和页面还没有。国际化已接入（ADR-0019）。其余写操作还没有开始。
+monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制、注册用例和注册规则、邮件发送队列、注册接口（`POST /api/register`，第一个 REST 接口，`packages/api/src/rest/`）、登录注册和找回密码的页面已经落地（ADR-0018），两步验证和通行密钥的页面、Yggdrasil Connect 还没有。国际化已接入（ADR-0019）。其余写操作还没有开始。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
@@ -92,6 +92,7 @@ nextskin 启动器（进程监管 + 命令行）
 
 - Next 16：`middleware.ts` 已改名为 `proxy.ts`；页面的 `params` 和 `searchParams` 是 Promise；同一个路由段不能同时有 `page.tsx` 和 `route.ts`。
 - 根路径上的协议端点由 `next.config.ts` 的 rewrite 转进 `app/api/[...path]`，Route Handler 拿到的仍是改写前的 URL，所以 Hono 按公开路径注册路由。`request.url` 的 host 是 Next 自己的监听地址，需要客户端看到的站点地址时读 `Host` 头。
+- 客户端 IP 不要直接读 `X-Forwarded-For`：Next 原样保留客户端自带的值。用 `packages/api` 的 `clientIp()`，它按设置 `network.trustedProxies` 和连接的对端地址解析（对端地址的来历见 `apps/web/lib/peer-address.ts`）。
 - Next 默认把末尾带斜杠的路径 308 跳转，已用 `skipTrailingSlashRedirect` 关掉：启动器会请求 `/api/yggdrasil/`，旧版 Java 不跟随 308。
 - 协议端点里有些看起来像 bug 的 BS 行为（按名字查角色忽略末尾空格、批量查询返回请求里的名字……）是契约的一部分，改之前读 `tests/contract/README.md`。
 - Next App Router 在浏览器里用的是它自带的 React（canary 版本），不是 `node_modules` 里的 `react`。插件组件要共享这份 React，只能通过 import map（ADR-0011）。

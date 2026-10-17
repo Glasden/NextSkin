@@ -1,0 +1,9 @@
+{
+  "rendererVersion": 1,
+  "figures": {
+    "default-skin": {
+      "type": "alex",
+      "textureScale": 1
+    }
+  }
+}

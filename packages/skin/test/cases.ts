@@ -55,3 +55,29 @@ export function goldenCases(): GoldenCase[] {
   add('synthetic-22x17-cape', patterned(66, 51), 'cape')
   return cases
 }
+
+/** 随核心发布的材质（assets/）预先渲染的拼图，网页直接当静态文件引用。材质的出图路由落地前，登录页插图用它 */
+export const assetFigureDirectory = new URL('../assets/figures/', import.meta.url)
+export const assetInstruction =
+  '随核心发布的材质拼图过期了。渲染器升级后运行 pnpm --filter @nextskin/skin assets（AGENTS.md）'
+
+export interface AssetFigureManifest {
+  rendererVersion: number
+  figures: Record<string, { type: TextureType; textureScale: number }>
+}
+
+const ASSET_SKINS = ['default-skin'] as const
+
+export function assetFigures() {
+  return ASSET_SKINS.map((name) => {
+    const image = readPng(new URL(`../assets/${name}.png`, import.meta.url))
+    const type = inferSkinModel(image)
+    const s = textureScale(type, image.width, image.height)
+    return {
+      name,
+      type,
+      textureScale: s,
+      files: resolutions(s).map((k) => ({ file: `${name}-k${k}.png`, render: () => renderFigure(image, type, k) })),
+    }
+  })
+}

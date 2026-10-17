@@ -22,26 +22,84 @@
     }
   },
   "errors": {
-    "invalid_request": "请求格式不正确。",
-    "invalid_value": "格式不正确。",
+    "invalid_request": "请求的格式不对，请刷新页面后重试。",
+    "invalid_value": "填写的内容格式不对。",
     "invalid_origin": "请求来源不受信任，请刷新页面后重试。",
-    "request_too_large": "提交的内容太大了。",
+    "request_too_large": "提交的内容太长了，请删减后重试。",
     "internal_error": "服务器出错了，请稍后重试。",
     "service_unavailable": "服务暂时不可用，请稍后重试。",
-    "registration_disabled": "本站已关闭注册。",
+    "registration_disabled": "本站暂时关闭了注册，有疑问请联系站点管理员。",
     "email_invalid": "请填写有效的邮箱地址。",
-    "email_domain_not_allowed": "本站不接受这个邮箱域名注册。",
-    "email_taken": "这个邮箱已经注册过了。",
-    "email_not_verified": "请先验证邮箱。",
-    "password_too_short": "密码至少 {min} 位。",
+    "email_domain_not_allowed": "本站不接受这个邮箱域名注册，换一个邮箱试试。",
+    "email_taken": "这个邮箱已经注册过了，可以直接登录，或者找回密码。",
+    "email_not_verified": "请先验证邮箱，再进行这个操作。",
+    "password_too_short": "密码至少要 {min} 位。",
     "password_too_long": "密码最多 {max} 位。",
     "nickname_invalid": "昵称长度要在 {min} 到 {max} 个字符之间。",
     "player_name_required": "请填写角色名。",
     "player_name_invalid": "角色名{rule, select, official {只能包含英文字母、数字和下划线} cjk {只能包含英文字母、数字、下划线、§ 和汉字} utf8 {不能包含空格等空白字符} other {不符合本站的规则}}。",
     "player_name_length": "角色名长度要在 {min} 到 {max} 个字符之间。",
-    "player_name_taken": "这个角色名已经被占用了。",
+    "player_name_taken": "这个角色名已被占用，换一个试试。",
     "player_name_rule_misconfigured": "本站的角色名规则设置有误，请联系管理员。",
-    "ip_limit_reached": "同一 IP 地址最多只能注册 {limit} 个账号。",
-    "mail_not_configured": "本站没有配置邮件发送，暂时无法发送邮件。"
+    "ip_limit_reached": "这个 IP 地址注册的账号已经达到上限（{limit} 个）。已有账号的话，请直接登录。",
+    "mail_not_configured": "本站没有配置邮件发送，暂时无法发送邮件。请联系站点管理员。"
+  },
+  "auth": {
+    "illustration": "{name} 的皮肤",
+    "email": "邮箱",
+    "password": "密码",
+    "backToSignIn": "返回登录",
+    "signIn": {
+      "title": "登录",
+      "noAccount": "还没有账号？",
+      "signUp": "注册一个",
+      "remember": "记住我",
+      "forgot": "忘记密码？",
+      "submit": "登录",
+      "invalidCredentials": "邮箱或密码不对，请检查后重试。",
+      "tooManyAttempts": "尝试次数太多了，请过几分钟再试。",
+      "failed": "没能登录，请稍后重试。"
+    },
+    "signUp": {
+      "title": "注册",
+      "hasAccount": "已经有账号了？",
+      "signIn": "直接登录",
+      "passwordHint": "{min} 到 {max} 位，用一句只有你知道的话更安全。",
+      "playerName": "角色名",
+      "playerNameHint": "进入游戏时用的名字，也是你在本站的昵称。{rule, select, official {可以用英文字母、数字和下划线} cjk {可以用英文字母、数字、下划线、§ 和汉字} utf8 {不能有空格} other {需要符合本站的规则}}，{min} 到 {max} 个字符。",
+      "nickname": "昵称",
+      "nicknameHint": "在本站显示的名字，注册后可以添加角色。",
+      "verificationNotice": "注册后，我们会往这个邮箱发一封验证邮件。",
+      "submit": "注册",
+      "closed": "本站暂时关闭了注册。已经有账号的话，可以直接登录。",
+      "failed": "没能注册，请稍后重试。"
+    },
+    "forgotPassword": {
+      "title": "找回密码",
+      "description": "填写注册时用的邮箱，我们会发一封重设密码的邮件。",
+      "submit": "发送邮件",
+      "sentTitle": "邮件已发出",
+      "sent": "如果 {email} 在本站注册过，重设密码的邮件已经发到这个邮箱，链接 1 小时内有效。没收到的话，看看垃圾邮件文件夹。",
+      "mailNotConfigured": "本站没有配置邮件发送，无法通过邮件找回密码。请联系站点管理员重设密码。",
+      "tooManyAttempts": "发送得太频繁了，请过几分钟再试。",
+      "failed": "没能发送邮件，请稍后重试。"
+    },
+    "resetPassword": {
+      "title": "重设密码",
+      "newPassword": "新密码",
+      "submit": "重设密码",
+      "doneTitle": "密码已重设",
+      "done": "所有设备上的登录都已退出，请用新密码重新登录。",
+      "invalidLink": "这个链接已经失效或用过了，请重新找回密码。",
+      "requestAgain": "重新找回密码",
+      "failed": "没能重设密码，请稍后重试。"
+    },
+    "verifyEmail": {
+      "title": "验证邮箱",
+      "doneTitle": "邮箱已验证",
+      "done": "感谢验证，现在可以使用全部功能了。",
+      "invalidLink": "这个验证链接已经失效或用过了。登录后可以重新发送验证邮件。",
+      "home": "前往首页"
+    }
   }
 }

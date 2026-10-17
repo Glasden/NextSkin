@@ -1,15 +1,9 @@
+import type { AppEnv } from '../env.ts'
 import type { Core } from '@nextskin/domain'
 import type { Hono } from 'hono'
-import {
-  publicCacheResponse,
-  protocolMethodResponse,
-  errorPage,
-  httpDate,
-  suffixPlayer,
-  type ProtocolEnv,
-} from './http.ts'
+import { publicCacheResponse, protocolMethodResponse, errorPage, httpDate, suffixPlayer } from './http.ts'
 
-export function registerCsl(app: Hono<ProtocolEnv>, core: Core): void {
+export function registerCsl(app: Hono<AppEnv>, core: Core): void {
   app.on('ALL', ['/:file', '/csl/:file'], async (c) => {
     const name = suffixPlayer(c.req.param('file'), '.json')
     if (name === null) return errorPage(404)

@@ -13,7 +13,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@hono/zod-openapi": "1.6.3",
     "@nextskin/domain": "workspace:*",
+    "@nextskin/i18n": "workspace:*",
     "hono": "catalog:",
     "zod": "catalog:"
   },

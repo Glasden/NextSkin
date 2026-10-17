@@ -64,9 +64,11 @@ export function createRegister(
       if ([...nickname].length < 1 || [...nickname].length > 255)
         throw new DomainError('nickname_invalid', { min: 1, max: 255 })
     }
+    const limit = values['auth.registration.perIpLimit']
+    if (limit > 0 && (await countRows(db.selectFrom('users').where('registration_ip', '=', input.ip))) >= limit)
+      throw new DomainError('ip_limit_reached', { limit })
     const password = await hashPassword(input.password)
     const uid = await transactionWithRetry(db, async (tx) => {
-      const limit = values['auth.registration.perIpLimit']
       if (limit > 0 && (await countRows(tx.selectFrom('users').where('registration_ip', '=', input.ip))) >= limit)
         throw new DomainError('ip_limit_reached', { limit })
       const now = writeAuthDate(tx, toIsoTimestamp(new Date()))

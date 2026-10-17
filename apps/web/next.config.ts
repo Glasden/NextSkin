@@ -31,6 +31,13 @@ const config: NextConfig = {
   // 不把 /api/yggdrasil/ 308 跳转到不带斜杠的地址：authlib-injector 请求元数据时带斜杠，BS 直接返回 200，
   // 而旧版 Java 的 HttpURLConnection 不跟随 308。Hono 用 strict: false 匹配带斜杠的路径
   skipTrailingSlashRedirect: true,
+  // BS 的认证页地址：旧站的书签、论坛帖子里的注册链接还能用
+  redirects: () =>
+    Promise.resolve([
+      { source: '/auth/login', destination: '/sign-in', permanent: true },
+      { source: '/auth/register', destination: '/sign-up', permanent: true },
+      { source: '/auth/forgot', destination: '/forgot-password', permanent: true },
+    ]),
   rewrites: () =>
     Promise.resolve({
       beforeFiles: [],

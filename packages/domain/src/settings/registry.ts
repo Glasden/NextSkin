@@ -1,9 +1,16 @@
 import { locales } from '@nextskin/i18n'
 import { z } from 'zod'
+import { isTrustedProxy } from '../network/client-ip.ts'
 
 export const coreSettingsNamespace = 'core'
 
 export const coreSettingsRegistry = {
+  // 默认信任回环地址，让同机的 nginx 等反向代理开箱可用（ADR-0018）。
+  'network.trustedProxies': {
+    schema: z.array(z.string().refine(isTrustedProxy, 'invalid IP or CIDR')),
+    default: ['127.0.0.0/8', '::1'],
+    secret: false,
+  },
   'site.url': { schema: z.union([z.literal(''), z.url({ protocol: /^https?$/ })]), default: '', secret: false },
   'site.name': { schema: z.string(), default: 'NextSkin', secret: false },
   // 站点默认语言：用户没有设置、浏览器也没有受支持的语言时用它（ADR-0019）

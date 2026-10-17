@@ -20,6 +20,7 @@ import { serialSafety } from './serial-safety.ts'
 
 /** Better Auth 挂在这个路径下（Hono 的 /api/auth/*） */
 export const AUTH_BASE_PATH = '/api/auth'
+export const CLIENT_IP_HEADER = 'x-nextskin-client-ip'
 
 export const OAUTH_SCOPES = ['openid', 'profile', 'email', 'offline_access']
 
@@ -134,6 +135,7 @@ export function authOptions(config: AuthConfig) {
     // /token：jwt 插件给会话签发 JWT，用不到；/update-user：昵称等字段改动要经过领域用例（不变量 4）
     disabledPaths: ['/token', '/update-user'],
     advanced: {
+      ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
       database: { generateId: 'serial' },
       cookiePrefix: 'nextskin',
     },

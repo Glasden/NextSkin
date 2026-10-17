@@ -80,10 +80,11 @@ class Browser {
       body = new URLSearchParams(options.form).toString()
     }
     const method = options.method ?? (body === undefined ? 'GET' : 'POST')
-    const response = await this.target.auth.handle(
-      new Request(new URL(path, LISTEN), { method, headers, body }),
-      this.root,
-    )
+    // Next 用 Proxy 包装 Request；Node 的 new Request(proxy) 会抛 TypeError。
+    const request = new Proxy(new Request(new URL(path, LISTEN), { method, headers, body }), {
+      get: (target, property) => Reflect.get(target, property, target) as unknown,
+    })
+    const response = await this.target.auth.handle(request, this.root, '127.0.0.1')
     for (const cookie of response.headers.getSetCookie()) {
       const pair = cookie.split(';')[0]!
       const index = pair.indexOf('=')
@@ -426,4 +427,92 @@ test('生产环境没有设置站点地址时拒绝处理认证请求，不信�
   expect(response.status).toBe(503)
   expect(await json(response)).toMatchObject({ error: 'site_url_required' })
   expect(await database.db.selectFrom('users').select('id').execute()).toEqual([])
+})
+
+test.each(['198.51.100.10', null])('handle 保留登录请求体并替换或删除伪造的内部 IP：%s', async (clientIp) => {
+  const { uid } = await core.users.register({
+    email: 'ip@example.test',
+    password,
+    playerName: 'IpTest',
+    ip: '192.0.2.1',
+    locale: null,
+  })
+  const response = await core.auth.handle(
+    new Request(`${LISTEN}/api/auth/sign-in/email`, {
+      method: 'POST',
+      headers: {
+        origin: ROOT,
+        'content-type': 'application/json',
+        'x-nextskin-client-ip': '203.0.113.99',
+        'x-forwarded-for': '203.0.113.88',
+      },
+      body: JSON.stringify({ email: 'ip@example.test', password }),
+    }),
+    ROOT,
+    clientIp,
+  )
+  expect(response.status).toBe(200)
+  const session = await database.db
+    .selectFrom('sessions')
+    .select(['ip_address', 'user_id'])
+    .where('user_id', '=', uid)
+    .executeTakeFirstOrThrow()
+  // Better Auth 在开发/测试环境缺 IP 时退回回环地址，不能使用伪造值。
+  expect(session.ip_address).toBe(clientIp ?? '127.0.0.1')
+})
+
+test('createSession 复用登录 Cookie，记 IP 与 User-Agent，站点 URL 未配置时拒绝', async () => {
+  await storeSetting('site.url', 'https://skin.example.test')
+  const { uid } = await core.users.register({
+    email: 'session@example.test',
+    password,
+    playerName: 'Session',
+    ip: '192.0.2.1',
+    locale: null,
+  })
+  const cookies = await core.auth.createSession({
+    email: ' Session@Example.test ',
+    password,
+    clientIp: '198.51.100.20',
+    userAgent: 'session-test',
+    requestRoot: ROOT,
+  })
+  expect(
+    cookies.some(
+      (cookie) =>
+        /^__Secure-nextskin\.session_token=/.test(cookie) &&
+        /; HttpOnly/i.test(cookie) &&
+        /; Secure/i.test(cookie) &&
+        /; SameSite=Lax/i.test(cookie),
+    ),
+  ).toBe(true)
+  const headers = new Headers({
+    cookie: cookies.map((value) => value.split(';')[0]).join('; '),
+    'x-nextskin-client-ip': '203.0.113.99',
+  })
+  expect(await core.auth.getSessionUser(headers, ROOT)).toMatchObject({ uid })
+  expect(headers.get('x-nextskin-client-ip')).toBe('203.0.113.99')
+  expect(
+    await database.db
+      .selectFrom('sessions')
+      .select(['ip_address', 'user_agent'])
+      .where('user_id', '=', uid)
+      .executeTakeFirstOrThrow(),
+  ).toEqual({ ip_address: '198.51.100.20', user_agent: 'session-test' })
+  await database.db.deleteFrom('settings').execute()
+  const production = createCore({
+    db: database.db,
+    secretKey,
+    production: true,
+    textureStorage: { read: () => Promise.resolve(null) },
+  })
+  await expect(
+    production.auth.createSession({
+      email: 'session@example.test',
+      password,
+      clientIp: '198.51.100.20',
+      userAgent: null,
+      requestRoot: ROOT,
+    }),
+  ).rejects.toThrow('site_url_required')
 })

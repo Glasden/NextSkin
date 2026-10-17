@@ -1,8 +1,9 @@
+import type { AppEnv } from '../env.ts'
 import type { Core } from '@nextskin/domain'
 import type { Hono } from 'hono'
-import { errorPage, protocolMethodResponse, suffixPlayer, type ProtocolEnv } from './http.ts'
+import { errorPage, protocolMethodResponse, suffixPlayer } from './http.ts'
 
-export function registerLegacy(app: Hono<ProtocolEnv>, core: Core): void {
+export function registerLegacy(app: Hono<AppEnv>, core: Core): void {
   for (const kind of ['skin', 'cape'] as const) {
     app.all(`/${kind}/:file`, async (c) => {
       const name = suffixPlayer(c.req.param('file'), '.png')
