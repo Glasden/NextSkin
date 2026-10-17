@@ -8,6 +8,7 @@ interface IndexEntry {
   title: string
   name: string
   type: 'story' | 'docs'
+  tags?: string[]
 }
 
 const index = JSON.parse(readFileSync(new URL('../storybook-static/index.json', import.meta.url), 'utf8')) as {
@@ -18,6 +19,9 @@ const stories = Object.values(index.entries).filter((entry) => entry.type === 's
 for (const story of stories) {
   for (const theme of ['light', 'dark'] as const) {
     test(`${story.title} / ${story.name}（${theme}）`, async ({ page }) => {
+      // 通知、对话框这类浮层渲染在 body 下、按视口定位，这类 story 带 screenshot-viewport 标签，截整个视口
+      const wholeViewport = story.tags?.includes('screenshot-viewport') ?? false
+      if (wholeViewport) await page.setViewportSize({ width: 720, height: 480 })
       await page.goto(`/iframe.html?id=${story.id}&viewMode=story&globals=theme:${theme}`)
       // play 函数可能留下焦点之类的状态，等它跑完再截图；它失败时截图没有意义
       const phase = await page.waitForFunction(() => {
@@ -28,7 +32,9 @@ for (const story of stories) {
       })
       expect(await phase.jsonValue()).toBe('finished')
       await page.evaluate(() => document.fonts.ready)
-      await expect(page.locator('[data-screenshot]')).toHaveScreenshot(`${story.id}--${theme}.png`)
+      const name = `${story.id}--${theme}.png`
+      if (wholeViewport) await expect(page).toHaveScreenshot(name)
+      else await expect(page.locator('[data-screenshot]')).toHaveScreenshot(name)
     })
   }
 }

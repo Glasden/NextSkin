@@ -169,7 +169,7 @@
 
 ## 6. 组件清单
 
-落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、Form、Field、Input、Checkbox、Alert、Link、Logo。
+落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、Form、Field、Input、Checkbox、Toast、Alert、Link、Logo。
 
 | 组件 | 何时用 | 何时不用 |
 |---|---|---|
@@ -186,7 +186,7 @@
 | Dialog | 需要用户做决定、并且应当打断当前流程 | 展示大量内容或编辑详情，改用 Sheet |
 | Sheet | 侧边查看和编辑详情 | 二选一的确认，改用 Dialog |
 | Popover | 轻量、不打断流程的补充内容 | 包含表单提交 |
-| Toast | 操作结果的简短反馈 | 需要用户操作或必须读到的内容，改用 Alert |
+| Toast | 操作结果的简短反馈，例如“设置已保存”。最多同时显示 3 条，5 秒后自动关闭，鼠标停在上面或焦点在里面时暂停；可以带一个操作，例如“撤销”。警告和错误会立即读出 | 需要用户操作或必须读到的内容，改用 Alert |
 | Alert | 页面内持续存在的提示 | 一次性的操作反馈 |
 | Notice | 全站公告，放在页头下方 | 只和当前页面有关的提示，改用 Alert |
 | Table | 后台数据列表 | 前台展示材质，改用 TextureCard 网格 |
@@ -257,7 +257,7 @@
 - token 用 `@theme static` 全量输出：运行时插件的 CSS 引用宿主的 token 变量，宿主自己没用到的 token 也必须存在于宿主 CSS 里。
 - lint：在 `packages/ui` 以外，禁止原始色值、任意值类（`bg-[#…]`、`p-[13px]`）以及内联样式中的颜色。
 - 每个组件都有 story，并作为交互测试运行（`pnpm test`）。
-- 截图回归：`pnpm test:visual` 给每个 story 拍亮色、暗色两张截图，和 `packages/ui/visual/__screenshots__` 里的基线比较。浏览器跑在与 `@playwright/test` 同版本的官方 Docker 镜像里，系统字体和渲染与宿主机无关，本地和 CI 共用一套基线。镜像里的中文字体只有带点阵字形的文泉驿正黑，所以另外挂进 Noto Sans CJK SC（`packages/ui/visual/fonts.ts`），中文按 Linux 用户常见的字体渲染。页面的截图（包括移动端宽度）以后放进 e2e。
+- 截图回归：`pnpm test:visual` 给每个 story 拍亮色、暗色两张截图，和 `packages/ui/visual/__screenshots__` 里的基线比较。浏览器跑在与 `@playwright/test` 同版本的官方 Docker 镜像里，系统字体和渲染与宿主机无关，本地和 CI 共用一套基线。镜像里的中文字体只有带点阵字形的文泉驿正黑，所以另外挂进 Noto Sans CJK SC（`packages/ui/visual/fonts.ts`），中文按 Linux 用户常见的字体渲染。渲染在 body 下、按视口定位的浮层（Toast 这类）截整个视口，见 `packages/ui/AGENTS.md`。页面的截图（包括移动端宽度）以后放进 e2e。
 - 正反示例：Storybook 落地后，用截图填充本节。
 
 ## 附录：备选主题的取值
