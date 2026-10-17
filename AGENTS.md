@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制已经落地（`packages/domain/src/auth/`），Yggdrasil Connect、邮件、注册规则和页面还没有。其余写操作还没有开始。
+monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制、注册用例和注册规则、邮件发送队列已经落地（`packages/domain/src/auth/`、`users/`、`mail/`，ADR-0018），注册的 HTTP 接口、Yggdrasil Connect 和页面还没有。国际化已接入（ADR-0019）。其余写操作还没有开始。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
@@ -67,6 +67,8 @@ nextskin 启动器（进程监管 + 命令行）
 | `packages/db` | Kysely 实例、迁移、方言辅助函数 |
 | `packages/ui` | 组件库与设计 token（`src/theme.css` 是 token 的唯一来源） |
 | `packages/skin` | 材质的前处理和 2D 渲染，纯函数，服务端出图和浏览器上传页共用（ADR-0017） |
+| `packages/i18n` | 界面文案（`messages/<语言>.json`）和语言解析，网页和领域层共用（ADR-0019） |
+| `packages/email` | 邮件模板，无依赖的 HTML 模板函数（ADR-0020） |
 | `packages/plugin-sdk`、`plugin-host`、`plugin-testing` | 插件 API、插件运行时、插件测试工具 |
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |
 | `packages/importer` | 从 BS v6 只读导入 |
@@ -77,7 +79,7 @@ nextskin 启动器（进程监管 + 命令行）
 
 ## 常见任务的固定顺序
 
-- **新功能**：领域用例（含事务、拦截器、事件）→ Hono 路由与 zod schema → UI。
+- **新功能**：领域用例（含事务、拦截器、事件）→ Hono 路由与 zod schema → UI。领域用例的错误只带 code 和参数；文案先写进 `packages/i18n` 的 `zh-CN.json`，同时写 `en.json`（ADR-0019）。
 - **新数据表**：迁移 → 类型 → 仓储；跑 `pnpm test:db`。
 - **新事件或拦截点**：先改 SDK 的类型、`interceptorPolicies` 和 type-tests，再在核心实现。这属于插件 API 变更。
 - **新组件**：写进 `packages/ui`，照 `src/button/` 的样子配 story（同时是交互测试）和截图基线，并在 DESIGN.md 的组件清单里补一行。

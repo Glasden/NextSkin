@@ -3,6 +3,7 @@ import { coreMigrations, migrateToLatest, type CoreDatabase } from '@nextskin/db
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import { isoCBOR } from '@simplewebauthn/server/helpers'
 import { afterAll, beforeAll, expect, test } from 'vitest'
+import { createCore, type Core } from '../core.ts'
 import { createAuth, type Auth } from './auth.ts'
 
 // 通行密钥的注册走完 Better Auth 的整条路径，在四种数据库上确认 passkeys 表存得下规范允许的数据。
@@ -11,10 +12,17 @@ import { createAuth, type Auth } from './auth.ts'
 const ROOT = 'http://localhost:3000'
 let database: TestDatabase<CoreDatabase>
 let auth: Auth
+let core: Core
 
 beforeAll(async () => {
   database = await createTestDatabase<CoreDatabase>()
   await migrateToLatest(database.db, coreMigrations)
+  core = createCore({
+    db: database.db,
+    secretKey: 'test-only-secret-key-with-at-least-32-characters',
+    production: false,
+    textureStorage: { read: () => Promise.resolve(null) },
+  })
   auth = createAuth({
     db: database.db,
     secretKey: 'test-only-secret-key-with-at-least-32-characters',
@@ -79,8 +87,15 @@ const cookies = (response: Response) =>
     .join('; ')
 
 test.each([32, 1023])('注册 credential ID 为 %i 字节的通行密钥（1023 是 WebAuthn 允许的上限）', async (length) => {
-  const signUp = await auth.api.signUpEmail({
-    body: { email: `passkey-${length}@example.test`, name: 'Passkey', password: 'correct horse battery staple' },
+  await core.users.register({
+    email: `passkey-${length}@example.test`,
+    playerName: `Passkey${length}`,
+    password: 'correct horse battery staple',
+    ip: '127.0.0.1',
+    locale: null,
+  })
+  const signUp = await auth.api.signInEmail({
+    body: { email: `passkey-${length}@example.test`, password: 'correct horse battery staple' },
     asResponse: true,
   })
   expect(signUp.status).toBe(200)

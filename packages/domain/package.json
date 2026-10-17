@@ -17,15 +17,19 @@
     "@better-auth/oauth-provider": "catalog:",
     "@better-auth/passkey": "catalog:",
     "@nextskin/db": "workspace:*",
+    "@nextskin/email": "workspace:*",
+    "@nextskin/i18n": "workspace:*",
     "@nextskin/plugin-sdk": "workspace:*",
     "better-auth": "catalog:",
     "hash-wasm": "4.12.0",
     "kysely": "catalog:",
+    "nodemailer": "10.1.0",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@simplewebauthn/server": "13.3.3",
     "@types/node": "catalog:",
+    "@types/nodemailer": "7.0.11",
     "jose": "6.2.12",
     "vitest": "catalog:"
   }

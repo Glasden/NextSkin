@@ -112,10 +112,10 @@ const password = 'correct horse battery staple'
 
 async function signUp(email: string, name = 'Steve') {
   const browser = new Browser()
-  const response = await browser.request('/api/auth/sign-up/email', { json: { email, password, name } })
+  const { uid } = await core.users.register({ email, password, playerName: name, ip: '127.0.0.1', locale: null })
+  const response = await browser.request('/api/auth/sign-in/email', { json: { email, password } })
   expect(response.status).toBe(200)
-  const body = await json(response)
-  return { browser, uid: Number((body.user as { id: string }).id) }
+  return { browser, uid }
 }
 
 async function signUpAdmin() {
@@ -142,15 +142,10 @@ function basic(clientId: string, secret: string) {
 }
 
 test('注册和登录：整数 uid、邮箱转小写、会话 Cookie 是 HttpOnly + SameSite=Lax', async () => {
-  const browser = new Browser()
-  const response = await browser.request('/api/auth/sign-up/email', {
-    json: { email: 'Steve@Example.TEST', password, name: 'Steve' },
-  })
-  expect(response.status).toBe(200)
-  const uid = Number(((await json(response)).user as { id: string }).id)
+  const { uid } = await signUp('Steve@Example.TEST', 'Steve')
   expect(Number.isSafeInteger(uid)).toBe(true)
   const row = await database.db.selectFrom('users').selectAll().where('id', '=', uid).executeTakeFirstOrThrow()
-  expect(row).toMatchObject({ email: 'steve@example.test', nickname: 'Steve', role: 'user', score: 0 })
+  expect(row).toMatchObject({ email: 'steve@example.test', nickname: 'Steve', role: 'user', score: 1000 })
 
   const signIn = await new Browser().request('/api/auth/sign-in/email', {
     json: { email: 'steve@example.test', password },
@@ -166,13 +161,14 @@ test('注册和登录：整数 uid、邮箱转小写、会话 Cookie 是 HttpOnl
   expect(wrong.status).toBe(401)
 })
 
-test('getSessionUser 返回 uid、昵称和角色；没有会话时返回 null', async () => {
+test('getSessionUser 返回 uid、昵称、角色和语言；没有会话时返回 null', async () => {
   const { browser, uid } = await signUp('alex@example.test', 'Alex')
   expect(await core.auth.getSessionUser(new Headers({ cookie: browser.cookieHeader() }), ROOT)).toEqual({
     uid,
     nickname: 'Alex',
     email: 'alex@example.test',
     role: 'user',
+    locale: null,
   })
   expect(await core.auth.getSessionUser(new Headers(), ROOT)).toBeNull()
 })
@@ -398,8 +394,15 @@ test.each([
 test('站点地址是 https 时会话 Cookie 带 Secure 和 __Secure- 前缀', async () => {
   await storeSetting('site.url', 'https://skin.example.test/')
   const site = 'https://skin.example.test'
-  const response = await new Browser(core, site).request('/api/auth/sign-up/email', {
-    json: { email: 'secure@example.test', password, name: 'Secure' },
+  await core.users.register({
+    email: 'secure@example.test',
+    password,
+    playerName: 'Secure',
+    ip: '127.0.0.1',
+    locale: null,
+  })
+  const response = await new Browser(core, site).request('/api/auth/sign-in/email', {
+    json: { email: 'secure@example.test', password },
   })
   expect(response.status).toBe(200)
   const cookie = response.headers.getSetCookie().find((value) => value.includes('session_token='))

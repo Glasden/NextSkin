@@ -1,0 +1,24 @@
+{
+  "common": {
+    "close": "关闭",
+    "notifications": "通知"
+  },
+  "mail": {
+    "greeting": "{nickname}，你好：",
+    "linkFallback": "按钮打不开时，把下面的地址复制到浏览器里打开：",
+    "actionLink": "{action}：{url}",
+    "footer": "这封邮件由 {siteName} 自动发送，请不要直接回复。",
+    "verifyEmail": {
+      "subject": "验证你在 {siteName} 的邮箱",
+      "body": "点击下面的按钮验证邮箱。链接 {hours, plural, other {# 小时}}内有效。",
+      "action": "验证邮箱",
+      "ignore": "如果你没有在 {siteName} 注册，忽略这封邮件即可。"
+    },
+    "resetPassword": {
+      "subject": "重设你在 {siteName} 的密码",
+      "body": "我们收到了重设密码的请求。点击下面的按钮设置新密码，链接 {hours, plural, other {# 小时}}内有效。",
+      "action": "重设密码",
+      "ignore": "如果不是你本人操作，忽略这封邮件即可，你的密码不会改变。"
+    }
+  }
+}

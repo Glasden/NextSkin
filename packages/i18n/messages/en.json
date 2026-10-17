@@ -1,0 +1,24 @@
+{
+  "common": {
+    "close": "Close",
+    "notifications": "Notifications"
+  },
+  "mail": {
+    "greeting": "Hi {nickname},",
+    "linkFallback": "If the button doesn't work, copy this address into your browser:",
+    "actionLink": "{action}: {url}",
+    "footer": "This email was sent automatically by {siteName}. Please don't reply to it.",
+    "verifyEmail": {
+      "subject": "Verify your email for {siteName}",
+      "body": "Click the button below to verify your email. The link expires in {hours, plural, one {# hour} other {# hours}}.",
+      "action": "Verify email",
+      "ignore": "If you didn't sign up for {siteName}, you can ignore this email."
+    },
+    "resetPassword": {
+      "subject": "Reset your password for {siteName}",
+      "body": "We received a request to reset your password. Click the button below to choose a new one. The link expires in {hours, plural, one {# hour} other {# hours}}.",
+      "action": "Reset password",
+      "ignore": "If you didn't ask for this, you can ignore this email. Your password won't change."
+    }
+  }
+}

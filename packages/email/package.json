@@ -1,0 +1,22 @@
+{
+  "name": "@nextskin/email",
+  "version": "0.0.0",
+  "private": true,
+  "description": "邮件模板：无依赖的 HTML 模板函数，颜色取 theme.css 的亮色取值（ADR-0020）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nextskin/i18n": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

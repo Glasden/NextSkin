@@ -15,8 +15,10 @@
   "dependencies": {
     "@nextskin/api": "workspace:*",
     "@nextskin/domain": "workspace:*",
+    "@nextskin/i18n": "workspace:*",
     "@nextskin/ui": "workspace:*",
     "next": "catalog:",
+    "next-intl": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },

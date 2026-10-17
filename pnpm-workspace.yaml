@@ -5,6 +5,9 @@ packages:
 
 allowBuilds:
   esbuild: false
+  # next-intl 的消息提取功能（useExtracted）才用到，我们不用，不跑它们的安装脚本
+  '@parcel/watcher': false
+  '@swc/core': false
 
 catalog:
   '@better-auth/oauth-provider': 1.7.10
@@ -27,12 +30,14 @@ catalog:
   kysely: 0.29.6
   mysql2: 3.24.6
   next: 16.4.2
+  next-intl: 4.14.9
   pg: 8.23.1
   react: 19.3.1
   react-dom: 19.3.1
   storybook: 10.6.2
   tailwindcss: 4.3.3
   typescript-eslint: 8.71.2
+  use-intl: 4.14.9
   vite: 8.3.4
   vitest: 5.0.5
   zod: 4.6.7

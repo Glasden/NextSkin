@@ -1,5 +1,6 @@
 import type { CoreDatabase, UserRole } from '@nextskin/db'
 import type { Kysely } from 'kysely'
+import type { MailService } from '../mail/service.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { AUTH_BASE_PATH, createAuth, type Auth } from './auth.ts'
 import { normalizeClientAuthentication } from './client-authentication.ts'
@@ -14,6 +15,7 @@ export interface AuthServiceOptions {
    * 不能取自请求的 Host 头。开发环境没填时退回到请求的地址
    */
   production: boolean
+  mail: MailService
 }
 
 export interface SessionUser {
@@ -21,6 +23,7 @@ export interface SessionUser {
   nickname: string
   email: string
   role: UserRole
+  locale: string | null
 }
 
 const DISCOVERY_PATH = `${AUTH_BASE_PATH}/.well-known/openid-configuration`
@@ -43,6 +46,7 @@ export function createAuthService(options: AuthServiceOptions) {
         siteUrl,
         siteName: values['site.name'],
         legacyPasswordSalt: async () => (await settings.read(['auth.legacyPasswordSalt']))['auth.legacyPasswordSalt'],
+        mail: options.mail,
       })
       cached = { key, auth }
     }
@@ -60,6 +64,12 @@ export function createAuthService(options: AuthServiceOptions) {
   }
 
   return {
+    /** 注册提交后调用；令牌由 Better Auth 自己签发，复用 /verify-email 的校验。 */
+    async sendVerificationEmail(email: string): Promise<void> {
+      const auth = await instance('')
+      if (!auth) throw new Error('site_url_required')
+      await auth.api.sendVerificationEmail({ body: { email } })
+    },
     /**
      * 处理 /api/auth/* 的请求。
      * @param requestRoot 客户端看到的站点地址（Next 里 request.url 的 host 是它自己的监听地址）
@@ -91,10 +101,10 @@ export function createAuthService(options: AuthServiceOptions) {
       const uid = Number(session.user.id)
       const row = await db
         .selectFrom('users')
-        .select(['id', 'nickname', 'email', 'role'])
+        .select(['id', 'nickname', 'email', 'role', 'locale'])
         .where('id', '=', uid)
         .executeTakeFirst()
-      return row ? { uid: row.id, nickname: row.nickname, email: row.email, role: row.role } : null
+      return row ? { uid: row.id, nickname: row.nickname, email: row.email, role: row.role, locale: row.locale } : null
     },
   }
 }

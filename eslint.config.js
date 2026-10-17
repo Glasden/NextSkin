@@ -49,6 +49,11 @@ export default defineConfig(
     rules: { 'nextskin/no-raw-color': 'off', 'nextskin/no-arbitrary-value': 'off' },
   },
   {
+    // 邮件客户端不支持 CSS 变量，颜色只能写成具体的值；取值和 theme.css 一致由 packages/email 的 tokens.test.ts 守护
+    files: ['packages/email/**'],
+    rules: { 'nextskin/no-raw-color': 'off' },
+  },
+  {
     // SQLite 方言和跨数据库 SQL 辅助函数就在这里实现，需要使用底层方言 API
     files: ['packages/db/**'],
     rules: { 'nextskin/no-sqlite-dialect': 'off', 'nextskin/no-dialect-specific-sql': 'off' },

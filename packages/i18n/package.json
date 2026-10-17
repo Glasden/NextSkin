@@ -1,0 +1,23 @@
+{
+  "name": "@nextskin/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "description": "界面文案与语言解析（ADR-0019）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "use-intl": "catalog:"
+  },
+  "devDependencies": {
+    "@formatjs/icu-messageformat-parser": "3.5.18",
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

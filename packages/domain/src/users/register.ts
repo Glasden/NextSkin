@@ -1,0 +1,126 @@
+import {
+  countRows,
+  insertOrIgnore,
+  toIsoTimestamp,
+  transactionWithRetry,
+  writeAuthDate,
+  type CoreDatabase,
+} from '@nextskin/db'
+import { hashPassword } from 'better-auth/crypto'
+import type { Kysely } from 'kysely'
+import { z } from 'zod'
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '../auth/password-policy.ts'
+import type { AuthService } from '../auth/service.ts'
+import { DomainError } from '../errors.ts'
+import type { MailService } from '../mail/service.ts'
+import { createPlayer, validatePlayerName } from '../players/create.ts'
+import type { createSettingQueries } from '../settings/queries.ts'
+
+export interface RegisterInput {
+  email: string
+  password: string
+  nickname?: string
+  playerName?: string
+  ip: string
+  locale: string | null
+}
+
+export function createRegister(
+  db: Kysely<CoreDatabase>,
+  settings: ReturnType<typeof createSettingQueries>,
+  auth: AuthService,
+  mail: MailService,
+) {
+  return async function register(input: RegisterInput): Promise<{ uid: number }> {
+    const values = await settings.read([
+      'auth.registration.enabled',
+      'auth.registration.withPlayerName',
+      'auth.registration.perIpLimit',
+      'auth.registration.emailDomains',
+      'user.initialScore',
+      'player.nameRule',
+      'player.nameRegex',
+      'player.nameLength',
+      'player.uuidAlgorithm',
+    ])
+    if (!values['auth.registration.enabled']) throw new DomainError('registration_disabled')
+    const email = input.email.trim().toLowerCase()
+    if (!z.email().safeParse(email).success || email.length > 255) throw new DomainError('email_invalid')
+    const domains = values['auth.registration.emailDomains']
+    const listed = domains.domains.includes(email.slice(email.lastIndexOf('@') + 1))
+    if ((domains.mode === 'allow' && !listed) || (domains.mode === 'deny' && listed))
+      throw new DomainError('email_domain_not_allowed')
+    if (input.password.length < MIN_PASSWORD_LENGTH)
+      throw new DomainError('password_too_short', { min: MIN_PASSWORD_LENGTH })
+    if (input.password.length > MAX_PASSWORD_LENGTH)
+      throw new DomainError('password_too_long', { max: MAX_PASSWORD_LENGTH })
+    let nickname: string
+    const withPlayer = values['auth.registration.withPlayerName']
+    if (withPlayer) {
+      if (!input.playerName?.trim()) throw new DomainError('player_name_required')
+      nickname = validatePlayerName(input.playerName, values)
+    } else {
+      nickname = input.nickname?.trim() ?? ''
+      if ([...nickname].length < 1 || [...nickname].length > 255)
+        throw new DomainError('nickname_invalid', { min: 1, max: 255 })
+    }
+    const password = await hashPassword(input.password)
+    const uid = await transactionWithRetry(db, async (tx) => {
+      const limit = values['auth.registration.perIpLimit']
+      if (limit > 0 && (await countRows(tx.selectFrom('users').where('registration_ip', '=', input.ip))) >= limit)
+        throw new DomainError('ip_limit_reached', { limit })
+      const now = writeAuthDate(tx, toIsoTimestamp(new Date()))
+      // 插件运行时落地后，在这里调用 user.register 拦截器（同一事务）。
+      const inserted = await insertOrIgnore(
+        tx,
+        'users',
+        {
+          nickname,
+          email,
+          email_verified: false,
+          role: 'user',
+          score: values['user.initialScore'],
+          registration_ip: input.ip,
+          locale: input.locale,
+          created_at: now,
+          updated_at: now,
+          image: null,
+          avatar_texture_id: null,
+          last_check_in_at: null,
+        },
+        ['email'],
+      )
+      if (!inserted) throw new DomainError('email_taken')
+      const user = await tx.selectFrom('users').select('id').where('email', '=', email).executeTakeFirstOrThrow()
+      // Better Auth 1.7.10 sign-up.mjs 的 linkAccount：accountId 与 userId 相同。
+      await tx
+        .insertInto('accounts')
+        .values({
+          user_id: user.id,
+          provider_id: 'credential',
+          account_id: String(user.id),
+          password,
+          access_token: null,
+          refresh_token: null,
+          id_token: null,
+          access_token_expires_at: null,
+          refresh_token_expires_at: null,
+          scope: null,
+          created_at: now,
+          updated_at: now,
+        })
+        .execute()
+      if (withPlayer)
+        await createPlayer(tx, { uid: user.id, name: nickname, algorithm: values['player.uuidAlgorithm'] })
+      // outbox 落地后，在这里写入 user.registered 事件（同一事务）。
+      return user.id
+    })
+    try {
+      if (await mail.configured()) await auth.sendVerificationEmail(email)
+    } catch {
+      // 提交后的签发或入队失败不影响注册；不记录可能携带邮箱、令牌的异常。
+      console.warn('[mail] verification_enqueue_failed attempt=1')
+    }
+    return { uid }
+  }
+}

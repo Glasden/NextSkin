@@ -3,10 +3,17 @@ import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-prov
 import { passkey } from '@better-auth/passkey'
 import { dialectOf, type CoreDatabase } from '@nextskin/db'
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
-import { createAuthMiddleware, isAPIError } from 'better-auth/api'
+import { APIError, createAuthMiddleware, isAPIError } from 'better-auth/api'
 import { hashPassword, verifyPassword } from 'better-auth/crypto'
 import { jwt, twoFactor } from 'better-auth/plugins'
 import type { Kysely } from 'kysely'
+import type { MailService } from '../mail/service.ts'
+import {
+  EMAIL_VERIFICATION_TTL_SECONDS,
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  RESET_PASSWORD_TTL_SECONDS,
+} from './password-policy.ts'
 import { isLegacyPasswordHash, verifyLegacyPassword } from './legacy-passwords.ts'
 import { coreModelNaming, withNamingConvention } from './naming.ts'
 import { serialSafety } from './serial-safety.ts'
@@ -25,6 +32,7 @@ export interface AuthConfig {
   siteName: string
   /** BS 的全站盐（旧站 .env 的 SALT），只有校验旧摘要格式的密码时才读 */
   legacyPasswordSalt: () => Promise<string>
+  mail?: MailService
 }
 
 /** sha256 + base64url。令牌只存这个值，会话服务器按同样的方式查表（ADR-0007） */
@@ -76,6 +84,16 @@ export function authOptions(config: AuthConfig) {
     ...coreModelNaming(),
     emailAndPassword: {
       enabled: true,
+      disableSignUp: true,
+      minPasswordLength: MIN_PASSWORD_LENGTH,
+      maxPasswordLength: MAX_PASSWORD_LENGTH,
+      revokeSessionsOnPasswordReset: true,
+      resetPasswordTokenExpiresIn: RESET_PASSWORD_TTL_SECONDS,
+      sendResetPassword: async ({ user, url }) => {
+        if (!config.mail || !(await config.mail.configured()))
+          throw new APIError('SERVICE_UNAVAILABLE', { code: 'mail_not_configured' })
+        await config.mail.send('resetPassword', user, url)
+      },
       password: {
         hash: hashPassword,
         // 从 BS 导入的旧哈希在这里校验，登录成功后由下面的 after 钩子换成当前算法
@@ -85,7 +103,23 @@ export function authOptions(config: AuthConfig) {
             : verifyPassword({ hash, password }),
       },
     },
+    emailVerification: {
+      expiresIn: EMAIL_VERIFICATION_TTL_SECONDS,
+      sendVerificationEmail: async ({ user, url }) => {
+        if (!config.mail || !(await config.mail.configured()))
+          throw new APIError('SERVICE_UNAVAILABLE', { code: 'mail_not_configured' })
+        await config.mail.send('verifyEmail', user, url)
+      },
+    },
     hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        // 上游找回密码对不存在的邮箱提前返回；在查用户之前统一拒绝，避免泄露账号是否存在。
+        if (
+          (ctx.path === '/request-password-reset' || ctx.path === '/send-verification-email') &&
+          (!config.mail || !(await config.mail.configured()))
+        )
+          throw new APIError('SERVICE_UNAVAILABLE', { code: 'mail_not_configured' })
+      }),
       after: createAuthMiddleware(async (ctx) => {
         if (ctx.path !== '/sign-in/email' || !ctx.context.newSession) return
         // newSession 只在密码校验通过之后才有，所以这里的明文就是刚通过校验的那个

@@ -1,6 +1,7 @@
 import { coreMigrations, migrateToLatest, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import { afterAll, beforeAll, expect, test, vi } from 'vitest'
+import { createCore, type Core } from '../core.ts'
 import { createAuth, redactLogMessage, type Auth } from './auth.ts'
 
 // 直接对 Better Auth 实例的测试：只能在服务端调用的端点，以及测试环境下默认关掉的检查。
@@ -9,10 +10,17 @@ import { createAuth, redactLogMessage, type Auth } from './auth.ts'
 const ROOT = 'http://localhost:3000'
 let database: TestDatabase<CoreDatabase>
 let auth: Auth
+let core: Core
 
 beforeAll(async () => {
   database = await createTestDatabase<CoreDatabase>()
   await migrateToLatest(database.db, coreMigrations)
+  core = createCore({
+    db: database.db,
+    secretKey: 'test-only-secret-key-with-at-least-32-characters',
+    production: false,
+    textureStorage: { read: () => Promise.resolve(null) },
+  })
   auth = createAuth({
     db: database.db,
     secretKey: 'test-only-secret-key-with-at-least-32-characters',
@@ -24,13 +32,19 @@ beforeAll(async () => {
 afterAll(async () => database?.cleanup())
 
 async function signUp(email: string, role: 'user' | 'admin') {
-  const response = await auth.api.signUpEmail({
-    body: { email, name: 'Test', password: 'correct horse battery staple' },
+  const { uid } = await core.users.register({
+    email,
+    playerName: role === 'admin' ? 'ResourceAdmin' : 'ResourceUser',
+    password: 'correct horse battery staple',
+    ip: '127.0.0.1',
+    locale: null,
+  })
+  await database.db.updateTable('users').set({ role }).where('id', '=', uid).execute()
+  const response = await auth.api.signInEmail({
+    body: { email, password: 'correct horse battery staple' },
     asResponse: true,
   })
   expect(response.status).toBe(200)
-  const { user } = (await response.json()) as { user: { id: string } }
-  await database.db.updateTable('users').set({ role }).where('id', '=', Number(user.id)).execute()
   const cookie = response.headers
     .getSetCookie()
     .map((value) => value.split(';')[0])
