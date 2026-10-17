@@ -94,6 +94,7 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | cape_texture_id | integer | 可空；外键 → textures，set null | |
 | created_at | 时间 | 非空 | |
 | updated_at | 时间 | 非空 | 改名、换材质、转让时更新。CSL 响应的 `Last-Modified` 和 USM 的 `last_update` 都取自这里 |
+| score_paid | integer | 非空，默认 0 | 创建时实际扣的积分，删除时按它退还，不按现价（ADR-0022）。注册时一起创建的角色是 0；转让后清零 |
 
 ## 材质
 
@@ -205,7 +206,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | balance | integer | 非空 | 变动后的余额 |
 | reason | varchar(128) | 非空 | 原因的 i18n 键，例如签到、上传材质、导入 |
 | subject_type | varchar(32) | 可空 | 关联对象，例如上传材质时是 `texture` |
-| subject_id | integer | 可空 | 删除材质时，按这里找到当初扣了多少积分来退还 |
+| subject_id | integer | 可空 | 关联对象的 id。退还积分不查流水，按对象行上记的实付数（例如 `players.score_paid`，ADR-0022） |
 | created_at | 时间 | 非空 | |
 
 另建 `(user_id, id)` 索引。改余额和写流水在同一事务里：先用 `score = score + ?` 原子更新（扣减时带上"余额足够"的条件），再读回余额写流水。
@@ -332,6 +333,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | tid_skin、tid_cape | skin_texture_id、cape_texture_id | 小于等于 0、材质不存在或被跳过时为空 |
 | last_modified | updated_at、created_at | BS 没有记录创建时间 |
 | — | uuid | 见下文"UUID" |
+| — | score_paid | 一律取旧站的 `score_per_player`：BS 删除任何角色都按现价退还，迁移前后删除角色退还的积分不变（ADR-0022） |
 
 **textures → textures、texture_files**
 
@@ -397,6 +399,11 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | ygg_search_profile_max | yggdrasil.profileSearchLimit | 转成整数 |
 | ygg_enable_ali | yggdrasil.apiLocationIndication | `'true'` / `'false'` 转成布尔 |
 | ygg_private_key | yggdrasil.signingKey | 机密项，原样加密保存 |
+| score_per_player | score.perPlayer | 转成整数 |
+| return_score | score.refundOnDelete | `'true'` / `'false'` 转成布尔 |
+| sign_score | checkIn.score | `'最小,最大'` 拆成 `{ min, max }` |
+| sign_gap_time | checkIn.gapHours | 转成整数 |
+| sign_after_zero | checkIn.resetAtMidnight | `'true'` / `'false'` 转成布尔 |
 
 ### UUID
 
@@ -437,6 +444,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | 只读协议端点（第 3 步） | users（Better Auth 的字段先建好，此时还不接 Better Auth）、texture_files、textures、users.avatar_texture_id、players、settings |
 | 认证 | Better Auth 的其余各表、device_code_selections |
 | 后台任务和积分 | jobs、failed_jobs、score_transactions |
+| 用户中心和角色管理 | players.score_paid（加列） |
 | 材质上传、衣柜、举报 | closet_items、reports |
 | 第一个管理操作 | audit_logs |
 | 第一个定时任务 | job_schedules |
