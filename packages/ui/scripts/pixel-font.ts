@@ -98,8 +98,8 @@ function cmapOf(sfnt: Uint8Array) {
 
 /**
  * 码位合并成区间。`bridge` 返回 true 的码位可以夹在区间中间，这样 CSS 只有几 KB：
- * - 主字族里有的字不会落到补充字族上。主字族的分片还在加载时，Chromium 和 Firefox 也不会为这些字
- *   提前下载区间重叠的补充分片（2026-10 实测）；
+ * - 主字族里有的字不会落到补充字族上。主字族的分片还在加载时，Chromium、Firefox 和 WebKit 也不会
+ *   为这些字提前下载区间重叠的补充分片（2026-10 实测）；
  * - 字体里没有的字本来就要回退到正文字体，偶尔多下载一片也无妨。
  */
 function toRanges(codePoints: readonly number[], bridge: (cp: number) => boolean): Range[] {
