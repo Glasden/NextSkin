@@ -20,5 +20,28 @@
       "action": "Reset password",
       "ignore": "If you didn't ask for this, you can ignore this email. Your password won't change."
     }
+  },
+  "errors": {
+    "invalid_request": "The request is malformed.",
+    "invalid_value": "This value is invalid.",
+    "invalid_origin": "The request came from an untrusted origin. Refresh the page and try again.",
+    "request_too_large": "The submitted content is too large.",
+    "internal_error": "Something went wrong on the server. Try again later.",
+    "service_unavailable": "The service is temporarily unavailable. Try again later.",
+    "registration_disabled": "Registration is closed on this site.",
+    "email_invalid": "Enter a valid email address.",
+    "email_domain_not_allowed": "This site doesn't accept sign-ups from this email domain.",
+    "email_taken": "This email is already registered.",
+    "email_not_verified": "Verify your email first.",
+    "password_too_short": "Password must be at least {min} characters.",
+    "password_too_long": "Password must be at most {max} characters.",
+    "nickname_invalid": "Nickname must be between {min} and {max} characters.",
+    "player_name_required": "Enter a player name.",
+    "player_name_invalid": "Player name {rule, select, official {can only contain letters, numbers and underscores} cjk {can only contain letters, numbers, underscores, § and Chinese characters} utf8 {cannot contain spaces or other whitespace} other {does not match the rules of this site}}.",
+    "player_name_length": "Player name must be between {min} and {max} characters.",
+    "player_name_taken": "This player name is already taken.",
+    "player_name_rule_misconfigured": "The player name rule on this site is misconfigured. Contact the administrator.",
+    "ip_limit_reached": "Only {limit} accounts can be registered from the same IP address.",
+    "mail_not_configured": "This site hasn't set up email delivery, so emails can't be sent right now."
   }
 }
