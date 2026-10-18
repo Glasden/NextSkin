@@ -181,6 +181,8 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | score_paid | integer | 非空，默认 0 | 加入时实际付的衣柜费，移出时按它退还，不按现价（ADR-0025）。上传时自动放进衣柜的那一件也收 |
 | created_at | 时间 | 非空 | |
 
+另建 `created_at` 上的索引，供首页的领奖台按时间区间取最近 7 天加进衣柜的行（ADR-0032）。
+
 删除用户时，用例先锁住这个用户的行（见开头的"加锁顺序"），再逐条移除衣柜并减少对应材质的收藏数，最后删用户。外键的 `cascade` 只是兜底，它不会更新收藏数。不先锁用户的行，就挡不住两步之间并发加进来的收藏：它会被级联删除，收藏数却不会扣回。
 
 ### reports
@@ -535,8 +537,10 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 | reporter_reward_score | report.reward | 转成整数，与上一行的正值相加 |
 | announcement_{语言}、announcement | site.announcement | 取与 `site.locale` 对应的那份（`zh-CN` 对应 `announcement_zh_CN`），没有就取不带后缀的；其余语言的版本在报告里列出。等于 BS 的默认公告（`Welcome to Blessing Skin {version}!`）时不导入。含原始 HTML 的在报告里注明：导入后这部分不再显示（ADR-0028）。超过 20000 个字符时停止并报告 |
 | content_policy_{语言}、content_policy | texture.contentPolicy | 规则同上一行，没有默认文案 |
+| site_description_{语言}、site_description | site.description | 取与 `site.locale` 对应的那份，没有就取不带后缀的，同公告。等于 BS 的默认值时不导入；超过 200 个字符时截断，在报告里注明（ADR-0032） |
+| meta_keywords | site.keywords | 按半角和全角逗号拆开，每项 trim，去掉空项 |
 
-下面这些设置不导入，不是默认值时在对账报告里列出来：`score_award_per_texture`、`take_back_scores_after_deletion`、`score_award_per_like`（不做奖励，ADR-0025、ADR-0026），`status_code_for_private`、`auto_del_invalid_texture`、`allow_downloading_texture`（ADR-0025）。
+下面这些设置不导入，不是默认值时在对账报告里列出来：`score_award_per_texture`、`take_back_scores_after_deletion`、`score_award_per_like`（不做奖励，ADR-0025、ADR-0026），`status_code_for_private`、`auto_del_invalid_texture`、`allow_downloading_texture`（ADR-0025）；`meta_description`（meta description 就是站点描述，与 `site_description` 不同时列出原文）、`copyright_text`（原始 HTML，列出原文，请站长改写成 Markdown 填进 `site.footer`）、`home_pic_url`、`favicon_url`、`meta_extras`、`copyright_prefer`、`fixed_bg`、`transparent_navbar`、`hide_intro`、`navbar_color`、`sidebar_color`、`custom_css`、`custom_js`（ADR-0032）。
 
 ### UUID
 
@@ -585,6 +589,7 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 | 定时任务 | job_schedules |
 | Yggdrasil | yggdrasil_tokens |
 | 导入器 | import_runs |
+| 首页 | closet_items 的 created_at 索引 |
 | 插件 | plugins、plugin_kv、plugin_migrations |
 | 通知 | notifications |
 
