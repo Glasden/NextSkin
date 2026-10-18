@@ -1,3 +1,4 @@
+import { markSiteInitialized } from '../setup/initialized.test-helper.ts'
 import { createHash, generateKeyPairSync, randomBytes } from 'node:crypto'
 import {
   coreMigrations,
@@ -25,6 +26,7 @@ let core: Core
 beforeAll(async () => {
   database = await createTestDatabase<CoreDatabase>()
   await migrateToLatest(database.db, coreMigrations)
+  await markSiteInitialized(database.db)
   core = createCore({
     db: database.db,
     secretKey: 'test-only-secret-key-with-at-least-32-characters',

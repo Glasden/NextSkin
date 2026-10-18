@@ -8,6 +8,22 @@ import type { AppEnv } from '../env.ts'
 
 type ErrorCode = keyof Messages['errors']
 const statuses = {
+  import_jobs_busy: 409,
+  setup_required: 403,
+  setup_completed: 404,
+  setup_code_invalid: 403,
+  setup_code_required: 401,
+  maintenance: 503,
+  import_running: 409,
+  import_not_running: 409,
+  import_run_not_found: 404,
+  import_timezone_invalid: 400,
+  import_password_method_invalid: 400,
+  import_textures_unreadable: 400,
+  import_site_url_invalid: 400,
+  site_name_invalid: 400,
+  site_url_invalid: 400,
+
   mail_not_configured: 400,
   mail_test_failed: 502,
   permission_denied: 403,
@@ -64,6 +80,13 @@ const statuses = {
 } as const satisfies Partial<Record<ErrorCode, number>>
 type ResponseCode = keyof typeof statuses
 const fieldNames: Partial<Record<ResponseCode, string>> = {
+  setup_code_invalid: 'code',
+  import_timezone_invalid: 'timeZone',
+  import_password_method_invalid: 'passwordMethod',
+  import_textures_unreadable: 'texturesDirectory',
+  import_site_url_invalid: 'siteUrl',
+  site_name_invalid: 'siteName',
+  site_url_invalid: 'siteUrl',
   report_reason_length: 'reason',
   texture_file_too_large: 'file',
   texture_file_invalid: 'file',
@@ -92,7 +115,11 @@ export const errorSchema = z.object({
   error: fieldErrorSchema.extend({ fields: z.record(z.string(), fieldErrorSchema).optional() }),
 })
 
-export function createErrorResponse(core: Core, fieldOverrides: Partial<Record<ResponseCode, string>> = {}) {
+export function createErrorResponse(
+  core: Core,
+  fieldOverrides: Partial<Record<ResponseCode, string>> = {},
+  databaseFree: boolean | (() => boolean) = false,
+) {
   return async <Code extends ResponseCode>(
     c: Context<AppEnv>,
     code: Code,
@@ -101,7 +128,9 @@ export function createErrorResponse(core: Core, fieldOverrides: Partial<Record<R
     status: (typeof statuses)[Code] | 415 = statuses[code],
   ) => {
     // 即使设置读取本身失败，也仍能返回无敏感信息的 JSON 错误。
-    const settings = await core.settings.read(['site.locale']).catch(() => ({ 'site.locale': 'zh-CN' as const }))
+    const settings = (typeof databaseFree === 'function' ? databaseFree() : databaseFree)
+      ? { 'site.locale': 'zh-CN' as const }
+      : await core.settings.read(['site.locale']).catch(() => ({ 'site.locale': 'zh-CN' as const }))
     const translate = createTranslator(
       resolveLocale({
         cookie: getCookie(c, LOCALE_COOKIE),
@@ -114,7 +143,10 @@ export function createErrorResponse(core: Core, fieldOverrides: Partial<Record<R
     const field = fieldOverrides[code] ?? fieldNames[code]
     const fields = invalidFields
       ? Object.fromEntries(
-          invalidFields.map((name) => [name, { code: 'invalid_value', message: translate('errors.invalid_value') }]),
+          invalidFields.map((name) => [
+            name,
+            code === 'invalid_request' ? { code: 'invalid_value', message: translate('errors.invalid_value') } : error,
+          ]),
         )
       : field
         ? { [field]: error }

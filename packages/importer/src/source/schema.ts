@@ -67,10 +67,15 @@ export interface SourceSchema {
 
 export class SourceSchemaError extends Error {
   readonly missing: string[]
+  readonly table: string
+  readonly column: string | null
   constructor(missing: string[]) {
     super(`旧库缺少 BS 6 的表或列：${missing.join('、')}。请确认表前缀，旧站要先升级到 BS 6`)
     this.name = 'SourceSchemaError'
     this.missing = missing
+    const [table, column] = missing[0]!.split('.')
+    this.table = table!
+    this.column = column ?? null
   }
 }
 

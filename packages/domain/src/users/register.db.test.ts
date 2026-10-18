@@ -1,3 +1,4 @@
+import { markSiteInitialized } from '../setup/initialized.test-helper.ts'
 import {
   coreMigrations,
   countRows,
@@ -52,6 +53,7 @@ beforeEach(async () => {
   await database.db.deleteFrom('users').execute()
   await database.db.deleteFrom('jobs').execute()
   await database.db.deleteFrom('settings').execute()
+  await markSiteInitialized(database.db)
   messages.length = 0
   core = createCore({
     db: database.db,
@@ -482,4 +484,17 @@ test('必须验证邮箱只影响显式检查，不阻止登录', async () => {
   await core.users.register(input())
   expect((await request('/sign-in/email', { email: 'steve@example.test', password })).status).toBe(200)
   expect(() => assertEmailVerified({ email_verified: 0 }, true)).toThrow(DomainError)
+})
+
+test('未完成安装时拒绝注册，先于设置读取，用户和凭据保持为空', async () => {
+  await database.db.deleteFrom('import_runs').execute()
+  const read = vi.spyOn(core.settings, 'read')
+  try {
+    await expect(core.users.register(input())).rejects.toMatchObject({ code: 'setup_required' })
+    expect(read).not.toHaveBeenCalled()
+    expect(await countRows(database.db.selectFrom('users'))).toBe(0)
+    expect(await countRows(database.db.selectFrom('accounts'))).toBe(0)
+  } finally {
+    read.mockRestore()
+  }
 })

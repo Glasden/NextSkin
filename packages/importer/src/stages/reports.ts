@@ -12,6 +12,7 @@ export async function importReports(ctx: StageContext): Promise<void> {
   const stats = report.tables.reports
   const table = ctx.schema.tables.reports
   stats.source = await countRows(src.selectFrom(table))
+  ctx.advance('reports', 0, undefined, stats.source)
   // 同一个人对同一个材质的重复举报只保留 id 最小的一条，按旧库里的原值判断：材质或举报人已经不存在的也算，
   // 否则材质被删掉的重复举报会各自结案、各退一次花费
   const seen = new Set<string>()

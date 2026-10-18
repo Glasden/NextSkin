@@ -75,6 +75,7 @@ export interface ImportOptions {
   /** 加密机密设置（签名私钥、盐）的 NEXTSKIN_SECRET */
   secretKey: string
   signal?: AbortSignal
+  onRunCreated?: (runId: number) => void
   onProgress?: (progress: ImportProgress) => void
   /**
    * 每个导入的角色的 UUID 和来源（报告里只有统计和一部分）。试跑和被回滚的运行也会调用。
@@ -92,9 +93,17 @@ export interface ImportResult {
 
 /** 参数不对、材质目录读不了：还没开始运行，import_runs 里也没有记录 */
 export class ImportOptionsError extends Error {
-  constructor(message: string) {
+  readonly code: 'timezone_invalid' | 'password_method_invalid' | 'site_url_invalid' | 'textures_unreadable'
+  readonly field: 'timeZone' | 'passwordMethod' | 'siteUrl' | 'texturesDirectory'
+  constructor(
+    message: string,
+    code: 'timezone_invalid' | 'password_method_invalid' | 'site_url_invalid' | 'textures_unreadable',
+    field: 'timeZone' | 'passwordMethod' | 'siteUrl' | 'texturesDirectory',
+  ) {
     super(message)
     this.name = 'ImportOptionsError'
+    this.code = code
+    this.field = field
   }
 }
 
@@ -104,11 +113,19 @@ export async function checkImportOptions(
   options: Pick<ImportOptions, 'timeZone' | 'passwordMethod' | 'texturesDirectory' | 'siteUrl'>,
 ): Promise<void> {
   if (!isTimeZone(options.timeZone))
-    throw new ImportOptionsError(`时区 ${options.timeZone} 不认识；请使用 IANA 时区名，例如 Asia/Shanghai`)
+    throw new ImportOptionsError(
+      `时区 ${options.timeZone} 不认识；请使用 IANA 时区名，例如 Asia/Shanghai`,
+      'timezone_invalid',
+      'timeZone',
+    )
   try {
     passwordFormat(options.passwordMethod)
   } catch (error) {
-    throw new ImportOptionsError(error instanceof Error ? error.message : '不支持这个 PWD_METHOD')
+    throw new ImportOptionsError(
+      error instanceof Error ? error.message : '不支持这个 PWD_METHOD',
+      'password_method_invalid',
+      'passwordMethod',
+    )
   }
   if (options.siteUrl) {
     let url: URL | null = null
@@ -118,7 +135,7 @@ export async function checkImportOptions(
       // 下面统一报错
     }
     if (!url || (url.protocol !== 'http:' && url.protocol !== 'https:'))
-      throw new ImportOptionsError('站点地址要以 http:// 或 https:// 开头')
+      throw new ImportOptionsError('站点地址要以 http:// 或 https:// 开头', 'site_url_invalid', 'siteUrl')
   }
   try {
     if (!(await stat(options.texturesDirectory)).isDirectory()) throw new Error()
@@ -126,6 +143,8 @@ export async function checkImportOptions(
   } catch {
     throw new ImportOptionsError(
       `材质目录 ${options.texturesDirectory} 不存在或读不了；NextSkin 进程要能直接读到旧站的材质目录`,
+      'textures_unreadable',
+      'texturesDirectory',
     )
   }
 }
@@ -202,12 +221,20 @@ export async function runImport(options: ImportOptions): Promise<ImportResult> {
     }),
     started_at: startedAt,
   })
+  options.onRunCreated?.(runId)
   let status: ImportRunStatus = 'failed'
   try {
     status = await execute(options, report, startedAt)
   } catch (error) {
     status = error instanceof ImportCancelledError ? 'cancelled' : 'failed'
-    report.error = error instanceof Error ? error.message : '导入失败'
+    report.error =
+      options.entry === 'cli'
+        ? error instanceof Error
+          ? error.message
+          : '导入失败'
+        : error instanceof Error
+          ? error.name
+          : 'Error'
   } finally {
     const finishedAt = toIsoTimestamp(now())
     report.finishedAt = finishedAt
@@ -225,13 +252,15 @@ async function execute(
   report: ImportReport,
   now: ReturnType<typeof toIsoTimestamp>,
 ): Promise<ImportRunStatus> {
-  const progress = { stage: 'connect' as ImportStage, rows: 0, files: 0 }
-  const advance = (stage: ImportStage, rows: number, files?: number) => {
+  const progress: ImportProgress = { stage: 'connect', rows: 0, files: 0, total: null }
+  const advance = (stage: ImportStage, rows: number, files?: number, total?: number | null) => {
     if (options.signal?.aborted) throw new ImportCancelledError()
     if (stage !== progress.stage) {
       progress.stage = stage
       progress.rows = 0
+      progress.total = null
     }
+    if (total !== undefined) progress.total = total
     progress.rows += rows
     if (files !== undefined) progress.files = files
     options.onProgress?.({ ...progress })

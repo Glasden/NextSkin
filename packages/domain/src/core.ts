@@ -1,3 +1,4 @@
+import { createSetup } from './setup/service.ts'
 import { createTokens } from './yggdrasil/tokens.ts'
 import { createSessions } from './yggdrasil/join.ts'
 import { createProfileTextures } from './yggdrasil/profile-textures.ts'
@@ -37,6 +38,7 @@ import { createTextureUpload } from './textures/upload.ts'
 import { createSigningKeyQuery } from './yggdrasil/signing-key.ts'
 
 export interface CoreOptions {
+  setupCodeFile?: string | null
   db: Kysely<CoreDatabase>
   textureStorage: TextureStorage
   /** 领域用例与任务共享的时钟；同时供任务执行器入队和轮询使用。 */
@@ -167,6 +169,14 @@ export function createCore(options: CoreOptions) {
   }
   return {
     players,
+    setup: createSetup({
+      db: options.db,
+      secretKey: options.secretKey,
+      file: options.setupCodeFile ?? null,
+      settings,
+      events,
+      now,
+    }),
     admin: createAdmin({
       ...textureOptions,
       secretKey: options.secretKey,

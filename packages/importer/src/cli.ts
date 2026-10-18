@@ -112,7 +112,7 @@ async function main(argv: string[]): Promise<number> {
 
   let texturesDirectory: string
   if (args.textures) texturesDirectory = resolve(cwd, args.textures)
-  else if (env?.localTextures) texturesDirectory = env.texturesDirectory
+  else if (env?.localTextures && env.texturesDirectory) texturesDirectory = env.texturesDirectory
   else if (env) fail('旧站的材质不在本地磁盘上（FS_DRIVER 不是 local）；请先同步到本地目录，再用 --textures 指定')
   else fail('缺少旧站的材质目录：用 --textures 指定，或者用 --bs-env 提供旧站的 .env')
 

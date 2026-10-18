@@ -38,6 +38,8 @@
     }
   },
   "errors": {
+    "import_jobs_busy": "Background jobs have not stopped yet. Please try again in a moment.",
+    "setup_required": "This site has not finished setup. Registration is temporarily unavailable.",
     "mail_test_failed": "The test email could not be sent: {reason}",
     "permission_denied": "You don't have permission for this admin action.",
     "user_not_manageable": "You can only manage users whose role is below yours, and you can't change your own role.",
@@ -91,7 +93,20 @@
     "closet_item_not_found": "This texture isn't in your closet. Add it to your closet first.",
     "texture_type_mismatch": "{slot, select, skin {A player's skin must be a skin, not a cape.} cape {A player's cape must be a cape, not a skin.} other {Only skins can be used as an avatar, not capes.}}",
     "report_duplicate": "You have already reported this texture. Each texture can only be reported once.",
-    "report_reason_length": "The reason must be between {min} and {max} characters long."
+    "report_reason_length": "The reason must be between {min} and {max} characters long.",
+    "setup_completed": "This site is already set up. You can sign in.",
+    "setup_code_invalid": "The setup code is incorrect. You can find it in the setup-code file in the data directory.",
+    "setup_code_required": "You need to verify the setup code first. Enter the code from the setup-code file in the data directory.",
+    "maintenance": "The site is importing data and is temporarily unavailable. Please try again later.",
+    "import_running": "An import is already running. Wait for it to finish before starting another.",
+    "import_not_running": "This import has finished and cannot be cancelled. You can view its report.",
+    "import_run_not_found": "This import could not be found. Start again from setup or the admin page.",
+    "import_timezone_invalid": "This time zone is not recognized. Enter an IANA time zone such as Asia/Shanghai.",
+    "import_password_method_invalid": "This password method is not supported. Check PWD_METHOD in your old site configuration.",
+    "import_textures_unreadable": "The textures directory is missing or unreadable. Check the path and the process permissions.",
+    "import_site_url_invalid": "The site URL is invalid. Enter a URL starting with http:// or https://.",
+    "site_name_invalid": "The site name must contain 1–64 characters. Adjust it and try again.",
+    "site_url_invalid": "The site URL is missing or invalid. Enter a URL starting with http:// or https://."
   },
   "score": {
     "reasons": {
@@ -143,7 +158,10 @@
       "verificationNotice": "After signing up, we'll send a verification email to this address.",
       "submit": "Sign up",
       "closed": "Registration is currently closed on this site. If you already have an account, sign in.",
-      "failed": "Couldn't sign up. Try again later."
+      "failed": "Couldn't sign up. Try again later.",
+      "notInstalled": "This site isn't set up yet",
+      "notInstalledHint": "Registration opens once the site is set up.",
+      "openSetup": "I own this site, set it up"
     },
     "forgotPassword": {
       "title": "Reset your password",
@@ -796,7 +814,8 @@
       "reports": "Reports",
       "users": "Users",
       "audit": "Audit log",
-      "settings": "Settings"
+      "settings": "Settings",
+      "migration": "Migration"
     },
     "roles": {
       "banned": "Banned",
@@ -950,7 +969,8 @@
         "reportResolve": "Handled report",
         "textureDelete": "Deleted texture",
         "userSetRole": "Changed role",
-        "settingUpdate": "Change setting"
+        "settingUpdate": "Change setting",
+        "siteSetup": "Set up site"
       },
       "subjects": {
         "user": "User #{id}",
@@ -1310,6 +1330,48 @@
           }
         }
       }
+    },
+    "migration": {
+      "title": "Migration",
+      "description": "Import from Blessing Skin 6: the final sync before switching over, or importing old data into a site created with New site. Every run imports everything from the old database again and replaces this site's data.",
+      "start": "Start import",
+      "noticeTitle": "The site is in maintenance while importing",
+      "notice": "Both dry runs and imports put the site in maintenance until they finish. Web imports only support single-instance deployments; for multiple instances, stop the service and use the pnpm import:bs command.",
+      "emptyTitle": "No runs yet",
+      "empty": "Dry runs and imports are listed here, each with its report.",
+      "tableLabel": "Runs",
+      "columns": {
+        "id": "#",
+        "status": "Result",
+        "startedAt": "Started",
+        "source": "Old database",
+        "totals": "Imported",
+        "startedBy": "Started by",
+        "actions": "Report"
+      },
+      "statuses": {
+        "running": "Running",
+        "succeeded": "Succeeded",
+        "blocked": "Blocked",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      },
+      "dryRun": "Dry run",
+      "blocking": "{count, plural, one {# blocking issue} other {# blocking issues}}",
+      "totals": "{users} users, {players} players, {textures} textures",
+      "entries": {
+        "setup": "Setup",
+        "admin": "Admin",
+        "cli": "Command line"
+      },
+      "view": "View",
+      "newTitle": "Start import",
+      "newDescription": "Do a dry run and read the report first, fix any blocking issues, then run the real import. Stop the old site for the last import: texture files aren't part of the database snapshot.",
+      "backToList": "‹ Migration",
+      "runTitle": "Run #{id}",
+      "runMeta": "{entry} · {by} · {time}",
+      "download": "Download report (Markdown)",
+      "noReport": "This run left no report."
     }
   },
   "yggdrasil": {
@@ -1333,6 +1395,458 @@
       "content_type": "The Content-Type of the request must be application/json.",
       "signing_key_unavailable": "This site has no signing key yet, so external login is unavailable. Contact the site administrator.",
       "query_limit": "You can look up at most {count, plural, one {# player} other {# players}} at a time."
+    }
+  },
+  "setup": {
+    "title": "Setup",
+    "description": "This site hasn't been set up yet. First, confirm you own the server: enter the setup code stored on it.",
+    "headings": {
+      "choose": "Setup",
+      "new": "New site",
+      "import": "Import from Blessing Skin"
+    },
+    "intro": {
+      "choose": "Start a fresh site, or move a whole Blessing Skin site over.",
+      "new": "Fill in the site details and the first super admin account. You'll be signed in when it's done.",
+      "import": "The old site is never modified, so you can always switch back. When the import finishes, sign in with your old account."
+    },
+    "paths": {
+      "new": {
+        "title": "New site",
+        "description": "Start from scratch: players register and upload textures here.",
+        "point1": "Enter the site name, URL and a super admin account",
+        "point2": "You can still import an old site later under Admin › Migration",
+        "action": "Create new site"
+      },
+      "import": {
+        "title": "Import from Blessing Skin",
+        "description": "Move the users, players, textures, closets and settings of a Blessing Skin 6 site.",
+        "point1": "Player UUIDs are kept, so data on your game servers still matches",
+        "point2": "Do a dry run and read the report before the real import",
+        "action": "Start import"
+      }
+    },
+    "changePath": "Choose another way",
+    "code": {
+      "where": "The setup code is in the setup-code file in the server's data directory (NEXTSKIN_DATA_DIR, data by default), for example:",
+      "command": "cat data/setup-code",
+      "why": "Anyone can open this page on a freshly installed public site. Being able to read this file proves you own the server. The file is deleted after setup.",
+      "label": "Setup code",
+      "submit": "Continue",
+      "failed": "Couldn't verify the setup code. Check your connection and try again.",
+      "illustration": "The default skin standing on a stage"
+    },
+    "newSite": {
+      "site": "Site",
+      "siteName": "Site name",
+      "siteUrl": "Site URL",
+      "siteUrlHint": "The address players use. Defaults to the address you're on now; you can change it later in the admin settings.",
+      "admin": "Super admin",
+      "email": "Email",
+      "nickname": "Nickname",
+      "password": "Password",
+      "passwordHint": "{min} to {max} characters.",
+      "back": "Back",
+      "submit": "Finish setup",
+      "failed": "Couldn't finish setup. Check your connection and try again."
+    }
+  },
+  "maintenance": {
+    "title": "Down for maintenance",
+    "description": "The site owner is importing data, so the site is unavailable for now. This usually takes a few minutes.",
+    "refresh": "This page refreshes every 30 seconds and takes you back to the page you wanted once the import is done.",
+    "illustration": "The default skin standing on a stage"
+  },
+  "import": {
+    "wizard": {
+      "stepsLabel": "Import steps",
+      "complete": "done",
+      "steps": {
+        "env": "Old .env",
+        "source": "Connection",
+        "dryRun": "Dry run",
+        "confirm": "Confirm",
+        "import": "Import",
+        "done": "Done"
+      },
+      "failed": "The request didn't go through. Check your connection and try again.",
+      "back": "Back",
+      "env": {
+        "title": "The old site's .env",
+        "description": "Upload or paste the .env from the old site's root directory. The database connection, table prefix, password method, salt and textures directory are read from it and filled into the next step. No .env? Skip this step and fill in the form yourself.",
+        "tooLarge": "This file is too large. An old site's .env is usually a few KB (limit {max} KB). Make sure you picked the right file.",
+        "dropTitle": "Drop the .env file here",
+        "dropDescription": "The file is read in your browser and its content goes into the box below",
+        "choose": "Choose file",
+        "paste": "Or paste the content of .env",
+        "privacy": "The database password and salt only stay in memory for this import; they aren't saved in NextSkin's database.",
+        "directory": "Old site's directory on this machine (optional)",
+        "directoryHint": "Used to resolve relative paths in .env, such as the default textures directory storage/textures. Leave it empty if the old site is on another machine and fill in the textures directory in the next step.",
+        "read": "Read",
+        "skip": "Skip and fill in manually"
+      },
+      "source": {
+        "title": "Connection and paths",
+        "description": "NextSkin must be able to connect to the old database and read the old textures directory directly. Fill in the form, then select Check.",
+        "nonLocalTitle": "The old textures aren't on a local disk",
+        "nonLocal": "The old site's FS_DRIVER isn't local, so textures are in object storage. Sync them to a directory on this machine first, then enter that directory below.",
+        "check": "Check",
+        "recheck": "Check again",
+        "next": "Next: dry run"
+      },
+      "dryRun": {
+        "title": "Dry run",
+        "description": "Runs the whole import and writes a report, then rolls everything back without copying texture files. The report is exactly what the real import would produce, and it takes about as long.",
+        "maintenanceTitle": "The site is in maintenance during the dry run",
+        "maintenance": "Pages show a maintenance notice and skins and launcher sign-in are unavailable. Everything comes back when the dry run ends.",
+        "start": "Start dry run",
+        "again": "Run again",
+        "next": "Next: confirm"
+      },
+      "confirm": {
+        "title": "Confirm",
+        "description": "The dry run found no problems. Check the items below, then start the import.",
+        "siteUrl": "Site URL",
+        "siteUrlHint": "Overrides the old site URL, since migrations often change the domain or port. Defaults to the address you're on now.",
+        "replaceTitle": "Existing data on this site will be deleted",
+        "replaceHint": "The import replaces everything: the existing {users} users, {players} players and {textures} textures, along with their sessions, closets and score history, are replaced by the old site's data.",
+        "replace": "I understand the existing data will be replaced",
+        "neverImported": "This data wasn't imported from the old site. The site is already in use, and importing will wipe what players did here.",
+        "newData": "New data appeared after the last import (people signed in, checked in, uploaded or registered). Importing deletes it. See Other › Target in the report.",
+        "force": "Delete the new site's data",
+        "notesTitle": "Before you start",
+        "noteDuration": "The site is in maintenance during the import, which takes about as long as the dry run (the dry run took {seconds} s).",
+        "noteSignIn": "The import replaces all users, so you'll be signed out. Sign in with your old account afterwards.",
+        "noteSingleInstance": "Web imports only support single-instance deployments. For multiple instances, stop the service and use the pnpm import:bs command.",
+        "start": "Start import"
+      },
+      "done": {
+        "retry": "Back to dry run"
+      }
+    },
+    "source": {
+      "database": "Old database",
+      "dialect": "Database type",
+      "dialectHint": "Choose MySQL for MariaDB too.",
+      "dialects": {
+        "mysql": "MySQL",
+        "postgres": "PostgreSQL",
+        "sqlite": "SQLite"
+      },
+      "host": "Host",
+      "port": "Port",
+      "databaseName": "Database",
+      "username": "Username",
+      "password": "Password",
+      "file": "SQLite file",
+      "fileHint": "Full path of the old database file on this machine.",
+      "prefix": "Table prefix",
+      "prefixHint": "DB_PREFIX in the old .env. Leave empty if there is none.",
+      "site": "Old site",
+      "textures": "Textures directory",
+      "texturesHint": "Full path of the old textures directory on this machine; storage/textures under the old site by default. When running in a container, mount the old site's directory into it.",
+      "timeZone": "Time zone",
+      "timeZoneHint": "The time zone in the old config/app.php, Asia/Shanghai unless changed. If it's wrong, every timestamp will be off.",
+      "passwordMethod": "Password method",
+      "passwordMethodHint": "PWD_METHOD in the old .env. If unknown, BS's default BCRYPT is used; the dry run stops and asks you if the old database has hex digest passwords.",
+      "passwordMethodUnknown": "Unknown (BCRYPT)",
+      "salt": "Salt",
+      "saltHint": "SALT in the old .env. Only kept in memory for this import, then stored encrypted to verify old-format passwords."
+    },
+    "check": {
+      "databaseOk": "Found Blessing Skin {version}",
+      "unknownVersion": "(unknown version)",
+      "counts": "{users} users, {players} players, {textures} textures.",
+      "uuidTable": "The UUID mapping table comes from the {plugin} plugin and is kept as is.",
+      "noUuidTable": "No UUID mapping table: player UUIDs are generated with the offline algorithm or randomly, following the old settings.",
+      "descriptions": "Texture descriptions from the texture-description plugin will be imported too.",
+      "unknownTables": "{count, plural, one {# table isn't} other {# tables aren't}} recognized ({names}); that data won't be migrated.",
+      "database": {
+        "unreachable": "Can't connect to the old database",
+        "auth_failed": "Wrong username or password for the old database",
+        "database_missing": "The old database doesn't exist",
+        "not_blessing_skin": "This doesn't look like a Blessing Skin 6 database",
+        "failed": "Something went wrong while checking the old database"
+      },
+      "databaseHints": {
+        "unreachable": "Check the host and port, and whether this machine can reach the old database (firewall, listening on localhost only). For SQLite, check the file path and read permission.",
+        "auth_failed": "Check DB_USERNAME and DB_PASSWORD in the old .env.",
+        "database_missing": "Check DB_DATABASE in the old .env.",
+        "not_blessing_skin": "Check the table prefix and the database name.",
+        "failed": "Try again. If it still fails, do a dry run with the pnpm import:bs command to see the full error."
+      },
+      "missing": "{name} is missing. Check the table prefix and database name, and make sure the old site runs Blessing Skin 6.",
+      "texturesUnreadable": "Can't read the textures directory",
+      "texturesUnreadableHint": "Make sure the path exists and the NextSkin process can read it. When running in a container, mount the old site's directory into it.",
+      "texturesMissing": "{missing} of {sampled} sampled texture files are missing",
+      "texturesMissingHint": "The textures directory might be wrong. Textures whose files are really missing are skipped and listed in the report.",
+      "texturesOk": "The textures directory is readable",
+      "texturesSampled": "All {count} sampled texture files are there.",
+      "texturesEmpty": "The old database has no textures yet."
+    },
+    "progress": {
+      "dryRunTitle": "Dry run in progress",
+      "importTitle": "Importing",
+      "elapsed": "{minutes} min {seconds} s elapsed",
+      "cancelDryRun": "Cancel dry run",
+      "cancelImport": "Cancel import",
+      "cancelFailed": "Couldn't cancel. Check your connection and try again.",
+      "maintenanceTitle": "The site is in maintenance",
+      "maintenance": "While this runs, other pages show a maintenance notice and APIs return 503. You can close this page: the run continues on the server, and opening any page of the site brings you back here.",
+      "lostTitle": "This run is no longer visible",
+      "lost": "The service probably restarted. Progress only lives in the server's memory; the database rolled the run back and the site is unchanged. Refresh the page to start over.",
+      "stagesLabel": "Stages",
+      "complete": "done",
+      "stages": {
+        "connect": "Connect",
+        "users": "Users",
+        "textures": "Textures",
+        "players": "Players",
+        "closet": "Closets",
+        "reports": "Reports",
+        "oauthClients": "Third-party apps",
+        "settings": "Settings",
+        "commit": "Verify and commit"
+      },
+      "stageHints": {
+        "connect": "Connecting to the old database and clearing this site",
+        "settings": "Importing settings",
+        "commit": "Reading every player back to verify, then committing"
+      },
+      "processed": "Processed",
+      "rows": "{rows} rows",
+      "rowsOf": "{rows} / {total} rows",
+      "files": "{count, plural, one {# texture file} other {# texture files}} processed"
+    },
+    "result": {
+      "dryRunSucceeded": "Dry run finished",
+      "dryRunSucceededHint": "No blocking issues, and everything has been rolled back. Read through the report, then go to the next step.",
+      "importSucceeded": "Import complete",
+      "importSucceededHint": "All data from the old site has been imported.",
+      "titles": {
+        "blocked": "Blocking issues found",
+        "failed": "The run didn't finish",
+        "cancelled": "Cancelled"
+      },
+      "hints": {
+        "blocked": "Nothing on the site changed. Fix the issues on the old site as the report says, then do another dry run.",
+        "failed": "Nothing on the site changed. Check the error at the top of the report, fix it and do another dry run.",
+        "cancelled": "Nothing on the site changed."
+      },
+      "signInTitle": "Sign in with your old account",
+      "signIn": "The import replaced all users, including the session that started it.",
+      "signInAction": "Sign in",
+      "download": "Download report (Markdown)",
+      "noReport": "This run left no report; it probably failed while connecting to this site's database.",
+      "backToSetup": "Back to setup",
+      "backToMigration": "Back to Migration"
+    },
+    "report": {
+      "status": {
+        "running": "Running",
+        "succeeded": "Succeeded",
+        "blocked": "Blocked",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      },
+      "dryRun": "Dry run",
+      "timing": "Started {time}, took {seconds} s",
+      "source": {
+        "database": "Old database",
+        "prefix": "Table prefix",
+        "textures": "Textures directory",
+        "timeZone": "Time zone",
+        "passwordMethod": "Password method",
+        "bsVersion": "BS version",
+        "uuidTable": "UUID mapping table",
+        "uuidTables": {
+          "none": "None",
+          "yggdrasil-api": "yggdrasil-api",
+          "yggdrasil-connect": "yggdrasil-connect"
+        }
+      },
+      "none": "None",
+      "unknown": "Unknown",
+      "error": "The run didn't finish",
+      "cancelled": "Cancelled",
+      "cancelledHint": "The run was cancelled and this site's database was rolled back.",
+      "blocking": {
+        "title": "{count, plural, one {# blocking issue} other {# blocking issues}}; nothing on the site changed",
+        "hint": "Each one says how to fix it on the old site. Fix them and run again until none are left."
+      },
+      "truncated": "{total} items in total; only the first {shown} are listed. See the downloaded report for the full list.",
+      "issues": {
+        "targetReplace": "This site has data from the last import ({users} users, {players} players, {textures} textures). Importing again replaces everything; confirm it in the Confirm step.",
+        "targetForce": "This site has data created here, or data that was never imported ({users} users, {players} players, {textures} textures). The new site is probably in use, and importing would wipe what players did here. If you really want to delete it, confirm in the Confirm step.",
+        "idOutOfRange": "The largest id in {table} is {maxId}, more than 2147483647, which doesn't fit NextSkin's primary keys. Deal with these rows on the old site.",
+        "duplicateEmail": "The email {email} is duplicated after lowercasing and trimming (uid {uids}). Change one of the emails on the old site, or merge the accounts.",
+        "duplicatePlayerName": "Player names that differ only in case: {players}. Player names are case-insensitive in NextSkin; rename one of them on the old site.",
+        "duplicateUuid": "The UUID {uuid} is used by several players (pid {pids}). Fix the uuid table on the old site.",
+        "uuidAmbiguous": "Player {name} (pid {pid}) has several different values in the uuid table. Pick the one your game servers use, or delete the extra mapping rows on the old site. If a UUID changes, the player's inventory, claims and permissions on your game servers no longer match.",
+        "uuidInvalid": "Mapping row {row} of player {name} (pid {pid}) holds {value}, which isn't a valid UUID. Fix it on the old site.",
+        "uuidOverrideInvalid": "The UUID {value} chosen for pid {pid} isn't valid.",
+        "uuidOverrideUnknownPlayer": "A UUID was chosen for pid {pid}, but the old database has no such player.",
+        "passwordMethodRequired": "{total} users have hex digest passwords (e.g. uid {uids}) and the algorithm is unknown, so none of them could sign in after the import. Go back to Connection and choose PWD_METHOD from the old .env and enter the salt, or provide the old .env in the first step.",
+        "regexUnsupported": "The regular expression {value} in {option} can't be converted to JavaScript (only the i, m, s and u flags are supported). Rewrite or clear it on the old site.",
+        "textTooLong": "{option} has {length} characters, more than 20000. Shorten it on the old site.",
+        "verificationFailed": "Reading back found {count} mismatches (see Other › Verification). This is a bug in the importer; please report it with this report attached."
+      },
+      "choice": {
+        "candidate": "{source, select, pid {by pid} other {by name}}, mapping row {row}, name {name}",
+        "label": "UUID for {name}",
+        "placeholder": "Not chosen"
+      },
+      "uuid": {
+        "title": "UUID",
+        "description": "Game servers store player data by UUID, so not a single UUID may change. Below is where each player's UUID comes from; the full list per player is in the downloaded report.",
+        "sources": {
+          "pid": "Mapping table, by pid",
+          "name": "Mapping table, by name",
+          "override": "Chosen manually",
+          "offline": "Offline algorithm",
+          "random": "Random"
+        },
+        "orphans": "{count, plural, one {# mapping row has} other {# mapping rows have}} no matching player (left over after renames or deletions) and weren't imported.",
+        "mismatches": "Mappings whose name doesn't match exactly (the mapped value is still used)",
+        "generated": "UUIDs not taken from the mapping table"
+      },
+      "columns": {
+        "pid": "pid",
+        "player": "Player",
+        "mappingName": "Name in mapping",
+        "uuid": "UUID",
+        "uuidSource": "Source",
+        "hash": "Hash",
+        "tids": "tid",
+        "type": "Type",
+        "size": "Size",
+        "option": "Setting",
+        "value": "Value",
+        "setting": "Setting",
+        "from": "Old value",
+        "to": "Imported value",
+        "field": "Field",
+        "expected": "Old site",
+        "actual": "Imported",
+        "tid": "tid",
+        "before": "Old site",
+        "after": "Recounted",
+        "table": "Table",
+        "rows": "Rows"
+      },
+      "tabs": {
+        "label": "Report sections",
+        "tables": "Tables",
+        "files": "Texture files",
+        "settings": "Settings",
+        "other": "Other"
+      },
+      "tables": {
+        "label": "Rows imported per table",
+        "columns": {
+          "table": "Table",
+          "source": "Old",
+          "imported": "Imported",
+          "skipped": "Skipped",
+          "adjusted": "Adjusted"
+        },
+        "names": {
+          "users": "Users",
+          "players": "Players",
+          "textures": "Textures",
+          "closet": "Closets",
+          "reports": "Reports",
+          "oauthClients": "Third-party apps"
+        }
+      },
+      "reasons": {
+        "duplicate_email": "Duplicate email",
+        "unknown_permission": "Unknown permission value, imported as a regular user",
+        "invalid_register_at": "Invalid registration time, set to the import time",
+        "unsupported_locale": "Unsupported language, cleared",
+        "unrecognized_password": "Unrecognized password hash, password not imported (can be reset)",
+        "avatar_missing": "Avatar texture missing, cleared",
+        "user_missing": "User missing",
+        "duplicate_name": "Duplicate player name",
+        "uuid_unresolved": "UUID needs a decision",
+        "duplicate_uuid": "Duplicate UUID",
+        "skin_missing": "Skin missing, cleared",
+        "cape_missing": "Cape missing, cleared",
+        "invalid_last_modified": "Invalid modification time, set to the import time",
+        "invalid_type": "Unknown type",
+        "invalid_hash": "Malformed hash",
+        "file_missing": "File missing",
+        "file_undecodable": "File can't be decoded",
+        "uploader_missing": "Uploader missing, cleared",
+        "invalid_upload_at": "Invalid upload time, set to the import time",
+        "texture_missing": "Texture missing",
+        "duplicate": "Duplicate row",
+        "invalid_status": "Unknown status",
+        "reporter_missing": "Reporter missing, cleared",
+        "invalid_report_at": "Invalid report time, set to the import time",
+        "unsupported_client": "Personal access or password grant client, no longer supported"
+      },
+      "files": {
+        "total": "Files",
+        "decoded": "Decoded",
+        "reused": "Reused from last import",
+        "copied": "Copied",
+        "alreadyStored": "Already stored",
+        "dryRunCopy": "Dry runs don't copy files.",
+        "missing": "Missing files (textures using them were skipped)",
+        "undecodable": "Files that can't be decoded (textures using them were skipped)",
+        "nonconforming": "Files with nonstandard sizes",
+        "nonconformingHint": "They decode but don't fit NextSkin's size rules; imported anyway."
+      },
+      "settings": {
+        "imported": "{count, plural, one {# setting} other {# settings}} imported.",
+        "clamped": "Settings out of range, clamped",
+        "invalid": "Settings with invalid values, not imported",
+        "notImported": "Changed on the old site but not imported",
+        "notImportedHint": "NextSkin has no matching feature for these settings.",
+        "otherLocales": "Other language versions of the announcement and content policy",
+        "otherLocalesHint": "Only the version in the site's default language was imported.",
+        "rawHtml": "Settings containing raw HTML",
+        "rawHtmlHint": "NextSkin only renders Markdown, so this HTML is no longer shown."
+      },
+      "other": {
+        "source": "Old database",
+        "verification": "Verification",
+        "verified": "Before committing, {count} players were read back with the protocol endpoints' queries and compared with the old database for UUID, skin, cape and model: {mismatches, plural, =0 {all match} one {# mismatch} other {# mismatches}}.",
+        "fields": {
+          "found": "Player found",
+          "pid": "pid",
+          "uuid": "UUID",
+          "skin": "Skin",
+          "model": "Model",
+          "cape": "Cape"
+        },
+        "closetAndReports": "Closets and reports",
+        "closetDuplicates": "{count, plural, one {# duplicate closet row} other {# duplicate closet rows}} removed.",
+        "reportStats": "Reports: {duplicates} duplicates removed, {autoResolved} closed automatically because the texture is gone, {refunded} refunded.",
+        "likes": "Textures whose like count differs from the old database",
+        "likesHint": "Like counts are recounted from the imported closets.",
+        "unknownTables": "Unrecognized tables",
+        "unknownTablesHint": "For example data from other plugins; not migrated.",
+        "target": "Target",
+        "targetBefore": "Before the import: {users} users, {players} players, {textures} textures.",
+        "lastImport": "Last import: {time}.",
+        "neverImported": "Never imported."
+      },
+      "newData": {
+        "sessions": "Sessions",
+        "oauthTokens": "OAuth tokens and consents",
+        "launcherTokens": "Launcher tokens",
+        "scoreTransactions": "Score transactions",
+        "users": "New users",
+        "players": "New or changed players",
+        "textures": "New or changed textures",
+        "closetItems": "Closet items",
+        "reports": "New or handled reports",
+        "oauthClients": "Third-party apps",
+        "auditLogs": "Audit entries",
+        "other": "Other"
+      }
     }
   }
 }

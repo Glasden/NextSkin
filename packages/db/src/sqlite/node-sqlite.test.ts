@@ -62,3 +62,13 @@ test('RETURNING 被识别为返回行，缓存大小为零时不复用语句', (
   expect(prepare).toHaveBeenCalledTimes(4)
   expect(() => wrapNodeSqlite(native, -1)).toThrow(RangeError)
 })
+
+test('写语句的 lastInsertRowid 超过 2^53 时原样返回 bigint，不抛错也不丢精度', () => {
+  const db = wrapNodeSqlite(native)
+  db.prepare('create table big (id integer primary key, name text)').run([])
+  const result = db.prepare('insert into big (id, name) values (?, ?)').run([9007199254740993n, 'big'])
+  expect(BigInt(result.lastInsertRowid)).toBe(9007199254740993n)
+  expect(BigInt(result.changes)).toBe(1n)
+  // 读语句不受影响：整数仍按 number 读
+  expect(db.prepare('select count(*) as count from big').all([])).toEqual([{ count: 1 }])
+})

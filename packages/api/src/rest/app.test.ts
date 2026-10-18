@@ -107,6 +107,7 @@ test.each([
   ['player_name_invalid', 400, 'playerName', { rule: 'official' }],
   ['player_name_length', 400, 'playerName', { min: 3, max: 16 }],
   ['player_name_taken', 409, 'playerName', {}],
+  ['setup_required', 403, undefined, {}],
   ['registration_disabled', 403, undefined, {}],
   ['ip_limit_reached', 403, undefined, { limit: 3 }],
 ] as const)('领域错误 %s → %s，带本地化字段错误', async (code, status, field, params) => {

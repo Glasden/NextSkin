@@ -88,6 +88,7 @@
 
   --animate-*: initial;
   --animate-loading: loading 900ms steps(1, end) infinite; /* 提交中：三个方块依次亮起 */
+  --animate-progress: progress 1200ms linear infinite; /* 进度未知：进度条的方块半亮，一组亮块从左走到右 */
 }
 
 /* 不能写在 @theme 里：design:sync 按第一个右花括号截取 @theme 块 */
@@ -96,6 +97,18 @@
     opacity: 1;
   }
   33.333%,
+  100% {
+    opacity: 0.3;
+  }
+}
+
+/* 一格全亮 15% 的时间（三格的时长），其余时间半亮；进度条按格错开 60ms 开始 */
+@keyframes progress {
+  0%,
+  15% {
+    opacity: 1;
+  }
+  15.01%,
   100% {
     opacity: 0.3;
   }

@@ -1,4 +1,5 @@
 import { Chart } from 'pixelarticons/react/Chart.js'
+import { Database } from 'pixelarticons/react/Database.js'
 import { Flag } from 'pixelarticons/react/Flag.js'
 import { Notebook } from 'pixelarticons/react/Notebook.js'
 import { Sliders } from 'pixelarticons/react/Sliders.js'
@@ -16,6 +17,7 @@ export const adminNavItems = [
   { href: '/admin/users', icon: Users, label: 'users', permission: 'users.ban' },
   { href: '/admin/audit', icon: Notebook, label: 'audit', permission: 'audit.read' },
   { href: '/admin/settings', icon: Sliders, label: 'settings', permission: 'settings.manage' },
+  { href: '/admin/migration', icon: Database, label: 'migration', permission: 'import.manage' },
 ] as const
 
 export type AdminNavHref = (typeof adminNavItems)[number]['href']

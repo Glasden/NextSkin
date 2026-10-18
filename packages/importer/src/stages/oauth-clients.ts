@@ -10,6 +10,7 @@ export async function importOAuthClients(ctx: StageContext): Promise<void> {
   const stats = report.tables.oauthClients
   const table = ctx.schema.tables.oauth_clients
   stats.source = await countRows(src.selectFrom(table))
+  ctx.advance('oauthClients', 0, undefined, stats.source)
   for await (const rows of pages(src, table, 'id', [
     'id',
     'user_id',

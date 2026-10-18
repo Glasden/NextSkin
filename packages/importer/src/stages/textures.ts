@@ -242,6 +242,7 @@ export async function importTextures(ctx: StageContext, options: FileOptions): P
   const { src, tx, report, schema } = ctx
   const stats = report.tables.textures
   stats.source = await countRows(src.selectFrom(schema.tables.textures))
+  ctx.advance('textures', 0, undefined, stats.source)
   const resolve = createFileResolver(ctx, options)
   for await (const rows of pages(src, schema.tables.textures, 'tid', [
     'tid',

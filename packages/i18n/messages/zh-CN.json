@@ -38,6 +38,8 @@
     }
   },
   "errors": {
+    "import_jobs_busy": "后台任务还没停下来，过一会儿再试。",
+    "setup_required": "站点还没有完成安装，暂时不能注册。",
     "mail_test_failed": "测试邮件没有发出去：{reason}",
     "permission_denied": "你没有这项管理权限。",
     "user_not_manageable": "只能管理角色比你低的用户，也不能改自己的角色。",
@@ -91,7 +93,20 @@
     "closet_item_not_found": "你的衣柜里没有这个材质，先把它加入衣柜。",
     "texture_type_mismatch": "{slot, select, skin {角色的皮肤只能用皮肤，不能用披风。} cape {角色的披风只能用披风，不能用皮肤。} other {头像只能用皮肤，不能用披风。}}",
     "report_duplicate": "你已经举报过这个材质了，每个材质只能举报一次。",
-    "report_reason_length": "举报理由要在 {min} 到 {max} 个字符之间。"
+    "report_reason_length": "举报理由要在 {min} 到 {max} 个字符之间。",
+    "setup_completed": "站点已经安装好了，直接登录就行。",
+    "setup_code_invalid": "安装码不对。安装码在数据目录的 setup-code 文件里，复制过来再试一次。",
+    "setup_code_required": "先输入安装码。安装码在数据目录的 setup-code 文件里。",
+    "maintenance": "站点正在导入数据，暂时不能使用，稍后再试。",
+    "import_running": "已经有一次导入在运行，等它结束后再开始。",
+    "import_not_running": "这次运行已经结束，不能再取消。",
+    "import_run_not_found": "找不到这次运行，可能服务重启过。从安装向导或后台重新开始。",
+    "import_timezone_invalid": "认不出这个时区。请填写 IANA 时区名，例如 Asia/Shanghai。",
+    "import_password_method_invalid": "不支持这个密码算法。请核对旧站 .env 里的 PWD_METHOD。",
+    "import_textures_unreadable": "材质目录不存在或者读不了。请确认路径，以及 NextSkin 进程有读取权限。",
+    "import_site_url_invalid": "站点地址要以 http:// 或 https:// 开头。",
+    "site_name_invalid": "站点名称要在 1 到 64 个字符之间。",
+    "site_url_invalid": "站点地址要以 http:// 或 https:// 开头。"
   },
   "score": {
     "reasons": {
@@ -143,7 +158,10 @@
       "verificationNotice": "注册后，我们会往这个邮箱发一封验证邮件。",
       "submit": "注册",
       "closed": "本站暂时关闭了注册。已经有账号的话，可以直接登录。",
-      "failed": "没能注册，请稍后重试。"
+      "failed": "没能注册，请稍后重试。",
+      "notInstalled": "站点还没有安装",
+      "notInstalledHint": "安装完成之前不能注册。",
+      "openSetup": "我是服主，去安装"
     },
     "forgotPassword": {
       "title": "找回密码",
@@ -796,7 +814,8 @@
       "reports": "举报",
       "users": "用户",
       "audit": "审计日志",
-      "settings": "设置"
+      "settings": "设置",
+      "migration": "数据迁移"
     },
     "roles": {
       "banned": "已封禁",
@@ -950,7 +969,8 @@
         "reportResolve": "处理举报",
         "textureDelete": "删除材质",
         "userSetRole": "更改角色",
-        "settingUpdate": "修改设置"
+        "settingUpdate": "修改设置",
+        "siteSetup": "完成站点安装"
       },
       "subjects": {
         "user": "用户 #{id}",
@@ -1310,6 +1330,48 @@
           }
         }
       }
+    },
+    "migration": {
+      "title": "数据迁移",
+      "description": "从 Blessing Skin 6 导入：切换前的最终同步，或者用“新站”建好的站点后来要导入旧数据。每次运行都从旧库重新导入全部数据，整库替换。",
+      "start": "开始导入",
+      "noticeTitle": "导入期间站点处于维护状态",
+      "notice": "试跑和导入都会让站点进入维护状态，直到运行结束。网页导入只支持单实例部署；多实例的站点请停掉服务，用命令行 pnpm import:bs 导入。",
+      "emptyTitle": "还没有运行过",
+      "empty": "试跑和导入的记录会列在这里，每一条都带着对账报告。",
+      "tableLabel": "历次运行",
+      "columns": {
+        "id": "#",
+        "status": "结果",
+        "startedAt": "开始时间",
+        "source": "旧库",
+        "totals": "导入",
+        "startedBy": "发起人",
+        "actions": "报告"
+      },
+      "statuses": {
+        "running": "运行中",
+        "succeeded": "成功",
+        "blocked": "有停止类问题",
+        "failed": "失败",
+        "cancelled": "已取消"
+      },
+      "dryRun": "试跑",
+      "blocking": "{count, plural, other {# 个}}停止类问题",
+      "totals": "用户 {users}、角色 {players}、材质 {textures}",
+      "entries": {
+        "setup": "安装向导",
+        "admin": "后台",
+        "cli": "命令行"
+      },
+      "view": "查看",
+      "newTitle": "开始导入",
+      "newDescription": "先试跑看报告，处理完停止类问题再真正导入。最后一次导入时旧站要停止服务：材质文件不在旧库的快照里。",
+      "backToList": "‹ 数据迁移",
+      "runTitle": "运行 #{id}",
+      "runMeta": "{entry} · {by} · {time}",
+      "download": "下载报告（Markdown）",
+      "noReport": "这次运行没有留下报告。"
     }
   },
   "yggdrasil": {
@@ -1333,6 +1395,458 @@
       "content_type": "请求的 Content-Type 必须是 application/json。",
       "signing_key_unavailable": "本站还没有配置签名密钥，外置登录暂时不可用，请联系站点管理员。",
       "query_limit": "一次最多只能查询 {count, plural, other {# 个}}角色。"
+    }
+  },
+  "setup": {
+    "title": "安装向导",
+    "description": "这个站点还没有安装。先确认你是服主：输入服务器上的安装码。",
+    "headings": {
+      "choose": "安装向导",
+      "new": "新站",
+      "import": "从 Blessing Skin 导入"
+    },
+    "intro": {
+      "choose": "从零开始建一个新站，或者把 Blessing Skin 的站点整个搬过来。",
+      "new": "填写站点信息和第一个超级管理员的账号，完成后直接登录。",
+      "import": "旧站在整个过程中不会被修改，出了问题切回旧站就行。导入完成后用旧站的账号登录。"
+    },
+    "paths": {
+      "new": {
+        "title": "新站",
+        "description": "从零开始，注册的玩家、上传的材质都从这里开始。",
+        "point1": "填站点名称、站点地址和超级管理员的账号",
+        "point2": "以后也可以在后台的“数据迁移”导入旧站的数据",
+        "action": "创建新站"
+      },
+      "import": {
+        "title": "从 Blessing Skin 导入",
+        "description": "把 Blessing Skin 6 的用户、角色、材质、衣柜和设置整个搬过来。",
+        "point1": "玩家的 UUID 原样保留，游戏服务器上的数据都对得上",
+        "point2": "先试跑看报告，处理完问题再真正导入",
+        "action": "开始导入"
+      }
+    },
+    "changePath": "换一种方式",
+    "code": {
+      "where": "安装码在服务器的数据目录（NEXTSKIN_DATA_DIR，默认是 data）下的 setup-code 文件里，例如：",
+      "command": "cat data/setup-code",
+      "why": "公网上刚装好的站点谁都能打开这一页；能读到这个文件，说明你是服主。安装完成后这个文件会被删除。",
+      "label": "安装码",
+      "submit": "继续",
+      "failed": "没能验证安装码，检查网络后再试一次。",
+      "illustration": "站在展台上的默认皮肤"
+    },
+    "newSite": {
+      "site": "站点",
+      "siteName": "站点名称",
+      "siteUrl": "站点地址",
+      "siteUrlHint": "玩家访问的地址，默认是你现在打开的地址。以后可以在后台的设置里改。",
+      "admin": "超级管理员",
+      "email": "邮箱",
+      "nickname": "昵称",
+      "password": "密码",
+      "passwordHint": "{min} 到 {max} 个字符。",
+      "back": "上一步",
+      "submit": "完成安装",
+      "failed": "没能完成安装，检查网络后再试一次。"
+    }
+  },
+  "maintenance": {
+    "title": "站点正在维护",
+    "description": "服主正在导入数据，站点暂时不能使用。通常几分钟就好。",
+    "refresh": "这个页面每 30 秒刷新一次，导入结束后会自动回到你原来要打开的页面。",
+    "illustration": "站在展台上的默认皮肤"
+  },
+  "import": {
+    "wizard": {
+      "stepsLabel": "导入步骤",
+      "complete": "已完成",
+      "steps": {
+        "env": "旧站的 .env",
+        "source": "连接和路径",
+        "dryRun": "试跑",
+        "confirm": "确认",
+        "import": "导入",
+        "done": "完成"
+      },
+      "failed": "请求没有成功，检查网络后再试一次。",
+      "back": "上一步",
+      "env": {
+        "title": "旧站的 .env",
+        "description": "上传或粘贴旧站根目录下的 .env，从里面读出数据库连接、表前缀、密码算法、盐和材质目录，填进下一步的表单。没有 .env 也可以跳过，手动填写。",
+        "tooLarge": "这个文件太大了，旧站的 .env 一般只有几 KB（上限 {max} KB）。确认选对了文件。",
+        "dropTitle": "把 .env 文件拖到这里",
+        "dropDescription": "文件只在浏览器里读取，内容填进下面的输入框",
+        "choose": "选择文件",
+        "paste": "或者粘贴 .env 的内容",
+        "privacy": "数据库密码和盐只在这次导入的内存里，不会保存到 NextSkin 的数据库。",
+        "directory": "旧站在这台机器上的目录（可选）",
+        "directoryHint": "用来解析 .env 里的相对路径，例如默认的材质目录 storage/textures。旧站在别的机器上时留空，下一步手动填材质目录。",
+        "read": "读取",
+        "skip": "跳过，手动填写"
+      },
+      "source": {
+        "title": "连接和路径",
+        "description": "NextSkin 要能直接连上旧库、读到旧站的材质目录。填好之后点“检查”。",
+        "nonLocalTitle": "旧站的材质不在本地磁盘上",
+        "nonLocal": "旧站的 FS_DRIVER 不是 local，材质存在对象存储里。先把材质同步到这台机器的一个目录，再在下面填这个目录。",
+        "check": "检查",
+        "recheck": "重新检查",
+        "next": "下一步：试跑"
+      },
+      "dryRun": {
+        "title": "试跑",
+        "description": "完整跑一遍、生成报告，最后回滚，不复制材质文件。报告和真正导入时的完全相同，用时也差不多。",
+        "maintenanceTitle": "试跑期间站点处于维护状态",
+        "maintenance": "页面显示维护页，皮肤加载和外置登录暂时不可用。试跑结束后自动恢复。",
+        "start": "开始试跑",
+        "again": "重新试跑",
+        "next": "下一步：确认"
+      },
+      "confirm": {
+        "title": "确认",
+        "description": "试跑没有问题。确认下面几项，然后开始导入。",
+        "siteUrl": "站点地址",
+        "siteUrlHint": "覆盖旧站的站点地址：迁移时常常换了域名或端口。默认是你现在打开的地址。",
+        "replaceTitle": "站点里现有的数据会被删除",
+        "replaceHint": "导入是整库替换：现有的用户 {users}、角色 {players}、材质 {textures}，以及它们的会话、衣柜、积分记录都会被旧站的数据替换。",
+        "replace": "我知道现有的数据会被替换",
+        "neverImported": "这些数据不是从旧站导入的：站点已经在用了，导入会冲掉玩家在这里的操作。",
+        "newData": "上一次导入之后，站点上有了新的数据（有人登录、签到、上传或注册过），导入会把它们删掉。详见报告的“其他 › 目标库”。",
+        "force": "删除新站的数据",
+        "notesTitle": "开始之前",
+        "noteDuration": "导入期间站点处于维护状态，用时和试跑差不多（试跑用了 {seconds} 秒）。",
+        "noteSignIn": "导入会替换全部用户，你现在的登录会失效。完成后用旧站的账号登录。",
+        "noteSingleInstance": "网页导入只支持单实例部署。多个实例的站点请停掉服务，用命令行 pnpm import:bs 导入。",
+        "start": "开始导入"
+      },
+      "done": {
+        "retry": "回到试跑"
+      }
+    },
+    "source": {
+      "database": "旧库",
+      "dialect": "数据库类型",
+      "dialectHint": "MariaDB 也选 MySQL。",
+      "dialects": {
+        "mysql": "MySQL",
+        "postgres": "PostgreSQL",
+        "sqlite": "SQLite"
+      },
+      "host": "地址",
+      "port": "端口",
+      "databaseName": "库名",
+      "username": "用户名",
+      "password": "密码",
+      "file": "SQLite 文件",
+      "fileHint": "旧库文件在这台机器上的完整路径。",
+      "prefix": "表前缀",
+      "prefixHint": "旧站 .env 的 DB_PREFIX，没有就留空。",
+      "site": "旧站",
+      "textures": "材质目录",
+      "texturesHint": "旧站的材质目录在这台机器上的完整路径，默认是旧站目录下的 storage/textures。在容器里运行时，把旧站的目录挂载进来。",
+      "timeZone": "时区",
+      "timeZoneHint": "旧站 config/app.php 里的时区，没改过就是 Asia/Shanghai。填错了所有时间都会错。",
+      "passwordMethod": "密码算法",
+      "passwordMethodHint": "旧站 .env 的 PWD_METHOD。不知道时按 BS 的默认 BCRYPT；旧库里有十六进制摘要的密码时，试跑会停下来让你选。",
+      "passwordMethodUnknown": "不知道（按 BCRYPT）",
+      "salt": "盐",
+      "saltHint": "旧站 .env 的 SALT。只在这次导入的内存里，导入后加密保存，用来核对旧格式的密码。"
+    },
+    "check": {
+      "databaseOk": "认出了 Blessing Skin {version}",
+      "unknownVersion": "（版本未知）",
+      "counts": "用户 {users}、角色 {players}、材质 {textures}。",
+      "uuidTable": "UUID 映射表来自 {plugin} 插件，导入时原样保留。",
+      "noUuidTable": "没有 UUID 映射表：角色的 UUID 按旧站的设置用离线算法或随机生成。",
+      "descriptions": "有 texture-description 插件的材质描述，会一起导入。",
+      "unknownTables": "有 {count, plural, other {# 张}}认不出的表（{names}），这些数据不会迁移。",
+      "database": {
+        "unreachable": "连不上旧库",
+        "auth_failed": "旧库的用户名或密码不对",
+        "database_missing": "旧库里没有这个库名",
+        "not_blessing_skin": "这不像 Blessing Skin 6 的库",
+        "failed": "检查旧库时出错了"
+      },
+      "databaseHints": {
+        "unreachable": "检查地址和端口，以及这台机器能不能访问旧库（防火墙、只监听本机）。SQLite 检查文件路径和读取权限。",
+        "auth_failed": "核对旧站 .env 的 DB_USERNAME 和 DB_PASSWORD。",
+        "database_missing": "核对旧站 .env 的 DB_DATABASE。",
+        "not_blessing_skin": "核对表前缀和库名。",
+        "failed": "再试一次；还是不行的话，用命令行 pnpm import:bs 试跑，看完整的错误。"
+      },
+      "missing": "缺少 {name}。核对表前缀和库名，确认旧站是 Blessing Skin 6。",
+      "texturesUnreadable": "材质目录读不了",
+      "texturesUnreadableHint": "确认路径存在，NextSkin 进程有读取权限。在容器里运行时，要把旧站的目录挂载进来。",
+      "texturesMissing": "抽查了 {sampled} 个材质文件，缺了 {missing} 个",
+      "texturesMissingHint": "可能是材质目录填错了。确实缺文件的材质会被跳过，报告里会列出它们。",
+      "texturesOk": "材质目录可以读",
+      "texturesSampled": "抽查了 {count} 个材质文件，都在。",
+      "texturesEmpty": "旧库里还没有材质。"
+    },
+    "progress": {
+      "dryRunTitle": "正在试跑",
+      "importTitle": "正在导入",
+      "elapsed": "已用 {minutes} 分 {seconds} 秒",
+      "cancelDryRun": "取消试跑",
+      "cancelImport": "取消导入",
+      "cancelFailed": "没能取消，检查网络后再试一次。",
+      "maintenanceTitle": "站点处于维护状态",
+      "maintenance": "运行期间别的页面显示维护页，接口返回 503。关掉这个页面也没关系：运行在服务里继续，回来打开站点的任意页面就能看到进度。",
+      "lostTitle": "看不到这次运行了",
+      "lost": "服务可能重启过：进度只在服务的内存里，数据库已经回滚了这次运行，站点保持原来的状态。刷新页面重新开始。",
+      "stagesLabel": "运行阶段",
+      "complete": "已完成",
+      "stages": {
+        "connect": "连接旧库",
+        "users": "用户",
+        "textures": "材质",
+        "players": "角色",
+        "closet": "衣柜",
+        "reports": "举报",
+        "oauthClients": "第三方应用",
+        "settings": "设置",
+        "commit": "比对和提交"
+      },
+      "stageHints": {
+        "connect": "正在连接旧库，清空目标库",
+        "settings": "正在导入设置",
+        "commit": "正在读回全部角色比对，然后提交"
+      },
+      "processed": "已处理",
+      "rows": "{rows} 行",
+      "rowsOf": "{rows} / {total} 行",
+      "files": "已处理 {count, plural, other {# 个}}材质文件"
+    },
+    "result": {
+      "dryRunSucceeded": "试跑完成",
+      "dryRunSucceededHint": "没有停止类问题，结果已经回滚。看一遍报告，然后进入下一步。",
+      "importSucceeded": "导入完成",
+      "importSucceededHint": "旧站的数据已经全部导入。",
+      "titles": {
+        "blocked": "有停止类问题",
+        "failed": "运行没有完成",
+        "cancelled": "已取消"
+      },
+      "hints": {
+        "blocked": "站点没有任何改动。按报告在旧站处理之后重新试跑。",
+        "failed": "站点没有任何改动。看看报告开头的错误，处理之后重新试跑。",
+        "cancelled": "站点没有任何改动。"
+      },
+      "signInTitle": "用旧站的账号登录",
+      "signIn": "导入替换了全部用户，发起导入的登录也不在了。",
+      "signInAction": "去登录",
+      "download": "下载报告（Markdown）",
+      "noReport": "这次运行没有留下报告：可能在连接目标库时就失败了。",
+      "backToSetup": "回到安装向导",
+      "backToMigration": "回到数据迁移"
+    },
+    "report": {
+      "status": {
+        "running": "运行中",
+        "succeeded": "成功",
+        "blocked": "有停止类问题",
+        "failed": "失败",
+        "cancelled": "已取消"
+      },
+      "dryRun": "试跑",
+      "timing": "{time} 开始，用时 {seconds} 秒",
+      "source": {
+        "database": "旧库",
+        "prefix": "表前缀",
+        "textures": "材质目录",
+        "timeZone": "时区",
+        "passwordMethod": "密码算法",
+        "bsVersion": "BS 版本",
+        "uuidTable": "UUID 映射表",
+        "uuidTables": {
+          "none": "没有",
+          "yggdrasil-api": "yggdrasil-api",
+          "yggdrasil-connect": "yggdrasil-connect"
+        }
+      },
+      "none": "无",
+      "unknown": "未知",
+      "error": "运行没有完成",
+      "cancelled": "已取消",
+      "cancelledHint": "运行被取消，目标库已经回滚。",
+      "blocking": {
+        "title": "{count, plural, other {# 个}}停止类问题，站点没有改动",
+        "hint": "每一条都写着在旧站怎么处理。处理完重新试跑，直到没有为止。"
+      },
+      "truncated": "共 {total} 项，只列出了前 {shown} 项。完整的列表见下载的报告。",
+      "issues": {
+        "targetReplace": "站点里有上一次导入的数据（用户 {users}、角色 {players}、材质 {textures}）。重新导入会整库替换，在确认这一步勾选。",
+        "targetForce": "站点里有新站产生的数据，或者有数据却从没导入过（用户 {users}、角色 {players}、材质 {textures}）。新站多半已经在用，再导入会冲掉玩家在新站的操作；确实要删除时在确认这一步勾选。",
+        "idOutOfRange": "{table} 的最大 id 是 {maxId}，超过 2147483647，NextSkin 的主键放不下。请在旧站处理这些行。",
+        "duplicateEmail": "邮箱 {email} 转小写、去掉首尾空格之后重复（uid {uids}）。请在旧站修改其中的邮箱，或者合并账号。",
+        "duplicatePlayerName": "角色名只差大小写：{players}。NextSkin 里角色名不区分大小写，请在旧站给其中的角色改名。",
+        "duplicateUuid": "UUID {uuid} 被多个角色使用（pid {pids}）。请在旧站修正 uuid 表。",
+        "uuidAmbiguous": "角色 {name}（pid {pid}）在 uuid 表里有多个不同的值。选游戏服务器上正在用的那个，或者在旧站删掉多余的映射行。UUID 一变，玩家在游戏服务器上的背包、领地、权限就全对不上了。",
+        "uuidInvalid": "角色 {name}（pid {pid}）的映射行 {row} 存的 {value} 不是合法的 UUID。请在旧站修正。",
+        "uuidOverrideInvalid": "给 pid {pid} 指定的 UUID {value} 格式不对。",
+        "uuidOverrideUnknownPlayer": "给 pid {pid} 指定了 UUID，旧库里没有这个角色。",
+        "passwordMethodRequired": "{total} 个用户的密码是十六进制摘要（例如 uid {uids}），不知道是哪种算法，导入后他们都登录不了。回到“连接和路径”选择旧站 .env 里的 PWD_METHOD 并填写盐，或者在第一步提供旧站的 .env。",
+        "regexUnsupported": "设置 {option} 的正则 {value} 转不成 JavaScript 的写法（只支持修饰符 i、m、s、u）。请在旧站改写或者清空它。",
+        "textTooLong": "{option} 有 {length} 个字符，超过 20000。请在旧站缩短。",
+        "verificationFailed": "读回比对发现 {count} 处不一致（见“其他 › 比对”）。这是导入器的问题，请附上这份报告反馈。"
+      },
+      "choice": {
+        "candidate": "{source, select, pid {按 pid} other {按名字}}，映射行 {row}，名字 {name}",
+        "label": "{name} 用的 UUID",
+        "placeholder": "还没选"
+      },
+      "uuid": {
+        "title": "UUID",
+        "description": "游戏服务器按 UUID 存玩家的数据，所以 UUID 一个都不能变。下面是每个角色 UUID 的来源；每个角色的完整列表在下载的报告里。",
+        "sources": {
+          "pid": "映射表，按 pid",
+          "name": "映射表，按名字",
+          "override": "手动选择",
+          "offline": "离线算法生成",
+          "random": "随机生成"
+        },
+        "orphans": "{count, plural, other {# 行}}映射没有对应的角色（改名或删除角色后留下的），没有导入。",
+        "mismatches": "名字不完全相同的映射（仍然用映射表里的值）",
+        "generated": "不是从映射表取来的 UUID"
+      },
+      "columns": {
+        "pid": "pid",
+        "player": "角色",
+        "mappingName": "映射里的名字",
+        "uuid": "UUID",
+        "uuidSource": "来源",
+        "hash": "hash",
+        "tids": "tid",
+        "type": "类型",
+        "size": "尺寸",
+        "option": "设置",
+        "value": "值",
+        "setting": "设置",
+        "from": "旧站的值",
+        "to": "导入的值",
+        "field": "项",
+        "expected": "旧站",
+        "actual": "导入后",
+        "tid": "tid",
+        "before": "旧站",
+        "after": "重新统计",
+        "table": "表",
+        "rows": "行数"
+      },
+      "tabs": {
+        "label": "报告的分节",
+        "tables": "数据表",
+        "files": "材质文件",
+        "settings": "设置",
+        "other": "其他"
+      },
+      "tables": {
+        "label": "各表的导入数",
+        "columns": {
+          "table": "表",
+          "source": "旧库",
+          "imported": "导入",
+          "skipped": "跳过",
+          "adjusted": "调整"
+        },
+        "names": {
+          "users": "用户",
+          "players": "角色",
+          "textures": "材质",
+          "closet": "衣柜",
+          "reports": "举报",
+          "oauthClients": "第三方应用"
+        }
+      },
+      "reasons": {
+        "duplicate_email": "邮箱重复",
+        "unknown_permission": "权限值不认识，按普通用户导入",
+        "invalid_register_at": "注册时间无效，取导入时刻",
+        "unsupported_locale": "语言不受支持，置空",
+        "unrecognized_password": "密码哈希认不出，没有导入密码（可以用找回密码重设）",
+        "avatar_missing": "头像的材质不存在，置空",
+        "user_missing": "用户不存在",
+        "duplicate_name": "角色名重复",
+        "uuid_unresolved": "UUID 待裁决",
+        "duplicate_uuid": "UUID 重复",
+        "skin_missing": "皮肤不存在，置空",
+        "cape_missing": "披风不存在，置空",
+        "invalid_last_modified": "修改时间无效，取导入时刻",
+        "invalid_type": "类型不认识",
+        "invalid_hash": "hash 的格式不对",
+        "file_missing": "文件缺失",
+        "file_undecodable": "文件无法解码",
+        "uploader_missing": "上传者不存在，置空",
+        "invalid_upload_at": "上传时间无效，取导入时刻",
+        "texture_missing": "材质不存在",
+        "duplicate": "重复的行",
+        "invalid_status": "状态值不认识",
+        "reporter_missing": "举报人不存在，置空",
+        "invalid_report_at": "举报时间无效，取导入时刻",
+        "unsupported_client": "个人访问令牌或密码授权的客户端，不再支持"
+      },
+      "files": {
+        "total": "文件",
+        "decoded": "解码",
+        "reused": "沿用上次的结果",
+        "copied": "复制",
+        "alreadyStored": "已经在存储里",
+        "dryRunCopy": "试跑不复制文件。",
+        "missing": "缺失的文件（引用它们的材质被跳过）",
+        "undecodable": "无法解码的文件（引用它们的材质被跳过）",
+        "nonconforming": "尺寸不合规则的文件",
+        "nonconformingHint": "能解码、但尺寸不合 NextSkin 的规则，照样导入。"
+      },
+      "settings": {
+        "imported": "导入了 {count, plural, other {# 项}}设置。",
+        "clamped": "超出范围、取了边界值的设置",
+        "invalid": "值不合法、没有导入的设置",
+        "notImported": "没有导入、但旧站改过的设置",
+        "notImportedHint": "这些设置在 NextSkin 里没有对应的功能。",
+        "otherLocales": "公告和内容政策的其他语言版本",
+        "otherLocalesHint": "只导入了站点默认语言的版本。",
+        "rawHtml": "含原始 HTML 的设置",
+        "rawHtmlHint": "NextSkin 只渲染 Markdown，导入后这部分 HTML 不再显示。"
+      },
+      "other": {
+        "source": "旧库",
+        "verification": "比对",
+        "verified": "提交之前用协议端点的查询读回了 {count} 个角色，和旧库比对 UUID、皮肤、披风和模型：{mismatches, plural, =0 {全部一致} other {# 处不一致}}。",
+        "fields": {
+          "found": "找到角色",
+          "pid": "pid",
+          "uuid": "UUID",
+          "skin": "皮肤",
+          "model": "模型",
+          "cape": "披风"
+        },
+        "closetAndReports": "衣柜和举报",
+        "closetDuplicates": "衣柜里去掉了 {count, plural, other {# 行}}重复。",
+        "reportStats": "举报：去掉重复 {duplicates}，材质已不存在、自动结案 {autoResolved}，退还积分 {refunded}。",
+        "likes": "收藏数和旧库不同的材质",
+        "likesHint": "收藏数按导入的衣柜重新统计。",
+        "unknownTables": "认不出的表",
+        "unknownTablesHint": "例如其他插件的数据，没有迁移。",
+        "target": "目标库",
+        "targetBefore": "导入之前：用户 {users}、角色 {players}、材质 {textures}。",
+        "lastImport": "上一次导入：{time}。",
+        "neverImported": "没有导入过。"
+      },
+      "newData": {
+        "sessions": "登录会话",
+        "oauthTokens": "OAuth 令牌和授权",
+        "launcherTokens": "启动器令牌",
+        "scoreTransactions": "积分流水",
+        "users": "新用户",
+        "players": "新建或改过的角色",
+        "textures": "新建或改过的材质",
+        "closetItems": "衣柜",
+        "reports": "新的或处理过的举报",
+        "oauthClients": "第三方应用",
+        "auditLogs": "审计记录",
+        "other": "其他"
+      }
     }
   }
 }

@@ -1,8 +1,10 @@
+import { createImportService, type ImportService } from '@nextskin/importer'
 import { createApp } from '@nextskin/api'
-import { coreConfigFromEnv, openCore, type Core } from '@nextskin/domain'
+import { coreConfigFromEnv, DomainError, openCore, type Core } from '@nextskin/domain'
 
 export interface Server {
   core: Core
+  importer: ImportService
   app: ReturnType<typeof createApp>
 }
 
@@ -23,6 +25,33 @@ async function open(): Promise<Server> {
     cwd: process.cwd(),
     production: process.env.NODE_ENV === 'production',
   })
-  const { core } = await openCore(config)
-  return { core, app: createApp({ core }) }
+  const opened = await openCore(config)
+  const { core } = opened
+  try {
+    const importer = await createImportService({
+      database: config.database,
+      textureDirectory: config.textureDirectory,
+      secretKey: config.secretKey,
+      maintenance: {
+        async enter() {
+          await core.schedules.stop()
+          if (!(await core.jobs.quiesce(60_000))) {
+            core.jobs.start()
+            core.schedules.start()
+            throw new DomainError('import_jobs_busy')
+          }
+        },
+        exit() {
+          core.jobs.start()
+          core.schedules.start()
+          return Promise.resolve()
+        },
+      },
+      onImported: () => core.setup.removeCode(),
+    })
+    return { core, importer, app: createApp({ core, importer }) }
+  } catch (error) {
+    await opened.close()
+    throw error
+  }
 }

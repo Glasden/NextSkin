@@ -2,8 +2,9 @@ import type { CoreDatabase, IsoTimestamp } from '@nextskin/db'
 import type { Actor } from '@nextskin/plugin-sdk'
 import type { Transaction } from 'kysely'
 
-type AuditAction = 'report.resolve' | 'texture.delete' | 'user.setRole' | 'setting.update'
+type AuditAction = 'site.setup' | 'report.resolve' | 'texture.delete' | 'user.setRole' | 'setting.update'
 const subjects: Record<AuditAction, string> = {
+  'site.setup': 'user',
   'setting.update': 'setting',
   'report.resolve': 'report',
   'texture.delete': 'texture',

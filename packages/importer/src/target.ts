@@ -64,11 +64,7 @@ export async function lastImport(
   return { id: row.id, finishedAt: row.finished_at, watermark }
 }
 
-/** 站点未初始化：没有用户，也没有成功的导入（试跑不算）。安装向导只在这时可用 */
-export async function isSiteInitialized(db: Kysely<CoreDatabase>): Promise<boolean> {
-  if (await db.selectFrom('users').select('id').limit(1).executeTakeFirst()) return true
-  return (await lastImport(db)) !== null
-}
+export { isSiteInitialized } from '@nextskin/domain/importer'
 
 /** 服务或命令行启动时：上次中途退出的运行，数据库已经回滚了它的事务，记录标为失败 */
 export async function failInterruptedRuns(db: Kysely<CoreDatabase>, now: Date): Promise<number> {

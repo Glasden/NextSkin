@@ -109,6 +109,11 @@ export function createAdmin(options: {
     return { resolvedReports }
   }
   return {
+    async requirePermission(uid: number, permission: CorePermission): Promise<void> {
+      const user = await db.selectFrom('users').select('role').where('id', '=', uid).executeTakeFirst()
+      if (!user) throw new DomainError('unauthenticated')
+      if (!can(user.role, permission)) throw new DomainError('permission_denied')
+    },
     ...createAdminQueries(db, settings, now),
     ...createAdminSettings({ ...options, authorize }),
     async setRole(actor: AdminActor, uid: number, role: AssignableRole): Promise<AdminUser> {

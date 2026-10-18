@@ -65,13 +65,13 @@ export interface BsEnvironment {
   passwordMethod: string | null
   salt: string
   /** TEXTURES_DIR，相对路径按 .env 所在目录解析；没写时是 BS 的默认位置 storage/textures */
-  texturesDirectory: string
+  texturesDirectory: string | null
   /** FS_DRIVER 不是 local 时，材质不在本地磁盘上，要先同步到本地目录 */
   localTextures: boolean
 }
 
 /** directory 是 .env 所在的目录，也就是 BS 的根目录 */
-export function readBsEnvironment(env: Record<string, string>, directory: string): BsEnvironment {
+export function readBsEnvironment(env: Record<string, string>, directory: string | null): BsEnvironment {
   const value = (key: string) => env[key]?.trim() || null
   const connection = connectionFromEnv(env, directory)
   const textures = value('TEXTURES_DIR')
@@ -83,19 +83,24 @@ export function readBsEnvironment(env: Record<string, string>, directory: string
     texturesDirectory: textures
       ? isAbsolute(textures)
         ? textures
-        : resolve(directory, textures)
-      : resolve(directory, 'storage', 'textures'),
+        : directory
+          ? resolve(directory, textures)
+          : null
+      : directory
+        ? resolve(directory, 'storage', 'textures')
+        : null,
     localTextures: (value('FS_DRIVER') ?? 'local') === 'local',
   }
 }
 
-function connectionFromEnv(env: Record<string, string>, directory: string): SourceConnection | null {
+function connectionFromEnv(env: Record<string, string>, directory: string | null): SourceConnection | null {
   const driver = env.DB_CONNECTION?.trim() || 'mysql'
   const database = env.DB_DATABASE?.trim()
   if (driver === 'sqlite') {
     // Laravel 的默认值是 database/database.sqlite
-    const file = database || resolve(directory, 'database', 'database.sqlite')
-    return { dialect: 'sqlite', file: isAbsolute(file) ? file : resolve(directory, file) }
+    const file = database || (directory ? resolve(directory, 'database', 'database.sqlite') : null)
+    if (!file || (!isAbsolute(file) && !directory)) return null
+    return { dialect: 'sqlite', file: isAbsolute(file) ? file : resolve(directory!, file) }
   }
   if (driver !== 'mysql' && driver !== 'pgsql') return null
   if (!database) return null

@@ -306,3 +306,68 @@ test('执行器运行时不能 drain', async () => {
   await expect(r.drain()).rejects.toThrow()
   await r.stop()
 })
+
+test.each([false, true])('quiesce 等忽略 signal 的超时处理函数真正结束，失败也算结束：%s', async (reject) => {
+  let release: () => void = () => {}
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let signal: AbortSignal | undefined
+  let finished = false
+  const r = runner({
+    'core:slow': {
+      timeoutMs: 10,
+      run: async ({ signal: value }) => {
+        signal = value
+        await gate
+        finished = true
+        if (reject) throw new Error('late failure')
+      },
+    },
+  })
+  await r.enqueue(database.db, 'core:slow', {})
+  // execute 已按超时收尾，处理函数仍卡在 gate 上。
+  await r.drain()
+  expect(signal?.aborted).toBe(true)
+  expect(finished).toBe(false)
+  let result: boolean | null = null
+  const quiescing = r.quiesce(1000).then((value) => {
+    result = value
+  })
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(result).toBeNull()
+  } finally {
+    release()
+    await quiescing
+  }
+  expect(result).toBe(true)
+  expect(finished).toBe(true)
+  expect(await r.quiesce(1000)).toBe(true)
+})
+
+test('quiesce 到上限返回 false，执行器保持停止，处理函数结束后可再次等待', async () => {
+  let release: () => void = () => {}
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let signal: AbortSignal | undefined
+  const run = vi.fn(async ({ signal: value }: Parameters<JobHandler['run']>[0]) => {
+    signal = value
+    await gate
+  })
+  const r = runner({ 'core:slow': { run } }, { pollIntervalMs: 5, stopTimeoutMs: 5 })
+  await r.enqueue(database.db, 'core:slow', {})
+  r.start()
+  try {
+    await vi.waitFor(() => expect(run).toHaveBeenCalledOnce())
+    expect(await r.quiesce(20)).toBe(false)
+    expect(signal?.aborted).toBe(true)
+    await r.enqueue(database.db, 'core:slow', {})
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(run).toHaveBeenCalledOnce()
+  } finally {
+    release()
+    expect(await r.quiesce(1000)).toBe(true)
+  }
+})

@@ -28,6 +28,7 @@ export { Nav, NavItem, type NavItemProps, type NavProps } from './nav/nav.tsx'
 export { Pagination, type PaginationLinkProps, type PaginationProps } from './pagination/pagination.tsx'
 export { PlayerCard, type PlayerCardProps } from './player-card/player-card.tsx'
 export { PlayerHead, type PlayerHeadProps } from './player-head/player-head.tsx'
+export { ProgressBar, type ProgressBarProps } from './progress-bar/progress-bar.tsx'
 export { QrCode, type QrCodeProps } from './qr-code/qr-code.tsx'
 export {
   SegmentedControl,
@@ -38,6 +39,7 @@ export { Select, type SelectOption, type SelectProps } from './select/select.tsx
 export { SkinFigure, type SkinFigureProps } from './skin-figure/skin-figure.tsx'
 export { SkinViewer, type SkinViewerLabels, type SkinViewerProps } from './skin-viewer/skin-viewer.tsx'
 export { Stage, type StageProps } from './stage/stage.tsx'
+export { Steps, type StepsItem, type StepsProps } from './steps/steps.tsx'
 export { Switch, type SwitchProps } from './switch/switch.tsx'
 export { Table, type TableColumn, type TableProps, type TableRow } from './table/table.tsx'
 export { Tabs, type TabsItem, type TabsProps } from './tabs/tabs.tsx'

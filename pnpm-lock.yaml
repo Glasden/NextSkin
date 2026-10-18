@@ -322,6 +322,9 @@ importers:
       '@nextskin/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@nextskin/importer':
+        specifier: workspace:*
+        version: link:../../packages/importer
       '@nextskin/skin':
         specifier: workspace:*
         version: link:../../packages/skin

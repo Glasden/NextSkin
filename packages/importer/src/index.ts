@@ -12,3 +12,17 @@ export {
   type SourceDescription,
 } from './source/connection.ts'
 export { SourceSchemaError } from './source/schema.ts'
+
+export {
+  createImportService,
+  type ImportServiceOptions,
+  type ImportService,
+  type ImportSourceInput,
+  type ImportStartInput,
+  type ImportCheckResult,
+  type ImportEnvForm,
+  type ImportRunState,
+  type ImportRunSummary,
+  type ImportSourceDefaults,
+} from './service.ts'
+export type { ImportRunEntry, ImportRunStatus } from '@nextskin/db'

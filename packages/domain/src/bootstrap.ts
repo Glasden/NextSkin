@@ -73,6 +73,7 @@ export async function openCore(
     const renderCache = createLocalRenderCache(config.renderCacheDirectory)
     void renderCache.pruneOtherVersions().catch(() => console.warn('旧版出图缓存清理失败'))
     const core = createCore({
+      setupCodeFile: join(config.dataDirectory, 'setup-code'),
       renderCache,
       db,
       textureStorage: createLocalTextureStorage(config.textureDirectory),
@@ -80,6 +81,9 @@ export async function openCore(
       production: config.production,
     })
     if (options.startJobs !== false) {
+      const code = await core.setup.prepareCode()
+      if (code?.status === 'created' || code?.status === 'kept')
+        console.info(`[setup] 站点还没有初始化：打开 /setup 完成安装，安装码在 ${code.file}`)
       core.jobs.start()
       core.schedules.start()
     }

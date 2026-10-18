@@ -16,6 +16,7 @@ export interface ImportProgress {
   stage: ImportStage
   /** 这一阶段已经处理的行数 */
   rows: number
+  total: number | null
   /** 已经处理的材质文件数 */
   files: number
 }
@@ -37,7 +38,7 @@ export interface StageContext {
   /** 导入时刻：BS 没有记录的时间（衣柜的加入时间、自动结案的举报）都用它 */
   now: IsoTimestamp
   /** 处理完一批之后调用：检查取消信号，报告进度 */
-  advance(stage: ImportStage, rows: number, files?: number): void
+  advance(stage: ImportStage, rows: number, files?: number, total?: number | null): void
   /** 每个导入的角色的 UUID 和来源，报告里只放得下统计和一部分，完整的列表由调用方写进文件 */
   onPlayerUuid?: (entry: PlayerUuid) => void
 }

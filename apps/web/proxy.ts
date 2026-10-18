@@ -13,7 +13,11 @@ const HONO_PATHS = [
   /^\/render(?:\/.*)?$/,
 ]
 
+// 维护期间仍然能打开的页面：安装向导（从向导发起的导入在这里看进度）和维护页本身
+const MAINTENANCE_PAGES = [/^\/setup(?:\/.*)?$/, /^\/maintenance$/]
+
 /**
+ * 导入期间（ADR-0031 的维护模式）别的页面都换成维护页，地址不变，结束后刷新就回到原来的页面；Hono 的端点自己返回 503。
  * 页面也带 X-Authlib-Injector-API-Location：玩家在启动器里填站点首页的地址，启动器据此找到 Yggdrasil API
  * （authlib-injector 的 API 地址指示，ADR-0001）。
  */
@@ -22,7 +26,12 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
   if (HONO_PATHS.some((pattern) => pattern.test(path))) return response
   try {
-    const { core } = await getServer()
+    const { core, importer } = await getServer()
+    if (importer.maintenance()) {
+      return MAINTENANCE_PAGES.some((pattern) => pattern.test(path))
+        ? response
+        : NextResponse.rewrite(new URL('/maintenance', request.url))
+    }
     const settings = await core.settings.read(['yggdrasil.apiLocationIndication'])
     if (settings['yggdrasil.apiLocationIndication']) {
       response.headers.set('X-Authlib-Injector-API-Location', `${requestRoot(request)}/api/yggdrasil`)

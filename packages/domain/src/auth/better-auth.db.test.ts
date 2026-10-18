@@ -1,3 +1,4 @@
+import { markSiteInitialized } from '../setup/initialized.test-helper.ts'
 import { coreMigrations, migrateToLatest, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import { afterAll, beforeAll, expect, test, vi } from 'vitest'
@@ -15,6 +16,7 @@ let core: Core
 beforeAll(async () => {
   database = await createTestDatabase<CoreDatabase>()
   await migrateToLatest(database.db, coreMigrations)
+  await markSiteInitialized(database.db)
   core = createCore({
     db: database.db,
     secretKey: 'test-only-secret-key-with-at-least-32-characters',

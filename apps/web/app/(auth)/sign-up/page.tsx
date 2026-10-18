@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SignUpPage() {
   if (await getSessionUser()) redirect('/user')
   const [{ core }, t] = await Promise.all([getServer(), getTranslations('auth.signUp')])
-  const [settings, mailConfigured] = await Promise.all([
+  const [settings, mailConfigured, initialized] = await Promise.all([
     core.settings.read([
       'auth.registration.enabled',
       'auth.registration.withPlayerName',
@@ -25,12 +25,23 @@ export default async function SignUpPage() {
       'player.nameLength',
     ]),
     core.mail.configured(),
+    core.setup.isInitialized(),
   ])
   const heading = (
     <AuthHeading title={t('title')}>
       {t('hasAccount')} <Link render={<NextLink href="/sign-in" />}>{t('signIn')}</Link>
     </AuthHeading>
   )
+  // 安装之前不开放注册（ADR-0031）：先注册的人会让安装向导关闭，站点就没有超级管理员了
+  if (!initialized)
+    return (
+      <>
+        {heading}
+        <Alert title={t('notInstalled')}>
+          {t('notInstalledHint')} <Link render={<NextLink href="/setup" />}>{t('openSetup')}</Link>
+        </Alert>
+      </>
+    )
   if (!settings['auth.registration.enabled'])
     return (
       <>

@@ -59,6 +59,7 @@ export async function importPlayers(ctx: StageContext, overrides: ReadonlyMap<nu
   const stats = report.tables.players
   const uuidTable = schema.uuid
   stats.source = await countRows(src.selectFrom(schema.tables.players))
+  ctx.advance('players', 0, undefined, stats.source)
   const names = new Map<string, { pid: number; name: string }>()
   const duplicateNames = new Map<string, { pid: number; name: string }[]>()
   const owners = new Map<string, Owner>()

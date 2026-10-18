@@ -60,6 +60,8 @@ export function createJobRunner(options: JobRunnerOptions) {
   const random = options.random ?? Math.random
   const log = options.log ?? ((line) => console.warn(line))
   const active = new Map<number, { name: string; done: Promise<void>; controller: AbortController }>()
+  // execute 超时后可能已经结束，处理函数仍要单独跟踪到真正完成。
+  const executions = new Set<Promise<void>>()
   let running = false
   // stop() 之后进行中的 poll 也不再认领；drain() 和执行器、和另一个 drain() 不能同时 poll，否则并发上限会被突破
   let stopping = false
@@ -130,8 +132,19 @@ export function createJobRunner(options: JobRunnerOptions) {
     }
     let timeout: ReturnType<typeof setTimeout> | undefined
     try {
+      const execution = handler.run({
+        jobId: job.id,
+        payload: job.payload,
+        attempt: job.attempts,
+        signal: controller.signal,
+      })
+      executions.add(execution)
+      const remove = () => {
+        executions.delete(execution)
+      }
+      void execution.then(remove, remove)
       await Promise.race([
-        handler.run({ jobId: job.id, payload: job.payload, attempt: job.attempts, signal: controller.signal }),
+        execution,
         new Promise<never>((_, reject) => {
           timeout = setTimeout(() => {
             controller.abort()
@@ -185,6 +198,25 @@ export function createJobRunner(options: JobRunnerOptions) {
     } else schedule(pollIntervalMs)
   }
 
+  async function stop(): Promise<void> {
+    running = false
+    stopping = true
+    clearTimeout(timer)
+    const settled = (async () => {
+      await polling
+      await Promise.all([...active.values()].map((job) => job.done))
+    })()
+    let waiting: ReturnType<typeof setTimeout> | undefined
+    const timedOut = await Promise.race([
+      settled.then(() => false),
+      new Promise<boolean>((resolve) => {
+        waiting = setTimeout(() => resolve(true), options.stopTimeoutMs ?? 10_000)
+      }),
+    ])
+    clearTimeout(waiting)
+    if (timedOut) for (const job of active.values()) job.controller.abort()
+  }
+
   return {
     /** 入队：传事务就随业务写入一起提交（ADR-0021）。返回 false 表示同一去重键已有未完成的任务 */
     enqueue(
@@ -207,23 +239,27 @@ export function createJobRunner(options: JobRunnerOptions) {
      * 不再认领新任务，等进行中的 poll 和执行中的任务结束；超过上限就 abort 执行中的任务并返回，
      * 剩下的等租约到期后由下次启动接手
      */
-    async stop(): Promise<void> {
-      running = false
-      stopping = true
-      clearTimeout(timer)
+    stop,
+    /** stop 之后再等处理函数真正结束，导入不能与尚未结束的文件操作并行。 */
+    async quiesce(timeoutMs: number): Promise<boolean> {
+      await stop()
       const settled = (async () => {
+        // stop 超时返回时，poll 和任务的收尾也可能还没有结束。
         await polling
         await Promise.all([...active.values()].map((job) => job.done))
+        await Promise.allSettled([...executions])
       })()
       let waiting: ReturnType<typeof setTimeout> | undefined
-      const timedOut = await Promise.race([
-        settled.then(() => false),
-        new Promise<boolean>((resolve) => {
-          waiting = setTimeout(() => resolve(true), options.stopTimeoutMs ?? 10_000)
-        }),
-      ])
-      clearTimeout(waiting)
-      if (timedOut) for (const job of active.values()) job.controller.abort()
+      try {
+        return await Promise.race([
+          settled.then(() => true),
+          new Promise<boolean>((resolve) => {
+            waiting = setTimeout(() => resolve(false), timeoutMs)
+          }),
+        ])
+      } finally {
+        clearTimeout(waiting)
+      }
     },
     /** 执行到没有到期的任务为止。测试和命令行用，不能和执行器或另一个 drain 同时进行 */
     async drain(): Promise<void> {

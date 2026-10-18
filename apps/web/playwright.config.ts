@@ -16,6 +16,17 @@ const accountSite = `http://localhost:${accountPort}`
 const accountDataDirectory = (process.env.NEXTSKIN_E2E_ACCOUNT_DATA_DIR ??= mkdtempSync(
   join(tmpdir(), 'nextskin-e2e-account-'),
 ))
+// 安装向导（e2e/setup.spec.ts）要两个未初始化的站点：一个走“新站”，一个从 BS 导入。旧站是按 BS 表结构建的 SQLite 文件，
+// 不需要 Docker（ADR-0031"测试"）
+const setupNewPort = 3102
+const setupImportPort = 3103
+const setupNewDataDirectory = (process.env.NEXTSKIN_E2E_SETUP_NEW_DATA_DIR ??= mkdtempSync(
+  join(tmpdir(), 'nextskin-e2e-setup-new-'),
+))
+const setupImportDataDirectory = (process.env.NEXTSKIN_E2E_SETUP_IMPORT_DATA_DIR ??= mkdtempSync(
+  join(tmpdir(), 'nextskin-e2e-setup-import-'),
+))
+const oldSiteDirectory = (process.env.NEXTSKIN_E2E_OLD_SITE_DIR ??= mkdtempSync(join(tmpdir(), 'nextskin-e2e-bs-')))
 const server = { NEXTSKIN_SECRET: secret, HOSTNAME: '127.0.0.1' }
 // 后台的用例（e2e/admin.spec.ts）用 set-role 脚本设定超级管理员，要用同一个密钥打开 account 服务的数据目录
 process.env.NEXTSKIN_E2E_SECRET = secret
@@ -29,13 +40,15 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts', 'admin.spec.ts'],
+      testIgnore: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts', 'admin.spec.ts', 'setup.spec.ts'],
     },
     {
       name: 'account',
       use: { ...devices['Desktop Chrome'], baseURL: accountSite },
       testMatch: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts', 'admin.spec.ts'],
     },
+    // 每个用例自己指定站点（两个未初始化的服务），用例之间不共享状态
+    { name: 'setup', use: { ...devices['Desktop Chrome'] }, testMatch: ['setup.spec.ts'] },
   ],
   // e2e 任务依赖 build（turbo.json），这里启动 standalone 产物；静态资源要按 Next 文档手动复制进去
   webServer: [
@@ -58,6 +71,22 @@ export default defineConfig({
       ].join(' && '),
       env: { ...server, PORT: String(accountPort), NEXTSKIN_DATA_DIR: accountDataDirectory },
       url: accountSite,
+      reuseExistingServer: false,
+    },
+    {
+      // 不写任何数据：站点未初始化，启动时生成安装码
+      command: 'node .next/standalone/apps/web/server.js',
+      env: { ...server, PORT: String(setupNewPort), NEXTSKIN_DATA_DIR: setupNewDataDirectory },
+      url: `http://localhost:${setupNewPort}/api/health`,
+      reuseExistingServer: false,
+    },
+    {
+      command: [
+        `node ../../packages/importer/scripts/bs-sqlite-site.ts ${oldSiteDirectory}`,
+        'node .next/standalone/apps/web/server.js',
+      ].join(' && '),
+      env: { ...server, PORT: String(setupImportPort), NEXTSKIN_DATA_DIR: setupImportDataDirectory },
+      url: `http://localhost:${setupImportPort}/api/health`,
       reuseExistingServer: false,
     },
   ],

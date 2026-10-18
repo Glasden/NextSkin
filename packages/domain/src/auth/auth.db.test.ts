@@ -1,3 +1,4 @@
+import { markSiteInitialized } from '../setup/initialized.test-helper.ts'
 import { createHash, randomBytes } from 'node:crypto'
 import { coreMigrations, migrateToLatest, toIsoTimestamp, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
@@ -23,6 +24,7 @@ let core: Core
 beforeAll(async () => {
   database = await createTestDatabase<CoreDatabase>()
   await migrateToLatest(database.db, coreMigrations)
+  await markSiteInitialized(database.db)
   core = createCore({
     db: database.db,
     secretKey,

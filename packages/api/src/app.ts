@@ -1,3 +1,6 @@
+import { createMiddleware } from 'hono/factory'
+import type { ImportGateway } from './import-gateway.ts'
+import { createErrorResponse } from './rest/errors.ts'
 import type { AppEnv } from './env.ts'
 import { YggdrasilError, type Core } from '@nextskin/domain'
 import { Hono } from 'hono'
@@ -13,8 +16,8 @@ import { createRestApp } from './rest/app.ts'
 import { createMemoryRateLimiter } from './rest/rate-limit.ts'
 
 /** 所有非页面的 HTTP 端点；只依赖领域查询，不直接访问数据库。 */
-export function createApp(options: { core: Core }) {
-  const { core } = options
+export function createApp(options: { core: Core; importer?: ImportGateway }) {
+  const { core, importer } = options
   const uploadRateLimiter = createMemoryRateLimiter(Date.now, { limit: 10, windowMs: 60_000 })
   // 末尾带斜杠的路径与不带斜杠的相同：BS（nginx + Laravel）就是这样，authlib-injector 请求元数据时会带上斜杠
   const app = new Hono<AppEnv>({ strict: false })
@@ -24,8 +27,30 @@ export function createApp(options: { core: Core }) {
       ? yggdrasilError(c, core, error)
       : new Response('Internal Server Error', { status: 500, headers: { 'Cache-Control': 'no-cache, private' } }),
   )
+  app.use(
+    '*',
+    createMiddleware<AppEnv>(async (c, next) => {
+      if (!importer?.maintenance()) return next()
+      const path = c.req.path.replace(/\/+$/, '')
+      if (
+        path === '/api/health' ||
+        path === '/api/setup' ||
+        path.startsWith('/api/setup/') ||
+        path === '/api/import/run' ||
+        path.startsWith('/api/import/run/')
+      )
+        return next()
+      c.header('Retry-After', '30')
+      c.header('Cache-Control', 'no-cache, private')
+      return path.startsWith('/api/') && path !== '/api/yggdrasil' && !path.startsWith('/api/yggdrasil/')
+        ? createErrorResponse(core, {}, true)(c, 'maintenance')
+        : c.text('Service Unavailable', 503)
+    }),
+  )
   app.use('*', async (c, next) => {
-    const settings = await core.settings.read(['yggdrasil.apiLocationIndication'])
+    const settings = importer?.maintenance()
+      ? { 'yggdrasil.apiLocationIndication': false }
+      : await core.settings.read(['yggdrasil.apiLocationIndication'])
     const root = requestRoot(c.req.raw)
     c.set('requestRoot', root)
     await next()
@@ -43,6 +68,6 @@ export function createApp(options: { core: Core }) {
   registerCsl(app, core)
   registerRender(app, core)
   // REST 的通配中间件排在协议处理器后，避免协议请求经过 REST 的校验和设置读取。
-  app.route('/api', createRestApp(core, { uploadRateLimiter }))
+  app.route('/api', createRestApp(core, { uploadRateLimiter, importer }))
   return app
 }

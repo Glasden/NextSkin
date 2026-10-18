@@ -1,3 +1,4 @@
+import { markSiteInitialized } from '../setup/initialized.test-helper.ts'
 import {
   coreMigrations,
   migrateToLatest,
@@ -24,6 +25,7 @@ const db = () => database.db
 beforeAll(async () => {
   database = await createTestDatabase<CoreDatabase>()
   await migrateToLatest(db(), coreMigrations)
+  await markSiteInitialized(db())
 })
 afterAll(async () => database?.cleanup())
 beforeEach(async () => {

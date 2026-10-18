@@ -9,6 +9,7 @@ export async function importCloset(ctx: StageContext): Promise<void> {
   const stats = report.tables.closet
   const table = ctx.schema.tables.user_closet
   stats.source = await countRows(src.selectFrom(table))
+  ctx.advance('closet', 0, undefined, stats.source)
   let distinct = 0
   let last: { uid: number; tid: number } | null = null
   // 按 (user_uid, texture_tid) 分页：同一对的重复行在排序后相邻，翻页条件用严格大于，每一对只读到一次

@@ -19,6 +19,7 @@ const actionKeys = {
   'texture.delete': 'textureDelete',
   'user.setRole': 'userSetRole',
   'setting.update': 'settingUpdate',
+  'site.setup': 'siteSetup',
 } as const
 
 // 处理举报的 details.action 可能是接口的动作，也可能是 SDK 的处理方式，都映射到同一份文案

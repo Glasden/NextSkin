@@ -1,3 +1,6 @@
+import type { ImportGateway } from '../import-gateway.ts'
+import { registerSetup } from './setup.ts'
+import { registerImport } from './import.ts'
 import { registerAdmin } from './admin.ts'
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { DomainError, type Core } from '@nextskin/domain'
@@ -19,10 +22,10 @@ import { registerYggdrasilTokens } from './yggdrasil-tokens.ts'
 
 export function createRestApp(
   core: Core,
-  options: { rateLimiter?: RateLimiter; uploadRateLimiter?: RateLimiter } = {},
+  options: { rateLimiter?: RateLimiter; uploadRateLimiter?: RateLimiter; importer?: ImportGateway } = {},
 ) {
   const rateLimiter = options.rateLimiter ?? createMemoryRateLimiter()
-  const errorResponse = createErrorResponse(core)
+  const errorResponse = createErrorResponse(core, {}, () => options.importer?.maintenance() ?? false)
   const app = new OpenAPIHono<AppEnv>({
     strict: false,
     defaultHook: (result, c) => {
@@ -51,17 +54,27 @@ export function createRestApp(
             player_name_taken: 'name',
           }
         : {},
+      () => options.importer?.maintenance() ?? false,
     )
-    return error instanceof DomainError
-      ? respond(c, code, error.params, code === 'invalid_request' ? error.fields : undefined)
-      : respond(c, code)
+    return error instanceof DomainError ? respond(c, code, error.params, error.fields) : respond(c, code)
   })
   app.use(
     '*',
     createMiddleware<AppEnv>(async (c, next) => {
       if (c.req.method !== 'POST' || !/\/textures\/?$/.test(c.req.path)) {
         // 设置里的公告和内容政策各能写 20000 个字，按 UTF-8 最多 4 字节一个字算（ADR-0028）
-        const maxSize = c.req.method === 'PATCH' && /\/admin\/settings\/?$/.test(c.req.path) ? 192 * 1024 : 16 * 1024
+        const maxSize =
+          c.req.method === 'POST' && /\/(?:setup|admin)\/import\/runs\/?$/.test(c.req.path)
+            ? 1024 * 1024
+            : c.req.method === 'PATCH' && /\/admin\/settings\/?$/.test(c.req.path)
+              ? 192 * 1024
+              : 16 * 1024
+        if (maxSize === 1024 * 1024) {
+          if (Number(c.req.header('content-length')) > maxSize) throw new DomainError('request_too_large')
+          const headers = new Headers(c.req.raw.headers)
+          headers.delete('content-length')
+          c.req.raw = new Request(c.req.raw, { headers })
+        }
         const limit = bodyLimit({ maxSize }) as MiddlewareHandler<AppEnv>
         return limit(c, next)
       }
@@ -85,7 +98,7 @@ export function createRestApp(
   app.use(
     '*',
     createMiddleware<AppEnv>(async (c, next) => {
-      const settings = await core.settings.read(['site.url'])
+      const settings = options.importer?.maintenance() ? { 'site.url': '' } : await core.settings.read(['site.url'])
       const origin = new URL(settings['site.url'] || c.get('requestRoot')).origin
       // 只按站点 Origin 放行，不能让 Sec-Fetch-Site 绕过配置的站点地址。
       const protect = csrf({ origin, secFetchSite: () => false }) as MiddlewareHandler<AppEnv>
@@ -119,6 +132,10 @@ export function createRestApp(
   registerCloset(app, core)
   registerReports(app, core)
   registerAdmin(app, core)
+  registerSetup(app, core, options.importer)
+  if (options.importer) {
+    registerImport(app, core, options.importer)
+  }
   registerPlayers(app, core)
   registerCheckIn(app, core)
   registerUser(app, core, rateLimiter)

@@ -50,6 +50,7 @@ export async function importUsers(ctx: StageContext, format: PasswordFormat): Pr
   const stats = report.tables.users
   const table = ctx.schema.tables.users
   stats.source = await countRows(src.selectFrom(table))
+  ctx.advance('users', 0, undefined, stats.source)
   const emails = new Map<string, number>()
   const duplicates = new Map<string, number[]>()
   const needsEnv: number[] = []

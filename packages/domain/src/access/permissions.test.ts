@@ -8,12 +8,16 @@ const permissions: CorePermission[] = [
   'users.ban',
   'users.appointAdmin',
   'audit.read',
+  'settings.manage',
+  'import.manage',
 ]
 test('固定权限映射与严格角色顺序', () => {
   for (const [i, role] of roles.entries()) {
     expect(hasAdminAccess(role)).toBe(i >= 2)
     for (const permission of permissions)
-      expect(can(role, permission)).toBe(i === 3 || (i === 2 && permission !== 'users.appointAdmin'))
+      expect(can(role, permission)).toBe(
+        i === 3 || (i === 2 && !['users.appointAdmin', 'settings.manage', 'import.manage'].includes(permission)),
+      )
     for (const [j, target] of roles.entries()) expect(outranks(role, target)).toBe(i > j)
   }
 })

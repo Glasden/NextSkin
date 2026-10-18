@@ -1,3 +1,4 @@
+import { isSiteInitialized } from '../setup/initialized.ts'
 import {
   countRows,
   insertOrIgnore,
@@ -35,6 +36,7 @@ export function createRegister(
   events: Events,
 ) {
   return async function register(input: RegisterInput): Promise<{ uid: number }> {
+    if (!(await isSiteInitialized(db))) throw new DomainError('setup_required')
     const values = await settings.read([
       'auth.registration.enabled',
       'auth.registration.withPlayerName',

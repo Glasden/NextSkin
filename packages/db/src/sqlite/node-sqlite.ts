@@ -40,7 +40,10 @@ export function wrapNodeSqlite(db: DatabaseSync, cacheSize = 256): SqliteDatabas
       if (cached) cache.delete(sql)
       else {
         const statement = db.prepare(sql)
-        cached = { statement, reader: statement.columns().length > 0 }
+        const reader = statement.columns().length > 0
+        // 写语句的 lastInsertRowid 按 bigint 读：主键超过 2^53 时（导入旧站的 bigint id），Node 26 读成 number 会抛错
+        if (!reader) statement.setReadBigInts(true)
+        cached = { statement, reader }
       }
       cache.set(sql, cached)
       if (cache.size > cacheSize) {

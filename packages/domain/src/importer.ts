@@ -20,3 +20,5 @@ export { assertTextureHash, createLocalTextureStorage, type ImportableTextureSto
 export { DomainError } from './errors.ts'
 export { coreConfigFromEnv, type CoreConfig } from './bootstrap.ts'
 export { isLocale, matchLocale, type Locale } from '@nextskin/i18n'
+
+export { isSiteInitialized } from './setup/initialized.ts'
