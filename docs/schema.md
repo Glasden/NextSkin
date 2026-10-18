@@ -69,6 +69,8 @@ Better Auth 的 user 模型加上我们的领域字段。领域字段都有默�
 | two_factors | 两步验证 | |
 | passkeys | 通行密钥 | 来自单独的 `@better-auth/passkey` 包 |
 
+- 过期的会话、OAuth 访问令牌和刷新令牌、客户端断言、设备码，由每天一次的定时任务 `core:auth-cleanup` 在过期 1 天后删除。撤销了但还没过期的刷新令牌保留：oauth-provider 靠它发现令牌被重放（ADR-0029）。`verifications` 不在其中，Better Auth 每次查验证值时会删掉全部过期的行。
+
 ### device_code_selections
 
 Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007、S1）。随认证切片落地。
@@ -80,7 +82,7 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | player_id | integer | 非空；外键 → players，cascade | |
 | created_at | 时间 | 非空 | |
 
-令牌兑换或请求被拒绝后删除这一行。
+令牌兑换或请求被拒绝后删除这一行。设备码过期后没人处理的，由 `core:auth-cleanup` 删除（ADR-0029）。
 
 ## 角色
 
@@ -144,7 +146,7 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 - **存储里有对象、表里没有行**：清理任务先插入一条 `deleting` 行来认领这个 hash，再按上面的流程删除；插入时发现已经有行，说明不是孤儿，跳过。修改时间的宽限期只用来挑选候选，不起互斥作用。
 - **临时文件**：文件名里的 `claim_id` 已经不是任何 `pending` 行的当前认领、修改时间又早于租期的，直接删除。临时文件从不对外提供，删掉总是安全的；原上传者改名时发现临时文件没了，就让这次上传失败。
 - 取值（ADR-0025）：认领租期 10 分钟；D 1 小时；L 由存储驱动给出，本地磁盘的删除是同步完成的，L 为 0。
-- 推进这些步骤靠延迟任务，不靠定时扫描（ADR-0025）：标记回收的事务里排一个 D 之后执行的任务，去重键是 hash；认领 `pending` 的事务里排一个租期到期时执行的检查任务。孤儿对象要遍历整个存储才找得到，随第一个定时任务落地。
+- 推进这些步骤靠延迟任务，不靠定时扫描（ADR-0025）：标记回收的事务里排一个 D 之后执行的任务，去重键是 hash；认领 `pending` 的事务里排一个租期到期时执行的检查任务。孤儿对象和遗留的临时文件要遍历整个存储才找得到，由每周一次的定时任务 `core:texture-sweep` 扫描（ADR-0029）：候选是修改时间早于 1 天的对象，文件名不是材质 hash 的跳过。
 - 回收文件时，一并删掉这个 hash 的出图缓存（ADR-0017、ADR-0025）。
 - `/textures/{hash}` 只响应 `active` 的行。
 - 外键 `textures.hash → texture_files` 的 `restrict` 只是兜底：引用计数出错时，至少数据库里的行删不掉。
@@ -254,6 +256,21 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 - 邮件任务进死信时，载荷里去掉链接（带着令牌）。
 - 诊断包不导出载荷和 `last_error`。
 
+### job_schedules
+
+定时任务的条目，一个条目一行（ADR-0021、ADR-0029）。条目本身（cron 表达式、任务名、载荷）写在代码或插件 manifest 里，表里只记调度状态。
+
+| 列 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| name | varchar(128) | 主键 | 条目名，也是入队时的去重键。核心条目以 `core:` 开头 |
+| cron | varchar(255) | 非空 | 算出 `next_run_at` 时用的五段 cron 表达式 |
+| time_zone | varchar(64) | 非空 | 算出 `next_run_at` 时用的时区 |
+| next_run_at | 时间 | 非空 | 下一次执行的时间 |
+
+- 调度器每 30 秒读一次整张表。到期的条目用条件 UPDATE 把 `next_run_at` 从读到的旧值推到从现在起的下一次，影响 1 行才在同一个事务里入队。
+- `cron` 或 `time_zone` 和当前的不一致，就按当前的值从现在起重算，这一轮不触发。
+- 不建其他索引：行数就是条目数。
+
 ## 站点设置
 
 ### settings
@@ -291,13 +308,9 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 - `actor_type` 加 CHECK 约束；`subject_type`、`action` 不加，在领域层校验：以后每个管理切片都会加新值，SQLite 改 CHECK 约束要重建整张表。
 - 和业务写入在同一个事务里写入。`details` 里不能出现不变量 11 列出的内容：机密设置项只记改了哪一项，不记值（ADR-0028）。
 - 另建 `(subject_type, subject_id, id)`、`(actor_user_id, id)` 索引。按时间列出用主键倒序。
-- 不自动清理，保留期等定时任务落地后再加设置项。
+- 按设置项 `audit.retentionDays` 清理，默认 0 表示永久保留。每天一次的定时任务 `core:audit-log-cleanup` 按主键从小到大分批删除，遇到不早于截止时间的行就停，不为 `created_at` 另建索引（ADR-0029）。
 
 ## 以下各表只定了要点，随对应切片细化
-
-### 定时任务
-
-- **job_schedules**：随第一个定时任务落地。列：`name`（varchar(128)，主键）、`next_run_at`（时间）。执行器用条件 UPDATE 把 `next_run_at` 从旧值推到下一次，影响 1 行才入队，去重键用 `name`（ADR-0021）。
 
 ### 通知
 
@@ -308,7 +321,8 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 - authserver 令牌（用户名密码换令牌）的表随 Yggdrasil 切片定。ADR-0007 把它和 OAuth 令牌体系是否统一留到了实现阶段。要点：
   - 令牌只存 sha256；
   - 绑定的角色被删除或转让后，令牌失效；
-  - 每个用户的令牌数有上限（BS 的 `ygg_tokens_limit`）。
+  - 每个用户的令牌数有上限（BS 的 `ygg_tokens_limit`）；
+  - 过期的令牌由 `core:auth-cleanup` 清理（ADR-0029）。
 - 进服记录（serverId 对应哪个角色）只保留几十秒，放在缓存接口里，默认是进程内存，不建表。
 - 签名私钥存在 `settings` 的机密项里。
 
@@ -499,7 +513,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | 材质上传和皮肤库 | textures.score_paid（加列）、closet_items |
 | 衣柜、换材质和举报 | reports |
 | 后台和审计日志 | audit_logs |
-| 第一个定时任务 | job_schedules |
+| 定时任务 | job_schedules |
 | Yggdrasil | authserver 令牌表 |
 | 插件 | plugins、plugin_kv、plugin_migrations |
 | 通知 | notifications |
