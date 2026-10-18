@@ -281,15 +281,15 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | actor_user_id | integer | 可空，不建外键 | 操作者是用户时的 uid |
 | actor_plugin_id | varchar(64) | 可空 | 操作者是插件时的插件 id |
 | action | varchar(64) | 非空 | 例如 `report.resolve`，取值见 ADR-0027 |
-| subject_type | varchar(32) | 非空 | 例如 `user`、`texture`、`report` |
-| subject_id | integer | 非空，不建外键 | |
+| subject_type | varchar(32) | 非空 | 例如 `user`、`texture`、`report`、`setting` |
+| subject_id | integer | 非空，不建外键 | 站点设置没有整数 id，记 0，键名在 `details` 里（ADR-0028） |
 | details | text | 非空 | JSON：操作时的快照，例如材质名、角色的新旧值 |
 | ip | varchar(45) | 可空 | 用 `clientIp()` 解析；脚本和系统操作为空 |
 | created_at | 时间 | 非空 | |
 
 - 两个 id 列都不建外键：用户、材质删除之后，记录照样要说明是谁、对什么做的。这是 ADR-0015"核心表之间都声明外键"的例外。删除账号时，审计记录不删。
 - `actor_type` 加 CHECK 约束；`subject_type`、`action` 不加，在领域层校验：以后每个管理切片都会加新值，SQLite 改 CHECK 约束要重建整张表。
-- 和业务写入在同一个事务里写入。`details` 里不能出现不变量 11 列出的内容。
+- 和业务写入在同一个事务里写入。`details` 里不能出现不变量 11 列出的内容：机密设置项只记改了哪一项，不记值（ADR-0028）。
 - 另建 `(subject_type, subject_id, id)`、`(actor_user_id, id)` 索引。按时间列出用主键倒序。
 - 不自动清理，保留期等定时任务落地后再加设置项。
 
@@ -450,8 +450,10 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | texture_name_regexp | texture.nameRegex | 去掉 PCRE 的分隔符；带了 JS 不支持的修饰符时，停止并报告 |
 | reporter_score_modification | report.cost、report.reward | 为负时取绝对值，作为 `report.cost`；为正时加进 `report.reward`：BS 提交就发、驳回时收回，这里改成采纳时才发（ADR-0026） |
 | reporter_reward_score | report.reward | 转成整数，与上一行的正值相加 |
+| announcement_{语言}、announcement | site.announcement | 取与 `site.locale` 对应的那份（`zh-CN` 对应 `announcement_zh_CN`），没有就取不带后缀的；其余语言的版本在报告里列出。等于 BS 的默认公告（`Welcome to Blessing Skin {version}!`）时不导入。含原始 HTML 的在报告里注明：导入后这部分不再显示（ADR-0028）。超过 20000 个字符时停止并报告 |
+| content_policy_{语言}、content_policy | texture.contentPolicy | 规则同上一行，没有默认文案 |
 
-下面这些设置不导入，不是默认值时在对账报告里列出来：`score_award_per_texture`、`take_back_scores_after_deletion`、`score_award_per_like`（不做奖励，ADR-0025、ADR-0026），`status_code_for_private`、`auto_del_invalid_texture`、`allow_downloading_texture`、`content_policy`（ADR-0025）。
+下面这些设置不导入，不是默认值时在对账报告里列出来：`score_award_per_texture`、`take_back_scores_after_deletion`、`score_award_per_like`（不做奖励，ADR-0025、ADR-0026），`status_code_for_private`、`auto_del_invalid_texture`、`allow_downloading_texture`（ADR-0025）。
 
 ### UUID
 
