@@ -76,10 +76,14 @@ export async function openCore(
       secretKey: config.secretKey,
       production: config.production,
     })
-    if (options.startJobs !== false) core.jobs.start()
+    if (options.startJobs !== false) {
+      core.jobs.start()
+      core.schedules.start()
+    }
     return {
       core,
       async close() {
+        await core.schedules.stop()
         await core.jobs.stop()
         await core.shutdown()
         await db.destroy()

@@ -50,6 +50,8 @@ beforeEach(async () => {
     secretKey,
     production: false,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),
@@ -348,6 +350,8 @@ test('生产环境已配置邮件却没有站点地址时拒绝签发，开发�
     secretKey,
     production: true,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),
@@ -525,6 +529,8 @@ test('security 未开启两步验证返回 null 备用码数量，通行密钥�
     secretKey,
     production: true,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),
@@ -676,6 +682,8 @@ test.each(['updateProfile', 'changeEmail', 'deleteAccount'] as const)(
       secretKey,
       production: false,
       textureStorage: {
+        list: () => Promise.resolve([]),
+        listTemp: () => Promise.resolve([]),
         lateDeleteWindowMs: 0,
         write: () => Promise.resolve(),
         delete: () => Promise.resolve(),

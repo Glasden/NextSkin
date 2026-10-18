@@ -57,6 +57,8 @@ export function setup() {
       production: false,
       now: () => new Date(clock),
       textureStorage: {
+        list: () => Promise.resolve([]),
+        listTemp: () => Promise.resolve([]),
         lateDeleteWindowMs: 0,
         read: () => Promise.resolve(null),
         write: () => Promise.resolve(),

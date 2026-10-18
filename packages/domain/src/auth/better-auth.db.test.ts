@@ -20,6 +20,8 @@ beforeAll(async () => {
     secretKey: 'test-only-secret-key-with-at-least-32-characters',
     production: false,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),

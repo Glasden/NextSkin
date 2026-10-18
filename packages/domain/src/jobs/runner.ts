@@ -5,7 +5,8 @@ import { claimJob, completeJob, failJob, findDueJobs, insertJob, rescheduleJob, 
 
 /** 一种任务的处理方式。处理函数在事务之外执行，至少执行一次，必须容忍重复（ADR-0021）。 */
 export interface JobHandler {
-  run(args: { payload: unknown; attempt: number; signal: AbortSignal }): Promise<void>
+  /** jobId 是本次认领的 jobs.id；续跑时用它释放自己的去重键，重试仍使用同一个 id。 */
+  run(args: { jobId: number; payload: unknown; attempt: number; signal: AbortSignal }): Promise<void>
   /** 默认 5，与 SDK 的 JobDefinition 相同 */
   maxAttempts?: number
   /** 默认 60 秒；超时后 signal 被 abort，这次执行按失败处理 */
@@ -130,7 +131,7 @@ export function createJobRunner(options: JobRunnerOptions) {
     let timeout: ReturnType<typeof setTimeout> | undefined
     try {
       await Promise.race([
-        handler.run({ payload: job.payload, attempt: job.attempts, signal: controller.signal }),
+        handler.run({ jobId: job.id, payload: job.payload, attempt: job.attempts, signal: controller.signal }),
         new Promise<never>((_, reject) => {
           timeout = setTimeout(() => {
             controller.abort()

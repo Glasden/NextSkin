@@ -1240,6 +1240,12 @@
             "help": "The client IP in X-Forwarded-For is only trusted for requests from these addresses. One IP or CIDR per line. A wrong value breaks the per-IP registration limit and rate limiting."
           }
         },
+        "audit": {
+          "retentionDays": {
+            "label": "Audit log retention days",
+            "help": "Audit logs older than this many days are automatically deleted each morning. Set to 0 to keep them forever."
+          }
+        },
         "cache": {
           "publicMaxAge": {
             "label": "Cache lifetime of public resources",

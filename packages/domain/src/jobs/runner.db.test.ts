@@ -45,9 +45,11 @@ const failed = () => database.db.selectFrom('failed_jobs').selectAll().orderBy('
 
 test('执行到期的任务，成功后删除；未到期的和没有处理函数的任务不动', async () => {
   const seen: unknown[] = []
+  const seenIds: number[] = []
   const r = runner({
     'core:test': {
-      run: ({ payload, attempt }) => {
+      run: ({ jobId, payload, attempt }) => {
+        seenIds.push(jobId)
         seen.push([payload, attempt])
         return Promise.resolve()
       },
@@ -55,9 +57,11 @@ test('执行到期的任务，成功后删除；未到期的和没有处理函�
   })
   await r.enqueue(database.db, 'core:test', { n: 1 })
   await r.enqueue(database.db, 'core:test', { n: 2 }, { delayMs: 60_000 })
+  const ids = (await jobs()).map((job) => job.id)
   await insertJob(database.db, { name: 'plugin:gone:job:x', payload: {}, runAt: iso() }, iso())
   await r.drain()
   expect(seen).toEqual([[{ n: 1 }, 1]])
+  expect(seenIds).toEqual([ids[0]])
   expect((await jobs()).map((job) => job.name)).toEqual(['core:test', 'plugin:gone:job:x'])
   advance(60_000)
   await r.drain()
@@ -65,6 +69,7 @@ test('执行到期的任务，成功后删除；未到期的和没有处理函�
     [{ n: 1 }, 1],
     [{ n: 2 }, 1],
   ])
+  expect(seenIds).toEqual(ids)
   expect((await jobs()).map((job) => job.name)).toEqual(['plugin:gone:job:x'])
 })
 

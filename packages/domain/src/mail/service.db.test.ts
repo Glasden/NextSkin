@@ -34,6 +34,8 @@ beforeEach(async () => {
     secretKey,
     production: false,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),
@@ -134,6 +136,8 @@ test('发送失败到次数用完进死信：载荷去掉链接，错误和日�
     secretKey,
     production: false,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),
@@ -192,6 +196,8 @@ test('确认新邮箱链接过期时丢弃，通知无期限；两种死信都�
     secretKey,
     production: false,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),

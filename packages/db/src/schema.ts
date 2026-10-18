@@ -320,6 +320,13 @@ export interface DeviceCodeSelectionsTable {
   created_at: IsoTimestamp
 }
 
+export interface JobSchedulesTable {
+  name: string
+  cron: string
+  time_zone: string
+  next_run_at: IsoTimestamp
+}
+
 export interface JobsTable {
   id: Generated<number>
   name: string
@@ -355,6 +362,7 @@ export interface ScoreTransactionsTable {
 }
 
 export interface CoreDatabase {
+  job_schedules: JobSchedulesTable
   jobs: JobsTable
   failed_jobs: FailedJobsTable
   score_transactions: ScoreTransactionsTable

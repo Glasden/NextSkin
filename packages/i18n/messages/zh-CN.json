@@ -1240,6 +1240,12 @@
             "help": "只有来自这些地址的请求，才采信 X-Forwarded-For 里的客户端 IP。一行一个 IP 或 CIDR。填错了，注册的 IP 限制和按 IP 的限流都会失效。"
           }
         },
+        "audit": {
+          "retentionDays": {
+            "label": "审计日志保留天数",
+            "help": "超过这个天数的审计日志每天凌晨自动删除。填 0 表示永久保留。"
+          }
+        },
         "cache": {
           "publicMaxAge": {
             "label": "公开资源的缓存时间",

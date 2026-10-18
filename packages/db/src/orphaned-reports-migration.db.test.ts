@@ -19,10 +19,9 @@ afterAll(async () => database?.cleanup())
 
 test('指向已删除材质的待处理举报结案，其余举报不动', async () => {
   const { db } = database
-  const before = Object.fromEntries(
-    Object.entries(coreMigrations).filter(([name]) => name < '0032_resolve_orphaned_reports'),
-  )
-  await migrateToLatest(db, before)
+  // 只迁移到 0032：后面加的迁移不影响这条测试
+  const upTo = (name: string) => Object.fromEntries(Object.entries(coreMigrations).filter(([key]) => key <= name))
+  await migrateToLatest(db, upTo('0031_create_audit_logs'))
   const timestamp = toIsoTimestamp(new Date('2026-10-01T00:00:00.000Z'))
   const reporter = await insertReturningId(db, 'users', {
     nickname: '举报人',
@@ -69,7 +68,7 @@ test('指向已删除材质的待处理举报结案，其余举报不动', async
   const pending = await insertReturningId(db, 'reports', report(tid, 'pending'))
   const rejected = await insertReturningId(db, 'reports', report(null, 'rejected'))
 
-  expect(await migrateToLatest(db, coreMigrations)).toEqual(['0032_resolve_orphaned_reports'])
+  expect(await migrateToLatest(db, upTo('0032_resolve_orphaned_reports'))).toEqual(['0032_resolve_orphaned_reports'])
   const rows = await db
     .selectFrom('reports')
     .select(['id', 'status', 'resolution', 'resolver_id', 'resolved_at', 'score_paid'])

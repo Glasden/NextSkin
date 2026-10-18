@@ -21,6 +21,7 @@
     "@nextskin/i18n": "workspace:*",
     "@nextskin/plugin-sdk": "workspace:*",
     "better-auth": "catalog:",
+    "croner": "10.0.1",
     "hash-wasm": "4.12.0",
     "kysely": "catalog:",
     "nodemailer": "10.1.0",

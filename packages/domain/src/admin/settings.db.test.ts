@@ -21,6 +21,8 @@ function core(production = false, mailTransport?: MailTransport) {
     mailTransport,
     now: () => new Date(env.now()),
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       read: () => Promise.resolve(null),
       write: () => Promise.resolve(),

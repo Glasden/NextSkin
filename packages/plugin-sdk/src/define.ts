@@ -55,7 +55,11 @@ export interface PluginDefinition<
   readonly providers?: Providers<Ctx<C, S, T>>
   readonly routes?: { readonly [K in RouteKey]?: RouteDefinition<Ctx<C, S, T>, P> }
   readonly jobs?: Readonly<Record<string, JobDefinition<Ctx<C, S, T>>>>
-  /** schedule 为五段 cron 表达式，按站点时区解释 */
+  /**
+   * schedule 为五段 cron 表达式，按站点时区解释；日和星期两段都限定时取"或"，任一满足就执行。
+   * 停机期间错过的多次执行只补一次；到时上一次还没执行完，这一次跳过。
+   * 夏令时拨快跳过的时刻顺延到跳过之后执行一次，拨慢重复的时刻只在第一次执行（ADR-0029）。
+   */
   readonly cron?: readonly { readonly schedule: string; readonly job: string; readonly payload?: Json }[]
   readonly ui?: UiContributions<P>
 

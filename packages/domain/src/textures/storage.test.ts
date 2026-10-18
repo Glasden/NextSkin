@@ -1,8 +1,26 @@
 import { mkdtemp, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { removeTestDirectory } from '@nextskin/db/testing'
-import { afterAll, beforeAll, expect, test } from 'vitest'
+import { afterAll, afterEach, beforeAll, expect, test, vi } from 'vitest'
 import { createLocalTextureStorage } from './storage.ts'
+
+const listing = vi.hoisted(() => ({ afterRead: undefined as (() => Promise<void>) | undefined }))
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const fs = await importOriginal<typeof import('node:fs/promises')>()
+  return {
+    ...fs,
+    async readdir(path: string, options: { withFileTypes: true }) {
+      const entries = await fs.readdir(path, options)
+      const afterRead = listing.afterRead
+      listing.afterRead = undefined
+      await afterRead?.()
+      return entries
+    },
+  }
+})
+afterEach(() => {
+  listing.afterRead = undefined
+})
 
 let directory: string
 beforeAll(async () => {
@@ -74,4 +92,64 @@ test('清理先前认领的临时文件不影响新的认领', async () => {
   await storage.write(hash, claim, Uint8Array.of(9))
   await storage.deleteTemp(hash, oldClaim)
   expect(new Uint8Array((await storage.read(hash))!)).toEqual(Uint8Array.of(9))
+})
+
+test('列出对象只含小写 hash 普通文件，按键排序且严格按游标分页', async () => {
+  const { mkdir, symlink, utimes } = await import('node:fs/promises')
+  const path = join(directory, 'listing')
+  await mkdir(path)
+  const keys = ['c', 'a', 'b'].map((key) => key.repeat(64))
+  const modifiedAt = new Date('2029-01-01T00:00:00Z')
+  for (const key of [...keys, 'A'.repeat(64), 'notes', 'd'.repeat(63)]) await writeFile(join(path, key), 'test')
+  for (const key of keys) await utimes(join(path, key), modifiedAt, modifiedAt)
+  await mkdir(join(path, 'd'.repeat(64)))
+  await symlink(join(path, keys[0]!), join(path, 'e'.repeat(64)))
+  const storage = createLocalTextureStorage(path)
+  expect(await storage.list({ after: null, limit: 2 })).toEqual([
+    { key: 'a'.repeat(64), modifiedAt },
+    { key: 'b'.repeat(64), modifiedAt },
+  ])
+  expect(await storage.list({ after: 'b'.repeat(64), limit: 2 })).toEqual([{ key: 'c'.repeat(64), modifiedAt }])
+  expect(await storage.list({ after: 'c'.repeat(64), limit: 2 })).toEqual([])
+})
+
+test('列出临时文件跳过非法名字、目录和符号链接；缺目录返回空，异常不泄露路径', async () => {
+  const { mkdir, symlink } = await import('node:fs/promises')
+  const storage = createLocalTextureStorage(join(directory, 'missing'))
+  expect(await storage.list({ after: null, limit: 1000 })).toEqual([])
+  expect(await storage.listTemp()).toEqual([])
+  const path = join(directory, 'temps'),
+    hash = 'a'.repeat(64),
+    claimId = '00000000-0000-4000-8000-000000000000'
+  await mkdir(join(path, '.tmp'), { recursive: true })
+  await writeFile(join(path, '.tmp', `${hash}.${claimId}`), 'temp')
+  await writeFile(join(path, '.tmp', `${hash}.invalid`), 'temp')
+  await writeFile(join(path, '.tmp', `${hash.toUpperCase()}.${claimId}`), 'temp')
+  await mkdir(join(path, '.tmp', `${'b'.repeat(64)}.${claimId}`))
+  await symlink(join(path, '.tmp', `${hash}.${claimId}`), join(path, '.tmp', `${'c'.repeat(64)}.${claimId}`))
+  const listed = await createLocalTextureStorage(path).listTemp()
+  expect(listed.map(({ hash, claimId }) => ({ hash, claimId }))).toEqual([{ hash, claimId }])
+  expect(listed[0]!.modifiedAt).toBeInstanceOf(Date)
+  await expect(createLocalTextureStorage('\0').list({ after: null, limit: 1 })).rejects.toThrow('列出材质文件失败')
+  await expect(createLocalTextureStorage('\0').listTemp()).rejects.toThrow('列出材质文件失败')
+})
+
+test.each(['list', 'listTemp'] as const)('目录读出之后被替换的符号链接不会被 %s 跟随', async (method) => {
+  const { mkdir, rm, symlink } = await import('node:fs/promises')
+  const path = join(directory, `link-race-${method}`)
+  const parent = method === 'list' ? path : join(path, '.tmp')
+  await mkdir(parent, { recursive: true })
+  const key = 'a'.repeat(64)
+  const claimId = '00000000-0000-4000-8000-000000000000'
+  const entry = join(parent, method === 'list' ? key : `${key}.${claimId}`)
+  const target = join(path, 'link-target')
+  await writeFile(entry, 'original')
+  await writeFile(target, 'target')
+  listing.afterRead = async () => {
+    await rm(entry)
+    await symlink(target, entry)
+  }
+  const storage = createLocalTextureStorage(path)
+  if (method === 'list') await expect(storage.list({ after: null, limit: 1000 })).rejects.toThrow('材质文件失败')
+  else expect(await storage.listTemp()).toEqual([])
 })

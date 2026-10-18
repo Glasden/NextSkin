@@ -44,6 +44,8 @@ beforeAll(async () => {
     secretKey,
     production: false,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),
@@ -178,6 +180,8 @@ test('文件键逐字比较，只允许 active，读文件保持字节', async (
     secretKey,
     production: false,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),
@@ -239,6 +243,8 @@ test('机密设置加密后可读；随机 IV；错误密钥、明文和篡改�
     secretKey: 'wrong-key'.repeat(8),
     production: false,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),
@@ -293,6 +299,8 @@ test('createCore 和 encodeSettingValue 都立即拒绝过短的 secretKey', () 
       secretKey: 'short',
       production: false,
       textureStorage: {
+        list: () => Promise.resolve([]),
+        listTemp: () => Promise.resolve([]),
         lateDeleteWindowMs: 0,
         write: () => Promise.resolve(),
         delete: () => Promise.resolve(),

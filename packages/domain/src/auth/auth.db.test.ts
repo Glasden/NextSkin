@@ -25,6 +25,8 @@ beforeAll(async () => {
     secretKey,
     production: false,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),
@@ -426,6 +428,8 @@ test('生产环境没有设置站点地址时拒绝处理认证请求，不信�
     secretKey,
     production: true,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),
@@ -517,6 +521,8 @@ test('createSession 复用登录 Cookie，记 IP 与 User-Agent，站点 URL 未
     secretKey,
     production: true,
     textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
       lateDeleteWindowMs: 0,
       write: () => Promise.resolve(),
       delete: () => Promise.resolve(),

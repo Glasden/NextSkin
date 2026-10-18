@@ -1,3 +1,7 @@
+import { createScheduler } from './jobs/schedules.ts'
+import { AUTH_CLEANUP_JOB, createAuthCleanup } from './auth/cleanup.ts'
+import { AUDIT_CLEANUP_JOB, createAuditCleanup } from './audit/cleanup.ts'
+import { TEXTURE_SWEEP_JOB, createTextureSweep } from './textures/sweep.ts'
 import { createAdmin } from './admin/service.ts'
 import { createCloset } from './closet/service.ts'
 import { createReports } from './reports/service.ts'
@@ -65,17 +69,43 @@ export function createCore(options: CoreOptions) {
   const events = createEvents(jobs, handlers)
   const mail = createMailService(options.db, settings, jobs, options.mailTransport)
   handlers.set(MAIL_JOB, mail.handler)
+  const leaseMs = options.textureClaimLeaseMs ?? 600_000
   const files = createTextureFiles({
     db: options.db,
     storage: options.textureStorage,
     renders,
     jobs,
     now,
-    leaseMs: options.textureClaimLeaseMs ?? 600_000,
+    leaseMs,
     deleteDelayMs: options.textureDeleteDelayMs ?? 3_600_000,
     attemptLeaseMs: options.textureDeleteAttemptLeaseMs,
   })
   for (const [name, handler] of Object.entries(files.handlers)) handlers.set(name, handler)
+  handlers.set(AUTH_CLEANUP_JOB, createAuthCleanup({ db: options.db, now }))
+  handlers.set(AUDIT_CLEANUP_JOB, createAuditCleanup({ db: options.db, settings, now }))
+  handlers.set(
+    TEXTURE_SWEEP_JOB,
+    createTextureSweep({
+      db: options.db,
+      storage: options.textureStorage,
+      files,
+      jobs,
+      now,
+      leaseMs,
+      log: options.jobs?.log,
+    }),
+  )
+  const schedules = createScheduler({
+    db: options.db,
+    jobs,
+    handlers,
+    now,
+    log: options.jobs?.log,
+    timeZone: async () => (await settings.read(['site.timeZone']))['site.timeZone'],
+  })
+  schedules.add({ name: AUTH_CLEANUP_JOB, job: AUTH_CLEANUP_JOB, cron: '17 4 * * *' })
+  schedules.add({ name: AUDIT_CLEANUP_JOB, job: AUDIT_CLEANUP_JOB, cron: '27 4 * * *' })
+  schedules.add({ name: TEXTURE_SWEEP_JOB, job: TEXTURE_SWEEP_JOB, cron: '47 4 * * 0' })
   const removal = createTextureRemoval(events, files)
   const textureOptions = {
     db: options.db,
@@ -131,6 +161,7 @@ export function createCore(options: CoreOptions) {
     auth,
     mail,
     jobs,
+    schedules,
     events: { subscribe: events.subscribe },
     users: {
       register: createRegister(options.db, settings, auth, mail, events),

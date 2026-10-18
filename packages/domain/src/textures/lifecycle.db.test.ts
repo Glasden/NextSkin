@@ -49,6 +49,8 @@ const pool = {
 }
 function createStorage(lateWindow: number) {
   return {
+    list: () => Promise.resolve([]),
+    listTemp: () => Promise.resolve([]),
     lateDeleteWindowMs: lateWindow,
     read: vi.fn<TextureStorage['read']>((key) => Promise.resolve(objects.get(key) ?? null)),
     write: vi.fn<TextureStorage['write']>((key, _claim, bytes) => {
@@ -707,6 +709,7 @@ function recycler() {
   })
   return () =>
     files.handlers[TEXTURE_RECYCLE_JOB]!.run({
+      jobId: 0,
       payload: { hash: hash() },
       attempt: 1,
       signal: new AbortController().signal,

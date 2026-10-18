@@ -144,6 +144,7 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0030_create_reports',
     '0031_create_audit_logs',
     '0032_resolve_orphaned_reports',
+    '0033_create_job_schedules',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -370,6 +371,7 @@ test('settings.value 无损读写七万字节的字符串', async () => {
 test('任务、死信和积分流水的列与 schema 一致', async () => {
   const tables = await db.introspection.getTables()
   const columns = {
+    job_schedules: ['name', 'cron', 'time_zone', 'next_run_at'],
     jobs: ['id', 'name', 'payload', 'dedupe_key', 'run_at', 'lease_id', 'attempts', 'last_error', 'created_at'],
     failed_jobs: ['id', 'name', 'payload', 'dedupe_key', 'attempts', 'last_error', 'created_at', 'failed_at'],
     score_transactions: ['id', 'user_id', 'delta', 'balance', 'reason', 'subject_type', 'subject_id', 'created_at'],
@@ -378,11 +380,13 @@ test('任务、死信和积分流水的列与 schema 一致', async () => {
     const table = tables.find((table) => table.name === name)!
     expect(table.columns.map((column) => column.name).sort()).toEqual([...expected].sort())
     const nullable =
-      name === 'jobs'
-        ? ['dedupe_key', 'lease_id', 'last_error']
-        : name === 'failed_jobs'
-          ? ['dedupe_key', 'last_error']
-          : ['subject_type', 'subject_id']
+      name === 'job_schedules'
+        ? []
+        : name === 'jobs'
+          ? ['dedupe_key', 'lease_id', 'last_error']
+          : name === 'failed_jobs'
+            ? ['dedupe_key', 'last_error']
+            : ['subject_type', 'subject_id']
     expect(
       table.columns
         .filter((column) => column.name !== 'id' && column.isNullable)

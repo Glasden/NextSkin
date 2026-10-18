@@ -247,6 +247,40 @@ export function createTextureFiles(options: {
       },
     },
   }
-  return { claim, release, handlers }
+  async function adoptOrphans(hashes: readonly string[]): Promise<number> {
+    // 绝大多数页没有孤儿，不为空页开事务（SQLite 上会白占一次写锁）
+    if (!hashes.length) return 0
+    return transactionWithRetry(db, async (tx) => {
+      const timestamp = at()
+      let adopted = 0
+      for (const hash of hashes) {
+        const inserted = await insertOrIgnore(
+          tx,
+          'texture_files',
+          {
+            hash,
+            pixel_hash: null,
+            width: null,
+            height: null,
+            size_bytes: null,
+            ref_count: 0,
+            status: 'deleting',
+            claim_id: randomUUID(),
+            status_changed_at: timestamp,
+            created_at: timestamp,
+            delete_attempted_at: null,
+            delete_confirmed_at: null,
+          },
+          ['hash'],
+        )
+        if (inserted) {
+          await scheduleRecycle(tx, hash)
+          adopted++
+        }
+      }
+      return adopted
+    })
+  }
+  return { claim, release, handlers, adoptOrphans }
 }
 export type TextureFiles = ReturnType<typeof createTextureFiles>
