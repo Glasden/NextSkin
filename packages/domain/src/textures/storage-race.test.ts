@@ -1,6 +1,7 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { removeTestDirectory } from '@nextskin/db/testing'
 import { expect, test, vi } from 'vitest'
 import { createLocalTextureStorage } from './storage.ts'
 
@@ -26,6 +27,6 @@ test('临时文件被清理后 write 必须失败，不产生最终文件', asyn
     )
     expect(await storage.read(hash)).toBeNull()
   } finally {
-    await rm(directory, { recursive: true, force: true })
+    await removeTestDirectory(directory)
   }
 })

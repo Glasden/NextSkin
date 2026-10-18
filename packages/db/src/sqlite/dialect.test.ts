@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -6,6 +6,7 @@ import { CompiledQuery, sql, type Kysely } from 'kysely'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { createDatabase } from '../database.ts'
 import { SqliteWalDialect, SqliteWriteLockTimeoutError } from './dialect.ts'
+import { removeTestDirectory } from '../testing.ts'
 
 interface Schema {
   items: { n: number }
@@ -27,7 +28,7 @@ afterEach(async () => {
   try {
     await db.destroy()
   } finally {
-    await rm(directory, { recursive: true, force: true })
+    await removeTestDirectory(directory)
   }
 })
 

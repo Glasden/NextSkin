@@ -26,6 +26,15 @@ export function testDatabaseAdminUrl(): string | undefined {
   return process.env[variable] ?? defaults[dialect]
 }
 
+/**
+ * 删除测试用的临时目录。Windows 上刚删掉的文件可能还处在“删除待定”状态（杀毒软件、索引服务还拿着句柄），
+ * 紧接着删目录会报 ENOTEMPTY：SQLite 的连接已经关了、目录里也只剩数据库文件，200 次里仍有几次。
+ * Node 的 rm 遇到 ENOTEMPTY、EBUSY、EPERM 时按 retryDelay 线性退避重试
+ */
+export function removeTestDirectory(directory: string): Promise<void> {
+  return rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
+}
+
 export interface TestDatabase<DB> {
   db: Kysely<DB>
   cleanup(): Promise<void>
@@ -43,7 +52,7 @@ export async function createTestDatabase<DB>(): Promise<TestDatabase<DB>> {
         try {
           await db.destroy()
         } finally {
-          await rm(directory, { recursive: true, force: true })
+          await removeTestDirectory(directory)
         }
       },
     }

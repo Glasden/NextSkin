@@ -1,6 +1,7 @@
-import { mkdtemp, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { removeTestDirectory } from '@nextskin/db/testing'
 import { RENDERER_VERSION } from '@nextskin/skin'
 import { afterAll, beforeAll, expect, test } from 'vitest'
 import { createLocalRenderCache, createMemoryRenderCache, type RenderCache, type RenderKey } from './render-cache.ts'
@@ -10,7 +11,7 @@ beforeAll(async () => {
   directory = await mkdtemp(join(tmpdir(), 'nextskin-cache-'))
 })
 afterAll(async () => {
-  await rm(directory, { recursive: true, force: true })
+  await removeTestDirectory(directory)
 })
 const key: RenderKey = { hash: 'a'.repeat(64), kind: 'figure', model: 'alex', k: 1 }
 async function verify(cache: RenderCache) {

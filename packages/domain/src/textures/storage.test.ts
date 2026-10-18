@@ -1,5 +1,6 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { removeTestDirectory } from '@nextskin/db/testing'
 import { afterAll, beforeAll, expect, test } from 'vitest'
 import { createLocalTextureStorage } from './storage.ts'
 
@@ -8,7 +9,7 @@ beforeAll(async () => {
   directory = await mkdtemp('/tmp/nextskin-storage-')
 })
 afterAll(async () => {
-  if (directory) await rm(directory, { recursive: true, force: true })
+  if (directory) await removeTestDirectory(directory)
 })
 
 test('按 hash 返回原始字节，缺文件返回 null', async () => {
