@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0 .",
-    "typecheck": "next typegen && node ../../node_modules/typescript-native/bin/tsc -p .",
+    "typegen": "next typegen",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
     "e2e": "playwright test"
   },
   "dependencies": {

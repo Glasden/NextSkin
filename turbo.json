@@ -9,11 +9,16 @@
       "dependsOn": ["^build", "typecheck"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
+    // Next 的 next-env.d.ts 和 .next/types 不进仓库，由 typegen 生成；类型检查和带类型的 lint 都读它们。
+    // 只在这里生成一次：两个任务并行跑时，lint 可能读到还没生成或正在重写的文件
+    "typegen": {
+      "cache": false
+    },
     "typecheck": {
-      "dependsOn": ["transit"]
+      "dependsOn": ["transit", "typegen"]
     },
     "lint": {
-      "dependsOn": ["transit"],
+      "dependsOn": ["transit", "typegen"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/eslint.config.js", "$TURBO_ROOT$/packages/eslint-plugin/src/**"]
     },
     "test": {
