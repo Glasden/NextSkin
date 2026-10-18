@@ -370,12 +370,17 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 
 ### 插件
 
-- **plugins**：已安装的插件。列：`id`（插件 id，主键）、`version`、`is_enabled`、`capabilities`（管理员授予的能力，JSON）、安装和更新时间。
-- **plugin_kv**：`ctx.kv`。主键 `(plugin_id, key)`，`value` 是长文本 JSON；外键 → plugins，cascade。
+- **plugins**：启用过的官方插件和已安装的插件，一个插件一行。官方插件第一次启用时才有这一行。列：
+  - `id`（插件 id，主键）、`version`、`is_enabled`；
+  - `capabilities`：管理员授予的能力，JSON。第一版安装时授予 manifest 申请的全部能力（ADR-0033）；
+  - `package_hash`：安装插件存在存储接口里的插件包的 sha256，可空，官方插件为空。多实例部署时，各实例按它取包、校验（ADR-0033）；
+  - `last_error`：最近一次启用或升级失败的原因，varchar(500)，可空。插件抛出的消息截到 500 字符，同 `jobs.last_error`；
+  - 安装和更新时间。
+- **plugin_kv**：`ctx.kv`。主键 `(plugin_id, key)`，`value` 是长文本 JSON，不超过 64 KB；`expires_at` 可空，建索引：读到过期的行当作不存在，定时任务清理；外键 → plugins，cascade。
 - **plugin_migrations**：插件自有表的迁移记录。主键 `(plugin_id, name)`。
 - 插件自有表的物理名是 `p_<id>__<名字>`，不能引用核心表（ADR-0010）。
 - 插件的设置存在 `settings` 里，namespace 是 `plugin:<id>`。
-- 卸载插件时删除它的表、KV、设置、迁移记录和还没完成的任务。
+- 卸载插件时删除它的表、KV、设置、迁移记录、还没完成的任务、定时任务条目、死信和存储里的插件包（ADR-0033）。
 
 ## 从 BS 导入
 

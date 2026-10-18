@@ -20,16 +20,16 @@
 | [0006](0006-new-schema-and-importer.md) | 新 schema + 只读导入器，不沿用旧表结构 | 已采纳（对账报告的抽样比对一条已被 ADR-0031 取代） |
 | [0007](0007-auth.md) | 认证：Better Auth + 自写 Yggdrasil 令牌体系 | 已采纳（S1 通过） |
 | [0008](0008-zero-native-deps.md) | 零原生依赖：node:sqlite + 纯 TS/WASM 图像管线 | 已采纳（S2、S4 通过） |
-| [0009](0009-plugin-runtime.md) | 插件运行模型：官方插件在核心进程内，安装插件在 plugin host，整代切换 | 已采纳 |
-| [0010](0010-plugin-api.md) | 插件 API：声明式定义、六类扩展点、能力授权、独立版本 | 已采纳（S5 通过） |
-| [0011](0011-plugin-ui.md) | 插件 UI：声明式为默认，运行时组件共享宿主 React | 已采纳（S3 通过） |
+| [0009](0009-plugin-runtime.md) | 插件运行模型：官方插件在核心进程内，安装插件在 plugin host，整代切换 | 已采纳（plugin host 由谁拉起、多实例的换代由 ADR-0033 补充） |
+| [0010](0010-plugin-api.md) | 插件 API：声明式定义、六类扩展点、能力授权、独立版本 | 已采纳（S5 通过；第一版的公开面和插件事务由 ADR-0033 补充） |
+| [0011](0011-plugin-ui.md) | 插件 UI：声明式为默认，运行时组件共享宿主 React | 已采纳（S3 通过；第一版只有声明式 UI，见 ADR-0033） |
 | [0012](0012-frontend-foundation.md) | 前端基座：token 单一来源 + Base UI + 自有组件库 | 已采纳（react-email 一条已被 ADR-0020 取代） |
 | [0013](0013-version-baseline.md) | 版本基线：Node 26 LTS、Next.js ≥16.4.1、TypeScript 7 | 已采纳 |
 | [0014](0014-toolchain.md) | 工具链：pnpm + Turborepo，TypeScript 7 做类型检查（TS 6 只给依赖编译器 API 的工具），ESLint、Prettier、Vitest、changesets | 已采纳 |
 | [0015](0015-core-schema-conventions.md) | 核心 schema 约定：时间存 ISO 字符串、角色名靠规范化列、UUID 绑定角色；逐表设计见 `docs/schema.md` | 已采纳 |
 | [0016](0016-protocol-contract.md) | 协议契约以录制结果为判据；客户端可能依赖的 BS 行为照样复现，只有异常输入才触发的 Laravel/PHP 副产品不复现 | 已采纳（"不复现"一表由 ADR-0030 补充了一类） |
 | [0017](0017-skin-figure-rendering.md) | 皮肤的 2D 正背面由服务端出图，按显示倍数选分辨率，浏览器只做整数倍放大 | 已采纳 |
-| [0018](0018-registration-and-mail.md) | 注册走领域用例，规则和默认值取 BS；邮件在事务之外异步发送 | 已采纳（react-email 一条已被 ADR-0020 取代，进程内的邮件队列一条已被 ADR-0021 取代） |
+| [0018](0018-registration-and-mail.md) | 注册走领域用例，规则和默认值取 BS；邮件在事务之外异步发送 | 已采纳（react-email 一条已被 ADR-0020 取代，进程内的邮件队列一条已被 ADR-0021 取代，验证码由官方插件接一条已被 ADR-0033 取代） |
 | [0019](0019-i18n.md) | 国际化：URL 不带语言前缀，消息集中在 `packages/i18n`，接口错误带 code 和本地化文案 | 已采纳 |
 | [0020](0020-email-templates-without-react.md) | 邮件模板不用 React，改用无依赖的 HTML 模板函数（取代 ADR-0012、ADR-0018 里 react-email 的部分） | 已采纳 |
 | [0021](0021-events-and-jobs.md) | 事件和后台任务共用数据库里的一张任务表，事件在业务事务里按订阅者展开成任务；积分只经过 `adjustScore` 修改（取代 ADR-0002 里队列的 Redis 驱动、ADR-0018 里进程内的邮件队列） | 已采纳（`job_schedules` 的列一条已被 ADR-0029 取代） |
@@ -44,6 +44,7 @@
 | [0030](0030-yggdrasil-authserver.md) | Yggdrasil：authserver 令牌存进自己的表，不与 OAuth 令牌合并；修掉 yggdrasil-api 的越权和吊销缺陷；开了两步验证的账号在密码后面接验证码（补充 ADR-0016 的"不复现"一表） | 已采纳 |
 | [0031](0031-blessing-skin-importer.md) | BS 导入器：安装向导、后台和命令行共用一个导入引擎，每次运行整库替换，在一个目标库事务里写完；不经过领域用例；报告逐个比对全部角色 | 已采纳 |
 | [0032](0032-home-page.md) | 首页：领奖台按最近 7 天新加进衣柜的次数排前三名，不满三个时空着不补位；站点描述和页脚（Markdown，放备案号）交给新的设置项；标志改成折起来的头，favicon 由 token 生成 | 已采纳 |
+| [0033](0033-plugin-system-v1.md) | 插件系统第一版：机制按最终形态做，公开面只开参考插件用得到的部分；插件不写核心数据、不自己开事务，没有运行时组件；事务内的拦截器只能访问插件自己的表；验证码改为做进核心（补充 ADR-0009、0010、0011，取代 ADR-0018 的验证码一句） | 已采纳 |
 
 ## 待做的 spike
 

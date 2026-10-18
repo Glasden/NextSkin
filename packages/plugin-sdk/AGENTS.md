@@ -4,7 +4,9 @@
 
 ## 当前状态
 
-设计草案，未发布（`prepublishOnly` 会拦住误发布）。`pnpm check` 覆盖本包：
+设计草案，未发布（`prepublishOnly` 会拦住误发布）。第一版（SDK 1.0）的公开面由 `docs/adr/0033-plugin-system-v1.md` 确定，比草案小：草案里推迟的部分（该 ADR 的"SDK 的改动"一节）随插件运行时落地的第一步删掉。不要往这些部分加东西，新增扩展点、能力也要先改 ADR。
+
+`pnpm check` 覆盖本包：
 
 - `typecheck`：TS 7 检查 `src`、`examples`、`type-tests`；
 - `test`：用 TS 7 生成声明文件（`build`），再让 api-extractor 和 `etc/plugin-sdk.api.md` 比对，公开面有任何变化都会失败。
@@ -27,7 +29,7 @@ CI 用 `changeset status` 检查：本包 `src` 有任何改动都要附 changes
 - 插件 id：`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`。表名、索引名、约束名：`^[a-z][a-z0-9]*(_[a-z0-9]+)*$`。物理名 `p_<id，连字符换成下划线>__<名字>` 不超过 63 字符。不要放宽这两个正则：它们保证不同插件的物理名不可能相同。
 - 一个 FROM 项加最多 4 个 inner/left JOIN；没有 INSERT…SELECT、CTE、窗口函数；RETURNING 只能用在 INSERT 上。
 - 运算符、函数、聚合、数据类型都有白名单（见 `spikes/s5-remote-kysely/src/sanitize.ts`）。SDK 文档里列出的能力必须与这些白名单一致。
-- SQLite 模式下，插件自己开的事务占住全局写锁，默认时限 100 ms，超时回滚。插件文档要写明：事务里不要发网络请求。插件的读查询在专用 worker 连接上执行，带期限，超时被中止（S2）。
+- 第一版插件不能自己开事务（ADR-0033）：每条语句单独提交，需要原子性就用一条带条件的语句。只有事务内的拦截器加入核心事务，那里的 `ctx` 只有 `db` 和不用等核心回应的几项，没有 `fetch`、`kv`、`jobs`。插件的读查询在专用 worker 连接上执行，带期限，超时被中止（S2）。
 
 ## 写插件表迁移时的坑（同样要写进面向插件作者的文档）
 
