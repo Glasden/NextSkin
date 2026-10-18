@@ -65,3 +65,24 @@ export const NarrowScreen: Story = {
     ),
   ],
 }
+
+/** 页头里的全站导航：始终横排，当前项的标记在底边 */
+export const Header: Story = {
+  args: {
+    label: '全站',
+    placement: 'header',
+    children: (
+      <>
+        <NavItem href="#skinlib" icon={<Layout />} current>
+          皮肤库
+        </NavItem>
+        <NavItem href="#user" icon={<User />}>
+          用户中心
+        </NavItem>
+      </>
+    ),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('link', { name: '皮肤库' })).toHaveAttribute('aria-current', 'page')
+  },
+}

@@ -59,7 +59,8 @@ export interface Texture {
   readonly width: number
   readonly height: number
   readonly sizeBytes: number
-  readonly uploader: Uid
+  readonly uploader: Uid | null
+  readonly description: string | null
   readonly public: boolean
   readonly likes: number
   readonly uploadedAt: IsoDateTime

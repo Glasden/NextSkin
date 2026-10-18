@@ -25,6 +25,7 @@ test.describe('X-Authlib-Injector-API-Location 每个响应恰好一个', () => 
     '/csl',
     '/Nobody.json',
     '/textures/abc',
+    `/render/v1/head/1/${'0'.repeat(64)}.png`,
     '/no-such-page',
   ]) {
     test(path, async ({ request }) => {

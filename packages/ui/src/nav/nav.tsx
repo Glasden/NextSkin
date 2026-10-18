@@ -9,18 +9,29 @@ import { focusRing } from '../styles.ts'
 export interface NavProps {
   /** 读屏软件用的名称，例如“用户中心” */
   label: string
+  /**
+   * sidebar：用户中心和后台的侧栏，宽屏竖排、窄屏横排；
+   * header：页头里的全站导航，始终横排
+   */
+  placement?: 'sidebar' | 'header'
   /** NavItem */
   children: ReactNode
 }
 
 /**
- * 用户中心和后台的分区导航。宽屏（lg 以上）是侧栏里的竖排列表；窄屏改成横排，放不下时横向滚动。
+ * 分区导航。侧栏在宽屏（lg 以上）是竖排列表，窄屏改成横排，放不下时横向滚动；页头里的始终横排。
  * 页面里的分组切换用 Tabs
  */
-export function Nav({ label, children }: NavProps) {
+export function Nav({ label, placement = 'sidebar', children }: NavProps) {
   return (
     <nav aria-label={label} className="min-w-0">
-      <ul className="-mx-4 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
+      <ul
+        data-placement={placement}
+        className={cx(
+          'group/nav flex gap-1',
+          placement === 'sidebar' && '-mx-4 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0',
+        )}
+      >
         {children}
       </ul>
     </nav>
@@ -43,6 +54,8 @@ const itemClass = cx(
   // 当前项的标记：窄屏是底边 4px，宽屏是左边 4px，都是不圆角的色块
   'aria-[current=page]:after:absolute aria-[current=page]:after:inset-x-3 aria-[current=page]:after:bottom-0 aria-[current=page]:after:h-1 aria-[current=page]:after:bg-accent',
   'lg:aria-[current=page]:after:inset-x-auto lg:aria-[current=page]:after:inset-y-2 lg:aria-[current=page]:after:left-0 lg:aria-[current=page]:after:h-auto lg:aria-[current=page]:after:w-1',
+  // 页头里的导航宽屏也是横排，标记留在底边
+  'group-data-[placement=header]/nav:lg:aria-[current=page]:after:inset-x-3 group-data-[placement=header]/nav:lg:aria-[current=page]:after:inset-y-auto group-data-[placement=header]/nav:lg:aria-[current=page]:after:bottom-0 group-data-[placement=header]/nav:lg:aria-[current=page]:after:h-1 group-data-[placement=header]/nav:lg:aria-[current=page]:after:w-auto',
   focusRing,
   // 横排在窄屏上，点击区域扩到 44px（DESIGN.md §9）
   'pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:-inset-y-0.5',

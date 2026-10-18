@@ -65,7 +65,18 @@
     "locale_invalid": "请选择本站支持的语言。",
     "email_change_link_invalid": "改邮箱的链接已失效，请重新申请。",
     "admin_cannot_delete_self": "管理员不能删除自己的账号。",
-    "too_many_requests": "尝试次数太多，请稍后重试。"
+    "too_many_requests": "尝试次数太多，请稍后重试。",
+    "texture_not_found": "找不到这个材质，它可能已经被删除了。",
+    "texture_not_owned": "只有上传者可以修改或删除这个材质。",
+    "texture_duplicate": "这张图已经在皮肤库里了（材质 #{tid}），不用重复上传。",
+    "texture_file_invalid": "这个文件不是有效的 PNG 图片，换一个文件试试。",
+    "texture_size_invalid": "图片尺寸 {width}×{height} 不符合要求。皮肤的宽度是 64 的倍数，高度等于宽度或宽度的一半，纤细（Alex）模型必须是正方形；披风是 64×32 或 22×17 的整数倍；宽度最大 1024。",
+    "texture_file_too_large": "文件太大了，最大 {max} KB。",
+    "texture_name_length": "材质名长度要在 {min} 到 {max} 个字符之间。",
+    "texture_name_invalid": "材质名不符合本站的规则。",
+    "texture_name_rule_misconfigured": "本站的材质名规则设置有误，请联系管理员。",
+    "texture_description_too_long": "描述最多 {max} 个字符，请删减后重试。",
+    "texture_type_invalid": "这个材质不能改成这种模型：披风不能改，纤细（Alex）模型的皮肤必须是正方形。"
   },
   "score": {
     "reasons": {
@@ -73,7 +84,11 @@
       "import": "从旧站导入",
       "playerCreated": "添加角色",
       "playerDeleted": "删除角色退还",
-      "checkIn": "签到"
+      "checkIn": "签到",
+      "textureUploaded": "上传材质",
+      "textureVisibilityChanged": "更改材质的公开状态",
+      "textureDeleted": "删除材质退还",
+      "closetItemRefunded": "衣柜里的材质被移除，退还"
     }
   },
   "auth": {
@@ -406,6 +421,150 @@
         "deleted": "已删除通行密钥 {name}",
         "failed": "没有成功，请稍后重试。"
       }
+    }
+  },
+  "site": {
+    "nav": {
+      "label": "全站",
+      "skinlib": "皮肤库",
+      "upload": "上传"
+    },
+    "signIn": "登录",
+    "signUp": "注册"
+  },
+  "skinlib": {
+    "types": {
+      "skin": "皮肤",
+      "steve": "Steve",
+      "alex": "Alex",
+      "cape": "披风"
+    },
+    "private": "私有",
+    "inCloset": "已在衣柜",
+    "figureAlt": "{name}（{type}）",
+    "list": {
+      "title": "皮肤库",
+      "mineTitle": "我上传的",
+      "count": "{count} 个",
+      "description": "大家上传的皮肤和披风。收进衣柜，就能给角色换上。",
+      "mineDescription": "你上传的材质，包括只有你自己看得到的私有材质。",
+      "uploaderDescription": "{name} 上传的公开材质。",
+      "allUploaders": "看全部上传者",
+      "mine": "我上传的",
+      "upload": "上传材质",
+      "typeLabel": "材质类型",
+      "sortLabel": "排序",
+      "types": {
+        "skin": "全部皮肤",
+        "steve": "Steve",
+        "alex": "Alex",
+        "cape": "披风"
+      },
+      "sorts": {
+        "latest": "最新",
+        "popular": "最热"
+      },
+      "searchLabel": "按名字搜索材质",
+      "searchPlaceholder": "材质名",
+      "search": "搜索",
+      "meta": "{type} · {likes, plural, other {#}} 人收藏",
+      "pagination": "皮肤库分页",
+      "previous": "上一页",
+      "next": "下一页",
+      "page": "第 {page} 页",
+      "noResultsTitle": "没有找到符合条件的材质",
+      "noResultsDescription": "换个关键词，或者清除筛选条件再看看。",
+      "clearFilters": "清除筛选条件",
+      "emptyTitle": "皮肤库还是空的",
+      "emptyDescription": "上传的公开材质会出现在这里，所有人都能收进衣柜。",
+      "mineEmptyTitle": "你还没有上传过材质",
+      "mineEmptyDescription": "上传一张皮肤或披风，就能给自己的角色用上。",
+      "uploadFirst": "上传材质"
+    },
+    "detail": {
+      "back": "返回皮肤库",
+      "notFound": "找不到这个材质",
+      "viewer": "{name} 的 3D 预览",
+      "animation": "动作",
+      "idle": "站立",
+      "walk": "行走",
+      "run": "奔跑",
+      "outerLayer": "显示外层",
+      "loading": "正在加载 3D 预览",
+      "failed": "3D 预览加载失败，刷新页面试试。",
+      "likes": "收藏",
+      "size": "尺寸",
+      "fileSize": "文件大小",
+      "kilobytes": "{size} KB",
+      "uploadedAt": "上传时间",
+      "uploader": "上传者",
+      "uploaderGone": "上传者已注销",
+      "description": "描述",
+      "noDescription": "上传者没有写描述。",
+      "download": "下载 PNG"
+    },
+    "manage": {
+      "edit": "编辑",
+      "editTitle": "编辑材质",
+      "name": "材质名",
+      "nameHint": "1 到 {max} 个字符。",
+      "nameHintRule": "1 到 {max} 个字符，还要符合本站的规则。",
+      "model": "模型",
+      "modelHint": "Steve 是经典的 4 像素手臂，Alex 是纤细的 3 像素手臂。改了以后，正在用它的角色在游戏里也会换模型。",
+      "description": "描述",
+      "descriptionHint": "选填，按纯文本显示，可以换行。",
+      "save": "保存",
+      "saved": "已保存",
+      "failed": "没有成功，请稍后重试。",
+      "makePublic": "改成公开",
+      "makePrivate": "改成私有",
+      "makePublicTitle": "把 {name} 改成公开？",
+      "makePrivateTitle": "把 {name} 改成私有？",
+      "makePublicHint": "公开后所有人都能看到、收进衣柜。{change, select, refund {按现价重新计算存储费，退还 {amount, plural, other {#}} 积分。} cost {按现价重新计算存储费，要再付 {amount, plural, other {#}} 积分。} other {}}",
+      "makePrivateHint": "私有后只有你自己看得到。{change, select, cost {按现价重新计算存储费，要再付 {amount, plural, other {#}} 积分。} refund {按现价重新计算存储费，退还 {amount, plural, other {#}} 积分。} other {}}{closets, plural, =0 {} other {它会从 # 个别人的衣柜里移除，正在用它的角色换回默认皮肤。}}",
+      "madePublic": "{refund, plural, =0 {已改成公开} other {已改成公开，退还 # 积分}}",
+      "madePrivate": "{cost, plural, =0 {已改成私有} other {已改成私有，扣除 # 积分}}",
+      "delete": "删除",
+      "deleteTitle": "删除 {name}？",
+      "deleteHint": "{refund, plural, =0 {删除后不退还积分} other {删除后退还 # 积分}}{closets, plural, =0 {，} other {，它会从 # 个别人的衣柜里移除，正在用它的角色换回默认皮肤，}}无法恢复。",
+      "deleteConfirm": "删除材质",
+      "deleted": "已删除 {name}",
+      "deletedRefund": "已删除 {name}，退还 {refund, plural, other {#}} 积分"
+    },
+    "upload": {
+      "title": "上传材质",
+      "intro": "上传皮肤或披风。公开的材质会出现在皮肤库里，大家都能收进衣柜；私有的只有你自己看得到。",
+      "banned": "你的账号已被封禁，不能上传材质。",
+      "verifyFirst": "验证邮箱之后，才能上传材质。",
+      "tooLarge": "文件太大了，最大 {max} KB。",
+      "notPng": "这个文件不是有效的 PNG 图片，换一个文件试试。",
+      "badSize": "图片尺寸 {width}×{height} 不符合要求：皮肤的宽度是 64 的倍数，高度等于宽度或宽度的一半；披风是 64×32 或 22×17 的整数倍。",
+      "previewAlt": "要上传的{type}的预览",
+      "previewing": "正在生成预览",
+      "typeMismatch": "这张图不能用作{type}：纤细（Alex）模型必须是正方形的皮肤，披风是 64×32 或 22×17 的整数倍。",
+      "fileInfo": "{name} · {width}×{height} · {size} KB",
+      "chooseAnother": "换一个文件",
+      "dropTitle": "把 PNG 文件拖到这里",
+      "dropDescription": "皮肤的宽度是 64 的倍数，宽度最大 1024；披风是 64×32 或 22×17 的整数倍。文件最大 {max} KB。",
+      "chooseFile": "选择文件",
+      "name": "材质名",
+      "nameHint": "1 到 {max} 个字符，默认取文件名。",
+      "nameHintRule": "1 到 {max} 个字符，还要符合本站的规则。",
+      "type": "类型",
+      "typeHint": "已经按图片推断了模型，不对的话可以改。",
+      "typeAmbiguous": "64×32 这类 2:1 的图，可能是旧版皮肤，也可能是披风，请确认。",
+      "public": "公开到皮肤库",
+      "publicHint": "存储费按文件大小计：公开每 KB {public, plural, other {#}} 积分，私有每 KB {private, plural, other {#}} 积分。",
+      "description": "描述",
+      "descriptionHint": "选填，按纯文本显示，可以换行。",
+      "cost": "最多扣 {cost, plural, other {#}} 积分，你现在有 {score} 积分。实际按处理后的文件大小计算，通常更少。",
+      "free": "上传这个材质不需要积分。",
+      "costUnknown": "选好文件后显示要扣多少积分。你现在有 {score, plural, other {#}} 积分。",
+      "mayBeInsufficient": "你的积分可能不够。实际花费按处理后的文件计算，通常比估计的少，可以先试试。",
+      "submit": "上传",
+      "uploaded": "已上传 {name}",
+      "uploadedCharged": "已上传 {name}，扣除 {cost, plural, other {#}} 积分",
+      "failed": "没有成功，请稍后重试。"
     }
   }
 }

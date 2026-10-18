@@ -31,3 +31,15 @@ export type { IsoTimestamp } from '@nextskin/db'
 
 export type { ChangeEmailResult } from './users/manage.ts'
 export type { PrivateUser } from '@nextskin/plugin-sdk'
+
+export { RENDERER_VERSION } from '@nextskin/skin'
+export { createImagePool, type ImagePool } from './textures/image-pool.ts'
+export {
+  createMemoryRenderCache,
+  createLocalRenderCache,
+  type RenderCache,
+  type RenderKey,
+} from './textures/render-cache.ts'
+
+export type { Texture, TextureType } from '@nextskin/plugin-sdk'
+export type { TextureSummary, TextureDetail, TextureListInput } from './textures/queries.ts'

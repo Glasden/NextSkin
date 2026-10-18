@@ -4,6 +4,8 @@ import {
   PostgresAdapter,
   SqliteAdapter,
   sql,
+  type RawBuilder,
+  type SqlBool,
   type CreateTableBuilder,
   type InsertObject,
   type Kysely,
@@ -446,4 +448,10 @@ export function readAuthBoolean(value: unknown): boolean {
   if (typeof value === 'boolean') return value
   if (value === 0 || value === 1) return value === 1
   throw new TypeError('认证布尔值必须是 boolean 或数字 0 / 1')
+}
+
+/** Literal substring search. SQLite lower() folds ASCII only; no dialect-specific Unicode promise. */
+export function containsInsensitive(column: string, value: string): RawBuilder<SqlBool> {
+  const escaped = value.replace(/[!%_]/g, (character) => `!${character}`)
+  return sql<SqlBool>`lower(${sql.ref(column)}) like lower(${`%${escaped}%`}) escape '!'`
 }

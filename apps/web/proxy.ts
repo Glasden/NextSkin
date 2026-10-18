@@ -10,6 +10,7 @@ const HONO_PATHS = [
   /^\/(?:csl|usm)(?:\/.*)?$/,
   /^\/(?:skin|cape)\/[^/]+\.png$/,
   /^\/textures\/[^/]+$/,
+  /^\/render(?:\/.*)?$/,
 ]
 
 /**

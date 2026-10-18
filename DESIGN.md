@@ -169,7 +169,7 @@
 
 ## 6. 组件清单
 
-落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、IconButton、Form、Field、Input、Checkbox、Select、Dialog、Toast、Alert、Badge、Stage、SkinFigure、FigurePlaceholder、NameTag、PlayerCard、Nav、Logo、Link、Menu、Tooltip、EmptyState、QrCode。
+落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、IconButton、Form、Field、Input、Textarea、Checkbox、Switch、Select、SegmentedControl、FileDrop、Dialog、Toast、Alert、Badge、Stage、SkinFigure、SkinViewer、FigurePlaceholder、NameTag、PlayerCard、PlayerHead、TextureCard、Nav、Logo、Link、Menu、Tooltip、EmptyState、Pagination、QrCode。
 
 | 组件 | 何时用 | 何时不用 |
 |---|---|---|
@@ -178,9 +178,11 @@
 | Form | 提交数据的表单：约束校验和服务端按字段名返回的错误显示在对应的 Field 下方 | — |
 | Field | 包裹所有表单控件，统一标签、帮助文字和错误信息的位置 | — |
 | Input | 单行文本，放在 Field 里；和同一行的 Button 取相同尺寸 | 多行文本改用 Textarea |
+| Textarea | 多行文本，例如材质描述、举报理由；设了 `maxLength` 就在右下角显示字数 | 单行文本改用 Input |
 | Checkbox | 需要点“保存”才生效的选项、同意条款；标签文字写在组件里 | 立即生效的开关，改用 Switch |
 | Select | 从几个固定的选项里选一个，例如界面语言。放在 Field 里时 Field 设 `nativeLabel={false}`：触发器是按钮，原生 label 会把点击转给它 | 选项多到需要搜索时改用 Combobox；三到五个即时切换的选项改用 SegmentedControl |
 | Switch | 立即生效的开关设置 | 需要点“保存”才生效的表单，改用 Checkbox |
+| FileDrop | 选一个本地文件：拖进来，或点按钮打开文件选择框，例如上传材质 | — |
 | SegmentedControl | 三到五个互斥选项的即时切换，例如材质类型、3D 预览的动作 | 选项多或需要说明时，改用 Tabs 或 Select |
 | Chip | 可以多选的筛选条件 | 互斥的选项，改用 SegmentedControl |
 | Tabs | 页面内的分组切换，可以带数量 | 只有两三个即时切换的选项，改用 SegmentedControl |
@@ -208,7 +210,8 @@
 | Menu | 一组跳转和操作，例如页头的用户菜单 | 少于两项时直接放按钮或链接 |
 | Tooltip | 图标按钮的名称这类补充说明。触屏设备上不显示 | 必须读到的内容 |
 | QrCode | 要用手机扫的内容，例如两步验证给验证器的地址。亮色、暗色主题下都是浅底深色，每个模块 4px | 用户可以直接点的地址，给 Link |
-| EmptyState、Skeleton、Pagination | 见各自 story | |
+| Pagination | 前台列表的分页，例如皮肤库、衣柜：页码都是链接，不需要 JS；窄屏只显示“当前页 / 总页数” | 后台表格以后另定 |
+| EmptyState、Skeleton | 见各自 story | |
 
 ## 7. 状态模式
 

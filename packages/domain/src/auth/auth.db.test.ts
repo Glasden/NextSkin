@@ -24,7 +24,13 @@ beforeAll(async () => {
     db: database.db,
     secretKey,
     production: false,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
   })
 })
 afterAll(async () => database?.cleanup())
@@ -419,7 +425,13 @@ test('生产环境没有设置站点地址时拒绝处理认证请求，不信�
     db: database.db,
     secretKey,
     production: true,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
   })
   const response = await new Browser(production).request('/api/auth/sign-up/email', {
     json: { email: 'steve@example.test', password, name: 'Steve' },
@@ -504,7 +516,13 @@ test('createSession 复用登录 Cookie，记 IP 与 User-Agent，站点 URL 未
     db: database.db,
     secretKey,
     production: true,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
   })
   await expect(
     production.auth.createSession({

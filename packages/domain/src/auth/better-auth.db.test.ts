@@ -19,7 +19,13 @@ beforeAll(async () => {
     db: database.db,
     secretKey: 'test-only-secret-key-with-at-least-32-characters',
     production: false,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
   })
   auth = createAuth({
     db: database.db,

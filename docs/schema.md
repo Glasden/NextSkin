@@ -167,7 +167,7 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | created_at | 时间 | 非空 | |
 | updated_at | 时间 | 非空 | |
 
-皮肤库的索引按三种查询建：公开材质按类型和时间、公开材质按类型和收藏数、按上传者（ADR-0025）。列的顺序在四种数据库上看过执行计划再定。
+皮肤库的索引按三种查询建（ADR-0025）：`(is_public, id, type)`、`(is_public, likes, id, type)`、`(uploader_id, id)`。`type` 放在最后："全部皮肤"是 `type in ('steve', 'alex')`，`type` 在前时 SQLite 和 PostgreSQL 都要额外排序；放在最后，按 `id` 或 `likes, id` 倒序扫索引就能边扫边过滤，四种数据库的执行计划都已看过。
 
 ### closet_items
 

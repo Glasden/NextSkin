@@ -36,6 +36,16 @@ export async function sendJson(
   }
 }
 
+/** 发一个 multipart 表单，例如上传材质。Content-Type 由浏览器按 FormData 填，带上分隔符 */
+export async function postForm(path: string, body: FormData): Promise<{ status: number; data: unknown }> {
+  try {
+    const response = await fetch(path, { method: 'POST', body })
+    return { status: response.status, data: await response.json().catch(() => null) }
+  } catch {
+    return { status: 0, data: null }
+  }
+}
+
 /** GET 一个 JSON 接口，例如 Better Auth 生成通行密钥参数的接口 */
 export async function getJson(path: string): Promise<{ status: number; data: unknown }> {
   try {

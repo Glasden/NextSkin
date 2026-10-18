@@ -28,7 +28,8 @@
     "@base-ui/react": "1.9.0",
     "@nextskin/skin": "workspace:*",
     "pixelarticons": "catalog:",
-    "qr": "0.7.2"
+    "qr": "0.7.2",
+    "skinview3d": "3.4.2"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",

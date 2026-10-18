@@ -65,7 +65,18 @@
     "locale_invalid": "Choose a language supported by this site.",
     "email_change_link_invalid": "This email change link is invalid or expired. Request a new one.",
     "admin_cannot_delete_self": "Administrators cannot delete their own accounts.",
-    "too_many_requests": "Too many attempts. Please try again later."
+    "too_many_requests": "Too many attempts. Please try again later.",
+    "texture_not_found": "This texture could not be found. It may have been deleted.",
+    "texture_not_owned": "Only the uploader can edit or delete this texture.",
+    "texture_duplicate": "This image is already in the skin library (texture #{tid}). There is no need to upload it again.",
+    "texture_file_invalid": "This file is not a valid PNG image. Please try another file.",
+    "texture_size_invalid": "The image dimensions {width}×{height} are not supported. Skin width must be a multiple of 64, with height equal to the width or half the width. Slim (Alex) skins must be square. Capes must be an integer multiple of 64×32 or 22×17. Maximum width is 1024.",
+    "texture_file_too_large": "The file is too large. The maximum size is {max} KB.",
+    "texture_name_length": "Texture names must be between {min} and {max} characters long.",
+    "texture_name_invalid": "The texture name does not meet this site's rules.",
+    "texture_name_rule_misconfigured": "This site's texture name rule is misconfigured. Please contact an administrator.",
+    "texture_description_too_long": "Descriptions can be at most {max} characters long. Please shorten it and try again.",
+    "texture_type_invalid": "This texture cannot use that model. Capes cannot be changed, and slim (Alex) skins must be square."
   },
   "score": {
     "reasons": {
@@ -73,7 +84,11 @@
       "import": "Imported from the old site",
       "playerCreated": "Added a player",
       "playerDeleted": "Refund for a deleted player",
-      "checkIn": "Check-in"
+      "checkIn": "Check-in",
+      "textureUploaded": "Texture uploaded",
+      "textureVisibilityChanged": "Texture visibility changed",
+      "textureDeleted": "Texture deletion refund",
+      "closetItemRefunded": "Closet item removal refund"
     }
   },
   "auth": {
@@ -406,6 +421,150 @@
         "deleted": "Passkey {name} deleted",
         "failed": "That didn’t work. Please try again later."
       }
+    }
+  },
+  "site": {
+    "nav": {
+      "label": "Site",
+      "skinlib": "Skin library",
+      "upload": "Upload"
+    },
+    "signIn": "Sign in",
+    "signUp": "Sign up"
+  },
+  "skinlib": {
+    "types": {
+      "skin": "Skin",
+      "steve": "Steve",
+      "alex": "Alex",
+      "cape": "Cape"
+    },
+    "private": "Private",
+    "inCloset": "In closet",
+    "figureAlt": "{name} ({type})",
+    "list": {
+      "title": "Skin library",
+      "mineTitle": "My uploads",
+      "count": "{count}",
+      "description": "Skins and capes shared by everyone. Add one to your closet to put it on a player.",
+      "mineDescription": "Textures you uploaded, including private ones only you can see.",
+      "uploaderDescription": "Public textures uploaded by {name}.",
+      "allUploaders": "All uploaders",
+      "mine": "My uploads",
+      "upload": "Upload a texture",
+      "typeLabel": "Texture type",
+      "sortLabel": "Sort by",
+      "types": {
+        "skin": "All skins",
+        "steve": "Steve",
+        "alex": "Alex",
+        "cape": "Capes"
+      },
+      "sorts": {
+        "latest": "Latest",
+        "popular": "Popular"
+      },
+      "searchLabel": "Search textures by name",
+      "searchPlaceholder": "Texture name",
+      "search": "Search",
+      "meta": "{type} · {likes, plural, one {# like} other {# likes}}",
+      "pagination": "Skin library pages",
+      "previous": "Previous page",
+      "next": "Next page",
+      "page": "Page {page}",
+      "noResultsTitle": "No textures match",
+      "noResultsDescription": "Try another keyword, or clear the filters.",
+      "clearFilters": "Clear filters",
+      "emptyTitle": "The skin library is empty",
+      "emptyDescription": "Public textures show up here, and anyone can add them to their closet.",
+      "mineEmptyTitle": "You haven’t uploaded anything yet",
+      "mineEmptyDescription": "Upload a skin or cape to use it on your players.",
+      "uploadFirst": "Upload a texture"
+    },
+    "detail": {
+      "back": "Back to the skin library",
+      "notFound": "Texture not found",
+      "viewer": "3D preview of {name}",
+      "animation": "Animation",
+      "idle": "Idle",
+      "walk": "Walk",
+      "run": "Run",
+      "outerLayer": "Show outer layer",
+      "loading": "Loading the 3D preview",
+      "failed": "The 3D preview didn’t load. Try refreshing the page.",
+      "likes": "Likes",
+      "size": "Size",
+      "fileSize": "File size",
+      "kilobytes": "{size} KB",
+      "uploadedAt": "Uploaded",
+      "uploader": "Uploader",
+      "uploaderGone": "The uploader deleted their account",
+      "description": "Description",
+      "noDescription": "The uploader didn’t write a description.",
+      "download": "Download PNG"
+    },
+    "manage": {
+      "edit": "Edit",
+      "editTitle": "Edit texture",
+      "name": "Name",
+      "nameHint": "1 to {max} characters.",
+      "nameHintRule": "1 to {max} characters, following this site’s rules.",
+      "model": "Model",
+      "modelHint": "Steve has classic 4-pixel arms; Alex has slim 3-pixel arms. Players using this skin switch models in game too.",
+      "description": "Description",
+      "descriptionHint": "Optional. Shown as plain text; line breaks are kept.",
+      "save": "Save",
+      "saved": "Saved",
+      "failed": "That didn’t work. Please try again later.",
+      "makePublic": "Make public",
+      "makePrivate": "Make private",
+      "makePublicTitle": "Make {name} public?",
+      "makePrivateTitle": "Make {name} private?",
+      "makePublicHint": "Everyone will be able to see it and add it to their closet. {change, select, refund {The storage fee is recalculated at current prices: {amount, plural, one {# point} other {# points}} will be refunded.} cost {The storage fee is recalculated at current prices: it costs {amount, plural, one {# more point} other {# more points}}.} other {}}",
+      "makePrivateHint": "Only you will be able to see it. {change, select, cost {The storage fee is recalculated at current prices: it costs {amount, plural, one {# more point} other {# more points}}.} refund {The storage fee is recalculated at current prices: {amount, plural, one {# point} other {# points}} will be refunded.} other {}}{closets, plural, =0 {} one { It will be removed from # other closet, and players using it go back to the default skin.} other { It will be removed from # other closets, and players using it go back to the default skin.}}",
+      "madePublic": "{refund, plural, =0 {Made public} one {Made public, # point refunded} other {Made public, # points refunded}}",
+      "madePrivate": "{cost, plural, =0 {Made private} one {Made private, # point charged} other {Made private, # points charged}}",
+      "delete": "Delete",
+      "deleteTitle": "Delete {name}?",
+      "deleteHint": "{refund, plural, =0 {No points will be refunded.} one {# point will be refunded.} other {# points will be refunded.}}{closets, plural, =0 {} one { It will be removed from # other closet, and players using it go back to the default skin.} other { It will be removed from # other closets, and players using it go back to the default skin.}} This can’t be undone.",
+      "deleteConfirm": "Delete texture",
+      "deleted": "Deleted {name}",
+      "deletedRefund": "Deleted {name}, {refund, plural, one {# point} other {# points}} refunded"
+    },
+    "upload": {
+      "title": "Upload a texture",
+      "intro": "Upload a skin or cape. Public textures show up in the skin library for everyone to add to their closet; private ones are visible only to you.",
+      "banned": "Your account is banned and can’t upload textures.",
+      "verifyFirst": "Verify your email before uploading textures.",
+      "tooLarge": "The file is too large. The limit is {max} KB.",
+      "notPng": "This file isn’t a valid PNG image. Try another file.",
+      "badSize": "{width}×{height} isn’t a valid size: skins are a multiple of 64 wide and as tall as they are wide, or half that; capes are a multiple of 64×32 or 22×17.",
+      "previewAlt": "Preview of the {type} to upload",
+      "previewing": "Generating a preview",
+      "typeMismatch": "This image can’t be used as {type}: slim (Alex) skins must be square, and capes are a multiple of 64×32 or 22×17.",
+      "fileInfo": "{name} · {width}×{height} · {size} KB",
+      "chooseAnother": "Choose another file",
+      "dropTitle": "Drop a PNG file here",
+      "dropDescription": "Skins are a multiple of 64 wide, up to 1024; capes are a multiple of 64×32 or 22×17. Files up to {max} KB.",
+      "chooseFile": "Choose a file",
+      "name": "Name",
+      "nameHint": "1 to {max} characters. Defaults to the file name.",
+      "nameHintRule": "1 to {max} characters, following this site’s rules.",
+      "type": "Type",
+      "typeHint": "The model was guessed from the image. Change it if it’s wrong.",
+      "typeAmbiguous": "A 2:1 image such as 64×32 could be a legacy skin or a cape. Please check.",
+      "public": "Share in the skin library",
+      "publicHint": "The storage fee depends on the file size: {public, plural, one {# point} other {# points}} per KB if public, {private, plural, one {# point} other {# points}} per KB if private.",
+      "description": "Description",
+      "descriptionHint": "Optional. Shown as plain text; line breaks are kept.",
+      "cost": "Costs up to {cost, plural, one {# point} other {# points}}; you have {score}. The final cost uses the processed file size and is usually lower.",
+      "free": "Uploading this texture is free.",
+      "costUnknown": "Choose a file to see the cost. You have {score, plural, one {# point} other {# points}}.",
+      "mayBeInsufficient": "You may not have enough points. The final cost is usually lower than this estimate, so you can still try.",
+      "submit": "Upload",
+      "uploaded": "Uploaded {name}",
+      "uploadedCharged": "Uploaded {name}, {cost, plural, one {# point} other {# points}} charged",
+      "failed": "That didn’t work. Please try again later."
     }
   }
 }

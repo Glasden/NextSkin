@@ -14,13 +14,28 @@ import { createRegister } from './users/register.ts'
 import { createPlayerQueries } from './players/queries.ts'
 import { validateSecretKey } from './settings/codec.ts'
 import { createSettingQueries } from './settings/queries.ts'
-import { createTextureQueries } from './textures/queries.ts'
+import { createTextureLibraryQueries, createTextureQueries } from './textures/queries.ts'
+import { createImagePool, type ImagePool } from './textures/image-pool.ts'
+import { createMemoryRenderCache, type RenderCache } from './textures/render-cache.ts'
+import { createRenders } from './textures/renders.ts'
 import type { TextureStorage } from './textures/storage.ts'
+import { createTextureFiles } from './textures/files.ts'
+import { createTextureManagement } from './textures/manage.ts'
+import { createTextureRemoval } from './textures/removal.ts'
+import { createTextureUpload } from './textures/upload.ts'
 import { createSigningKeyQuery } from './yggdrasil/signing-key.ts'
 
 export interface CoreOptions {
   db: Kysely<CoreDatabase>
   textureStorage: TextureStorage
+  /** 材质用例与任务共享的时钟；同时供任务执行器入队和轮询使用。 */
+  now?: () => Date
+  textureClaimLeaseMs?: number
+  textureDeleteDelayMs?: number
+  /** 删除尝试的租期，默认 10 分钟，应远大于回收任务的超时。 */
+  textureDeleteAttemptLeaseMs?: number
+  renderCache?: RenderCache
+  imagePool?: ImagePool
   /** .env 里的密钥，用来解密机密设置；至少 32 个字符。 */
   secretKey: string
   /** 生产环境：站点地址必须在设置里填写（auth/service.ts） */
@@ -32,13 +47,44 @@ export interface CoreOptions {
 
 export function createCore(options: CoreOptions) {
   validateSecretKey(options.secretKey)
+  const imagePool = options.imagePool ?? createImagePool()
+  const renders = createRenders({
+    db: options.db,
+    storage: options.textureStorage,
+    cache: options.renderCache ?? createMemoryRenderCache(),
+    pool: imagePool,
+  })
   const settings = createSettingQueries(options.db, options.secretKey)
   // 执行器每次轮询都读这张表，事件订阅和核心任务往里登记处理函数
   const handlers = new Map<string, JobHandler>()
-  const jobs = createJobRunner({ ...options.jobs, db: options.db, handlers })
+  const now = options.now ?? options.jobs?.now ?? (() => new Date())
+  const jobs = createJobRunner({ ...options.jobs, now, db: options.db, handlers })
   const events = createEvents(jobs, handlers)
   const mail = createMailService(options.db, settings, jobs, options.mailTransport)
   handlers.set(MAIL_JOB, mail.handler)
+  const files = createTextureFiles({
+    db: options.db,
+    storage: options.textureStorage,
+    renders,
+    jobs,
+    now,
+    leaseMs: options.textureClaimLeaseMs ?? 600_000,
+    deleteDelayMs: options.textureDeleteDelayMs ?? 3_600_000,
+    attemptLeaseMs: options.textureDeleteAttemptLeaseMs,
+  })
+  for (const [name, handler] of Object.entries(files.handlers)) handlers.set(name, handler)
+  const removal = createTextureRemoval(events, files)
+  const textureOptions = {
+    db: options.db,
+    settings,
+    events,
+    files,
+    storage: options.textureStorage,
+    imagePool,
+    renders,
+    removal,
+    now,
+  }
   const auth = createAuthService({
     db: options.db,
     secretKey: options.secretKey,
@@ -60,7 +106,14 @@ export function createCore(options: CoreOptions) {
   })
   return {
     players: { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events) },
-    textures: createTextureQueries(options.db, options.textureStorage),
+    renders,
+    shutdown: () => imagePool.close(),
+    textures: {
+      ...createTextureQueries(options.db, options.textureStorage),
+      ...createTextureLibraryQueries(options.db, settings),
+      upload: createTextureUpload(textureOptions),
+      ...createTextureManagement(textureOptions),
+    },
     settings,
     auth,
     mail,
@@ -70,7 +123,7 @@ export function createCore(options: CoreOptions) {
       register: createRegister(options.db, settings, auth, mail, events),
       checkIn: createCheckIn(options.db, settings),
       ...createUserQueries(options.db, settings),
-      ...createUserManagement(options, settings, mail, jobs, events),
+      ...createUserManagement(options, settings, mail, jobs, events, removal, now),
     },
     score: createScoreQueries(options.db),
     yggdrasil: { getSigningKey: createSigningKeyQuery(settings) },

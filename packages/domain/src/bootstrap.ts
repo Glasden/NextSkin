@@ -2,12 +2,14 @@ import { mkdir } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { coreMigrations, createDatabase, migrateToLatest, type CoreDatabase, type DatabaseConfig } from '@nextskin/db'
 import { createCore, type Core } from './core.ts'
+import { createLocalRenderCache } from './textures/render-cache.ts'
 import { createLocalTextureStorage } from './textures/storage.ts'
 
 export interface CoreConfig {
   database: DatabaseConfig
   /** 本地材质存储目录 */
   textureDirectory: string
+  renderCacheDirectory: string
   secretKey: string
   production: boolean
 }
@@ -44,7 +46,13 @@ export function coreConfigFromEnv(
   }
   const secretKey = env.NEXTSKIN_SECRET || (options.production ? undefined : DEVELOPMENT_SECRET)
   if (!secretKey) throw new Error('没有设置 NEXTSKIN_SECRET；请在 .env 里写入至少 32 个字符的随机字符串')
-  return { database, textureDirectory: join(dataDirectory, 'textures'), secretKey, production: options.production }
+  return {
+    database,
+    textureDirectory: join(dataDirectory, 'textures'),
+    renderCacheDirectory: join(dataDirectory, 'render-cache'),
+    secretKey,
+    production: options.production,
+  }
 }
 
 /** 连接数据库、执行核心迁移、启动任务执行器，返回领域层的入口。启动器落地之前，由 Web 进程在启动时调用。 */
@@ -53,7 +61,10 @@ export async function openCore(config: CoreConfig): Promise<{ core: Core; close(
   const db = createDatabase<CoreDatabase>(config.database)
   try {
     await migrateToLatest(db, coreMigrations)
+    const renderCache = createLocalRenderCache(config.renderCacheDirectory)
+    void renderCache.pruneOtherVersions().catch(() => console.warn('旧版出图缓存清理失败'))
     const core = createCore({
+      renderCache,
       db,
       textureStorage: createLocalTextureStorage(config.textureDirectory),
       secretKey: config.secretKey,
@@ -64,6 +75,7 @@ export async function openCore(config: CoreConfig): Promise<{ core: Core; close(
       core,
       async close() {
         await core.jobs.stop()
+        await core.shutdown()
         await db.destroy()
       },
     }

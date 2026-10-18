@@ -1,7 +1,9 @@
+import { fileURLToPath } from 'node:url'
 import type { NextConfig } from 'next'
 import createNextIntlPlugin from 'next-intl/plugin'
 
-const root = new URL('../..', import.meta.url).pathname
+// 不用 URL 的 pathname：Windows 上会得到 /D:/… 这种无效路径
+const root = fileURLToPath(new URL('../..', import.meta.url))
 
 // 根路径上的协议端点转给 Hono（ADR-0003）。Route Handler 拿到的仍是改写前的 URL，所以目标只要落进
 // app/api/[...path] 即可。用 afterFiles：public 目录里的同名文件优先，与 BS 的 nginx try_files 相同。
@@ -13,6 +15,7 @@ const protocolRewrites = [
   '/skin/:player.png',
   '/cape/:player.png',
   '/textures/:hash',
+  '/render/:path*',
 ]
 
 const config: NextConfig = {
@@ -37,6 +40,8 @@ const config: NextConfig = {
       { source: '/auth/login', destination: '/sign-in', permanent: true },
       { source: '/auth/register', destination: '/sign-up', permanent: true },
       { source: '/auth/forgot', destination: '/forgot-password', permanent: true },
+      // BS 的材质详情页（ADR-0001 的例子）
+      { source: '/skinlib/show/:tid', destination: '/skinlib/:tid', permanent: true },
     ]),
   rewrites: () =>
     Promise.resolve({

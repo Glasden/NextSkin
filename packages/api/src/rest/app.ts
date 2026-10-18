@@ -11,8 +11,12 @@ import { registerCheckIn } from './check-in.ts'
 import { registerUser } from './user.ts'
 import { createMemoryRateLimiter, type RateLimiter } from './rate-limit.ts'
 import { registerRegistration } from './register.ts'
+import { registerTextures } from './textures.ts'
 
-export function createRestApp(core: Core, options: { rateLimiter?: RateLimiter } = {}) {
+export function createRestApp(
+  core: Core,
+  options: { rateLimiter?: RateLimiter; uploadRateLimiter?: RateLimiter } = {},
+) {
   const rateLimiter = options.rateLimiter ?? createMemoryRateLimiter()
   const errorResponse = createErrorResponse(core)
   const app = new OpenAPIHono<AppEnv>({
@@ -46,7 +50,30 @@ export function createRestApp(core: Core, options: { rateLimiter?: RateLimiter }
     )
     return respond(c, code, error instanceof DomainError ? error.params : undefined)
   })
-  app.use('*', bodyLimit({ maxSize: 16 * 1024 }))
+  app.use(
+    '*',
+    createMiddleware<AppEnv>(async (c, next) => {
+      if (c.req.method !== 'POST' || !/\/textures\/?$/.test(c.req.path)) {
+        const limit = bodyLimit({ maxSize: 16 * 1024 }) as MiddlewareHandler<AppEnv>
+        return limit(c, next)
+      }
+      const { 'texture.maxFileSizeKb': max } = await core.settings.read(['texture.maxFileSizeKb'])
+      c.set('textureMaxKb', max)
+      const maxSize = max * 1024 + 64 * 1024
+      if (Number(c.req.header('content-length')) > maxSize) throw new DomainError('texture_file_too_large', { max })
+      // bodyLimit 会信任 Content-Length；仍逐块计数，挡住伪造的小长度。
+      const headers = new Headers(c.req.raw.headers)
+      headers.delete('content-length')
+      c.req.raw = new Request(c.req.raw, { headers })
+      const limit = bodyLimit({
+        maxSize,
+        onError: () => {
+          throw new DomainError('texture_file_too_large', { max })
+        },
+      }) as MiddlewareHandler<AppEnv>
+      return limit(c, next)
+    }),
+  )
   app.use(
     '*',
     createMiddleware<AppEnv>(async (c, next) => {
@@ -60,6 +87,11 @@ export function createRestApp(core: Core, options: { rateLimiter?: RateLimiter }
   app.use(
     '*',
     createMiddleware<AppEnv>(async (c, next) => {
+      if (c.req.method === 'POST' && /\/textures\/?$/.test(c.req.path)) {
+        if (!/^multipart\/form-data(?:\s*;|$)/i.test(c.req.header('content-type') ?? ''))
+          return errorResponse(c, 'invalid_request', undefined, undefined, 415)
+        return next()
+      }
       if (
         !['GET', 'HEAD', 'OPTIONS'].includes(c.req.method) &&
         !/^application\/(?:[\w.-]+\+)?json(?:\s*;|$)/i.test(c.req.header('content-type') ?? '') &&
@@ -69,6 +101,11 @@ export function createRestApp(core: Core, options: { rateLimiter?: RateLimiter }
         return errorResponse(c, 'invalid_request', undefined, undefined, 415)
       await next()
     }),
+  )
+  registerTextures(
+    app,
+    core,
+    options.uploadRateLimiter ?? createMemoryRateLimiter(Date.now, { limit: 10, windowMs: 60_000 }),
   )
   registerRegistration(app, core)
   registerPlayers(app, core)

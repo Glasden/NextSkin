@@ -24,7 +24,8 @@
     "hash-wasm": "4.12.0",
     "kysely": "catalog:",
     "nodemailer": "10.1.0",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@nextskin/skin": "workspace:*"
   },
   "devDependencies": {
     "@simplewebauthn/server": "13.3.3",

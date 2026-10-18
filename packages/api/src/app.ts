@@ -8,6 +8,7 @@ import { registerLegacy } from './protocol/legacy.ts'
 import { registerTextures } from './protocol/textures.ts'
 import { registerUsm } from './protocol/usm.ts'
 import { registerYggdrasil } from './protocol/yggdrasil.ts'
+import { registerRender } from './render.ts'
 import { createRestApp } from './rest/app.ts'
 
 /** 所有非页面的 HTTP 端点；只依赖领域查询，不直接访问数据库。 */
@@ -36,6 +37,7 @@ export function createApp(options: { core: Core }) {
   registerLegacy(app, core)
   registerUsm(app, core)
   registerCsl(app, core)
+  registerRender(app, core)
   // REST 的通配中间件排在协议处理器后，避免协议请求经过 REST 的校验和设置读取。
   app.route('/api', createRestApp(core))
   return app

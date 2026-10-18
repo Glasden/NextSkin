@@ -49,7 +49,13 @@ beforeEach(async () => {
     db: db(),
     secretKey,
     production: false,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
     mailTransport: { send: () => Promise.resolve({ messageId: null }) },
   })
   actor = await user('owner')
@@ -341,7 +347,13 @@ test('生产环境已配置邮件却没有站点地址时拒绝签发，开发�
     db: db(),
     secretKey,
     production: true,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
   })
   await expect(production.users.changeEmail(actor, { email: 'new@example.test', password }, root)).rejects.toThrow(
     'site_url_required',
@@ -512,7 +524,13 @@ test('security 未开启两步验证返回 null 备用码数量，通行密钥�
     db: db(),
     secretKey,
     production: true,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
   })
   expect((await production.auth.security(actor.uid)).backupCodesRemaining).toBeNull()
 })
@@ -657,7 +675,13 @@ test.each(['updateProfile', 'changeEmail', 'deleteAccount'] as const)(
       db: db().withPlugin(afterRoleReadOnce(ban)),
       secretKey,
       production: false,
-      textureStorage: { read: () => Promise.resolve(null) },
+      textureStorage: {
+        lateDeleteWindowMs: 0,
+        write: () => Promise.resolve(),
+        delete: () => Promise.resolve(),
+        deleteTemp: () => Promise.resolve(),
+        read: () => Promise.resolve(null),
+      },
     })
     for (const name of ['user.profileUpdated', 'user.deleted', 'player.deleted'] as const)
       subject.events.subscribe(name, `test:${name}`, { run: () => Promise.resolve() })

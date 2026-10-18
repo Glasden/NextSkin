@@ -1,6 +1,7 @@
 export { createDatabase, type DatabaseConfig } from './database.ts'
 export { transactionWithRetry } from './transaction-retry.ts'
 export {
+  containsInsensitive,
   isUniqueViolation,
   isIsoTimestamp,
   toIsoTimestamp,
@@ -39,6 +40,7 @@ export type {
   UsersTable,
   TextureFilesTable,
   TexturesTable,
+  ClosetItemsTable,
   PlayersTable,
   SettingsTable,
   SessionsTable,

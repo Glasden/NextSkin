@@ -32,7 +32,18 @@ beforeEach(async () => {
   await db().deleteFrom('users').execute()
   await db().deleteFrom('jobs').execute()
   await db().deleteFrom('settings').execute()
-  core = createCore({ db: db(), secretKey, production: false, textureStorage: { read: () => Promise.resolve(null) } })
+  core = createCore({
+    db: db(),
+    secretKey,
+    production: false,
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
+  })
   actor = await user('owner')
 })
 async function user(name: string, score = 1000, role: UserRole = 'user', verified = true) {
@@ -157,7 +168,13 @@ test('离线 UUID 在预查之后才被改名的角色占上：整个用例重�
     db: db().withPlugin(missUuidPrecheckOnce()),
     secretKey,
     production: false,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
   })
   const player = await create('Steve')
   expect(player.uuid).toMatch(/^[0-9a-f]{32}$/)
@@ -440,7 +457,7 @@ test('listOwned 返回皮肤与披风摘要，overview 正确读取未验证布�
       hash,
       pixel_hash: hash,
       width: 64,
-      height: 64,
+      height: 32,
       size_bytes: 1024,
       ref_count: 2,
       status: 'active',
@@ -459,7 +476,7 @@ test('listOwned 返回皮肤与披风摘要，overview 正确读取未验证布�
     created_at: old,
     updated_at: old,
   }
-  const skin = await insertReturningId(db(), 'textures', { ...texture, name: '皮肤', type: 'alex' })
+  const skin = await insertReturningId(db(), 'textures', { ...texture, name: '皮肤', type: 'steve' })
   const cape = await insertReturningId(db(), 'textures', { ...texture, name: '披风', type: 'cape' })
   await db()
     .updateTable('players')
@@ -467,8 +484,8 @@ test('listOwned 返回皮肤与披风摘要，overview 正确读取未验证布�
     .where('id', '=', player.pid)
     .execute()
   expect((await core.players.listOwned(actor.uid))[0]).toMatchObject({
-    skin: { tid: skin, hash, type: 'alex' },
-    cape: { tid: cape, hash },
+    skin: { tid: skin, hash, type: 'steve', scale: 1 },
+    cape: { tid: cape, hash, scale: 1 },
   })
   await db().updateTable('users').set({ email_verified: false }).where('id', '=', actor.uid).execute()
   expect((await core.users.overview(actor.uid))!.emailVerified).toBe(false)

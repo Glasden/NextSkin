@@ -1,14 +1,18 @@
+import { join, resolve } from 'node:path'
 import { expect, test } from 'vitest'
 import { coreConfigFromEnv } from './bootstrap.ts'
 
-const dev = { cwd: '/srv/nextskin', production: false }
-const prod = { cwd: '/srv/nextskin', production: true }
+// 路径按当前平台解析：Windows 上工作目录是 D:\srv\nextskin 这样的形式，预期值也用 node:path 拼
+const cwd = resolve('/srv/nextskin')
+const dev = { cwd, production: false }
+const prod = { cwd, production: true }
 const secret = 'x'.repeat(32)
 
 test('默认把 SQLite 和材质放在工作目录下的 data', () => {
   const config = coreConfigFromEnv({}, dev)
-  expect(config.database).toEqual({ dialect: 'sqlite', file: '/srv/nextskin/data/nextskin.sqlite' })
-  expect(config.textureDirectory).toBe('/srv/nextskin/data/textures')
+  expect(config.database).toEqual({ dialect: 'sqlite', file: join(cwd, 'data', 'nextskin.sqlite') })
+  expect(config.textureDirectory).toBe(join(cwd, 'data', 'textures'))
+  expect(config.renderCacheDirectory).toBe(join(cwd, 'data', 'render-cache'))
 })
 
 test('数据目录和 SQLite 路径按工作目录解析', () => {
@@ -16,8 +20,8 @@ test('数据目录和 SQLite 路径按工作目录解析', () => {
     { NEXTSKIN_DATA_DIR: 'storage', NEXTSKIN_DATABASE_URL: 'sqlite:db/site.sqlite' },
     dev,
   )
-  expect(config.database).toEqual({ dialect: 'sqlite', file: '/srv/nextskin/db/site.sqlite' })
-  expect(config.textureDirectory).toBe('/srv/nextskin/storage/textures')
+  expect(config.database).toEqual({ dialect: 'sqlite', file: join(cwd, 'db', 'site.sqlite') })
+  expect(config.textureDirectory).toBe(join(cwd, 'storage', 'textures'))
 })
 
 test.each([

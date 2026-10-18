@@ -1,3 +1,4 @@
+import { textureScale, TextureShapeError } from '@nextskin/skin'
 import type { CoreDatabase, IsoTimestamp, TextureType } from '@nextskin/db'
 import type { Kysely } from 'kysely'
 
@@ -27,12 +28,22 @@ export interface OwnedPlayer {
   pid: number
   name: string
   uuid: string
-  skin: { tid: number; hash: string; type: 'steve' | 'alex' } | null
-  cape: { tid: number; hash: string } | null
+  skin: { tid: number; hash: string; type: 'steve' | 'alex'; scale: number } | null
+  cape: { tid: number; hash: string; scale: number } | null
   /** 创建时实际扣的积分，删除时按它退还（ADR-0022） */
   scorePaid: number
   createdAt: IsoTimestamp
   updatedAt: IsoTimestamp
+}
+
+function textureScaleOrNull(type: TextureType | null, width: number | null, height: number | null): number | null {
+  if (type === null || width === null || height === null) return null
+  try {
+    return textureScale(type, width, height)
+  } catch (error) {
+    if (error instanceof TextureShapeError) return null
+    throw error
+  }
 }
 
 export function createPlayerQueries(db: Kysely<CoreDatabase>) {
@@ -78,6 +89,8 @@ export function createPlayerQueries(db: Kysely<CoreDatabase>) {
         .selectFrom('players')
         .leftJoin('textures as skin', 'skin.id', 'players.skin_texture_id')
         .leftJoin('textures as cape', 'cape.id', 'players.cape_texture_id')
+        .leftJoin('texture_files as skinFile', 'skinFile.hash', 'skin.hash')
+        .leftJoin('texture_files as capeFile', 'capeFile.hash', 'cape.hash')
         .select([
           'players.id as pid',
           'players.name',
@@ -90,18 +103,47 @@ export function createPlayerQueries(db: Kysely<CoreDatabase>) {
           'skin.type as skinType',
           'cape.id as capeId',
           'cape.hash as capeHash',
+          'cape.type as capeType',
+          'skinFile.width as skinWidth',
+          'skinFile.height as skinHeight',
+          'capeFile.width as capeWidth',
+          'capeFile.height as capeHeight',
         ])
         .where('players.user_id', '=', uid)
         .orderBy('players.id', 'asc')
         .execute()
-      return rows.map(({ skinId, skinHash, skinType, capeId, capeHash, ...player }) => ({
-        ...player,
-        skin:
-          skinId !== null && skinHash !== null && (skinType === 'steve' || skinType === 'alex')
-            ? { tid: skinId, hash: skinHash, type: skinType }
-            : null,
-        cape: capeId !== null && capeHash !== null ? { tid: capeId, hash: capeHash } : null,
-      }))
+      return rows.map(
+        ({
+          skinId,
+          skinHash,
+          skinType,
+          capeId,
+          capeHash,
+          capeType,
+          skinWidth,
+          skinHeight,
+          capeWidth,
+          capeHeight,
+          ...player
+        }) => {
+          const skinScale = textureScaleOrNull(skinType, skinWidth, skinHeight)
+          const capeScale = textureScaleOrNull(capeType, capeWidth, capeHeight)
+          return {
+            ...player,
+            skin:
+              skinId !== null &&
+              skinHash !== null &&
+              skinScale !== null &&
+              (skinType === 'steve' || skinType === 'alex')
+                ? { tid: skinId, hash: skinHash, type: skinType, scale: skinScale }
+                : null,
+            cape:
+              capeId !== null && capeHash !== null && capeType === 'cape' && capeScale !== null
+                ? { tid: capeId, hash: capeHash, scale: capeScale }
+                : null,
+          }
+        },
+      )
     },
     findByName: (name: string) => find('players.name_key', normalizeNameLookup(name)),
     findByUuid: (uuid: string) => find('players.uuid', normalizeUuidLookup(uuid)),

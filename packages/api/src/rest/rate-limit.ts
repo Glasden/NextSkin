@@ -8,7 +8,10 @@ export interface RateLimiter {
   consume(key: string): RateLimitResult | Promise<RateLimitResult>
 }
 
-export function createMemoryRateLimiter(now: () => number = Date.now) {
+export function createMemoryRateLimiter(
+  now: () => number = Date.now,
+  options: { limit?: number; windowMs?: number } = {},
+) {
   const windows = new Map<string, { count: number; expiresAt: number }>()
   return {
     consume(key: string) {
@@ -17,10 +20,10 @@ export function createMemoryRateLimiter(now: () => number = Date.now) {
       for (const [uid, window] of windows) if (window.expiresAt <= time) windows.delete(uid)
       let window = windows.get(key)
       if (!window) {
-        window = { count: 0, expiresAt: time + 10_000 }
+        window = { count: 0, expiresAt: time + (options.windowMs ?? 10_000) }
         windows.set(key, window)
       }
-      if (window.count >= 3)
+      if (window.count >= (options.limit ?? 3))
         return { allowed: false, retryAfter: Math.max(1, Math.ceil((window.expiresAt - time) / 1000)) }
       window.count++
       return { allowed: true, retryAfter: 0 }

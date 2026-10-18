@@ -57,7 +57,13 @@ beforeEach(async () => {
     db: database.db,
     secretKey,
     production: false,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
     mailTransport: {
       send: async (message) => {
         // transport 能看到已提交的用户、账号和角色，发送发生在注册事务外。
@@ -296,7 +302,13 @@ test('离线 UUID 在预查之后才被改名的角色占上：注册重来一�
     db: database.db.withPlugin(missUuidPrecheckOnce()),
     secretKey,
     production: false,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
   })
   const { uid } = await core.users.register(input({ email: 'second@example.test' }))
   const player = await database.db

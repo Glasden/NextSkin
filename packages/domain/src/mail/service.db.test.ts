@@ -33,7 +33,13 @@ beforeEach(async () => {
     db: database.db,
     secretKey,
     production: false,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
     mailTransport: { send: (message) => send(message) },
     jobs: { log: (line) => lines.push(line) },
   })
@@ -127,7 +133,13 @@ test('发送失败到次数用完进死信：载荷去掉链接，错误和日�
     db: database.db,
     secretKey,
     production: false,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
     mailTransport: { send: (message) => send(message) },
     jobs: { log: (line) => lines.push(line), now: () => clock },
   })
@@ -179,7 +191,13 @@ test('确认新邮箱链接过期时丢弃，通知无期限；两种死信都�
     db: database.db,
     secretKey,
     production: false,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
     mailTransport: { send: (message) => send(message) },
     jobs: { now: () => clock, log: (line) => lines.push(line) },
   })

@@ -138,3 +138,22 @@ definePlugin({
     'texture.liked': async () => {},
   },
 })
+
+// 注销后的上传者与描述是材质 DTO 的契约；事件允许只更新描述。
+definePlugin({
+  capabilities: ['textures.read'],
+  on: {
+    'texture.updated': async ({ event, ctx }) => {
+      const texture = await ctx.textures.get(event.data.texture.tid)
+      const uploader: number | null | undefined = texture?.uploader
+      const description: string | null | undefined = texture?.description
+      const fields: readonly ('name' | 'type' | 'public' | 'description')[] = event.data.fields
+      void uploader
+      void description
+      void fields
+      // @ts-expect-error 上传者注销后可空，不能假设始终是 uid。
+      const uid: number = event.data.texture.uploader
+      void uid
+    },
+  },
+})

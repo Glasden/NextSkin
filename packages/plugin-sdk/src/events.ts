@@ -37,8 +37,8 @@ export interface CoreEvents {
   'player.deleted': { pid: Pid; uid: Uid; name: string; uuid: string }
 
   'texture.uploaded': { texture: Texture }
-  'texture.updated': { texture: Texture; fields: readonly ('name' | 'type' | 'public')[] }
-  /** `fileDeleted`：这个 hash 已经没有任何引用，物理文件已删除（刷 CDN 时只需关心这种情况）。 */
+  'texture.updated': { texture: Texture; fields: readonly ('name' | 'type' | 'public' | 'description')[] }
+  /** 此 hash 已无条目引用，`/textures/{hash}` 立即 404；文件随后后台删除。投递时文件多半还在，回收前可能重新上传。 */
   'texture.deleted': { tid: Tid; hash: string; type: TextureType; fileDeleted: boolean }
 
   'closet.itemAdded': { uid: Uid; tid: Tid }

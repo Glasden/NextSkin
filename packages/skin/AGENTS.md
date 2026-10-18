@@ -1,6 +1,6 @@
 # packages/skin
 
-材质的前处理和 2D 渲染（ADR-0017）。服务端的图像 worker 用它出图，浏览器的上传页也用它，所以 `src/` 里只能写标准 JS：不用 `node:` 模块、`Buffer`、`process`（lint 守着）。PNG 的编解码不在这里。
+材质的前处理和 2D 渲染（ADR-0017）。服务端的图像 worker 用它出图，浏览器的上传页也用它，所以 `src/` 里只能写标准 JS：不用 `node:` 模块、`Buffer`、`process`（lint 守着）。PNG 的解析和解码（纯 JS，解压由调用方做）在 `src/png.ts`；编码和服务端的把关在 `@nextskin/domain`。
 
 - 任何输出像素变了，都要把 `RENDERER_VERSION` 加 1，再运行 `pnpm --filter @nextskin/skin golden`、`pnpm --filter @nextskin/skin assets` 和 `pnpm --filter @nextskin/ui skin:fixtures`。版本号在出图地址里，不升的话浏览器和 CDN 会一直用旧图。不升版本号时，黄金图测试会失败，生成脚本也拒绝写入。
 - 规则以 S4（`spikes/s4-image-pipeline/src/render.ts`）为准，合成的算术（float32 和截断的顺序）也要一致。

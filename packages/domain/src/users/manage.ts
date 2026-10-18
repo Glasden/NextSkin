@@ -9,6 +9,8 @@ import type { Events } from '../events/emit.ts'
 import type { JobRunner } from '../jobs/runner.ts'
 import { MAIL_JOB, type MailService } from '../mail/service.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
+import { lockTexture } from '../textures/manage.ts'
+import type { TextureRemoval } from '../textures/removal.ts'
 import { createEmailChangeTokens, EMAIL_CHANGE_TTL_SECONDS } from './email-change-token.ts'
 import { lockUser, type UserActor } from './lock.ts'
 import { createUserQueries } from './queries.ts'
@@ -22,6 +24,8 @@ export function createUserManagement(
   mail: MailService,
   jobs: Pick<JobRunner, 'enqueue'>,
   events: Events,
+  textureRemoval: TextureRemoval,
+  textureNow: () => Date,
 ) {
   const { db } = options
   const tokens = createEmailChangeTokens(options.secretKey)
@@ -214,11 +218,12 @@ export function createUserManagement(
     async deleteAccount(actor: UserActor, input: { password: string }): Promise<void> {
       await assertActiveUser(actor.uid)
       await checkPassword(actor.uid, input.password)
+      const { 'score.refundOnDelete': refund } = await settings.read(['score.refundOnDelete'])
       await transactionWithRetry(db, async (tx) => {
         const user = await lockUser(tx, actor.uid)
         if (user.role === 'admin' || user.role === 'superadmin') throw new DomainError('admin_cannot_delete_self')
         if (user.role === 'banned') throw new DomainError('user_banned')
-        const now = toIsoTimestamp(new Date())
+        const now = toIsoTimestamp(textureNow())
         const eventActor = { kind: 'user' as const, uid: actor.uid, role: user.role }
         const players = await tx
           .selectFrom('players')
@@ -236,7 +241,38 @@ export function createUserManagement(
             now,
           )
         }
-        // 材质和衣柜落地后补 docs/schema.md 的 closet_items 扣收藏数、私有材质删除与公开材质保留（ADR-0023 后果）。
+        const items = await tx
+          .selectFrom('closet_items')
+          .select('texture_id')
+          .where('user_id', '=', actor.uid)
+          .orderBy('texture_id')
+          .execute()
+        for (const item of items) {
+          await lockTexture(tx, item.texture_id)
+          await tx
+            .deleteFrom('closet_items')
+            .where('user_id', '=', actor.uid)
+            .where('texture_id', '=', item.texture_id)
+            .execute()
+          await tx
+            .updateTable('textures')
+            .set((eb) => ({ likes: eb('likes', '-', 1) }))
+            .where('id', '=', item.texture_id)
+            .execute()
+          await events.emit(tx, 'closet.itemRemoved', eventActor, { uid: actor.uid, tid: item.texture_id }, now)
+        }
+        const privateTextures = await tx
+          .selectFrom('textures')
+          .select('id')
+          .where('uploader_id', '=', actor.uid)
+          .where('is_public', '=', 0)
+          .orderBy('id')
+          .execute()
+        for (const { id } of privateTextures) {
+          const texture = await lockTexture(tx, id)
+          if (texture)
+            await textureRemoval.remove(tx, texture, { actor: eventActor, refund, deletedAccountUid: actor.uid, now })
+        }
         await tx.deleteFrom('users').where('id', '=', actor.uid).execute()
         await events.emit(tx, 'user.deleted', eventActor, { uid: actor.uid }, now)
       })

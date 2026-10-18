@@ -59,6 +59,7 @@ export interface PlayersApi {
 
 export interface TexturesApi {
   get(tid: Tid): Promise<Texture | null>
+  /** 同一 hash 可有多个条目，优先返回公开的，其次取 tid 最小的。 */
   findByHash(hash: string): Promise<Texture | null>
 }
 

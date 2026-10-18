@@ -23,8 +23,13 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   use: { baseURL: `http://localhost:${port}` },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: 'account.spec.ts' },
-    { name: 'account', use: { ...devices['Desktop Chrome'], baseURL: accountSite }, testMatch: 'account.spec.ts' },
+    // 页面发 multipart 请求或经过 Better Auth 的用例，要求站点地址等于浏览器的 Origin，跑在 account 服务上
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: ['account.spec.ts', 'skinlib.spec.ts'] },
+    {
+      name: 'account',
+      use: { ...devices['Desktop Chrome'], baseURL: accountSite },
+      testMatch: ['account.spec.ts', 'skinlib.spec.ts'],
+    },
   ],
   // e2e 任务依赖 build（turbo.json），这里启动 standalone 产物；静态资源要按 Next 文档手动复制进去
   webServer: [

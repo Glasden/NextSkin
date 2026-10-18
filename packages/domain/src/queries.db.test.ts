@@ -43,7 +43,13 @@ beforeAll(async () => {
     db: database.db,
     secretKey,
     production: false,
-    textureStorage: { read: () => Promise.resolve(bytes) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(bytes),
+    },
   })
 })
 afterAll(async () => database?.cleanup())
@@ -171,7 +177,13 @@ test('文件键逐字比较，只允许 active，读文件保持字节', async (
     db: database.db,
     secretKey,
     production: false,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
   })
   expect(await missing.textures.readFile(hash)).toBeNull()
 })
@@ -226,7 +238,13 @@ test('机密设置加密后可读；随机 IV；错误密钥、明文和篡改�
     db: database.db,
     secretKey: 'wrong-key'.repeat(8),
     production: false,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
   })
   await expect(wrongKey.settings.read([key])).rejects.toThrow(readFailure('yggdrasil.signingKey'))
   for (const field of ['data', 'iv', 'tag'] as const) {
@@ -274,7 +292,13 @@ test('createCore 和 encodeSettingValue 都立即拒绝过短的 secretKey', () 
       db: database.db,
       secretKey: 'short',
       production: false,
-      textureStorage: { read: () => Promise.resolve(null) },
+      textureStorage: {
+        lateDeleteWindowMs: 0,
+        write: () => Promise.resolve(),
+        delete: () => Promise.resolve(),
+        deleteTemp: () => Promise.resolve(),
+        read: () => Promise.resolve(null),
+      },
     }),
   ).toThrow('NEXTSKIN_SECRET 设为至少 32 个字符')
   expect(() => encodeSettingValue('site.name', 'valid', { secretKey: 'short' })).toThrow(

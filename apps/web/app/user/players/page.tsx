@@ -1,10 +1,11 @@
-import { Alert, EmptyState, FigurePlaceholder, PlayerCard } from '@nextskin/ui'
+import { Alert, EmptyState, FigurePlaceholder, PlayerCard, SkinFigure } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { Users } from 'pixelarticons/react/Users.js'
 import { getServer } from '../../../lib/server'
 import { requireUser } from '../../../lib/session'
+import { figureSrc } from '../../../lib/textures'
 import { AddPlayerDialog } from './add-player-dialog'
 import { CopyUuidButton } from './copy-uuid-button'
 import { DeletePlayerDialog, RenamePlayerDialog } from './player-dialogs'
@@ -73,10 +74,17 @@ export default async function PlayersPage() {
               key={player.pid}
               name={player.name}
               figure={
-                <FigurePlaceholder
-                  scale={4}
-                  label={player.skin ? t('figure', { name: player.name }) : t('figureEmpty', { name: player.name })}
-                />
+                player.skin ? (
+                  <SkinFigure
+                    src={figureSrc(player.skin.hash, player.skin.type)}
+                    type={player.skin.type}
+                    textureScale={player.skin.scale}
+                    scale={4}
+                    alt={t('figure', { name: player.name })}
+                  />
+                ) : (
+                  <FigurePlaceholder scale={4} label={t('figureEmpty', { name: player.name })} />
+                )
               }
               actions={
                 <>

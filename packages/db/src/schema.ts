@@ -39,6 +39,7 @@ export interface TextureFilesTable {
 }
 
 export interface TexturesTable {
+  score_paid: Generated<number>
   id: Generated<number>
   hash: string
   name: string
@@ -49,6 +50,14 @@ export interface TexturesTable {
   likes: Generated<number>
   created_at: IsoTimestamp
   updated_at: IsoTimestamp
+}
+
+export interface ClosetItemsTable {
+  user_id: number
+  texture_id: number
+  name: string
+  score_paid: Generated<number>
+  created_at: IsoTimestamp
 }
 
 export interface PlayersTable {
@@ -324,6 +333,7 @@ export interface CoreDatabase {
   score_transactions: ScoreTransactionsTable
   users: UsersTable
   texture_files: TextureFilesTable
+  closet_items: ClosetItemsTable
   textures: TexturesTable
   players: PlayersTable
   settings: SettingsTable

@@ -136,6 +136,9 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0024_create_score_transactions',
     '0025_add_players_score_paid',
     '0026_add_users_email_version',
+    '0027_add_textures_score_paid',
+    '0028_create_closet_items',
+    '0029_create_textures_library_indexes',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -160,8 +163,8 @@ test('类型化写入完整引用关系，读回各列、默认值和认证字�
   })
   expect(await db.selectFrom('texture_files').selectAll().execute()).toEqual([file])
   expect(await db.selectFrom('textures').selectAll().orderBy('id').execute()).toEqual([
-    { ...texture('alex'), id: skinId, likes: 0 },
-    { ...texture('cape'), id: capeId, likes: 0 },
+    { ...texture('alex'), id: skinId, likes: 0, score_paid: 0 },
+    { ...texture('cape'), id: capeId, likes: 0, score_paid: 0 },
   ])
   expect(await db.selectFrom('players').selectAll().execute()).toEqual([{ ...player(), id: playerId, score_paid: 0 }])
   expect(await db.selectFrom('settings').selectAll().where('key', '=', setting.key).execute()).toEqual([setting])
@@ -324,8 +327,8 @@ test('删除用户级联删除其角色，同时保留材质并将上传者置�
   await db.deleteFrom('users').where('id', '=', userId).execute()
   expect(await db.selectFrom('players').selectAll().execute()).toEqual([])
   expect(await db.selectFrom('textures').selectAll().orderBy('id').execute()).toEqual([
-    { ...texture('alex'), id: skinId, likes: 0, uploader_id: null },
-    { ...texture('cape'), id: capeId, likes: 0, uploader_id: null },
+    { ...texture('alex'), id: skinId, likes: 0, score_paid: 0, uploader_id: null },
+    { ...texture('cape'), id: capeId, likes: 0, score_paid: 0, uploader_id: null },
   ])
 })
 
@@ -482,7 +485,9 @@ test('邮箱版本迁移为已有用户和新用户补 0，拒绝 NULL，自增�
       updated_at: now,
     }
     const existing = await insertReturningId(upgrade.db, 'users', values)
-    expect(await migrateToLatest(upgrade.db, coreMigrations)).toEqual(['0026_add_users_email_version'])
+    expect(await migrateToLatest(upgrade.db, coreMigrations)).toEqual(
+      Object.keys(coreMigrations).filter((name) => name >= '0026_add_users_email_version'),
+    )
     const added = await insertReturningId(upgrade.db, 'users', { ...values, email: 'after@example.test' })
     const version = async (uid: number) =>
       (await upgrade.db.selectFrom('users').select('email_version').where('id', '=', uid).executeTakeFirstOrThrow())
@@ -508,6 +513,63 @@ test('邮箱版本迁移为已有用户和新用户补 0，拒绝 NULL，自增�
         .where('id', '=', existing)
         .execute(),
     ).rejects.toThrow()
+  } finally {
+    await upgrade.cleanup()
+  }
+})
+
+test('材质实付默认 0 且非空；衣柜复合主键、双向外键级联和实付默认值', async () => {
+  expect(
+    (await db.selectFrom('textures').select('score_paid').where('id', '=', skinId).executeTakeFirstOrThrow())
+      .score_paid,
+  ).toBe(0)
+  await expect(
+    db
+      .updateTable('textures')
+      .set({ score_paid: null as unknown as number })
+      .where('id', '=', skinId)
+      .execute(),
+  ).rejects.toThrow()
+  const item = { user_id: userId, texture_id: skinId, name: '衣柜', created_at: timestamp }
+  await db.insertInto('closet_items').values(item).execute()
+  expect(await db.selectFrom('closet_items').selectAll().execute()).toEqual([{ ...item, score_paid: 0 }])
+  await expect(db.insertInto('closet_items').values(item).execute()).rejects.toThrow()
+  await expect(
+    db
+      .insertInto('closet_items')
+      .values({ ...item, texture_id: -1 })
+      .execute(),
+  ).rejects.toThrow()
+  await expect(
+    db
+      .insertInto('closet_items')
+      .values({ ...item, user_id: -1 })
+      .execute(),
+  ).rejects.toThrow()
+  await db.deleteFrom('textures').where('id', '=', skinId).execute()
+  expect(await db.selectFrom('closet_items').selectAll().execute()).toEqual([])
+  await db
+    .insertInto('closet_items')
+    .values({ ...item, texture_id: capeId, score_paid: 7 })
+    .execute()
+  await db.deleteFrom('users').where('id', '=', userId).execute()
+  expect(await db.selectFrom('closet_items').selectAll().execute()).toEqual([])
+})
+
+test('材质实付迁移为已有条目补 0，不改文件和条目内容', async () => {
+  const upgrade = await createTestDatabase<CoreDatabase>()
+  try {
+    await migrateToLatest(
+      upgrade.db,
+      Object.fromEntries(Object.entries(coreMigrations).filter(([name]) => name < '0027_add_textures_score_paid')),
+    )
+    await upgrade.db.insertInto('texture_files').values(file).execute()
+    const tid = await insertReturningId(upgrade.db, 'textures', { ...texture('alex'), uploader_id: null })
+    await migrateToLatest(upgrade.db, coreMigrations)
+    expect(await upgrade.db.selectFrom('textures').selectAll().where('id', '=', tid).executeTakeFirstOrThrow()).toEqual(
+      { ...texture('alex'), uploader_id: null, id: tid, likes: 0, score_paid: 0 },
+    )
+    expect(await upgrade.db.selectFrom('texture_files').selectAll().execute()).toEqual([file])
   } finally {
     await upgrade.cleanup()
   }

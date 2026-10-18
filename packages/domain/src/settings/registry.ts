@@ -46,6 +46,11 @@ export const coreSettingsRegistry = {
   },
   'auth.requireEmailVerification': { schema: z.boolean(), default: false, secret: false },
   'score.perPlayer': { schema: z.int().min(0).max(2147483647), default: 100, secret: false },
+  'score.perKbPublic': { schema: z.int().min(0).max(2147483647), default: 1, secret: false },
+  'score.perKbPrivate': { schema: z.int().min(0).max(2147483647), default: 10, secret: false },
+  'score.perClosetItem': { schema: z.int().min(0).max(2147483647), default: 0, secret: false },
+  'texture.maxFileSizeKb': { schema: z.int().min(1).max(8192), default: 1024, secret: false },
+  'texture.nameRegex': { schema: z.string(), default: '', secret: false },
   'score.refundOnDelete': { schema: z.boolean(), default: true, secret: false },
   'checkIn.score': {
     schema: z

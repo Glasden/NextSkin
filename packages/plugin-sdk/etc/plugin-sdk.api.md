@@ -157,7 +157,7 @@ export interface CoreEvents {
     // (undocumented)
     'texture.updated': {
         texture: Texture;
-        fields: readonly ('name' | 'type' | 'public')[];
+        fields: readonly ('name' | 'type' | 'public' | 'description')[];
     };
     // (undocumented)
     'texture.uploaded': {
@@ -879,6 +879,8 @@ export interface TableSourceResponse {
 
 // @public (undocumented)
 export interface Texture {
+    // (undocumented)
+    readonly description: string | null;
     readonly hash: string;
     // (undocumented)
     readonly height: number;
@@ -897,7 +899,7 @@ export interface Texture {
     // (undocumented)
     readonly uploadedAt: IsoDateTime;
     // (undocumented)
-    readonly uploader: Uid;
+    readonly uploader: Uid | null;
     // (undocumented)
     readonly width: number;
 }
@@ -910,7 +912,6 @@ export interface TextureFilesApi {
 
 // @public (undocumented)
 export interface TexturesApi {
-    // (undocumented)
     findByHash(hash: string): Promise<Texture | null>;
     // (undocumented)
     get(tid: Tid): Promise<Texture | null>;
@@ -1021,8 +1022,8 @@ export { z }
 
 // Warnings were encountered during analysis:
 //
-// dist/types/context.d.ts:113:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
-// dist/types/context.d.ts:117:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
+// dist/types/context.d.ts:114:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
+// dist/types/context.d.ts:118:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
 // dist/types/routes.d.ts:29:5 - (ae-forgotten-export) The symbol "RouteArgs" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)

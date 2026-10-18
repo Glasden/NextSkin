@@ -254,3 +254,13 @@ export function renderHead(image: Rgba, type: 'steve' | 'alex', k: number): Rgba
   draw(out, skin, s, k, 40, 8, 8, 8, 0, 0, true)
   return out
 }
+
+export {
+  PngError,
+  parsePng,
+  decodePngScanlines,
+  decodePng,
+  normalizeTexture,
+  type PngLimits,
+  type ParsedPng,
+} from './png.ts'

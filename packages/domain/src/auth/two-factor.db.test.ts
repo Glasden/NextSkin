@@ -35,7 +35,13 @@ beforeEach(async () => {
     db: db(),
     secretKey,
     production: false,
-    textureStorage: { read: () => Promise.resolve(null) },
+    textureStorage: {
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
     mailTransport: { send: () => Promise.resolve({ messageId: null }) },
   })
   uid = (await core.users.register({ email, password, playerName: 'Security', ip: '127.0.0.1', locale: 'en' })).uid
