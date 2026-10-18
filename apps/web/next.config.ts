@@ -7,7 +7,7 @@ const root = fileURLToPath(new URL('../..', import.meta.url))
 
 // 根路径上的协议端点转给 Hono（ADR-0003）。Route Handler 拿到的仍是改写前的 URL，所以目标只要落进
 // app/api/[...path] 即可。用 afterFiles：public 目录里的同名文件优先，与 BS 的 nginx try_files 相同。
-// 改了这里要同步 e2e/protocol.spec.ts
+// 改了这里要同步 e2e/protocol.spec.ts 和 proxy.ts 的 HONO_PATHS
 const protocolRewrites = [
   '/:player.json',
   '/csl/:path*',
@@ -16,6 +16,8 @@ const protocolRewrites = [
   '/cape/:player.png',
   '/textures/:hash',
   '/render/:path*',
+  // 插件的路由（ADR-0033）
+  '/plugins/:id/:path*',
 ]
 
 const config: NextConfig = {

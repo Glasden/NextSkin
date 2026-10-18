@@ -1,21 +1,33 @@
 {
-  "page": { "refresh": "刷新 CDN" },
+  "page": {
+    "refresh": "刷新 CDN"
+  },
   "field": {
     "paths": "要刷新的地址",
     "pathsHelp": "一行一个，写完整地址或以 / 开头的路径，只能是本站的。角色换材质、改名和材质删除时插件会自动刷新，这里只用来补刷。",
     "pathsPlaceholder": "/csl/Steve.json"
   },
-  "action": { "refresh": "刷新" },
+  "action": {
+    "refresh": "刷新"
+  },
   "refresh": {
     "queued": "已经排进队列：{count, plural, other {# 个地址}}。刷新失败会自动重试，一直失败的任务显示在插件页上。"
   },
-  "error": { "invalidPaths": "地址格式不对，或者不是本站的地址。一次最多 1000 个。" },
-  "permission": { "refresh": "手动刷新 CDN 缓存" },
+  "error": {
+    "invalidPaths": "地址格式不对，或者不是本站的地址。一次最多 1000 个。"
+  },
+  "permission": {
+    "refresh": "手动刷新 CDN 缓存"
+  },
   "settings": {
     "provider": {
       "label": "CDN 服务商",
       "help": "站点放在哪家的 CDN 后面。",
-      "options": { "aliyun": "阿里云 CDN", "tencent": "腾讯云 CDN", "azure": "Azure Front Door" }
+      "options": {
+        "aliyun": "阿里云 CDN",
+        "tencent": "腾讯云 CDN",
+        "azure": "Azure Front Door"
+      }
     },
     "baseUrl": {
       "label": "CDN 上的站点地址",
@@ -29,10 +41,25 @@
       "label": "密钥",
       "help": "阿里云的 AccessKey Secret、腾讯云的 SecretKey，或 Azure 应用的客户端密码。只给刷新缓存的权限就够了。"
     },
-    "azureTenantId": { "label": "Azure 租户 ID", "help": "只有 Azure Front Door 要填，下面几项也是。" },
-    "azureSubscriptionId": { "label": "Azure 订阅 ID" },
-    "azureResourceGroup": { "label": "Azure 资源组" },
-    "azureProfile": { "label": "Front Door 配置文件名" },
-    "azureEndpoint": { "label": "Front Door 终结点名" }
+    "azureTenantId": {
+      "label": "Azure 租户 ID",
+      "help": "只有 Azure Front Door 要填，下面几项也是。"
+    },
+    "azureSubscriptionId": {
+      "label": "Azure 订阅 ID"
+    },
+    "azureResourceGroup": {
+      "label": "Azure 资源组"
+    },
+    "azureProfile": {
+      "label": "Front Door 配置文件名"
+    },
+    "azureEndpoint": {
+      "label": "Front Door 终结点名"
+    }
+  },
+  "plugin": {
+    "name": "CDN 缓存刷新",
+    "description": "站点放在 CDN 后面时，角色换了材质、改了名或删掉之后，以及材质删除之后，自动刷新相应地址的缓存。支持阿里云、腾讯云和 Azure Front Door。"
   }
 }

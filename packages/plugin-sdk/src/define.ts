@@ -1,12 +1,12 @@
 import { z } from 'zod'
-import type { Capability } from './capabilities'
-import type { PluginContext, PluginMigration, TableDef, TableMap, TransactionalPluginContext } from './context'
-import type { Json } from './dto'
-import type { EventHandler, EventName } from './events'
-import type { InterceptorName, InterceptorRegistration, interceptorPolicies } from './interceptors'
-import type { Providers } from './providers'
-import type { RouteDefinition, RouteKey } from './routes'
-import type { MessageKey, UiContributions } from './ui'
+import type { Capability } from './capabilities.ts'
+import type { PluginContext, PluginMigration, TableDef, TableMap, TransactionalPluginContext } from './context.ts'
+import type { Json } from './dto.ts'
+import type { EventHandler, EventName } from './events.ts'
+import type { InterceptorName, InterceptorRegistration, interceptorPolicies } from './interceptors.ts'
+import type { Providers } from './providers.ts'
+import type { RouteDefinition, RouteKey } from './routes.ts'
+import type { MessageKey, UiContributions } from './ui.ts'
 
 export type SettingsSchema = z.ZodObject
 export type PermissionMap = Readonly<Record<string, MessageKey>>

@@ -158,6 +158,21 @@ function toUser(row: UserRow): AdminUser {
     avatar: row.avatarHash !== null && scale !== null ? { hash: row.avatarHash, scale } : null,
   }
 }
+/** 只要昵称和头像：插件的表格里按 uid 渲染用户（ADR-0033） */
+export async function userSummaries(
+  db: Kysely<CoreDatabase>,
+  uids: readonly number[],
+): Promise<Pick<AdminUser, 'uid' | 'nickname' | 'avatar'>[]> {
+  if (!uids.length) return []
+  return (
+    await userRows(db)
+      .where('users.id', 'in', [...uids])
+      .execute()
+  ).map((row) => {
+    const { uid, nickname, avatar } = toUser(row)
+    return { uid, nickname, avatar }
+  })
+}
 export async function userView(db: Kysely<CoreDatabase>, uid: number): Promise<AdminUser> {
   return toUser(await userRows(db).where('users.id', '=', uid).executeTakeFirstOrThrow())
 }

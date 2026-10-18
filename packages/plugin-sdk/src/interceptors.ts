@@ -1,4 +1,4 @@
-import type { Actor, ExtraFields } from './dto'
+import type { Actor, ExtraFields } from './dto.ts'
 
 /**
  * 拦截器：在操作发生**之前**同步调用，可以拒绝。

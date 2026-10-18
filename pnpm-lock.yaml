@@ -325,6 +325,12 @@ importers:
       '@nextskin/importer':
         specifier: workspace:*
         version: link:../../packages/importer
+      '@nextskin/plugin-cdn-refresh':
+        specifier: workspace:*
+        version: link:../../plugins/cdn-refresh
+      '@nextskin/plugin-invitation-codes':
+        specifier: workspace:*
+        version: link:../../plugins/invitation-codes
       '@nextskin/skin':
         specifier: workspace:*
         version: link:../../packages/skin

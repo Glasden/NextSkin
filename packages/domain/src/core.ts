@@ -16,6 +16,7 @@ import { createPluginSystem, type OfficialPlugin } from './plugins/system.ts'
 import type { loadPlugin } from '@nextskin/plugin-host'
 import { createPluginAdmin } from './plugins/admin.ts'
 import { PLUGIN_KV_CLEANUP_JOB } from './plugins/kv.ts'
+import { pluginReferences } from './plugins/references.ts'
 import type { Kysely } from 'kysely'
 import { createAuthService } from './auth/service.ts'
 import { createEvents } from './events/emit.ts'
@@ -225,7 +226,10 @@ export function createCore(options: CoreOptions) {
     closet,
     reports: createReports(textureOptions),
     renders,
-    plugins: Object.assign(plugins, { admin: createPluginAdmin({ db: options.db, plugins, now }) }),
+    plugins: Object.assign(plugins, {
+      admin: createPluginAdmin({ db: options.db, plugins, now }),
+      references: (input: Parameters<typeof pluginReferences>[1]) => pluginReferences(options.db, input),
+    }),
     async shutdown() {
       await plugins.stop()
       await pluginDb.close()

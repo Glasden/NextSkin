@@ -1,6 +1,7 @@
 import { ToastProvider } from '@nextskin/ui'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
+import { pluginNavItems } from '../../lib/plugins'
 import { getSessionUser } from '../../lib/session'
 import { SiteFooter } from '../site-footer'
 import { SiteHeader } from '../site-header'
@@ -14,6 +15,7 @@ import { UserNav } from './user-nav'
 export default async function UserLayout({ children }: { readonly children: ReactNode }) {
   const [user, t, common] = await Promise.all([getSessionUser(), getTranslations('user'), getTranslations('common')])
   if (!user) return children
+  const pluginItems = await pluginNavItems('user', user)
   return (
     <ToastProvider label={common('notifications')} closeLabel={common('close')}>
       <div className="flex min-h-dvh flex-col">
@@ -27,7 +29,7 @@ export default async function UserLayout({ children }: { readonly children: Reac
         ) : (
           <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 sm:px-6 lg:flex-row lg:gap-10">
             <aside className="shrink-0 border-b border-border py-3 lg:w-52 lg:border-b-0 lg:py-8">
-              <UserNav />
+              <UserNav pluginItems={pluginItems} />
             </aside>
             <main className="min-w-0 flex-1 py-6 lg:py-8">{children}</main>
           </div>

@@ -91,7 +91,16 @@ function initialDrafts(items: readonly SettingItem[]): Record<string, Draft> {
  * 一个分区的设置（ADR-0028）。只提交改过的项，同一次提交要么都生效、要么都不生效；
  * 服务端按设置项的键返回字段错误。机密项的“清除”和“生成”当场生效，不经过“保存”
  */
-export function SettingsForm({ items, label }: { items: readonly SettingItem[]; label: string }) {
+export function SettingsForm({
+  items,
+  label,
+  endpoint = '/api/admin/settings',
+}: {
+  items: readonly SettingItem[]
+  label: string
+  /** 保存到哪里：核心的设置，或者某个插件的设置（`/api/admin/plugins/{id}/settings`） */
+  endpoint?: string
+}) {
   const t = useTranslations('admin.settings')
   const admin = useTranslations('admin')
   const router = useRouter()
@@ -120,7 +129,7 @@ export function SettingsForm({ items, label }: { items: readonly SettingItem[]; 
     setPending(true)
     setFailure(null)
     const values = Object.fromEntries(changed.map((item) => [item.key, fromDraft(item.control, drafts[item.key]!)]))
-    const { status, data } = await sendJson('PATCH', '/api/admin/settings', { values })
+    const { status, data } = await sendJson('PATCH', endpoint, { values })
     setPending(false)
     if (status === 200) {
       const count = isRecord(data) && Array.isArray(data.updated) ? data.updated.length : 0
@@ -153,6 +162,7 @@ export function SettingsForm({ items, label }: { items: readonly SettingItem[]; 
               )}
               <Setting
                 item={item}
+                endpoint={endpoint}
                 draft={drafts[item.key] ?? ''}
                 error={errors[item.key]}
                 onChange={(draft) => update(item.key, draft)}
@@ -184,17 +194,20 @@ export function SettingsForm({ items, label }: { items: readonly SettingItem[]; 
 
 function Setting({
   item,
+  endpoint,
   draft,
   error,
   onChange,
 }: {
   item: SettingItem
+  endpoint: string
   draft: Draft
   error: string | undefined
   onChange: (draft: Draft) => void
 }) {
   const { control, text, key } = item
-  if (control.kind === 'secret') return <SecretSetting item={item} draft={draft} error={error} onChange={onChange} />
+  if (control.kind === 'secret')
+    return <SecretSetting item={item} endpoint={endpoint} draft={draft} error={error} onChange={onChange} />
   if (control.kind === 'markdown')
     return (
       <MarkdownSetting name={key} text={text} max={control.maxLength} draft={draft} error={error} onChange={onChange} />
@@ -385,11 +398,13 @@ function MarkdownSetting({
  */
 function SecretSetting({
   item,
+  endpoint,
   draft,
   error,
   onChange,
 }: {
   item: SettingItem
+  endpoint: string
   draft: Draft
   error?: string
   onChange: (draft: Draft) => void
@@ -409,7 +424,7 @@ function SecretSetting({
     setPending(action)
     const { status, data } =
       action === 'clear'
-        ? await sendJson('PATCH', '/api/admin/settings', { values: { [key]: item.defaultValue } })
+        ? await sendJson('PATCH', endpoint, { values: { [key]: item.defaultValue } })
         : await sendJson('POST', `/api/admin/settings/${encodeURIComponent(key)}/generate`)
     setPending(null)
     setDialog(null)

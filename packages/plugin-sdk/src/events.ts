@@ -10,7 +10,7 @@ import type {
   Tid,
   Uid,
   UserRole,
-} from './dto'
+} from './dto.ts'
 
 /**
  * 事件：事实已经发生、事务已经提交之后才投递。

@@ -1,6 +1,7 @@
 import { createImportService, type ImportService } from '@nextskin/importer'
 import { createApp } from '@nextskin/api'
 import { coreConfigFromEnv, DomainError, openCore, type Core } from '@nextskin/domain'
+import { officialPlugins } from './official-plugins'
 
 export interface Server {
   core: Core
@@ -25,7 +26,7 @@ async function open(): Promise<Server> {
     cwd: process.cwd(),
     production: process.env.NODE_ENV === 'production',
   })
-  const opened = await openCore(config)
+  const opened = await openCore(config, { officialPlugins })
   const { core } = opened
   try {
     const importer = await createImportService({

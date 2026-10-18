@@ -20,7 +20,7 @@ export function postJson(path: string, body: unknown): Promise<{ status: number;
  * 不带的话接口按表单请求检查 Origin（hono/csrf）
  */
 export async function sendJson(
-  method: 'POST' | 'PATCH' | 'DELETE',
+  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
 ): Promise<{ status: number; data: unknown }> {

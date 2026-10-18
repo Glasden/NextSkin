@@ -14,9 +14,11 @@ export interface SettingText {
   generateHint?: string
 }
 
-export interface SettingItem extends SettingView {
+/** 核心的设置项，或者插件的设置项（ADR-0033：插件的设置页复用这个表单） */
+export interface SettingItem extends Omit<SettingView, 'key'> {
+  key: string
   text: SettingText
-  /** 机密项的“清除”恢复成它 */
+  /** 机密项的“清除”恢复成它；插件的设置传 null，表示删掉这一项、回到插件的默认值 */
   defaultValue: unknown
 }
 

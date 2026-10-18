@@ -1,5 +1,5 @@
-import type { RequestScope } from './interceptors'
-import type { UserActor } from './dto'
+import type { RequestScope } from './interceptors.ts'
+import type { UserActor } from './dto.ts'
 
 /**
  * 插件 HTTP 路由，统一挂在 `/plugins/{id}/` 下。

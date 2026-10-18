@@ -6,8 +6,10 @@ import {
   type CoreSettingKey,
 } from '@nextskin/domain'
 import { Link, Table } from '@nextskin/ui'
-import { getFormatter, getMessages, getTranslations } from 'next-intl/server'
+import { getFormatter, getLocale, getMessages, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
+import { pluginName } from '../../lib/plugins'
+import { getServer } from '../../lib/server'
 import { auditHref } from './params'
 import { formatSettingValue, settingsHref, settingText } from './settings/setting-text'
 
@@ -20,6 +22,10 @@ const actionKeys = {
   'user.setRole': 'userSetRole',
   'setting.update': 'settingUpdate',
   'site.setup': 'siteSetup',
+  'plugin.enable': 'pluginEnable',
+  'plugin.disable': 'pluginDisable',
+  'plugin.settings': 'pluginSettings',
+  'plugin.deadLetter': 'pluginDeadLetter',
 } as const
 
 // 处理举报的 details.action 可能是接口的动作，也可能是 SDK 的处理方式，都映射到同一份文案
@@ -64,7 +70,7 @@ export async function AuditTable({
   label: string
   empty: string
 }) {
-  const [t, admin, reports, types, settings, messages, format] = await Promise.all([
+  const [t, admin, reports, types, settings, messages, format, { core }, locale] = await Promise.all([
     getTranslations('admin.audit'),
     getTranslations('admin'),
     getTranslations('admin.reports'),
@@ -72,6 +78,8 @@ export async function AuditTable({
     getTranslations('admin.settings'),
     getMessages(),
     getFormatter(),
+    getServer(),
+    getLocale(),
   ])
   const settingFields = messages.admin.settings.fields
   const columns = [
@@ -100,6 +108,17 @@ export async function AuditTable({
 
   function subject(entry: AuditEntry) {
     const { type, id, exists } = entry.subject
+    // 插件也没有整数 id（记作 0），插件 id 在 details 里；插件还在就链接到它的页面（ADR-0033）
+    if (type === 'plugin') {
+      const plugin = text(entry.details.plugin)
+      if (!plugin) return t('subjects.other', { type, id })
+      const label = t('subjects.plugin', { name: core.plugins.get(plugin) ? pluginName(core, plugin, locale) : plugin })
+      return core.plugins.get(plugin) ? (
+        <Link render={<NextLink href={`/admin/plugins/${plugin}`} />}>{label}</Link>
+      ) : (
+        label
+      )
+    }
     // 设置项没有整数 id（记作 0），对象就是 details 里的键，链接到它所在的分区（ADR-0028）
     if (type === 'setting') {
       const key = settingKey(entry.details.key)
@@ -160,6 +179,29 @@ export async function AuditTable({
     })
   }
 
+  /** 插件的设置项：标签取插件的文案，值按 JSON 原样写；机密项只写“已更换” */
+  function pluginSettingChange(details: AuditEntry['details']): string {
+    const plugin = text(details.plugin)
+    const key = text(details.key) ?? ''
+    const labelKey = `settings.${key}.label`
+    const translated = plugin ? core.plugins.translate(plugin, labelKey, locale) : labelKey
+    const value = (raw: unknown) =>
+      typeof raw === 'string'
+        ? raw === ''
+          ? t('details.settingUpdate.empty')
+          : raw
+        : raw === null || raw === undefined
+          ? t('details.settingUpdate.empty')
+          : (JSON.stringify(raw) ?? '')
+    return t('details.pluginSetting', {
+      label: translated === labelKey ? key : translated,
+      change:
+        details.secret === true
+          ? t('details.settingUpdate.secret')
+          : t('details.settingUpdate.value', { from: value(details.from), to: value(details.to) }),
+    })
+  }
+
   function details(entry: AuditEntry) {
     const via =
       typeof entry.details.reportId === 'number' ? t('details.viaReport', { id: entry.details.reportId }) : null
@@ -181,6 +223,15 @@ export async function AuditTable({
       summary = t('details.userSetRole', { from: role(entry.details.from), to: role(entry.details.to) })
     } else if (entry.action === 'setting.update') {
       summary = settingChange(entry.details)
+    } else if (entry.action === 'plugin.enable' || entry.action === 'plugin.disable') {
+      summary = t('details.pluginVersion', { version: text(entry.details.version) ?? '' })
+    } else if (entry.action === 'plugin.settings') {
+      summary = pluginSettingChange(entry.details)
+    } else if (entry.action === 'plugin.deadLetter') {
+      summary = t('details.pluginDeadLetter', {
+        action: entry.details.action === 'retry' ? 'retry' : 'delete',
+        job: count(entry.details.job),
+      })
     }
     return (
       <span className="flex flex-col">

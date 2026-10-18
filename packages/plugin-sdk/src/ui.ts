@@ -1,10 +1,12 @@
-import type { Json } from './dto'
+import type { Json } from './dto.ts'
 
 /**
  * 插件 UI 贡献。
  *
  * 全部是声明式的：插件只描述"要什么"，由核心用 @nextskin/ui 的组件渲染。
  * 这样插件界面自动继承站点的视觉语言、暗色模式和无障碍处理，插件也拿不到浏览器里的执行权。
+ *
+ * 插件的名字和简介显示在后台的插件页，按约定取文案键 `plugin.name`、`plugin.description`；没写名字就显示 id。
  *
  * 设置页不需要在这里声明：核心根据 `settings` schema 自动生成（ADR-0028）。字段文案按约定取：
  * - `settings.<key>.label`、`settings.<key>.help`；
@@ -14,7 +16,7 @@ import type { Json } from './dto'
 
 /** 插件命名空间内的 i18n 键，对应插件 locales/<lang>.json 中的键。 */
 export type MessageKey = string
-/** pixelarticons 图标名，例如 'ticket'、'user'、'image'。 */
+/** pixelarticons 的图标名（SVG 的文件名，kebab-case），例如 'mail'、'user'、'cloud-server'；认不出来的显示成积木。 */
 export type IconName = string
 /** 插件路由路径，相对于 `/plugins/{id}`。可以用 `:field` 引用表格行的字段。 */
 export type PluginPath = `/${string}`

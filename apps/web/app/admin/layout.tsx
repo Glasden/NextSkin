@@ -3,6 +3,7 @@ import { ToastProvider } from '@nextskin/ui'
 import { getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
+import { pluginNavItems } from '../../lib/plugins'
 import { getServer } from '../../lib/server'
 import { getSessionUser } from '../../lib/session'
 import { SiteHeader } from '../site-header'
@@ -21,16 +22,21 @@ export default async function AdminLayout({ children }: { readonly children: Rea
     .filter(({ permission }) => permission === null || can(user.role, permission))
     .map(({ href }) => href)
   const { core } = await getServer()
-  const pending = can(user.role, 'reports.review')
-    ? (await core.admin.listReports(user.uid, { status: 'pending', page: 1, perPage: 1 })).counts.pending
-    : null
+  const [pending, pluginItems] = await Promise.all([
+    can(user.role, 'reports.review')
+      ? core.admin
+          .listReports(user.uid, { status: 'pending', page: 1, perPage: 1 })
+          .then(({ counts }) => counts.pending)
+      : null,
+    pluginNavItems('admin', user),
+  ])
   return (
     <ToastProvider label={common('notifications')} closeLabel={common('close')}>
       <div className="flex min-h-dvh flex-col">
         <SiteHeader wide />
         <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 sm:px-6 lg:flex-row lg:gap-8">
           <aside className="shrink-0 border-b border-border py-3 lg:w-52 lg:border-b-0 lg:py-8">
-            <AdminNav allowed={allowed} pendingReports={pending} />
+            <AdminNav allowed={allowed} pendingReports={pending} pluginItems={pluginItems} />
           </aside>
           <main className="min-w-0 flex-1 py-6 lg:py-8">{children}</main>
         </div>

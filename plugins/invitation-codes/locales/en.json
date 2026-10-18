@@ -3,6 +3,7 @@
     "code": "Invitation code",
     "codeHelp": "Registration on this site is by invitation only. Ask the site administrator for a code.",
     "count": "How many",
+    "countHelp": "Up to 100 at a time.",
     "expiresInDays": "Valid for (days)",
     "expiresInDaysHelp": "Leave empty to use the default from the plugin settings. 0 means the codes never expire."
   },
@@ -10,7 +11,9 @@
     "invalidCode": "This invitation code is invalid, already used, or expired.",
     "invalidCount": "You can generate 1 to 100 codes at a time, valid for 0 to 3650 days."
   },
-  "page": { "codes": "Invitation codes" },
+  "page": {
+    "codes": "Invitation codes"
+  },
   "column": {
     "code": "Code",
     "status": "Status",
@@ -18,16 +21,29 @@
     "createdAt": "Created",
     "expiresAt": "Expires"
   },
-  "status": { "unused": "Unused", "used": "Used", "expired": "Expired" },
-  "action": { "generate": "Generate codes", "delete": "Delete" },
+  "status": {
+    "unused": "Unused",
+    "used": "Used",
+    "expired": "Expired"
+  },
+  "action": {
+    "generate": "Generate codes",
+    "delete": "Delete"
+  },
   "confirm": {
     "delete": "Once deleted, this code can no longer be used to register. Accounts already registered with it are not affected."
   },
-  "permission": { "manage": "Generate, view and delete invitation codes" },
+  "permission": {
+    "manage": "Generate, view and delete invitation codes"
+  },
   "settings": {
     "defaultExpiresInDays": {
       "label": "Default validity (days)",
       "help": "Used when no validity is given while generating codes. 0 means the codes never expire."
     }
+  },
+  "plugin": {
+    "name": "Invitation codes",
+    "description": "Signing up requires an invitation code, and each code works once. Admins generate, search and delete codes, and can set how long new codes stay valid."
   }
 }

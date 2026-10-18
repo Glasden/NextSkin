@@ -102,7 +102,7 @@ export default definePlugin({
               method: 'POST',
               route: '/codes',
               form: [
-                { name: 'count', type: 'number', label: 'field.count', required: true },
+                { name: 'count', type: 'number', label: 'field.count', help: 'field.countHelp', required: true },
                 {
                   name: 'expiresInDays',
                   type: 'number',
@@ -124,7 +124,7 @@ export default definePlugin({
         },
       },
     },
-    nav: [{ area: 'admin', page: 'codes', label: 'page.codes', icon: 'ticket' }],
+    nav: [{ area: 'admin', page: 'codes', label: 'page.codes', icon: 'mail' }],
   },
 
   intercept: {

@@ -892,7 +892,8 @@
       "users": "Users",
       "audit": "Audit log",
       "settings": "Settings",
-      "migration": "Migration"
+      "migration": "Migration",
+      "plugins": "Plugins"
     },
     "roles": {
       "banned": "Banned",
@@ -1047,14 +1048,19 @@
         "textureDelete": "Deleted texture",
         "userSetRole": "Changed role",
         "settingUpdate": "Change setting",
-        "siteSetup": "Set up site"
+        "siteSetup": "Set up site",
+        "pluginEnable": "Enabled plugin",
+        "pluginDisable": "Disabled plugin",
+        "pluginSettings": "Changed plugin setting",
+        "pluginDeadLetter": "Handled failed job"
       },
       "subjects": {
         "user": "User #{id}",
         "texture": "Texture #{id}",
         "report": "Report #{id}",
         "other": "{type} #{id}",
-        "setting": "Settings"
+        "setting": "Settings",
+        "plugin": "Plugin {name}"
       },
       "actorSystem": "System",
       "actorPlugin": "Plugin {id}",
@@ -1071,7 +1077,10 @@
           "length": "{from, number} → {to, number} characters",
           "unreadable": "(unreadable)",
           "empty": "(empty)"
-        }
+        },
+        "pluginVersion": "Version {version}",
+        "pluginSetting": "{label}: {change}",
+        "pluginDeadLetter": "{action, select, retry {Retried} other {Deleted}} job #{job}"
       },
       "filterActor": "Only actor #{uid}",
       "filterSubject": "Only {subject}",
@@ -1462,6 +1471,106 @@
       "runMeta": "{entry} · {by} · {time}",
       "download": "Download report (Markdown)",
       "noReport": "This run left no report."
+    },
+    "plugins": {
+      "title": "Plugins",
+      "description": "Official plugins ship with the site and only run once enabled. Enabling, disabling and changing settings are all recorded in the audit log.",
+      "tableLabel": "Plugins",
+      "empty": "This release doesn't include any official plugins.",
+      "columns": {
+        "plugin": "Plugin",
+        "version": "Version",
+        "status": "Status",
+        "deadLetters": "Failed jobs"
+      },
+      "official": "Official",
+      "status": {
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "switching": "Switching"
+      },
+      "lastError": "Error",
+      "all": "All plugins",
+      "enable": "Enable plugin",
+      "disable": "Disable plugin",
+      "enableTitle": "Enable {name}?",
+      "enableHint": "Once enabled, the plugin runs on the server and can do everything listed under “What this plugin does”. Its tables are created first.",
+      "enableHighRisk": "It uses high-risk capabilities: {list}. Only enable plugins you trust.",
+      "enableConfirm": "Enable",
+      "disableTitle": "Disable {name}?",
+      "disableHint": "Once disabled, the plugin stops handling events, registrations and requests, and anything it added to pages disappears. Its data, settings and queued jobs are kept and resume when you enable it again.",
+      "disableConfirm": "Disable",
+      "enabled": "Enabled {name}",
+      "disabled": "Disabled {name}",
+      "switchingHint": "The plugin's status has changed; this instance switches over within a few seconds. Refresh the page to check.",
+      "lastErrorTitle": "Most recent error",
+      "settings": {
+        "title": "Settings",
+        "empty": "This plugin has no settings.",
+        "label": "{name} settings"
+      },
+      "deadLetters": {
+        "title": "Failed jobs",
+        "description": "Jobs that still failed after several retries stop here and won't run again on their own. Once you've fixed the cause (a wrong setting, say), retry them. Shows the latest 50.",
+        "tableLabel": "Failed jobs",
+        "empty": "No failed jobs.",
+        "columns": {
+          "job": "Job",
+          "attempts": "Attempts",
+          "failedAt": "Failed",
+          "error": "Reason",
+          "actions": "Actions"
+        },
+        "retry": "Retry",
+        "retried": "Queued again",
+        "delete": "Delete",
+        "deleteTitle": "Delete failed job #{id}?",
+        "deleteHint": "The job won't run again, and this can't be undone.",
+        "deleted": "Deleted job #{id}",
+        "noError": "No reason recorded"
+      },
+      "manifest": {
+        "title": "What this plugin does",
+        "capabilities": "Data it reads and writes",
+        "highRisk": "High risk",
+        "network": "External addresses it calls",
+        "events": "Events it handles",
+        "interceptors": "Operations it can stop",
+        "routes": "Endpoints it provides",
+        "tables": "Its own tables",
+        "jobs": "Background jobs",
+        "cron": "Scheduled jobs",
+        "pages": "Pages it adds",
+        "formFields": "Fields it adds to the sign-up form",
+        "none": "None",
+        "routeAuth": "{auth, select, user {signed in} other {public}}"
+      },
+      "capabilities": {
+        "users": {
+          "read": "Read users' nicknames, roles and avatars",
+          "readPrivate": "Read users' email addresses, score and language"
+        },
+        "players": {
+          "read": "Read players"
+        },
+        "textures": {
+          "read": "Read texture information",
+          "readFile": "Read texture files"
+        },
+        "storage": {
+          "kv": "Store a little data of its own",
+          "tables": "Create its own tables"
+        }
+      },
+      "interceptors": {
+        "user": {
+          "register": "Sign-up: can refuse"
+        }
+      },
+      "providers": {
+        "passwordHasher": "Check passwords from an old system",
+        "login": "Third-party sign-in"
+      }
     }
   },
   "yggdrasil": {
@@ -1938,5 +2047,20 @@
         "other": "Other"
       }
     }
+  },
+  "pluginView": {
+    "loadFailed": "The plugin didn't return the data for this page; it may have run into an error. Refresh in a while, and contact the site administrator if it keeps happening.",
+    "search": "Search",
+    "searchLabel": "Search {title}",
+    "empty": "Nothing here yet.",
+    "emptySearch": "Nothing matches.",
+    "actions": "Actions",
+    "yes": "Yes",
+    "no": "No",
+    "done": "Done",
+    "failed": "Couldn't complete this: {message}",
+    "failedPlain": "Couldn't complete this, and the plugin didn't say why.",
+    "invalid": "Some fields aren't filled in correctly. Fix them and submit again.",
+    "count": "{count, number} in total"
   }
 }

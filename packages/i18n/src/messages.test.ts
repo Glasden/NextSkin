@@ -28,7 +28,18 @@ function argumentsOf(elements: MessageFormatElement[], found = new Set<string>()
   return found
 }
 
+/** 原样的键名，不连前缀 */
+function keysOf(tree: Tree): string[] {
+  return Object.entries(tree).flatMap(([key, value]) => (typeof value === 'string' ? [key] : [key, ...keysOf(value)]))
+}
+
 const source = flatten(getMessages(sourceLocale))
+
+// next-intl 把点号当作嵌套，键名里有点号时浏览器里的 IntlProvider 直接报错。
+// 需要拿带点号的名字查文案时（例如插件能力 users.read），就把它写成嵌套的对象
+test('键名里没有点号', () => {
+  expect(keysOf(getMessages(sourceLocale)).filter((key) => key.includes('.'))).toEqual([])
+})
 
 for (const locale of locales) {
   const messages = flatten(getMessages(locale))

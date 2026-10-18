@@ -1,5 +1,5 @@
-import type { Uid } from './dto'
-import type { IconName, MessageKey } from './ui'
+import type { Uid } from './dto.ts'
+import type { IconName, MessageKey } from './ui.ts'
 
 /**
  * Provider：插件实现核心定义好的接口，由核心在合适的时机调用。

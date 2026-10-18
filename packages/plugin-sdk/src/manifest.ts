@@ -1,9 +1,9 @@
-import type { Capability } from './capabilities'
-import type { EventName } from './events'
-import type { Json } from './dto'
-import type { InterceptorName } from './interceptors'
-import type { HttpMethod } from './routes'
-import type { IconName, MessageKey, UiContributions } from './ui'
+import type { Capability } from './capabilities.ts'
+import type { EventName } from './events.ts'
+import type { Json } from './dto.ts'
+import type { InterceptorName } from './interceptors.ts'
+import type { HttpMethod } from './routes.ts'
+import type { IconName, MessageKey, UiContributions } from './ui.ts'
 
 /**
  * `nextskin-plugin build` 产出的 manifest.json。

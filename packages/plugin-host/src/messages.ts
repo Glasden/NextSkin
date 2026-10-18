@@ -16,18 +16,28 @@ export function translatePlugin(
     const catalog = messages[locale]
     if (!catalog || typeof lookup(catalog, key) !== 'string') continue
     let failed = false
-    const t = createTranslator({
+    const t = translator({
       locale,
-      messages: catalog as Record<string, string>,
+      messages: catalog,
       onError: () => {
         failed = true
       },
-    }) as (key: string, values?: Record<string, string | number>) => string
+    })
     const text = t(key, options.params ? { ...options.params } : undefined)
     if (!failed) return text
   }
   return key
 }
+
+/**
+ * 插件的文案不是核心的类型化文案：键和语言都是运行时的字符串。网页还会把 use-intl 的 Locale
+ * 收窄成核心支持的语言（apps/web/global.d.ts），插件的语言不受它限制
+ */
+const translator = createTranslator as unknown as (options: {
+  locale: string
+  messages: Readonly<Record<string, unknown>>
+  onError: () => void
+}) => (key: string, values?: Record<string, string | number>) => string
 
 function lookup(catalog: Readonly<Record<string, unknown>>, key: string): unknown {
   let value: unknown = catalog

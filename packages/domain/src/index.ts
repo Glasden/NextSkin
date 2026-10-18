@@ -86,6 +86,16 @@ export type { PodiumEntry, Podium, SiteStats } from './home/queries.ts'
 export type { OfficialPlugin, PluginFormField, PluginRouteRequest } from './plugins/system.ts'
 export type { PluginSummary, PluginDetail } from './plugins/admin.ts'
 export type { PluginSettingView } from './plugins/settings.ts'
+export type { PluginReferences } from './plugins/references.ts'
+/** 后台渲染插件声明的界面要用的类型（SDK 的 ui.ts） */
+export type {
+  Action as PluginAction,
+  Column as PluginColumn,
+  Field as PluginField,
+  StatsSourceResponse as PluginStatsResponse,
+  TableSourceResponse as PluginTableResponse,
+  View as PluginView,
+} from '@nextskin/plugin-sdk'
 export type { DeadLetter } from './jobs/store.ts'
 export { pluginFieldKey } from './plugins/form-fields.ts'
 export { canPlugin } from './access/permissions.ts'

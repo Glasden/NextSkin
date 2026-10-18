@@ -1,9 +1,10 @@
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '@nextskin/domain'
 import { Alert, Link } from '@nextskin/ui'
 import type { Metadata } from 'next'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { redirect } from 'next/navigation'
+import { pluginTranslator } from '../../../lib/plugins'
 import { getServer } from '../../../lib/server'
 import { getSessionUser } from '../../../lib/session'
 import { AuthHeading } from '../auth-heading'
@@ -16,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function SignUpPage() {
   if (await getSessionUser()) redirect('/user')
-  const [{ core }, t] = await Promise.all([getServer(), getTranslations('auth.signUp')])
+  const [{ core }, t, locale] = await Promise.all([getServer(), getTranslations('auth.signUp'), getLocale()])
   const [settings, mailConfigured, initialized] = await Promise.all([
     core.settings.read([
       'auth.registration.enabled',
@@ -49,10 +50,28 @@ export default async function SignUpPage() {
         <Alert>{t('closed')}</Alert>
       </>
     )
+  // 插件加在注册表单上的字段（ADR-0033），文案在服务端翻译好
+  const pluginFields = core.plugins.registerFields().map(({ pluginId, field }) => {
+    const translate = pluginTranslator(core, pluginId, locale)
+    return {
+      pluginId,
+      field: {
+        name: field.name,
+        type: field.type,
+        label: translate(field.label),
+        help: field.help ? translate(field.help) : undefined,
+        placeholder: field.placeholder ? translate(field.placeholder) : undefined,
+        required: field.required,
+        maxLength: field.maxLength,
+        options: field.options?.map((option) => ({ value: option.value, label: translate(option.label) })),
+      },
+    }
+  })
   return (
     <>
       {heading}
       <SignUpForm
+        pluginFields={pluginFields}
         password={{ min: MIN_PASSWORD_LENGTH, max: MAX_PASSWORD_LENGTH }}
         playerName={
           settings['auth.registration.withPlayerName']

@@ -1,7 +1,7 @@
 import type { Kysely } from 'kysely'
-import type { Capability, Gate, Has, Or } from './capabilities'
-import type { Json, Pid, Player, PrivateUser, PublicUser, Texture, Tid, Uid } from './dto'
-import type { MessageKey } from './ui'
+import type { Capability, Gate, Has, Or } from './capabilities.ts'
+import type { Json, Pid, Player, PrivateUser, PublicUser, Texture, Tid, Uid } from './dto.ts'
+import type { MessageKey } from './ui.ts'
 
 /**
  * 不用等核心回应的那部分上下文：插件信息、设置、翻译、日志、取消信号。

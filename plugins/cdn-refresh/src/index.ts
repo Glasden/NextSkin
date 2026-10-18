@@ -185,6 +185,6 @@ export default definePlugin({
         },
       },
     },
-    nav: [{ area: 'admin', page: 'refresh', label: 'page.refresh', icon: 'reload' }],
+    nav: [{ area: 'admin', page: 'refresh', label: 'page.refresh', icon: 'cloud' }],
   },
 })

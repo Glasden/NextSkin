@@ -892,7 +892,8 @@
       "users": "用户",
       "audit": "审计日志",
       "settings": "设置",
-      "migration": "数据迁移"
+      "migration": "数据迁移",
+      "plugins": "插件"
     },
     "roles": {
       "banned": "已封禁",
@@ -1047,14 +1048,19 @@
         "textureDelete": "删除材质",
         "userSetRole": "更改角色",
         "settingUpdate": "修改设置",
-        "siteSetup": "完成站点安装"
+        "siteSetup": "完成站点安装",
+        "pluginEnable": "启用插件",
+        "pluginDisable": "停用插件",
+        "pluginSettings": "修改插件设置",
+        "pluginDeadLetter": "处理失败的任务"
       },
       "subjects": {
         "user": "用户 #{id}",
         "texture": "材质 #{id}",
         "report": "举报 #{id}",
         "other": "{type} #{id}",
-        "setting": "设置"
+        "setting": "设置",
+        "plugin": "插件 {name}"
       },
       "actorSystem": "系统",
       "actorPlugin": "插件 {id}",
@@ -1071,7 +1077,10 @@
           "length": "{from, number} 字 → {to, number} 字",
           "unreadable": "（读不出来）",
           "empty": "（空）"
-        }
+        },
+        "pluginVersion": "版本 {version}",
+        "pluginSetting": "{label}：{change}",
+        "pluginDeadLetter": "{action, select, retry {重试} other {删除}}任务 #{job}"
       },
       "filterActor": "只看操作者 #{uid}",
       "filterSubject": "只看 {subject}",
@@ -1462,6 +1471,106 @@
       "runMeta": "{entry} · {by} · {time}",
       "download": "下载报告（Markdown）",
       "noReport": "这次运行没有留下报告。"
+    },
+    "plugins": {
+      "title": "插件",
+      "description": "官方插件随站点一起发布，启用之后才会运行。启用、停用和修改设置都记在审计日志里。",
+      "tableLabel": "插件",
+      "empty": "这个版本没有带官方插件。",
+      "columns": {
+        "plugin": "插件",
+        "version": "版本",
+        "status": "状态",
+        "deadLetters": "失败的任务"
+      },
+      "official": "官方",
+      "status": {
+        "enabled": "已启用",
+        "disabled": "未启用",
+        "switching": "切换中"
+      },
+      "lastError": "出错了",
+      "all": "所有插件",
+      "enable": "启用插件",
+      "disable": "停用插件",
+      "enableTitle": "启用{name}？",
+      "enableHint": "启用后插件会在服务器上运行，能做下面“这个插件会做什么”里列出的事。启用前会先建好它的数据表。",
+      "enableHighRisk": "它要用到高风险的能力：{list}。只启用你信任的插件。",
+      "enableConfirm": "启用",
+      "disableTitle": "停用{name}？",
+      "disableHint": "停用后插件不再处理事件、注册和请求，它在页面上加的东西也会消失。插件的数据、设置和排着队的任务都保留，重新启用后继续。",
+      "disableConfirm": "停用",
+      "enabled": "已启用{name}",
+      "disabled": "已停用{name}",
+      "switchingHint": "插件的状态已经改了，这个实例几秒后切换过来。刷新页面看看。",
+      "lastErrorTitle": "最近一次出错",
+      "settings": {
+        "title": "设置",
+        "empty": "这个插件没有设置项。",
+        "label": "{name}的设置"
+      },
+      "deadLetters": {
+        "title": "失败的任务",
+        "description": "重试了好几次还是失败的任务停在这里，不会再自动执行。修好原因（比如设置填错了）之后可以重试。最多显示最近 50 个。",
+        "tableLabel": "失败的任务",
+        "empty": "没有失败的任务。",
+        "columns": {
+          "job": "任务",
+          "attempts": "尝试次数",
+          "failedAt": "失败时间",
+          "error": "原因",
+          "actions": "操作"
+        },
+        "retry": "重试",
+        "retried": "已经重新排进队列",
+        "delete": "删除",
+        "deleteTitle": "删除失败的任务 #{id}？",
+        "deleteHint": "删除后这个任务不会再执行，也不能恢复。",
+        "deleted": "已删除任务 #{id}",
+        "noError": "没有记录原因"
+      },
+      "manifest": {
+        "title": "这个插件会做什么",
+        "capabilities": "读写的数据",
+        "highRisk": "高风险",
+        "network": "访问的外部地址",
+        "events": "处理的事件",
+        "interceptors": "拦截的操作",
+        "routes": "提供的接口",
+        "tables": "自己的数据表",
+        "jobs": "后台任务",
+        "cron": "定时任务",
+        "pages": "加的页面",
+        "formFields": "在注册表单上加的字段",
+        "none": "无",
+        "routeAuth": "{auth, select, user {要登录} other {公开}}"
+      },
+      "capabilities": {
+        "users": {
+          "read": "读用户的昵称、角色和头像",
+          "readPrivate": "读用户的邮箱、积分和语言"
+        },
+        "players": {
+          "read": "读角色"
+        },
+        "textures": {
+          "read": "读材质的信息",
+          "readFile": "读材质文件"
+        },
+        "storage": {
+          "kv": "存少量自己的数据",
+          "tables": "建自己的数据表"
+        }
+      },
+      "interceptors": {
+        "user": {
+          "register": "注册：可以拒绝"
+        }
+      },
+      "providers": {
+        "passwordHasher": "核对旧系统的密码",
+        "login": "第三方登录"
+      }
     }
   },
   "yggdrasil": {
@@ -1938,5 +2047,20 @@
         "other": "其他"
       }
     }
+  },
+  "pluginView": {
+    "loadFailed": "插件没有返回这个页面的数据，它可能出错了。稍后刷新看看，一直这样的话请联系站点管理员。",
+    "search": "搜索",
+    "searchLabel": "在{title}里搜索",
+    "empty": "还没有内容。",
+    "emptySearch": "没有符合条件的内容。",
+    "actions": "操作",
+    "yes": "是",
+    "no": "否",
+    "done": "已完成",
+    "failed": "没能完成：{message}",
+    "failedPlain": "没能完成，插件没有说明原因。",
+    "invalid": "有几项填写得不对，改好再提交。",
+    "count": "共 {count, number} 条"
   }
 }

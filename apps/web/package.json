@@ -19,6 +19,8 @@
     "@nextskin/domain": "workspace:*",
     "@nextskin/i18n": "workspace:*",
     "@nextskin/importer": "workspace:*",
+    "@nextskin/plugin-cdn-refresh": "workspace:*",
+    "@nextskin/plugin-invitation-codes": "workspace:*",
     "@nextskin/skin": "workspace:*",
     "@nextskin/ui": "workspace:*",
     "@simplewebauthn/browser": "13.3.0",
