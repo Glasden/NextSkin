@@ -41,6 +41,7 @@ Better Auth 的 user 模型加上我们的领域字段。领域字段都有默�
 | locale | varchar(16) | 可空 | |
 | registration_ip | varchar(45) | 可空 | 用于"同一 IP 注册数"限制 |
 | last_check_in_at | 时间 | 可空 | 上次签到时间。签到用一条带条件的 UPDATE 同时改它和积分，保证一天只能签到一次 |
+| email_version | integer | 非空，默认 0 | 邮箱每改一次加一。改邮箱的确认链接带着签发时的版本，版本对不上就作废（ADR-0024） |
 
 `users` 和 `textures` 互相引用，所以 `avatar_texture_id` 在建完 `textures` 之后再加。
 
@@ -317,6 +318,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | locale | locale | |
 | ip | registration_ip | |
 | last_sign_at | last_check_in_at | |
+| — | email_version | 0：BS 的邮箱修改立即生效，没有待确认的链接（ADR-0024） |
 | register_at | created_at、updated_at | |
 | verified | email_verified | |
 | password | accounts 里 `provider_id = 'credential'` 的一行 | `account_id` 写 uid 的字符串（Better Auth 按它找密码）。哈希登录成功后换成当前算法（ADR-0007）。BS 的算法和盐取决于旧站 `.env` 的 `PWD_METHOD` 和 `SALT`，导入命令要拿到这两项：bcrypt、argon2（`BCRYPT`、`ARGON2I`、`PHP_PASSWORD_HASH`）原样保存；十六进制摘要（`MD5`、`SALTED2SHA256` 等六种）存成 `$bs$<算法>$<小写摘要>`（`auth/legacy-passwords.ts` 的 `formatLegacyDigest`）。`SALT` 是全站的 pepper，不进哈希，存进机密设置 `auth.legacyPasswordSalt` |
@@ -445,6 +447,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | 认证 | Better Auth 的其余各表、device_code_selections |
 | 后台任务和积分 | jobs、failed_jobs、score_transactions |
 | 用户中心和角色管理 | players.score_paid（加列） |
+| 个人资料和账号安全 | users.email_version（加列） |
 | 材质上传、衣柜、举报 | closet_items、reports |
 | 第一个管理操作 | audit_logs |
 | 第一个定时任务 | job_schedules |
