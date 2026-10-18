@@ -11,7 +11,7 @@ test('manifest 能从定义里提取出来', () => {
     tables: ['codes'],
     migrations: ['0001_create_codes'],
     events: ['user.registered'],
-    interceptors: [{ name: 'user.register', priority: 0 }],
+    interceptors: [{ name: 'user.register', priority: 100 }],
     permissions: { manage: 'permission.manage' },
   })
   expect(manifest.routes.map((route) => `${route.method} ${route.path} ${route.permission}`)).toEqual([

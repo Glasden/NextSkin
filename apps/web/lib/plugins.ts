@@ -41,16 +41,25 @@ export interface PluginNavItem {
   icon: ReactElement
 }
 
+type PluginPageDefinition = NonNullable<ReturnType<Core['plugins']['activeUi']>[number]['ui']['pages']>[string]
+
 /**
- * 插件声明的导航项：页面要存在、区域要对得上。后台的页面要求管理员；第一版的插件权限固定给管理员和超级管理员
- * （SDK 的 routes.ts），所以带不带 permission 结果一样
+ * 当前用户能不能看插件的这个页面：区域要对得上；后台的页面要求管理员，声明了 permission 的页面要求这个插件权限。
+ * 第一版的插件权限固定给管理员和超级管理员（SDK 的 routes.ts），用户中心里声明了 permission 的页面也一样
  */
+function canSeePage(area: 'user' | 'admin', page: PluginPageDefinition | undefined, user: SessionUser): boolean {
+  if (!page || page.area !== area || user.role === 'banned') return false
+  if (area === 'admin' || page.permission !== undefined) return canPlugin(user.role)
+  return true
+}
+
+/** 插件声明的导航项：指向的页面要存在，并且当前用户能看 */
 export async function pluginNavItems(area: 'user' | 'admin', user: SessionUser): Promise<PluginNavItem[]> {
   if (user.role === 'banned' || (area === 'admin' && !canPlugin(user.role))) return []
   const [{ core }, locale] = await Promise.all([getServer(), getLocale()])
   return core.plugins.activeUi().flatMap(({ id, ui }) =>
     (ui.nav ?? [])
-      .filter((item) => item.area === area && ui.pages?.[item.page]?.area === area)
+      .filter((item) => item.area === area && canSeePage(area, ui.pages?.[item.page], user))
       .map((item) => ({
         href: `/${area}/plugins/${id}/${item.page}`,
         label: core.plugins.translate(id, item.label, locale),
@@ -61,11 +70,10 @@ export async function pluginNavItems(area: 'user' | 'admin', user: SessionUser):
 
 /** 当前用户能看的插件页面；不存在、插件没在运行、区域不对或者没有权限都返回 null，页面按 404 处理 */
 export async function pluginPage(area: 'user' | 'admin', pluginId: string, page: string, user: SessionUser) {
-  if (user.role === 'banned' || (area === 'admin' && !canPlugin(user.role))) return null
   const { core } = await getServer()
   const found = core.plugins.activeUi().find((item) => item.id === pluginId)
   const definition = found?.ui.pages && Object.hasOwn(found.ui.pages, page) ? found.ui.pages[page] : undefined
-  return definition?.area === area ? definition : null
+  return definition && canSeePage(area, definition, user) ? definition : null
 }
 
 export interface PluginResponse {

@@ -13,6 +13,13 @@ const password = 'correct horse battery staple'
 
 test.use({ locale: 'zh-CN' })
 
+// 邀请码的用例中途失败时停用插件，不然同一个服务上后面的用例都注册不了
+let restore: (() => Promise<unknown>) | undefined
+test.afterEach(async () => {
+  await restore?.()
+  restore = undefined
+})
+
 type Messages = { [key: string]: string | Messages }
 
 /** 插件自己的文案（不带参数的那些），和插件一起发布在 locales 目录里 */
@@ -78,6 +85,7 @@ test('邀请码：启用后注册要填邀请码，每个码只能用一次；�
   expect((await page.request.get('/admin/plugins/invitation-codes/codes')).status()).toBe(404)
 
   await toggle(page, 'invitation-codes', name, 'enable')
+  restore = () => page.request.post('/api/admin/plugins/invitation-codes/disable')
 
   // 注册页多了邀请码一栏；不填就注册不了
   const visitorContext = await browser.newContext({ locale: 'zh-CN' })
@@ -124,11 +132,13 @@ test('邀请码：启用后注册要填邀请码，每个码只能用一次；�
   await visitor.waitForURL('/user')
   await visitorContext.close()
 
-  // 用过的码标成已使用，使用者显示成刚注册的用户
-  await page.reload()
+  // 用过的码标成已使用（拦截器里，随注册提交）；使用者由 user.registered 事件在提交之后写上，要等任务跑完
   const usedRow = table.getByRole('row').filter({ hasText: used })
-  await expect(usedRow.getByText(ic('status.used'), { exact: true })).toBeVisible()
-  await expect(usedRow.getByRole('link', { name: visitorName })).toBeVisible()
+  await expect(async () => {
+    await page.reload()
+    await expect(usedRow.getByText(ic('status.used'), { exact: true })).toBeVisible({ timeout: 1000 })
+    await expect(usedRow.getByRole('link', { name: visitorName })).toBeVisible({ timeout: 1000 })
+  }).toPass()
 
   // 同一个码不能再用：拦截器拒绝，整个注册回滚
   const again = await page.request.post('/api/register', {
@@ -161,6 +171,7 @@ test('邀请码：启用后注册要填邀请码，每个码只能用一次；�
 
   // 停用后注册不再要邀请码，导航里的页面也没了；启用和停用都记在审计日志里
   await toggle(page, 'invitation-codes', name, 'disable')
+  restore = undefined
   await expect(nav.getByRole('link', { name: ic('page.codes') })).toHaveCount(0)
   const laterContext = await browser.newContext({ locale: 'zh-CN' })
   await register(await laterContext.newPage(), '203.0.113.143', `After${suffix}`)

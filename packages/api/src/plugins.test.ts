@@ -14,6 +14,8 @@ const echo = async ({ request }: { request: Request }) =>
     url: request.url,
     method: request.method,
     cookie: request.headers.get('cookie'),
+    authorization: request.headers.get('authorization'),
+    proxyAuthorization: request.headers.get('proxy-authorization'),
     header: request.headers.get('x-custom'),
     body: await request.text(),
   })
@@ -71,6 +73,11 @@ beforeEach(async () => {
             auth: 'public',
             handler: () =>
               Promise.resolve(new Response('cached', { headers: { 'cache-control': 'public, max-age=60' } })),
+          },
+          'GET /user-cached': {
+            auth: 'user',
+            handler: () =>
+              Promise.resolve(new Response('mine', { headers: { 'cache-control': 'public, max-age=60' } })),
           },
           'GET /throw': { auth: 'public', handler: () => Promise.reject(new Error('plugin failure')) },
         },
@@ -141,7 +148,7 @@ test.each([undefined, 'https://other.test', 'null'])('会话写请求拒绝不�
   )
 })
 
-test('Origin 匹配时转发公开 URL、查询串和请求体，剥离 Cookie 并保留普通头', async () => {
+test('Origin 匹配时转发公开 URL、查询串和请求体，剥离 Cookie 和认证头，保留普通头', async () => {
   signIn()
   // 模拟 Next 的内部监听地址；插件必须看到 Host 和代理协议还原的公开地址。
   const response = await app.request(
@@ -153,6 +160,8 @@ test('Origin 匹配时转发公开 URL、查询串和请求体，剥离 Cookie �
         host: 'skin.example.test',
         'x-forwarded-proto': 'https',
         cookie: 'session=example',
+        authorization: 'Bearer example',
+        'proxy-authorization': 'Basic ZXhhbXBsZQ==',
         'x-custom': 'kept',
       },
       body: '你好',
@@ -164,6 +173,8 @@ test('Origin 匹配时转发公开 URL、查询串和请求体，剥离 Cookie �
     url: `${origin}/plugins/a/user?q=a%20b&n=2`,
     method: 'POST',
     cookie: null,
+    authorization: null,
+    proxyAuthorization: null,
     header: 'kept',
     body: '你好',
   })
@@ -289,6 +300,13 @@ test('保留插件显式 Cache-Control，同时添加安全头', async () => {
   expect(response.headers.get('cache-control')).toBe('public, max-age=60')
   expect(response.headers.get('content-security-policy')).toContain('sandbox')
   expect(response.headers.get('x-content-type-options')).toBe('nosniff')
+})
+
+test('要登录的路由一律禁止缓存，插件设的 Cache-Control 不算数', async () => {
+  signIn()
+  const response = await request('/plugins/a/user-cached')
+  expect(response.status).toBe(200)
+  expect(response.headers.get('cache-control')).toBe('no-store')
 })
 
 test('HEAD 使用 GET 路由并去掉响应体', async () => {

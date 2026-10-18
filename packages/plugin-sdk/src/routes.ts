@@ -7,6 +7,9 @@ import type { UserActor } from './dto.ts'
  * 键的格式是 'METHOD /path'，路径参数写 `:name`，例如 'DELETE /codes/:code'。
  * 核心统一处理：登录态（只认会话 Cookie）、权限、CSRF（非 GET 请求校验 Origin）、限流、请求体大小。
  * 请求体完整读入后才交给插件，所以有大小上限；响应体同样完整读出，不超过 10 MiB，不支持流式响应。
+ * 交给插件的请求里没有 Cookie、Authorization、Proxy-Authorization：登录的是谁看 scope.actor，
+ * 插件要自己的令牌认证就用自己的请求头。响应不能设置 Cookie，CSP 由核心决定；
+ * `auth: 'user'` 的路由一律 `Cache-Control: no-store`，公开的路由可以自己设缓存，不设就是 no-store。
  */
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RouteKey = `${HttpMethod} /${string}`

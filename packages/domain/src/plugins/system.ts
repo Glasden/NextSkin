@@ -116,6 +116,8 @@ interface ActivePlugin {
   granted: ReadonlySet<Capability>
   /** 登记过的任务名和定时任务名，停用时按它们撤销 */
   registered: { jobs: string[]; events: [string, string][]; schedules: string[] }
+  /** 这一次启用已经停用：停用时只能取消已经开始的调用，还在准备上下文的调用靠它拦下 */
+  stopped: boolean
 }
 
 interface Invocation {
@@ -364,7 +366,7 @@ export function createPluginSystem(options: {
    * 调用结束后这次 invocation 立即作废，插件留着 ctx 迟到的请求一律被拒绝
    */
   async function invoke(
-    plugin: { known: KnownPlugin; granted: ReadonlySet<Capability> },
+    plugin: { known: KnownPlugin; granted: ReadonlySet<Capability>; stopped?: boolean },
     call: PluginCall,
     opts: { timeoutMs: number; locale?: string; transaction?: Kysely<CoreDatabase>; allowDdl?: boolean },
   ): Promise<unknown> {
@@ -384,13 +386,26 @@ export function createPluginSystem(options: {
               : call.kind
     let outcome = 'ok'
     let timer: ReturnType<typeof setTimeout> | undefined
+    // 期限从调用开始算，读设置这些准备工作也算在里面：注册事务里的拦截器不能因为准备工作卡住而一直占着写锁
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new PluginInvocationError(id, 'timeout', `插件在 ${opts.timeoutMs} ms 内没有完成`)),
+        opts.timeoutMs,
+      )
+    })
+    deadline.catch(() => {})
     try {
-      const [values, info] = await Promise.all([
-        call.kind === 'migrate' || call.kind === 'validateSettings'
-          ? Promise.resolve({})
-          : pluginSettings.read(id, plugin.known.properties),
-        site(),
+      const [values, info] = await Promise.race([
+        Promise.all([
+          call.kind === 'migrate' || call.kind === 'validateSettings'
+            ? Promise.resolve({})
+            : pluginSettings.read(id, plugin.known.properties),
+          site(),
+        ]),
+        deadline,
       ])
+      // 准备的这段时间里插件可能被停用了：停用时取消的只是已经开始的调用，这里不能再开始新的
+      if (plugin.stopped) throw new PluginInvocationError(id, 'unavailable', '插件已经停用')
       invocations.set(invocationId, {
         pluginId: id,
         known: plugin.known,
@@ -430,12 +445,7 @@ export function createPluginSystem(options: {
             )
           },
         ),
-        new Promise<never>((_, reject) => {
-          timer = setTimeout(
-            () => reject(new PluginInvocationError(id, 'timeout', `插件在 ${opts.timeoutMs} ms 内没有完成`)),
-            Math.max(1, started + opts.timeoutMs - Date.now()),
-          )
-        }),
+        deadline,
       ])
       return result
     } catch (error) {
@@ -458,7 +468,12 @@ export function createPluginSystem(options: {
   function activate(plugin: KnownPlugin, granted: ReadonlySet<Capability>) {
     const { manifest } = plugin
     const id = manifest.id
-    const state: ActivePlugin = { known: plugin, granted, registered: { jobs: [], events: [], schedules: [] } }
+    const state: ActivePlugin = {
+      known: plugin,
+      granted,
+      registered: { jobs: [], events: [], schedules: [] },
+      stopped: false,
+    }
     for (const job of manifest.jobs) {
       const name = pluginJobName(id, job.name)
       handlers.set(name, {
@@ -504,6 +519,7 @@ export function createPluginSystem(options: {
   function deactivate(id: string) {
     const state = active.get(id)
     if (!state) return
+    state.stopped = true
     active.delete(id)
     for (const name of state.registered.schedules) schedules.remove(name)
     for (const [event, name] of state.registered.events) events.unsubscribe(event as never, name)

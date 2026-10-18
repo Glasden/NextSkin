@@ -508,3 +508,70 @@ test('非法返回值连续三次也必须熔断，第四次不调用', async ()
     await expect(env.core.users.register(env.input())).rejects.toMatchObject({ code: 'plugin_unavailable' })
   expect(invoke).toHaveBeenCalledTimes(3)
 })
+
+/** 插件准备上下文时读站点设置的那一步停住，直到 release() */
+function holdSiteSettings() {
+  const settings = env.core.settings
+  const read = settings.read.bind(settings)
+  const entered = Promise.withResolvers<void>()
+  const released = Promise.withResolvers<void>()
+  let held = false
+  vi.spyOn(settings, 'read').mockImplementation((async (keys: readonly string[]) => {
+    if (!held && keys.length === 3 && ['site.url', 'site.name', 'site.locale'].every((key) => keys.includes(key))) {
+      held = true
+      entered.resolve()
+      await released.promise
+    }
+    return read(keys as never)
+  }) as typeof settings.read)
+  return { entered: entered.promise, release: () => released.resolve() }
+}
+
+test('准备上下文卡住也按 300 ms 拒绝注册：不调用插件，写锁按时释放', async () => {
+  let called = false
+  await env.boot([
+    official(
+      'a',
+      recorder(() => (called = true)),
+    ),
+  ])
+  await enable('a')
+  const hold = holdSiteSettings()
+  const registration = env.core.users.register(env.input())
+  await hold.entered
+  const enteredAt = performance.now()
+  await expect(registration).rejects.toMatchObject({ code: 'plugin_unavailable' })
+  expect(performance.now() - enteredAt).toBeLessThan(450)
+  hold.release()
+  expect(called).toBe(false)
+  expect(await countRows(env.db.selectFrom('users').where('email', 'like', 'user%'))).toBe(0)
+})
+
+test('准备上下文时插件被停用：不再调用插件', async () => {
+  let calls = 0
+  await env.boot([
+    official(
+      'a',
+      definePlugin({
+        capabilities: [],
+        routes: {
+          'GET /hello': {
+            auth: 'public',
+            handler: () => {
+              calls++
+              return Promise.resolve(new Response('late'))
+            },
+          },
+        },
+      }),
+    ),
+  ])
+  const actor = await enable('a')
+  const hold = holdSiteSettings()
+  const pending = env.core.plugins.route(routeInput('/hello'))
+  await hold.entered
+  await env.core.plugins.admin.disable(actor, 'a')
+  hold.release()
+  await expect(pending).rejects.toMatchObject({ code: 'plugin_error' })
+  expect(calls).toBe(0)
+})

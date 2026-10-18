@@ -39,6 +39,8 @@ const DROPPED_RESPONSE_HEADERS = new Set([
   'access-control-allow-credentials',
 ])
 const NULL_BODY = new Set([101, 204, 205, 304])
+/** 请求里不转给插件的凭据头。插件要自己的令牌认证，就用自己的头（例如 X-Api-Key） */
+const FORWARDED_CREDENTIALS = new Set(['cookie', 'authorization', 'proxy-authorization'])
 
 export function registerPluginRoutes(app: Hono<AppEnv>, core: Core) {
   const errorResponse = createErrorResponse(core)
@@ -106,8 +108,8 @@ export function registerPluginRoutes(app: Hono<AppEnv>, core: Core) {
       request: {
         method,
         url: `${c.get('requestRoot')}${url.pathname}${url.search}`,
-        // 会话 Cookie 不交给插件：登录的是谁，在 scope.actor 里
-        headers: [...c.req.raw.headers].filter(([name]) => name !== 'cookie'),
+        // 凭据不交给插件：登录的是谁，在 scope.actor 里。站点前面的反向代理要求的 HTTP 认证也会出现在 Authorization 里
+        headers: [...c.req.raw.headers].filter(([name]) => !FORWARDED_CREDENTIALS.has(name)),
         body: body && body.byteLength ? body : null,
       },
       user: sessionUser ? { uid: sessionUser.uid, role: sessionUser.role } : null,
@@ -132,7 +134,8 @@ export function registerPluginRoutes(app: Hono<AppEnv>, core: Core) {
     // 插件返回的 HTML 不能在站点的源上运行脚本、提交表单，也不能被浏览器猜成别的类型
     headers.set('Content-Security-Policy', "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:")
     headers.set('X-Content-Type-Options', 'nosniff')
-    if (!headers.has('Cache-Control')) headers.set('Cache-Control', 'no-store')
+    // 要登录的路由，响应因人而异，不能让插件改成可以被共享缓存存下来；公开的路由由插件决定，默认不缓存
+    if (route.auth === 'user' || !headers.has('Cache-Control')) headers.set('Cache-Control', 'no-store')
     return new Response(
       NULL_BODY.has(response.status) || c.req.method === 'HEAD' ? null : (response.body as Uint8Array<ArrayBuffer>),
       { status: response.status, headers },
