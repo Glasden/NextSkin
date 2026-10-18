@@ -310,21 +310,37 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 - 另建 `(subject_type, subject_id, id)`、`(actor_user_id, id)` 索引。按时间列出用主键倒序。
 - 按设置项 `audit.retentionDays` 清理，默认 0 表示永久保留。每天一次的定时任务 `core:audit-log-cleanup` 按主键从小到大分批删除，遇到不早于截止时间的行就停，不为 `created_at` 另建索引（ADR-0029）。
 
+## Yggdrasil
+
+### yggdrasil_tokens
+
+authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAuth 令牌分开存放（ADR-0030）。
+
+| 列 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | 自增 | 主键 | |
+| access_token_hash | varchar(64) | 非空，唯一 | 访问令牌的 sha256，base64url，与 OAuth 令牌相同。明文只在签发时返回给客户端 |
+| client_token | varchar(255) | 非空 | 客户端给的值原样保存；没给就由服务端生成 |
+| user_id | integer | 非空；外键 → users，cascade | |
+| player_id | integer | 可空；外键 → players，cascade | 绑定的角色。删除角色时令牌一并删除 |
+| created_at | 时间 | 非空 | 签发时间 |
+| valid_until | 时间 | 非空 | 在这之前令牌有效：能进服、能上传材质 |
+| expires_at | 时间 | 非空 | 在这之前令牌可刷新；不早于 `valid_until` |
+
+- 两个时间在签发时按当时的设置算好，之后改设置不影响已经签发的令牌。
+- 每次使用都检查：绑定的角色此刻仍属于令牌的用户（转让之后按无效处理），用户没有被封禁。封禁不删令牌。
+- 签发的事务里插入新令牌后，按 `id` 倒序只保留 `yggdrasil.tokensPerUser` 个。
+- 刷新用带条件的 DELETE 抢旧令牌，删到 1 行才签发新令牌。
+- 改密码、重设密码时删除这个用户的全部令牌。
+- 过期超过 1 天的由 `core:auth-cleanup` 按 `expires_at` 删除（ADR-0029）。
+
+进服记录（serverId 对应哪个角色和客户端 IP）只保留 120 秒，放在缓存接口里，默认是进程内存，不建表。签名私钥存在 `settings` 的机密项里。
+
 ## 以下各表只定了要点，随对应切片细化
 
 ### 通知
 
 - **notifications**：SDK 的 `notifications.send`。标题和正文存 i18n 键加参数，按收件人的语言渲染。列：`user_id`（cascade）、`title_key`、`body_key`、`params`（JSON）、`read_at`、`created_at`。
-
-### Yggdrasil
-
-- authserver 令牌（用户名密码换令牌）的表随 Yggdrasil 切片定。ADR-0007 把它和 OAuth 令牌体系是否统一留到了实现阶段。要点：
-  - 令牌只存 sha256；
-  - 绑定的角色被删除或转让后，令牌失效；
-  - 每个用户的令牌数有上限（BS 的 `ygg_tokens_limit`）；
-  - 过期的令牌由 `core:auth-cleanup` 清理（ADR-0029）。
-- 进服记录（serverId 对应哪个角色）只保留几十秒，放在缓存接口里，默认是进程内存，不建表。
-- 签名私钥存在 `settings` 的机密项里。
 
 ### 插件
 
@@ -452,6 +468,10 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | ygg_search_profile_max | yggdrasil.profileSearchLimit | 转成整数 |
 | ygg_enable_ali | yggdrasil.apiLocationIndication | `'true'` / `'false'` 转成布尔 |
 | ygg_private_key | yggdrasil.signingKey | 机密项，原样加密保存 |
+| ygg_token_expire_1 | yggdrasil.tokenValidSeconds | 转成整数 |
+| ygg_token_expire_2 | yggdrasil.tokenRefreshableSeconds | 转成整数 |
+| ygg_tokens_limit | yggdrasil.tokensPerUser | 转成整数 |
+| ygg_rate_limit | yggdrasil.loginIntervalMs | 转成整数 |
 | score_per_player | score.perPlayer | 转成整数 |
 | return_score | score.refundOnDelete | `'true'` / `'false'` 转成布尔 |
 | sign_score | checkIn.score | `'最小,最大'` 拆成 `{ min, max }` |
@@ -514,7 +534,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | 衣柜、换材质和举报 | reports |
 | 后台和审计日志 | audit_logs |
 | 定时任务 | job_schedules |
-| Yggdrasil | authserver 令牌表 |
+| Yggdrasil | yggdrasil_tokens |
 | 插件 | plugins、plugin_kv、plugin_migrations |
 | 通知 | notifications |
 

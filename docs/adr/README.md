@@ -27,7 +27,7 @@
 | [0013](0013-version-baseline.md) | 版本基线：Node 26 LTS、Next.js ≥16.4.1、TypeScript 7 | 已采纳 |
 | [0014](0014-toolchain.md) | 工具链：pnpm + Turborepo，TypeScript 7 做类型检查（TS 6 只给依赖编译器 API 的工具），ESLint、Prettier、Vitest、changesets | 已采纳 |
 | [0015](0015-core-schema-conventions.md) | 核心 schema 约定：时间存 ISO 字符串、角色名靠规范化列、UUID 绑定角色；逐表设计见 `docs/schema.md` | 已采纳 |
-| [0016](0016-protocol-contract.md) | 协议契约以录制结果为判据；客户端可能依赖的 BS 行为照样复现，只有异常输入才触发的 Laravel/PHP 副产品不复现 | 已采纳 |
+| [0016](0016-protocol-contract.md) | 协议契约以录制结果为判据；客户端可能依赖的 BS 行为照样复现，只有异常输入才触发的 Laravel/PHP 副产品不复现 | 已采纳（"不复现"一表由 ADR-0030 补充了一类） |
 | [0017](0017-skin-figure-rendering.md) | 皮肤的 2D 正背面由服务端出图，按显示倍数选分辨率，浏览器只做整数倍放大 | 已采纳 |
 | [0018](0018-registration-and-mail.md) | 注册走领域用例，规则和默认值取 BS；邮件在事务之外异步发送 | 已采纳（react-email 一条已被 ADR-0020 取代，进程内的邮件队列一条已被 ADR-0021 取代） |
 | [0019](0019-i18n.md) | 国际化：URL 不带语言前缀，消息集中在 `packages/i18n`，接口错误带 code 和本地化文案 | 已采纳 |
@@ -41,7 +41,7 @@
 | [0027](0027-admin-and-audit-log.md) | 后台和审计日志：固定角色映射到具名权限，不做 RBAC；审计日志和业务写入在同一事务，不建外键；举报的状态用带条件的 UPDATE 推进；材质删除时一并结案它的待处理举报 | 已采纳 |
 | [0028](0028-admin-settings.md) | 后台设置页：表单由设置注册表生成，只有超级管理员能改设置；公告和内容政策按 Markdown 渲染，不渲染原始 HTML；签名密钥可以在后台生成 | 已采纳 |
 | [0029](0029-scheduled-jobs.md) | 定时任务：`job_schedules` 记下算出下次执行时间用的 cron 和时区，表达式或时区变了由调度器自己重算；第一批条目清理过期的认证数据、按保留期清理审计日志、回收存储里的孤儿文件（取代 ADR-0021 里 `job_schedules` 只有两列的部分） | 已采纳 |
-| [0030](0030-yggdrasil-authserver.md) | Yggdrasil：authserver 令牌存进自己的表，不与 OAuth 令牌合并；修掉 yggdrasil-api 的越权和吊销缺陷；开了两步验证的账号在密码后面接验证码（补充 ADR-0016 的"不复现"一表） | 提议 |
+| [0030](0030-yggdrasil-authserver.md) | Yggdrasil：authserver 令牌存进自己的表，不与 OAuth 令牌合并；修掉 yggdrasil-api 的越权和吊销缺陷；开了两步验证的账号在密码后面接验证码（补充 ADR-0016 的"不复现"一表） | 已采纳 |
 
 ## 待做的 spike
 
