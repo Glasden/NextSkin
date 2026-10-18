@@ -4,13 +4,13 @@
 
 ## 当前阶段
 
-monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制、注册用例和注册规则、邮件发送、注册接口（`POST /api/register`，第一个 REST 接口，`packages/api/src/rest/`）、登录注册和找回密码的页面已经落地（ADR-0018），Yggdrasil Connect 还没有。国际化已接入（ADR-0019）。后台任务和积分流水已经落地（ADR-0021）：任务表和执行器、事件在业务事务里按订阅者展开成任务、邮件改为持久的任务、`adjustScore`。用户中心已经落地（ADR-0022）：外壳和导航、仪表盘（积分、签到）、角色管理，写接口认会话 Cookie。个人资料和账号安全已经落地（ADR-0023、ADR-0024）：改昵称和语言、改邮箱、删除账号、两步验证、通行密钥；核对密码的 REST 接口按用户限流。材质上传和皮肤库已经落地（ADR-0025）：纯 JS 的 PNG 解码、图像 worker 池、出图端点 `/render/…`、上传和上传者的管理、皮肤库和详情页（3D 预览）、用延迟任务推进的文件回收。衣柜、换材质和举报已经落地（ADR-0026）：衣柜页和 `GET /api/closet`、给角色换材质、头像、提交举报和“我的举报”。后台已经落地（ADR-0027）：固定角色映射到具名权限（`can()`）、审计日志、处理举报、管理员删除材质、封禁和任免管理员；用户管理的其余操作还没有。设置页已经落地（ADR-0028）：表单由设置注册表生成，只有超级管理员能改；公告和内容政策（Markdown，不渲染原始 HTML）、生成签名密钥、测试邮件。定时任务已经落地（ADR-0029）：`job_schedules` 和调度器（cron 按站点时区解释，用 croner），清理过期的认证数据、按保留期清理审计日志、回收材质存储里的孤儿文件和临时文件。Yggdrasil 已经落地（ADR-0030）：authserver 的令牌表和五个端点、进服、启动器上传和删除材质，开了两步验证的账号在密码后面接验证码；仪表盘的外置登录配置、安全页的启动器登录列表；契约测试支持有状态的场景。BS 导入器已经落地（ADR-0031）：导入引擎（`packages/importer`）、`import_runs`、对账报告和命令行，网页登录核对旧格式的哈希时接受 trim 之前的密码，录制环境上的导入回放检查；安装向导 `/setup`（安装码、"新站"、从 BS 导入）、后台的"数据迁移"、导入期间的维护模式（页面换成维护页，接口返回 503，任务和定时任务暂停）。首页已经落地（ADR-0032）：领奖台（最近 7 天新加进衣柜最多的三个皮肤）、站点统计、最新上传、外置登录三步，全站页脚，站点描述、关键词和页脚文字三个设置项；标志改成“折起来的头”，站点图标由 `pnpm design:sync` 从 token 生成。
+monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制、注册用例和注册规则、邮件发送、注册接口（`POST /api/register`，第一个 REST 接口，`packages/api/src/rest/`）、登录注册和找回密码的页面已经落地（ADR-0018），Yggdrasil Connect 还没有。国际化已接入（ADR-0019）。后台任务和积分流水已经落地（ADR-0021）：任务表和执行器、事件在业务事务里按订阅者展开成任务、邮件改为持久的任务、`adjustScore`。用户中心已经落地（ADR-0022）：外壳和导航、仪表盘（积分、签到）、角色管理，写接口认会话 Cookie。个人资料和账号安全已经落地（ADR-0023、ADR-0024）：改昵称和语言、改邮箱、删除账号、两步验证、通行密钥；核对密码的 REST 接口按用户限流。材质上传和皮肤库已经落地（ADR-0025）：纯 JS 的 PNG 解码、图像 worker 池、出图端点 `/render/…`、上传和上传者的管理、皮肤库和详情页（3D 预览）、用延迟任务推进的文件回收。衣柜、换材质和举报已经落地（ADR-0026）：衣柜页和 `GET /api/closet`、给角色换材质、头像、提交举报和“我的举报”。后台已经落地（ADR-0027）：固定角色映射到具名权限（`can()`）、审计日志、处理举报、管理员删除材质、封禁和任免管理员；用户管理的其余操作还没有。设置页已经落地（ADR-0028）：表单由设置注册表生成，只有超级管理员能改；公告和内容政策（Markdown，不渲染原始 HTML）、生成签名密钥、测试邮件。定时任务已经落地（ADR-0029）：`job_schedules` 和调度器（cron 按站点时区解释，用 croner），清理过期的认证数据、按保留期清理审计日志、回收材质存储里的孤儿文件和临时文件。Yggdrasil 已经落地（ADR-0030）：authserver 的令牌表和五个端点、进服、启动器上传和删除材质，开了两步验证的账号在密码后面接验证码；仪表盘的外置登录配置、安全页的启动器登录列表；契约测试支持有状态的场景。BS 导入器已经落地（ADR-0031）：导入引擎（`packages/importer`）、`import_runs`、对账报告和命令行，网页登录核对旧格式的哈希时接受 trim 之前的密码，录制环境上的导入回放检查；安装向导 `/setup`（安装码、"新站"、从 BS 导入）、后台的"数据迁移"、导入期间的维护模式（页面换成维护页，接口返回 503，任务和定时任务暂停）。首页已经落地（ADR-0032）：领奖台（最近 7 天新加进衣柜最多的三个皮肤）、站点统计、最新上传、外置登录三步，全站页脚，站点描述、关键词和页脚文字三个设置项；标志改成“折起来的头”，站点图标由 `pnpm design:sync` 从 token 生成。插件系统第一版的第一步已经落地（ADR-0033）：插件在核心进程内运行（`packages/domain/src/plugins/`、`packages/plugin-host`），能力检查、事件、任务和定时任务、KV、设置；插件自有表经网关查询（重建 SQL，SQLite 用专用的只读连接）；`/plugins/{id}/*` 路由网关；声明式的页面、导航和注册表单字段；`user.register` 拦截器；后台的“插件”页（启用、停用、设置、死信）；邀请码和 CDN 刷新两个官方插件。plugin host 进程、安装第三方插件、passwordHasher 和第三方登录还没有。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
 - 核心表的设计在 `docs/schema.md`，跨表约定（时间、布尔、JSON、外键、UUID）见 ADR-0015。写迁移前先读。
 - 视觉与界面规范在 `DESIGN.md`。
-- 插件 API 草案在 `packages/plugin-sdk/`，该目录有自己的 AGENTS.md。
+- 插件 API 在 `packages/plugin-sdk/`（未发布），该目录有自己的 AGENTS.md。
 - `spikes/` 是技术验证代码，结论写在各自的 README 和对应 ADR 里。这些代码不按产品标准维护，移植进正式代码时要重新审视。
 
 ## 系统结构
@@ -71,10 +71,10 @@ nextskin 启动器（进程监管 + 命令行）
 | `packages/skin` | 材质的前处理和 2D 渲染，纯函数，服务端出图和浏览器上传页共用（ADR-0017） |
 | `packages/i18n` | 界面文案（`messages/<语言>.json`）和语言解析，网页和领域层共用（ADR-0019） |
 | `packages/email` | 邮件模板，无依赖的 HTML 模板函数（ADR-0020） |
-| `packages/plugin-sdk`、`plugin-host`、`plugin-testing` | 插件 API、插件运行时、插件测试工具 |
+| `packages/plugin-sdk`、`plugin-host` | 插件 API（公开面，ADR-0033）；插件侧的运行时：加载插件定义、构造 `ctx`。核心侧的注册表、网关和调用在 `packages/domain/src/plugins/` |
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |
 | `packages/importer` | 从 BS v6 只读导入（ADR-0031）：导入引擎、命令行和网页导入服务（`apps/web` 创建、注入 Hono），迁移指南在 `MIGRATION.md`，该目录有自己的 AGENTS.md |
-| `plugins/*` | 官方插件，用公开 API 编写 |
+| `plugins/*` | 官方插件，只用公开 API 编写，随站点发布、在后台启用；也是 ADR-0033 的参考插件 |
 | `tests/contract` | 协议契约用例：从 BS v6 录制，回放比较（见该目录 README） |
 | `docs/adr` | 架构决策记录 |
 | `spikes/*` | 技术验证，见上文"当前阶段" |
