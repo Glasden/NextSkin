@@ -162,10 +162,18 @@ test('管理员看不到设置；超级管理员改站点名、写公告、生�
 
   // 公告：预览和仪表盘用同一个组件，原始 HTML 不渲染
   const heading = `开服通知 ${suffix}`
+  // exact：“预览：公告”按钮的名字里也有“公告”
   await page
-    .getByLabel(t('admin.settings.fields.site.announcement.label'))
+    .getByLabel(t('admin.settings.fields.site.announcement.label'), { exact: true })
     .fill(`## ${heading}\n\n生存服地址是 **play.example.test**。\n\n<b>粗体标签</b>`)
-  await page.getByRole('button', { name: t('admin.settings.markdown.preview') }).click()
+  await page
+    .getByRole('button', {
+      name: t('admin.settings.markdown.buttonLabel', {
+        action: t('admin.settings.markdown.preview'),
+        label: t('admin.settings.fields.site.announcement.label'),
+      }),
+    })
+    .click()
   const preview = page.getByRole('region', {
     name: t('admin.settings.markdown.previewLabel', { label: t('admin.settings.fields.site.announcement.label') }),
   })

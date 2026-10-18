@@ -17,6 +17,10 @@ import {
   type UsersTable,
 } from './index.ts'
 import { createTestDatabase, type TestDatabase } from './testing.ts'
+import {
+  down as dropClosetTimeIndex,
+  up as createClosetTimeIndex,
+} from './migrations/0036_create_closet_items_created_at_index.ts'
 
 const timestamp = toIsoTimestamp(new Date('2040-02-29T23:59:59.123Z'))
 const hash = 'a'.repeat(64)
@@ -147,6 +151,7 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0033_create_job_schedules',
     '0034_create_yggdrasil_tokens',
     '0035_create_import_runs',
+    '0036_create_closet_items_created_at_index',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -829,4 +834,11 @@ test('导入记录的列、状态和入口的 CHECK，报告能存下超过 64 K
     ).rejects.toThrow()
   }
   await db.deleteFrom('import_runs').execute()
+})
+
+// MySQL 删索引要带表名，另外三种不带：down 在四种数据库上都要能执行（ADR-0005）
+test('衣柜时间索引可以撤销并重建', async () => {
+  const schema = db as unknown as Kysely<unknown>
+  await dropClosetTimeIndex(schema)
+  await createClosetTimeIndex(schema)
 })

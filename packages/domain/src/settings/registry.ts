@@ -28,6 +28,13 @@ function validRegex(value: string): boolean {
 
 export const coreSettingsRegistry = {
   'site.name': { schema: z.string(), default: 'NextSkin', section: 'site', secret: false },
+  'site.description': { schema: z.string().max(200), default: '', section: 'site', secret: false },
+  'site.keywords': {
+    schema: z.array(z.string().min(1).max(64)).max(32),
+    default: [],
+    section: 'site',
+    secret: false,
+  },
   'site.url': {
     schema: z.union([z.literal(''), z.url({ protocol: /^https?$/ })]),
     default: '',
@@ -52,6 +59,12 @@ export const coreSettingsRegistry = {
   },
   'site.announcement': {
     schema: z.string().max(20000).meta({ contentMediaType: 'text/markdown' }),
+    default: '',
+    section: 'site',
+    secret: false,
+  },
+  'site.footer': {
+    schema: z.string().max(2000).meta({ contentMediaType: 'text/markdown' }),
     default: '',
     section: 'site',
     secret: false,

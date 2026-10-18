@@ -625,7 +625,76 @@
       "upload": "Upload"
     },
     "signIn": "Sign in",
-    "signUp": "Sign up"
+    "signUp": "Sign up",
+    "footer": {
+      "columns": {
+        "site": "Site",
+        "account": "Account"
+      },
+      "links": {
+        "skinlib": "Skin library",
+        "upload": "Upload a texture",
+        "userCenter": "User center",
+        "closet": "Closet",
+        "players": "Players"
+      },
+      "copyright": "© {year} {name}",
+      "poweredBy": "Powered by NextSkin"
+    }
+  },
+  "home": {
+    "eyebrow": "Minecraft skin site · External login",
+    "title": "Dress up your character",
+    "description": "Upload skins and capes, then wear them on supported servers through external login.",
+    "actions": {
+      "signUp": "Sign up",
+      "signIn": "Sign in",
+      "browse": "Browse the skin library",
+      "upload": "Upload a texture",
+      "userCenter": "User center"
+    },
+    "stats": {
+      "label": "Site statistics",
+      "textures": "Public textures",
+      "users": "Users",
+      "players": "Players"
+    },
+    "podium": {
+      "title": "Most collected this week",
+      "period": "{from} – {to}",
+      "score": "♥ +{gain}",
+      "label": "No. {rank}: {name}, added to {gain, plural, one {# closet} other {# closets}} in the last 7 days",
+      "vacant": "This spot is still open",
+      "empty": "Nobody has added a skin to their closet in the last 7 days. <link>Browse the skin library</link>"
+    },
+    "latest": {
+      "title": "Latest uploads",
+      "all": "Go to the skin library",
+      "emptyTitle": "No textures yet",
+      "emptyDescription": "Uploaded skins appear here, and others can add them to their closets.",
+      "uploadFirst": "Upload the first texture"
+    },
+    "launcher": {
+      "title": "External login in three steps",
+      "description": "Works with any launcher that supports authlib-injector, such as HMCL and PCL. The server needs authlib-injector too.",
+      "steps": {
+        "player": {
+          "title": "Sign up and add a player",
+          "body": "The player name is the name shown in game. One account can have several players.",
+          "signUp": "Create an account",
+          "manage": "Manage players"
+        },
+        "launcher": {
+          "title": "Add external login to your launcher",
+          "body": "Enter the address below in your launcher’s external login settings, then sign in with your account on this site. Launchers that support drag and drop accept the Copy address button dropped onto them."
+        },
+        "wear": {
+          "title": "Join a server in your new skin",
+          "body": "Pick a skin and a cape for your player in the closet. Others see them the next time you join.",
+          "closet": "Open the closet"
+        }
+      }
+    }
   },
   "skinlib": {
     "types": {
@@ -1043,7 +1112,8 @@
         "hidePreview": "Hide preview",
         "previewLabel": "Preview of the {label}",
         "empty": "Nothing here yet.",
-        "hint": "Markdown is supported, HTML is not. At most {max, number} characters."
+        "hint": "Markdown is supported, HTML is not. At most {max, number} characters.",
+        "buttonLabel": "{action}: {label}"
       },
       "lines": "One per line.",
       "checked": "On",
@@ -1058,6 +1128,14 @@
           "name": {
             "label": "Site name",
             "help": "Shown in the header, the browser tab and emails. Launchers show it as the name of the authentication server."
+          },
+          "description": {
+            "label": "Site description",
+            "help": "A sentence below the home page heading and footer logo, also used as the page meta description. Leave it empty to use the default introduction."
+          },
+          "keywords": {
+            "label": "Page keywords",
+            "help": "The page meta keywords. One per line, up to 32 entries with 1–64 characters each."
           },
           "url": {
             "label": "Site URL",
@@ -1078,6 +1156,10 @@
           "announcement": {
             "label": "Announcement",
             "help": "Shown on the user dashboard. Leave it empty to hide it."
+          },
+          "footer": {
+            "label": "Footer text",
+            "help": "One line at the bottom of the footer. Supports Markdown; {year} becomes the current year. Leave it empty to show “© year site name”. For an ICP registration link, for example: [京ICP备12345678号](https://beian.miit.gov.cn/)."
           }
         },
         "auth": {

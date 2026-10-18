@@ -8,6 +8,21 @@ const MAX_INT = 2147483647
 const BS_DEFAULTS: Record<string, string> = {
   site_url: '',
   site_name: 'Blessing Skin',
+  site_description: 'Open-source PHP Minecraft Skin Hosting Service',
+  meta_keywords: '',
+  meta_description: '',
+  copyright_text: '<b>Copyright &copy; {year} <a href="{site_url}">{site_name}</a>.</b> All rights reserved.',
+  home_pic_url: './app/bg.webp',
+  favicon_url: 'app/favicon.ico',
+  meta_extras: '',
+  copyright_prefer: '0',
+  fixed_bg: '',
+  transparent_navbar: 'false',
+  hide_intro: '',
+  navbar_color: 'cyan',
+  sidebar_color: 'dark-maroon',
+  custom_css: '',
+  custom_js: '',
   register_with_player_name: 'true',
   require_verification: 'false',
   regs_per_ip: '3',
@@ -48,7 +63,7 @@ const BS_DEFAULTS: Record<string, string> = {
   ygg_enable_ali: 'true',
 }
 
-/** 不导入的设置：不是默认值时在报告里列出（ADR-0025、ADR-0026） */
+/** 不导入的设置：不是默认值时在报告里列出（ADR-0025、ADR-0026、ADR-0032） */
 const NOT_IMPORTED = [
   'score_award_per_texture',
   'take_back_scores_after_deletion',
@@ -56,12 +71,27 @@ const NOT_IMPORTED = [
   'status_code_for_private',
   'auto_del_invalid_texture',
   'allow_downloading_texture',
+  'meta_description',
+  'copyright_text',
+  'home_pic_url',
+  'favicon_url',
+  'meta_extras',
+  'copyright_prefer',
+  'fixed_bg',
+  'transparent_navbar',
+  'hide_intro',
+  'navbar_color',
+  'sidebar_color',
+  'custom_css',
+  'custom_js',
 ]
 
 /** 导入器写的设置项：每次导入先删掉这些键，再写入和默认值不同的。其余的键是新站自己的配置，保留 */
 export const IMPORTED_SETTING_KEYS = [
   'site.url',
   'site.name',
+  'site.description',
+  'site.keywords',
   'site.timeZone',
   'site.announcement',
   'cache.publicMaxAge',
@@ -156,6 +186,12 @@ export function convertPcre(value: string): string | null {
   } catch {
     return null
   }
+}
+
+/** 设置的长度上限按 UTF-16 计；边界落在代理对中间时，连同高代理一起去掉。 */
+function truncateText(text: string, max: number): string {
+  const truncated = text.slice(0, max)
+  return /[\uD800-\uDBFF]$/.test(truncated) ? truncated.slice(0, -1) : truncated
 }
 
 const DEFAULT_ANNOUNCEMENT = /^Welcome to Blessing Skin (?:\{version\}|\S+)!$/
@@ -287,18 +323,38 @@ export function planSettings(input: {
   integer('yggdrasil.tokensPerUser', 'ygg_tokens_limit', 1, 1000)
   integer('yggdrasil.loginIntervalMs', 'ygg_rate_limit', 0, 600000)
 
-  // 公告和内容政策：取与 site.locale 对应的那份，没有就取不带后缀的
+  const keywords = option('meta_keywords')
+    .split(/[,，]/)
+    .map((word) => word.trim())
+    .filter(Boolean)
+  const boundedKeywords = keywords.slice(0, 32).map((word) => truncateText(word, 64))
+  if (JSON.stringify(keywords) !== JSON.stringify(boundedKeywords))
+    report.clamped.push({ key: 'site.keywords', from: JSON.stringify(keywords), to: JSON.stringify(boundedKeywords) })
+  values.set('site.keywords', boundedKeywords)
+
+  // 公告、内容政策和站点描述：取与 site.locale 对应的那份，没有就取不带后缀的
   const suffix = input.siteLocale.replace('-', '_')
   for (const [key, base] of [
     ['site.announcement', 'announcement'],
     ['texture.contentPolicy', 'content_policy'],
+    ['site.description', 'site_description'],
   ] as const) {
     const localized = `${base}_${suffix}`
     const chosen = options.has(localized) ? localized : base
     for (const name of [...options.keys()].sort())
       if (name.startsWith(`${base}_`) && name !== chosen && options.get(name)?.trim()) report.otherLocales.push(name)
-    const text = option(chosen)
+    let text = option(chosen)
     if (base === 'announcement' && DEFAULT_ANNOUNCEMENT.test(text.trim())) continue
+    if (base === 'site_description') {
+      if (text === BS_DEFAULTS.site_description) continue
+      if (text.length > 200) {
+        const truncated = truncateText(text, 200)
+        report.clamped.push({ key, from: text, to: truncated })
+        text = truncated
+      }
+      values.set(key, text)
+      continue
+    }
     if (text.length > 20000) {
       issues.push({ code: 'text_too_long', option: chosen, length: text.length })
       continue
@@ -307,8 +363,11 @@ export function planSettings(input: {
     values.set(key, text)
   }
 
-  for (const name of NOT_IMPORTED)
+  for (const name of NOT_IMPORTED) {
+    if (name === 'meta_description' && (!option(name) || option(name) === (values.get('site.description') ?? '')))
+      continue
     if (option(name) !== BS_DEFAULTS[name]) report.notImported.push({ option: name, value: option(name) })
+  }
 
   // 最后按注册表的类型和检查再过一遍，不合格的不写
   for (const [key, value] of values) {

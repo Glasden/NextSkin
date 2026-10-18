@@ -20,6 +20,7 @@ import type { MailTransport } from './mail/types.ts'
 import { createPlayerManagement } from './players/manage.ts'
 import { createCheckIn } from './users/check-in.ts'
 import { createUserManagement } from './users/manage.ts'
+import { createHomeQueries } from './home/queries.ts'
 import { createUserQueries } from './users/queries.ts'
 import { createScoreQueries } from './score/queries.ts'
 import { createRegister } from './users/register.ts'
@@ -168,6 +169,7 @@ export function createCore(options: CoreOptions) {
     ...createProfileTextures({ db: options.db, settings, tokens, upload, closet, players }),
   }
   return {
+    home: createHomeQueries(options.db, settings, now),
     players,
     setup: createSetup({
       db: options.db,

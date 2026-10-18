@@ -6,6 +6,7 @@ import NextLink from 'next/link'
 import { redirect } from 'next/navigation'
 import { getServer } from '../../lib/server'
 import { getRequestRoot, requireUser } from '../../lib/session'
+import { yggdrasilApiUrl } from '../../lib/yggdrasil'
 import { CheckInButton } from './check-in-button'
 import { LauncherCopyButton } from './launcher-copy-button'
 import { VerifyEmailAlert } from './verify-email-alert'
@@ -42,9 +43,7 @@ export default async function DashboardPage() {
   if (!overview) redirect('/sign-in')
   const { min, max } = settings['checkIn.score']
   const dateTime = (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short' })
-  // 填了站点地址就用它，与邮件里的链接一致；没填时按这次请求的地址。站点地址可能以 / 结尾，
-  // 拼出 `//api/yggdrasil` 会被 Next 308 跳转，旧版 Java 不跟随
-  const apiUrl = `${(settings['site.url'] || root).replace(/\/+$/, '')}/api/yggdrasil`
+  const apiUrl = yggdrasilApiUrl(settings['site.url'], root)
 
   return (
     <div className="flex flex-col gap-8">

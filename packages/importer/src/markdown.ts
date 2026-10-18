@@ -241,13 +241,15 @@ export function reportToMarkdown(report: ImportReport): string {
     for (const item of settings.invalid) lines.push(`- \`${item.option}\`：${code(item.value)}`)
   }
   if (settings.notImported.length) {
-    lines.push('', '不导入、但旧站改过的设置（NextSkin 没有对应的功能）：')
+    lines.push('', '不导入、但旧站改过的设置：')
     for (const item of settings.notImported) lines.push(`- \`${item.option}\`：${code(item.value)}`)
   }
+  if (settings.notImported.some((item) => item.option === 'copyright_text'))
+    lines.push('', '旧站版权文字是原始 HTML，请改写成 Markdown 后填进 site.footer；备案号链接也需要改写。')
   if (settings.otherLocales.length)
     lines.push(
       '',
-      `公告和内容政策的其他语言版本，没有导入：${settings.otherLocales.map((key) => `\`${key}\``).join('、')}`,
+      `公告、内容政策和站点描述的其他语言版本，没有导入：${settings.otherLocales.map((key) => `\`${key}\``).join('、')}`,
     )
   if (settings.rawHtml.length)
     lines.push(

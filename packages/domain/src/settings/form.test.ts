@@ -20,10 +20,13 @@ const score = integer(0, 2147483647)
 const markdown: SettingControl = { kind: 'markdown', maxLength: 20000 }
 const expected = {
   'site.name': text,
+  'site.description': { ...text, maxLength: 200 },
+  'site.keywords': lines,
   'site.url': { ...text, format: 'url' },
   'site.locale': select('zh-CN', 'en'),
   'site.timeZone': text,
   'site.announcement': markdown,
+  'site.footer': { kind: 'markdown', maxLength: 2000 },
   'auth.registration.enabled': boolean,
   'auth.registration.withPlayerName': boolean,
   'auth.registration.perIpLimit': integer(0),

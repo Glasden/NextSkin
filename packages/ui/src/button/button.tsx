@@ -46,6 +46,11 @@ const interactive = cx(
 )
 const disabledLook = 'cursor-not-allowed border-border bg-surface-sunken text-text-muted'
 
+/** ButtonLink 与按钮同一个外观（DESIGN.md §6）：可点的状态，没有加载和禁用 */
+export function buttonLook(variant: 'primary' | 'secondary', size: 'md' | 'lg') {
+  return cx(base, sizes[size], variants[variant], raised, interactive)
+}
+
 export function Button({
   variant = 'secondary',
   size = 'md',

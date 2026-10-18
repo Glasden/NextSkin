@@ -1,11 +1,11 @@
-import { Badge, Button, EmptyState, Input, Link, Pagination, SkinFigure, TextureCard } from '@nextskin/ui'
+import { Button, EmptyState, Input, Link, Pagination } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { Image } from 'pixelarticons/react/Image.js'
 import { getServer } from '../../lib/server'
 import { getSessionUser } from '../../lib/session'
-import { figureSrc } from '../../lib/textures'
+import { LibraryCard } from './library-card'
 import { LibraryFilters } from './library-filters'
 import { libraryHref, parseLibraryParams, PER_PAGE } from './params'
 
@@ -89,28 +89,9 @@ export default async function SkinlibPage({
       {items.length > 0 ? (
         <>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {items.map((texture) => {
-              const type = t(`types.${texture.type}`)
-              return (
-                <TextureCard
-                  key={texture.tid}
-                  render={<NextLink href={`/skinlib/${texture.tid}`} />}
-                  name={texture.name}
-                  figure={
-                    <SkinFigure
-                      src={figureSrc(texture.hash, texture.type)}
-                      type={texture.type}
-                      textureScale={texture.scale}
-                      scale={4}
-                      alt={t('figureAlt', { name: texture.name, type })}
-                    />
-                  }
-                  meta={t('list.meta', { type, likes: texture.likes })}
-                  badge={texture.public ? undefined : <Badge>{t('private')}</Badge>}
-                  selected={texture.inCloset ? t('inCloset') : undefined}
-                />
-              )
-            })}
+            {items.map((texture) => (
+              <LibraryCard key={texture.tid} texture={texture} />
+            ))}
           </div>
           <Pagination
             page={params.page}

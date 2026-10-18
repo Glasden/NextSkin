@@ -39,3 +39,22 @@ export const CustomElement: Story = {
     await expect(link.className).toContain('underline')
   },
 }
+
+/** 页脚这种成组的一列链接用 quiet：正文色，悬停时才出下划线 */
+export const Quiet: Story = {
+  render: () => (
+    <ul className="flex flex-col gap-2 text-sm">
+      {['皮肤库', '上传材质', '用户中心'].map((label) => (
+        <li key={label}>
+          <Link tone="quiet" href={`#${label}`}>
+            {label}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  ),
+  play: async ({ canvas }) => {
+    const link = canvas.getByRole('link', { name: '皮肤库' })
+    await expect(getComputedStyle(link).textDecorationLine).toBe('none')
+  },
+}

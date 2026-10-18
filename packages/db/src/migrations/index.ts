@@ -41,6 +41,7 @@ import * as createJobSchedules from './0033_create_job_schedules.ts'
 import * as createYggdrasilTokens from './0034_create_yggdrasil_tokens.ts'
 
 import * as createImportRuns from './0035_create_import_runs.ts'
+import * as createClosetItemsCreatedAtIndex from './0036_create_closet_items_created_at_index.ts'
 
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
@@ -78,4 +79,5 @@ export const coreMigrations: Record<string, Migration> = {
   '0033_create_job_schedules': createJobSchedules,
   '0034_create_yggdrasil_tokens': createYggdrasilTokens,
   '0035_create_import_runs': createImportRuns,
+  '0036_create_closet_items_created_at_index': createClosetItemsCreatedAtIndex,
 }

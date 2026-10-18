@@ -894,3 +894,45 @@ test('超过 2^53 的 OAuth 客户端 id 原样成为 client_id', async () => {
     { client_id: '9007199254740993' },
   ])
 })
+
+test('首页设置写入并在重导时清除旧值，报告显示旧站描述和版权原文', async () => {
+  await seedWorld()
+  const description = '旧站描述 <b>纯文本</b>'
+  const metaDescription = '旧站另一份 SEO 描述'
+  const copyright = '<a href="https://beian.miit.gov.cn/">京ICP备12345678号</a>'
+  await insertRows(source.db, 'options', [
+    { option_name: 'site_description_zh_CN', option_value: description },
+    { option_name: 'meta_keywords', option_value: ' Minecraft, ，皮肤, ' },
+    { option_name: 'meta_description', option_value: metaDescription },
+    { option_name: 'copyright_text', option_value: copyright },
+  ])
+  const result = await run()
+  expect(result.status).toBe('succeeded')
+  const settings = await target.db
+    .selectFrom('settings')
+    .select(['key', 'value'])
+    .where('key', 'in', ['site.description', 'site.keywords'])
+    .execute()
+  expect(Object.fromEntries(settings.map(({ key, value }) => [key, JSON.parse(value)]))).toEqual({
+    'site.description': description,
+    'site.keywords': ['Minecraft', '皮肤'],
+  })
+  const markdown = reportToMarkdown(result.report)
+  expect(markdown).toContain(metaDescription)
+  expect(markdown).toContain(copyright)
+  expect(markdown).toContain('改写成 Markdown 后填进 site.footer')
+  await source.db
+    .updateTable('options')
+    .set({ option_value: 'Open-source PHP Minecraft Skin Hosting Service' })
+    .where('option_name', '=', 'site_description_zh_CN')
+    .execute()
+  await source.db.updateTable('options').set({ option_value: '' }).where('option_name', '=', 'meta_keywords').execute()
+  expect((await run({ replace: true, force: true })).status).toBe('succeeded')
+  expect(
+    await target.db
+      .selectFrom('settings')
+      .select('key')
+      .where('key', 'in', ['site.description', 'site.keywords'])
+      .execute(),
+  ).toEqual([])
+})

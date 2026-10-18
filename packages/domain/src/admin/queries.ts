@@ -3,7 +3,6 @@ import {
   countRows,
   readAuthBoolean,
   readAuthDate,
-  toIsoTimestamp,
   writeAuthDate,
   type CoreDatabase,
   type UserRole,
@@ -14,6 +13,7 @@ import { DomainError } from '../errors.ts'
 import { textureScaleOrNull } from '../players/queries.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { rejectNul } from '../text.ts'
+import { todayStart } from '../time.ts'
 import type { AdminOverview, AdminReport, AdminUser, AuditEntry } from './types.ts'
 
 function pagination(input: { page: number; perPage?: number }) {
@@ -212,20 +212,6 @@ async function auditViews(db: Kysely<CoreDatabase>, ids: number[]): Promise<Audi
     },
     details: parseDetails(row.details),
   }))
-}
-/** 按当地日期找第一毫秒，兼容夏令时导致的非 24 小时日。 */
-function todayStart(now: Date, timeZone: string) {
-  const format = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
-  const day = (value: number) => format.format(new Date(value))
-  const target = day(now.getTime())
-  let lo = now.getTime() - 48 * 3600000,
-    hi = now.getTime()
-  while (lo < hi) {
-    const mid = Math.floor((lo + hi) / 2)
-    if (day(mid) < target) lo = mid + 1
-    else hi = mid
-  }
-  return toIsoTimestamp(new Date(lo))
 }
 export function createAdminQueries(
   db: Kysely<CoreDatabase>,

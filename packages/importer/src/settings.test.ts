@@ -120,3 +120,94 @@ test('不导入、但改过的设置列出来', () => {
     { option: 'allow_downloading_texture', value: 'false' },
   ])
 })
+
+test('站点描述复用本地化选择，默认描述不导入；纯文本里的 HTML 原样保留', () => {
+  const result = plan({
+    site_description: 'fallback',
+    site_description_zh_CN: '中文 <b>描述</b>',
+    site_description_en: 'English',
+  })
+  expect(result.values.get('site.description')).toBe('中文 <b>描述</b>')
+  expect(result.report.otherLocales).toEqual(['site_description_en'])
+  expect(result.report.rawHtml).toEqual([])
+  expect(plan({ site_description: 'fallback' }).values.get('site.description')).toBe('fallback')
+  const english = planSettings({
+    options: new Map([
+      ['site_description', 'fallback'],
+      ['site_description_en', 'English'],
+    ]),
+    timeZone: 'UTC',
+    siteUrl: null,
+    salt: '',
+    siteLocale: 'en',
+  })
+  expect(english.values.get('site.description')).toBe('English')
+  const defaultDescription = 'Open-source PHP Minecraft Skin Hosting Service'
+  const defaults: Record<string, string>[] = [
+    {},
+    { site_description: defaultDescription },
+    { site_description_zh_CN: defaultDescription },
+  ]
+  for (const options of defaults) expect(plan(options).values.has('site.description')).toBe(false)
+})
+
+test('描述截到 200 个 UTF-16 单元，不能截断 emoji；报告注明原值和边界值', () => {
+  for (const [text, expected] of [
+    ['x'.repeat(201), 'x'.repeat(200)],
+    ['x'.repeat(199) + '😀tail', 'x'.repeat(199)],
+    ['x'.repeat(198) + '😀tail', 'x'.repeat(198) + '😀'],
+  ]) {
+    const result = plan({ site_description: text! })
+    expect(result.values.get('site.description')).toBe(expected)
+    expect(result.report.clamped).toEqual([{ key: 'site.description', from: text, to: expected }])
+    expect(result.report.invalid).toEqual([])
+    expect(result.issues).toEqual([])
+  }
+})
+
+test('关键词按半角和全角逗号拆分、去空项，超长和超量取边界并报告', () => {
+  const result = plan({ meta_keywords: ' Minecraft, ， 皮肤 ，, skin, ' })
+  expect(result.values.get('site.keywords')).toEqual(['Minecraft', '皮肤', 'skin'])
+  expect(result.report.clamped).toEqual([])
+  expect(plan({}).values.get('site.keywords')).toEqual([])
+  const words = ['x'.repeat(63) + '😀', 'y'.repeat(62) + '😀tail', ...Array.from({ length: 31 }, (_, i) => `word${i}`)]
+  const expected = ['x'.repeat(63), 'y'.repeat(62) + '😀', ...words.slice(2, 32)]
+  const bounded = plan({ meta_keywords: words.join('，') })
+  expect(bounded.values.get('site.keywords')).toEqual(expected)
+  expect(bounded.report.clamped).toEqual([
+    { key: 'site.keywords', from: JSON.stringify(words), to: JSON.stringify(expected) },
+  ])
+  expect(bounded.report.invalid).toEqual([])
+})
+
+test('首页外观设置仅报告非默认值，描述不同的 meta_description 和版权保留原文', () => {
+  expect(plan({}).report.notImported).toEqual([])
+  const defaults = {
+    home_pic_url: './app/bg.webp',
+    copyright_text: '<b>Copyright &copy; {year} <a href="{site_url}">{site_name}</a>.</b> All rights reserved.',
+    favicon_url: 'app/favicon.ico',
+    copyright_prefer: '0',
+    transparent_navbar: 'false',
+    navbar_color: 'cyan',
+    sidebar_color: 'dark-maroon',
+    fixed_bg: '',
+    hide_intro: '',
+    meta_description: '',
+    meta_extras: '',
+    custom_css: '',
+    custom_js: '',
+  }
+  expect(plan(defaults).report.notImported).toEqual([])
+  const options = Object.fromEntries(Object.keys(defaults).map((key) => [key, `custom ${key}`]))
+  options.meta_description = '<p>旧站的 SEO 描述</p>'
+  options.copyright_text = '<a href="https://beian.miit.gov.cn/">备案号</a>'
+  const result = plan(options)
+  expect(result.report.notImported).toHaveLength(Object.keys(defaults).length)
+  expect(Object.fromEntries(result.report.notImported.map(({ option, value }) => [option, value]))).toEqual(options)
+  expect(plan({ site_description: 'same', meta_description: 'same' }).report.notImported).toEqual([])
+  const long = 'x'.repeat(201)
+  expect(plan({ site_description: long, meta_description: long }).report.notImported).toEqual([
+    { option: 'meta_description', value: long },
+  ])
+  expect(plan({ site_description: long, meta_description: long.slice(0, 200) }).report.notImported).toEqual([])
+})

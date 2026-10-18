@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 
 test('首页能打开', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'NextSkin' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'NextSkin' }).first()).toHaveAttribute('href', '/')
 })
 
 // ADR-0008：发行包里没有原生模块和动态库，同一个 ZIP 能在任何系统和架构上运行。sharp 这类可选依赖一装上，

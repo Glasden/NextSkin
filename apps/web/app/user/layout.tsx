@@ -2,12 +2,13 @@ import { ToastProvider } from '@nextskin/ui'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
 import { getSessionUser } from '../../lib/session'
+import { SiteFooter } from '../site-footer'
 import { SiteHeader } from '../site-header'
 import { SignOutButton } from './user-menu'
 import { UserNav } from './user-nav'
 
 /**
- * 用户中心的外壳：全站页头、分区导航和正文。没有登录时由各页面跳到登录页（requireUser 要知道原路径，布局拿不到），
+ * 用户中心的外壳：全站页头、分区导航、正文和页脚。没有登录时由各页面跳到登录页（requireUser 要知道原路径，布局拿不到），
  * 这里只渲染正文；被封禁的用户只看到封禁说明（ADR-0022）
  */
 export default async function UserLayout({ children }: { readonly children: ReactNode }) {
@@ -31,6 +32,7 @@ export default async function UserLayout({ children }: { readonly children: Reac
             <main className="min-w-0 flex-1 py-6 lg:py-8">{children}</main>
           </div>
         )}
+        <SiteFooter />
       </div>
     </ToastProvider>
   )

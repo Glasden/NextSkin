@@ -625,7 +625,76 @@
       "upload": "上传"
     },
     "signIn": "登录",
-    "signUp": "注册"
+    "signUp": "注册",
+    "footer": {
+      "columns": {
+        "site": "站点",
+        "account": "账号"
+      },
+      "links": {
+        "skinlib": "皮肤库",
+        "upload": "上传材质",
+        "userCenter": "用户中心",
+        "closet": "衣柜",
+        "players": "角色"
+      },
+      "copyright": "© {year} {name}",
+      "poweredBy": "由 NextSkin 驱动"
+    }
+  },
+  "home": {
+    "eyebrow": "Minecraft 皮肤站 · 支持外置登录",
+    "title": "给角色换身衣服",
+    "description": "上传皮肤和披风，配合外置登录，在支持的服务器里穿上它们。",
+    "actions": {
+      "signUp": "注册",
+      "signIn": "登录",
+      "browse": "浏览皮肤库",
+      "upload": "上传材质",
+      "userCenter": "用户中心"
+    },
+    "stats": {
+      "label": "站点统计",
+      "textures": "公开材质",
+      "users": "用户",
+      "players": "角色"
+    },
+    "podium": {
+      "title": "本周收藏最多",
+      "period": "{from} – {to}",
+      "score": "♥ +{gain}",
+      "label": "第 {rank} 名：{name}，最近 7 天 {gain, plural, other {# 人收藏}}",
+      "vacant": "这个名次还空着",
+      "empty": "最近 7 天还没有人收藏皮肤，<link>去皮肤库看看</link>"
+    },
+    "latest": {
+      "title": "最新上传",
+      "all": "去皮肤库",
+      "emptyTitle": "还没有人上传材质",
+      "emptyDescription": "上传的皮肤会出现在这里，其他人可以把它加进衣柜。",
+      "uploadFirst": "上传第一个材质"
+    },
+    "launcher": {
+      "title": "三步用上外置登录",
+      "description": "HMCL、PCL 等支持 authlib-injector 的启动器都能用；服务器也要装上 authlib-injector。",
+      "steps": {
+        "player": {
+          "title": "注册并添加角色",
+          "body": "角色名就是你在游戏里显示的名字，一个账号可以有好几个角色。",
+          "signUp": "注册账号",
+          "manage": "管理角色"
+        },
+        "launcher": {
+          "title": "在启动器里添加外置登录",
+          "body": "把下面的地址填进启动器的“外置登录”设置，再用本站的账号登录。支持拖放的启动器，可以直接把“复制地址”按钮拖进去。"
+        },
+        "wear": {
+          "title": "进服务器，换上皮肤",
+          "body": "在衣柜里给角色选好皮肤和披风，下次进服就能看到。",
+          "closet": "打开衣柜"
+        }
+      }
+    }
   },
   "skinlib": {
     "types": {
@@ -1043,7 +1112,8 @@
         "hidePreview": "收起预览",
         "previewLabel": "{label}的预览",
         "empty": "还没有内容。",
-        "hint": "支持 Markdown，不支持 HTML，最多 {max, number} 个字。"
+        "hint": "支持 Markdown，不支持 HTML，最多 {max, number} 个字。",
+        "buttonLabel": "{action}：{label}"
       },
       "lines": "一行一项。",
       "checked": "开启",
@@ -1058,6 +1128,14 @@
           "name": {
             "label": "站点名称",
             "help": "显示在页头、浏览器标签页和邮件里，启动器里显示的验证服务器名称也是它。"
+          },
+          "description": {
+            "label": "站点描述",
+            "help": "显示在首页主标题下面和页脚标志下面的一句话，也用作页面的 meta description。留空时使用默认介绍。"
+          },
+          "keywords": {
+            "label": "页面关键词",
+            "help": "页面的 meta keywords，每行一项，最多 32 项，每项 1–64 个字符。"
           },
           "url": {
             "label": "站点地址",
@@ -1078,6 +1156,10 @@
           "announcement": {
             "label": "公告",
             "help": "显示在用户中心的仪表盘上，留空就不显示。"
+          },
+          "footer": {
+            "label": "页脚文字",
+            "help": "显示在页脚底部一行，支持 Markdown，{year} 会换成当前年份。留空时显示“© 年份 站点名”。例如放 ICP 备案号：[京ICP备12345678号](https://beian.miit.gov.cn/)。"
           }
         },
         "auth": {

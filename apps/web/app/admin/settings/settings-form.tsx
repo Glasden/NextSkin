@@ -351,7 +351,14 @@ function MarkdownSetting({
         <Textarea rows={8} maxLength={max ?? undefined} value={value} onValueChange={(next) => onChange(next)} />
       </Field>
       <div>
-        <Button size="sm" variant="secondary" aria-expanded={preview} onClick={() => setPreview(!preview)}>
+        {/* 一个分区里可能有几个 Markdown 设置（公告、页脚文字），按钮的名字带上设置项，读屏软件分得清；看得见的字放在名字开头 */}
+        <Button
+          size="sm"
+          variant="secondary"
+          aria-expanded={preview}
+          aria-label={t('buttonLabel', { action: preview ? t('hidePreview') : t('preview'), label: text.label })}
+          onClick={() => setPreview(!preview)}
+        >
           {preview ? t('hidePreview') : t('preview')}
         </Button>
       </div>
