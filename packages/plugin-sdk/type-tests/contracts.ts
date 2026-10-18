@@ -5,7 +5,7 @@
  * 注意：同一个 definePlugin 调用的对象字面量里只放一个结构性错误。
  * TypeScript 对一个参数只报告第一处不可赋值，多放的 @ts-expect-error 会被误判为"未使用"。
  */
-import { definePlugin, deny, patch, table, z } from '@nextskin/plugin-sdk'
+import { definePlugin, deny, secret, table, z } from '@nextskin/plugin-sdk'
 
 // 没申请 storage.tables 就没有 ctx.db；没申请 users.readPrivate 就看不到邮箱。
 definePlugin({
@@ -17,22 +17,20 @@ definePlugin({
       const user = await ctx.users.get(event.data.user.uid)
       // @ts-expect-error email 需要 users.readPrivate
       user?.email
-      // @ts-expect-error adjustScore 需要 users.score
+      // @ts-expect-error 插件不写核心数据（ADR-0033）
       ctx.users.adjustScore
     },
   },
 })
 
-// 只申请 users.score 时，users 上只有 adjustScore。
+// 推迟到以后的能力不存在（ADR-0033）。
 definePlugin({
+  // @ts-expect-error 写核心数据的能力推迟了
   capabilities: ['users.score'],
-  on: {
-    'closet.itemAdded': async ({ event, ctx }) => {
-      await ctx.users.adjustScore(event.data.uid, 1, 'reason.closet')
-      // @ts-expect-error 没有 users.read
-      ctx.users.get
-    },
-  },
+})
+definePlugin({
+  // @ts-expect-error 运行时组件推迟了
+  capabilities: ['ui.script'],
 })
 
 // 只能访问 tables 里声明过的表。
@@ -66,14 +64,11 @@ definePlugin({
   },
 })
 
-// 不允许修改的拦截点不能返回 patch；可修改的拦截点只能改白名单字段。
+// user.register 只能拒绝，不能改字段。
 definePlugin({
   capabilities: [],
   intercept: {
-    // @ts-expect-error player.create 不接受 patch
-    'player.create': async () => patch({ name: 'x' }),
     'user.register': async ({ input }) => {
-      if (input.nickname.length > 20) return patch({ nickname: input.nickname.slice(0, 20) })
       if (input.email.endsWith('@example.com')) return deny('blocked_domain', '不支持该邮箱域名')
     },
   },
@@ -81,8 +76,116 @@ definePlugin({
 definePlugin({
   capabilities: [],
   intercept: {
-    // @ts-expect-error email 不在 user.register 的可修改字段里
-    'user.register': async () => patch({ email: 'x@y.z' }),
+    // @ts-expect-error 拦截器不能改字段
+    'user.register': async () => ({ action: 'patch', patch: { nickname: 'x' } }),
+  },
+})
+definePlugin({
+  capabilities: [],
+  intercept: {
+    // @ts-expect-error 只有 user.register 一个拦截点
+    'player.create': async () => {},
+  },
+})
+
+// 事务内的拦截器只有 db 和不用等核心回应的几项。
+definePlugin({
+  capabilities: ['storage.tables', 'storage.kv', 'users.read'],
+  settings: z.object({ required: z.boolean().default(true) }),
+  tables: { codes: table<{ code: string }>() },
+  intercept: {
+    'user.register': async ({ ctx }) => {
+      const required: boolean = ctx.settings.required
+      await ctx.db.selectFrom('codes').selectAll().execute()
+      ctx.log.info('checked', { required })
+      void ctx.t('error.invalidCode')
+      void ctx.signal
+      // @ts-expect-error 事务内不能发网络请求
+      ctx.fetch
+      // @ts-expect-error 事务内不能写 KV
+      ctx.kv
+      // @ts-expect-error 事务内不能入队
+      ctx.jobs
+      // @ts-expect-error 事务内不能读核心数据
+      ctx.users
+    },
+  },
+  on: {
+    'user.registered': async ({ ctx }) => {
+      // 事件处理函数里照常可用
+      await ctx.kv.set('k', 1)
+      await ctx.users.get(1)
+      void ctx.fetch
+    },
+  },
+})
+
+// 插件不能自己开事务，也不能在迁移以外执行 DDL。
+definePlugin({
+  capabilities: ['storage.tables'],
+  tables: { codes: table<{ code: string }>() },
+  migrations: {
+    '0001_create_codes': {
+      async up(db) {
+        await db.schema.createTable('codes').addColumn('code', 'varchar(32)').execute()
+        // @ts-expect-error 迁移里也不能开事务
+        db.transaction
+      },
+    },
+  },
+  on: {
+    'player.created': async ({ ctx }) => {
+      // @ts-expect-error 不能开事务
+      ctx.db.transaction
+      // @ts-expect-error 不能开受控事务
+      ctx.db.startTransaction
+      // @ts-expect-error 不能独占连接
+      ctx.db.connection
+      // @ts-expect-error DDL 只在迁移里
+      ctx.db.schema
+      // @ts-expect-error 换插件会绕过上面的限制
+      ctx.db.withPlugin
+    },
+  },
+})
+
+// 只有注册表单能加字段；没有逃生舱 setup。
+definePlugin({
+  capabilities: [],
+  ui: {
+    formFields: [
+      {
+        // @ts-expect-error 只有 auth.register
+        form: 'user.profile',
+        field: { name: 'x', type: 'text', label: 'field.x' },
+      },
+    ],
+  },
+})
+definePlugin({
+  capabilities: [],
+  // @ts-expect-error setup 推迟了
+  setup: async () => {},
+})
+definePlugin({
+  capabilities: [],
+  ui: {
+    pages: {
+      // @ts-expect-error 没有运行时组件
+      x: { area: 'admin', title: 'page.x', view: { kind: 'component', module: { path: './x.js' } } },
+    },
+  },
+})
+
+// 机密设置项是非空字符串。
+definePlugin({
+  capabilities: [],
+  settings: z.object({ token: secret() }),
+  on: {
+    'texture.deleted': async ({ ctx }) => {
+      const token: string = ctx.settings.token
+      void token
+    },
   },
 })
 
@@ -136,6 +239,13 @@ definePlugin({
   on: {
     // @ts-expect-error 不存在的事件
     'texture.liked': async () => {},
+  },
+})
+definePlugin({
+  capabilities: [],
+  on: {
+    // @ts-expect-error 核心没有发出登录事件（ADR-0033）
+    'user.loggedIn': async () => {},
   },
 })
 

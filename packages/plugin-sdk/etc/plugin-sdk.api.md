@@ -8,7 +8,6 @@ import { ColumnType } from 'kysely';
 import { Generated } from 'kysely';
 import { Insertable } from 'kysely';
 import type { Kysely } from 'kysely';
-import type { Migration } from 'kysely/migration';
 import { Selectable } from 'kysely';
 import { Updateable } from 'kysely';
 import { z } from 'zod';
@@ -44,50 +43,18 @@ export const capabilities: readonly [
 /** 公开资料：uid、昵称、角色、头像 */
 'users.read',
 /** 额外可见：邮箱、积分、语言 */
-'users.readPrivate',
-/** 调整积分；核心记流水，必须给出原因 */
-'users.score', 'players.read',
+'users.readPrivate', 'players.read',
 /** 材质元数据 */
 'textures.read',
 /** 材质 PNG 原始字节 */
-'textures.readFile', 'notifications.send',
+'textures.readFile',
 /** 按插件隔离的 KV 存储（`ctx.kv`） */
 'storage.kv',
 /** 插件自有表（`ctx.db`），表名自动加插件前缀 */
-'storage.tables',
-/** 在主域运行插件自己的前端代码：等同于以当前登录用户（包括管理员）的身份行事 */
-'ui.script'];
+'storage.tables'];
 
 // @public (undocumented)
 export type Capability = (typeof capabilities)[number];
-
-// @public (undocumented)
-export type CaptchaAction = 'login' | 'register' | 'forgotPassword';
-
-// @public
-export interface CaptchaProvider<Ctx> {
-    // (undocumented)
-    readonly id: string;
-    // (undocumented)
-    readonly label: MessageKey;
-    // (undocumented)
-    verify(args: {
-        token: string;
-        ip: string;
-        action: CaptchaAction;
-        ctx: Ctx;
-    }): Promise<{
-        ok: boolean;
-    }>;
-    // (undocumented)
-    readonly widget: ClientModuleRef;
-}
-
-// @public (undocumented)
-export interface ClientModuleRef {
-    readonly export?: string;
-    readonly path: `./${string}`;
-}
 
 // @public (undocumented)
 export interface Column {
@@ -168,11 +135,6 @@ export interface CoreEvents {
         uid: Uid;
     };
     // (undocumented)
-    'user.loggedIn': {
-        uid: Uid;
-        method: 'password' | 'oauth' | 'passkey';
-    };
-    // (undocumented)
     'user.profileUpdated': {
         uid: Uid;
         fields: readonly ('nickname' | 'email' | 'password' | 'avatar' | 'locale')[];
@@ -197,58 +159,6 @@ export interface CoreEvents {
 
 // @public
 export interface CoreInterceptors {
-    // (undocumented)
-    'closet.add': {
-        input: {
-            uid: Uid;
-            tid: Tid;
-        };
-        patch: never;
-    };
-    // (undocumented)
-    'player.create': {
-        input: {
-            uid: Uid;
-            name: string;
-        };
-        patch: never;
-    };
-    // (undocumented)
-    'player.rename': {
-        input: {
-            player: Player;
-            newName: string;
-        };
-        patch: never;
-    };
-    // (undocumented)
-    'texture.upload': {
-        input: {
-            uid: Uid;
-            name: string;
-            type: TextureType;
-            public: boolean;
-            width: number;
-            height: number;
-            sizeBytes: number;
-            hash: string;
-            png: Uint8Array;
-        };
-        patch: {
-            name?: string;
-            public?: boolean;
-        };
-    };
-    // (undocumented)
-    'user.login': {
-        input: {
-            uid: Uid;
-            method: 'password' | 'oauth' | 'passkey';
-            ip: string;
-        };
-        patch: never;
-    };
-    // (undocumented)
     'user.register': {
         input: {
             email: string;
@@ -257,9 +167,7 @@ export interface CoreInterceptors {
             ip: string;
             extra: ExtraFields;
         };
-        patch: {
-            nickname?: string;
-        };
+        patch: never;
     };
 }
 
@@ -339,7 +247,7 @@ export interface Field {
 }
 
 // @public
-export type FormName = 'auth.register' | 'user.profile' | 'texture.upload';
+export type FormName = 'auth.register';
 
 // @public
 export type Gate<B extends boolean, T> = B extends true ? T : unknown;
@@ -350,7 +258,7 @@ export { Generated }
 export type Has<C extends readonly Capability[], K extends Capability> = K extends C[number] ? true : false;
 
 // @public
-export const highRiskCapabilities: readonly ["users.readPrivate", "textures.readFile", "ui.script"];
+export const highRiskCapabilities: readonly ["users.readPrivate", "textures.readFile"];
 
 // @public
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -365,7 +273,7 @@ export type InterceptorHandler<I extends InterceptorName, Ctx> = (args: {
     readonly input: Readonly<CoreInterceptors[I]['input']>;
     readonly scope: RequestScope;
     readonly ctx: Ctx;
-}) => Promise<InterceptResult<I>>;
+}) => Promise<InterceptResult>;
 
 // @public (undocumented)
 export type InterceptorName = keyof CoreInterceptors;
@@ -374,32 +282,7 @@ export type InterceptorName = keyof CoreInterceptors;
 export const interceptorPolicies: {
     readonly 'user.register': {
         readonly onFailure: 'closed';
-        readonly timeoutMs: 1500;
-        readonly transactional: true;
-    };
-    readonly 'user.login': {
-        readonly onFailure: 'open';
-        readonly timeoutMs: 800;
-        readonly transactional: false;
-    };
-    readonly 'player.create': {
-        readonly onFailure: 'closed';
-        readonly timeoutMs: 1000;
-        readonly transactional: true;
-    };
-    readonly 'player.rename': {
-        readonly onFailure: 'closed';
-        readonly timeoutMs: 1000;
-        readonly transactional: true;
-    };
-    readonly 'texture.upload': {
-        readonly onFailure: 'open';
-        readonly timeoutMs: 5000;
-        readonly transactional: false;
-    };
-    readonly 'closet.add': {
-        readonly onFailure: 'open';
-        readonly timeoutMs: 800;
+        readonly timeoutMs: 300;
         readonly transactional: true;
     };
 };
@@ -407,7 +290,6 @@ export const interceptorPolicies: {
 // @public (undocumented)
 export interface InterceptorPolicy {
     readonly onFailure: 'open' | 'closed';
-    // (undocumented)
     readonly timeoutMs: number;
     readonly transactional: boolean;
 }
@@ -416,13 +298,10 @@ export interface InterceptorPolicy {
 export type InterceptorRegistration<I extends InterceptorName, Ctx> = InterceptorHandler<I, Ctx> | {
     readonly handler: InterceptorHandler<I, Ctx>;
     readonly priority?: number;
-    readonly failClosed?: true;
 };
 
-// Warning: (ae-forgotten-export) The symbol "PatchOf" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
-export type InterceptResult<I extends InterceptorName> = void | Deny | ([PatchOf<I>] extends [never] ? never : Patch<PatchOf<I>>);
+export type InterceptResult = void | Deny;
 
 // @public
 export type IsoDateTime = string;
@@ -450,7 +329,6 @@ export interface KvApi {
     delete(key: string): Promise<void>;
     // (undocumented)
     get<T extends Json>(key: string): Promise<T | null>;
-    // (undocumented)
     set(key: string, value: Json, options?: {
         ttlSec?: number;
     }): Promise<void>;
@@ -492,47 +370,8 @@ export interface LoginProvider<Ctx> {
     readonly label: MessageKey;
 }
 
-// @public (undocumented)
-export interface MailMessage {
-    // (undocumented)
-    readonly html: string;
-    // (undocumented)
-    readonly replyTo?: string;
-    // (undocumented)
-    readonly subject: string;
-    // (undocumented)
-    readonly text: string;
-    // (undocumented)
-    readonly to: string;
-}
-
-// @public
-export interface MailTransportProvider<Ctx> {
-    // (undocumented)
-    readonly id: string;
-    // (undocumented)
-    readonly label: MessageKey;
-    // (undocumented)
-    send(args: {
-        message: MailMessage;
-        ctx: Ctx;
-    }): Promise<{
-        messageId: string | null;
-    }>;
-}
-
 // @public
 export type MessageKey = string;
-
-// @public (undocumented)
-export interface NotificationsApi {
-    send(args: {
-        to: Uid | readonly Uid[] | 'admins';
-        title: MessageKey;
-        body: MessageKey;
-        params?: Readonly<Record<string, string | number>>;
-    }): Promise<void>;
-}
 
 // @public (undocumented)
 export type Or<A extends boolean, B extends boolean> = A extends true ? true : B;
@@ -555,17 +394,6 @@ export interface PasswordHasherProvider<Ctx> {
         ctx: Ctx;
     }): Promise<boolean>;
 }
-
-// @public (undocumented)
-export interface Patch<P> {
-    // (undocumented)
-    readonly action: 'patch';
-    // (undocumented)
-    readonly patch: P;
-}
-
-// @public (undocumented)
-export function patch<P>(value: P): Patch<P>;
 
 // @public (undocumented)
 export type PermissionMap = Readonly<Record<string, MessageKey>>;
@@ -603,14 +431,12 @@ export interface PlayersApi {
 }
 
 // @public
-export type PluginContext<C extends readonly Capability[], S, T extends TableMap> = PluginContextBase<S> & Gate<Or<Or<Has<C, 'users.read'>, Has<C, 'users.readPrivate'>>, Has<C, 'users.score'>>, {
+export type PluginContext<C extends readonly Capability[], S, T extends TableMap> = PluginContextBase<S> & Gate<Or<Has<C, 'users.read'>, Has<C, 'users.readPrivate'>>, {
     readonly users: UsersApiFor<C>;
 }> & Gate<Has<C, 'players.read'>, {
     readonly players: PlayersApi;
 }> & Gate<Or<Has<C, 'textures.read'>, Has<C, 'textures.readFile'>>, {
     readonly textures: TexturesApiFor<C>;
-}> & Gate<Has<C, 'notifications.send'>, {
-    readonly notifications: NotificationsApi;
 }> & Gate<Has<C, 'storage.kv'>, {
     readonly kv: KvApi;
 }> & Gate<Has<C, 'storage.tables'>, {
@@ -618,7 +444,7 @@ export type PluginContext<C extends readonly Capability[], S, T extends TableMap
 }>;
 
 // @public
-export interface PluginContextBase<S> {
+export interface PluginContextBase<S> extends PluginContextLocal<S> {
     fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>;
     // (undocumented)
     readonly jobs: {
@@ -627,7 +453,10 @@ export interface PluginContextBase<S> {
             dedupeKey?: string;
         }): Promise<void>;
     };
-    // (undocumented)
+}
+
+// @public
+export interface PluginContextLocal<S> {
     readonly log: Logger;
     // (undocumented)
     readonly plugin: {
@@ -644,8 +473,10 @@ export interface PluginContextBase<S> {
     t(key: MessageKey, params?: Readonly<Record<string, string | number>>, locale?: string): string;
 }
 
+// Warning: (ae-forgotten-export) The symbol "DbOmitted" needs to be exported by the entry point index.d.ts
+//
 // @public
-export type PluginDb<T extends TableMap> = Kysely<RowsOf<T>>;
+export type PluginDb<T extends TableMap> = Omit<Kysely<RowsOf<T>>, DbOmitted>;
 
 // @public
 export interface PluginDefinition<C extends readonly Capability[], S extends SettingsSchema, T extends TableMap, P extends PermissionMap> {
@@ -655,13 +486,15 @@ export interface PluginDefinition<C extends readonly Capability[], S extends Set
         readonly job: string;
         readonly payload?: Json;
     }[];
+    // Warning: (ae-forgotten-export) The symbol "InterceptorCtx" needs to be exported by the entry point index.d.ts
+    //
     // (undocumented)
     readonly intercept?: {
-        readonly [I in InterceptorName]?: InterceptorRegistration<I, Ctx<C, S, T>>;
+        readonly [I in InterceptorName]?: InterceptorRegistration<I, InterceptorCtx<I, C, S, T>>;
     };
     // (undocumented)
     readonly jobs?: Readonly<Record<string, JobDefinition<Ctx<C, S, T>>>>;
-    readonly migrations?: Readonly<Record<string, Migration>>;
+    readonly migrations?: Readonly<Record<string, PluginMigration>>;
     readonly network?: readonly `https://${string}`[];
     // Warning: (ae-forgotten-export) The symbol "Ctx" needs to be exported by the entry point index.d.ts
     //
@@ -678,9 +511,6 @@ export interface PluginDefinition<C extends readonly Capability[], S extends Set
     };
     // (undocumented)
     readonly settings?: S;
-    readonly setup?: (args: {
-        ctx: Ctx<C, S, T>;
-    }) => Promise<void | (() => Promise<void>)>;
     // (undocumented)
     readonly tables?: T;
     // (undocumented)
@@ -698,11 +528,11 @@ export interface PluginManifest {
     readonly cron: readonly {
         readonly schedule: string;
         readonly job: string;
+        readonly payload: Json;
     }[];
     // (undocumented)
     readonly entry: {
         readonly server: string | null;
-        readonly client: readonly string[];
     };
     // (undocumented)
     readonly events: readonly EventName[];
@@ -713,10 +543,13 @@ export interface PluginManifest {
     readonly interceptors: readonly {
         readonly name: InterceptorName;
         readonly priority: number;
-        readonly failClosed: boolean;
     }[];
     // (undocumented)
-    readonly jobs: readonly string[];
+    readonly jobs: readonly {
+        readonly name: string;
+        readonly maxAttempts: number;
+        readonly timeoutMs: number;
+    }[];
     // (undocumented)
     readonly manifestVersion: 1;
     // (undocumented)
@@ -727,10 +560,19 @@ export interface PluginManifest {
     readonly permissions: Readonly<Record<string, MessageKey>>;
     // (undocumented)
     readonly providers: {
-        readonly passwordHasher: readonly string[];
-        readonly login: readonly string[];
-        readonly captcha: readonly string[];
-        readonly mail: readonly string[];
+        readonly passwordHasher: readonly {
+            readonly id: string;
+            readonly label: MessageKey;
+            readonly detect: {
+                readonly prefix?: readonly string[];
+                readonly pattern?: string;
+            };
+        }[];
+        readonly login: readonly {
+            readonly id: string;
+            readonly label: MessageKey;
+            readonly icon: IconName;
+        }[];
     };
     // (undocumented)
     readonly requires: Readonly<Record<string, string>>;
@@ -740,6 +582,12 @@ export interface PluginManifest {
         readonly path: string;
         readonly auth: 'public' | 'user';
         readonly permission: string | null;
+        readonly maxBodyBytes: number;
+        readonly rateLimit: {
+            readonly limit: number;
+            readonly windowSec: number;
+            readonly by: 'ip' | 'user';
+        } | null;
     }[];
     readonly settingsSchema: Readonly<Record<string, Json>> | null;
     // (undocumented)
@@ -749,6 +597,15 @@ export interface PluginManifest {
     // (undocumented)
     readonly version: string;
 }
+
+// @public
+export interface PluginMigration {
+    // (undocumented)
+    up(db: PluginMigrationDb): Promise<void>;
+}
+
+// @public
+export type PluginMigrationDb = Omit<Kysely<any>, Exclude<DbOmitted, 'schema'>>;
 
 // @public
 export interface PluginPackageField {
@@ -778,11 +635,7 @@ export interface PrivateUser extends PublicUser {
 // @public
 export interface Providers<Ctx> {
     // (undocumented)
-    readonly captcha?: readonly CaptchaProvider<Ctx>[];
-    // (undocumented)
     readonly login?: readonly LoginProvider<Ctx>[];
-    // (undocumented)
-    readonly mail?: readonly MailTransportProvider<Ctx>[];
     // (undocumented)
     readonly passwordHasher?: readonly PasswordHasherProvider<Ctx>[];
 }
@@ -842,9 +695,6 @@ export { Selectable }
 
 // @public (undocumented)
 export type SettingsSchema = z.ZodObject;
-
-// @public
-export type SlotName = 'user.dashboard' | 'admin.dashboard' | 'user.profile.sections' | 'skinlib.detail.sidebar' | 'player.card.footer';
 
 // @public (undocumented)
 export interface StatsSourceResponse {
@@ -923,6 +773,11 @@ export type TextureType = 'steve' | 'alex' | 'cape';
 // @public (undocumented)
 export type Tid = number;
 
+// @public
+export type TransactionalPluginContext<C extends readonly Capability[], S, T extends TableMap> = PluginContextLocal<S> & Gate<Has<C, 'storage.tables'>, {
+    readonly db: PluginDb<T>;
+}>;
+
 // @public (undocumented)
 export interface UiContributions<P> {
     // (undocumented)
@@ -944,12 +799,6 @@ export interface UiContributions<P> {
         readonly permission?: NoInfer<keyof P & string>;
         readonly view: View;
     }>>;
-    // (undocumented)
-    readonly widgets?: readonly {
-        readonly slot: SlotName;
-        readonly title?: MessageKey;
-        readonly view: View;
-    }[];
 }
 
 // @public
@@ -984,13 +833,6 @@ export interface UsersPublicApi {
 }
 
 // @public (undocumented)
-export interface UsersScoreApi {
-    adjustScore(uid: Uid, delta: number, reason: MessageKey): Promise<{
-        score: number;
-    }>;
-}
-
-// @public (undocumented)
 export type View = {
     readonly kind: 'table';
     readonly source: PluginPath;
@@ -1013,17 +855,14 @@ export type View = {
 } | {
     readonly kind: 'markdown';
     readonly source: PluginPath;
-} | {
-    readonly kind: 'component';
-    readonly module: ClientModuleRef;
 };
 
 export { z }
 
 // Warnings were encountered during analysis:
 //
-// dist/types/context.d.ts:114:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
-// dist/types/context.d.ts:118:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
+// dist/types/context.d.ts:119:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
+// dist/types/context.d.ts:123:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
 // dist/types/routes.d.ts:29:5 - (ae-forgotten-export) The symbol "RouteArgs" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)

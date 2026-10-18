@@ -3,12 +3,13 @@ import type { Json } from './dto'
 /**
  * 插件 UI 贡献。
  *
- * 默认全部是声明式的：插件只描述"要什么"，由核心用 @nextskin/ui 的组件渲染。
+ * 全部是声明式的：插件只描述"要什么"，由核心用 @nextskin/ui 的组件渲染。
  * 这样插件界面自动继承站点的视觉语言、暗色模式和无障碍处理，插件也拿不到浏览器里的执行权。
- * 只有 `{ kind: 'component' }` 视图和验证码挂件会在浏览器里运行插件代码，需要 `ui.script` 能力。
  *
- * 设置页不需要在这里声明：核心根据 `settings` schema 自动生成，
- * 字段文案按约定取 `settings.<key>.label` 和 `settings.<key>.help`。
+ * 设置页不需要在这里声明：核心根据 `settings` schema 自动生成（ADR-0028）。字段文案按约定取：
+ * - `settings.<key>.label`、`settings.<key>.help`；
+ * - 对象的属性：`settings.<key>.fields.<属性>.label`、`settings.<key>.fields.<属性>.help`；
+ * - 枚举的选项：`settings.<key>.options.<值>`。
  */
 
 /** 插件命名空间内的 i18n 键，对应插件 locales/<lang>.json 中的键。 */
@@ -18,12 +19,8 @@ export type IconName = string
 /** 插件路由路径，相对于 `/plugins/{id}`。可以用 `:field` 引用表格行的字段。 */
 export type PluginPath = `/${string}`
 
-/** 插件可以追加字段的核心表单。字段值通过拦截器/事件里的 `extra` 交给插件。 */
-export type FormName = 'auth.register' | 'user.profile' | 'texture.upload'
-
-/** 插件可以放置挂件的位置。 */
-export type SlotName =
-  'user.dashboard' | 'admin.dashboard' | 'user.profile.sections' | 'skinlib.detail.sidebar' | 'player.card.footer'
+/** 插件可以追加字段的核心表单。字段值通过拦截器和事件里的 `extra` 交给插件。 */
+export type FormName = 'auth.register'
 
 export interface Field {
   readonly name: string
@@ -54,13 +51,6 @@ export interface Action {
   readonly form?: readonly Field[]
 }
 
-export interface ClientModuleRef {
-  /** 插件包内已构建好的 ESM 路径 */
-  readonly path: `./${string}`
-  /** 默认 'default' */
-  readonly export?: string
-}
-
 export type View =
   | {
       readonly kind: 'table'
@@ -89,18 +79,8 @@ export type View =
     }
   | {
       readonly kind: 'markdown'
-      /** GET 该路由，返回 text/markdown；核心负责净化 */
+      /** GET 该路由，返回 text/markdown；不渲染原始 HTML（ADR-0028） */
       readonly source: PluginPath
-    }
-  | {
-      /**
-       * 需要 `ui.script`。组件必须使用 `@nextskin/ui` 和设计 token。
-       * 只在浏览器里、水合之后加载，不能是服务端组件；插槽传给它的 props 都可序列化。
-       * 由 `nextskin-plugin build` 打成单文件 ESM，`react`、`react-dom`、`@nextskin/ui`、`@nextskin/plugin-client`
-       * 用宿主的实例；入口只能静态导入这些模块，不能用 import()，安装时核心会检查（ADR-0011）。
-       */
-      readonly kind: 'component'
-      readonly module: ClientModuleRef
     }
 
 export interface TableSourceResponse {
@@ -133,5 +113,4 @@ export interface UiContributions<P> {
     >
   >
   readonly formFields?: readonly { readonly form: FormName; readonly field: Field }[]
-  readonly widgets?: readonly { readonly slot: SlotName; readonly title?: MessageKey; readonly view: View }[]
 }

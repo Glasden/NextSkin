@@ -23,7 +23,6 @@ import type {
  */
 export interface CoreEvents {
   'user.registered': { user: PublicUser; extra: ExtraFields }
-  'user.loggedIn': { uid: Uid; method: 'password' | 'oauth' | 'passkey' }
   'user.profileUpdated': {
     uid: Uid
     fields: readonly ('nickname' | 'email' | 'password' | 'avatar' | 'locale')[]

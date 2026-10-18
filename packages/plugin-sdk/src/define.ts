@@ -1,10 +1,9 @@
-import type { Migration } from 'kysely/migration'
 import { z } from 'zod'
 import type { Capability } from './capabilities'
-import type { PluginContext, TableDef, TableMap } from './context'
+import type { PluginContext, PluginMigration, TableDef, TableMap, TransactionalPluginContext } from './context'
 import type { Json } from './dto'
 import type { EventHandler, EventName } from './events'
-import type { InterceptorName, InterceptorRegistration } from './interceptors'
+import type { InterceptorName, InterceptorRegistration, interceptorPolicies } from './interceptors'
 import type { Providers } from './providers'
 import type { RouteDefinition, RouteKey } from './routes'
 import type { MessageKey, UiContributions } from './ui'
@@ -17,6 +16,16 @@ type Ctx<C extends readonly Capability[], S extends SettingsSchema, T extends Ta
   z.output<S>,
   T
 >
+
+/** 拦截器的上下文按 `interceptorPolicies` 收窄：事务内的拦截器只有 `db` 和不用等核心回应的几项。 */
+type InterceptorCtx<
+  I extends InterceptorName,
+  C extends readonly Capability[],
+  S extends SettingsSchema,
+  T extends TableMap,
+> = (typeof interceptorPolicies)[I]['transactional'] extends true
+  ? TransactionalPluginContext<C, z.output<S>, T>
+  : Ctx<C, S, T>
 
 export interface JobDefinition<Ctx> {
   handler(args: { payload: Json; attempt: number; ctx: Ctx }): Promise<void>
@@ -47,11 +56,16 @@ export interface PluginDefinition<
   /** 插件新增的权限：键是权限名，值是给管理员看的说明文案键 */
   readonly permissions?: P
   readonly tables?: T
-  /** Kysely 迁移，按键名排序执行；键名建议 '0001_create_codes' 这种格式 */
-  readonly migrations?: Readonly<Record<string, Migration>>
+  /**
+   * 迁移，按键名排序执行，键名建议 '0001_create_codes' 这种格式。启用插件之前由核心执行，只往前走。
+   * DDL 只能写在这里；表名写逻辑名，并且必须在 `tables` 里声明。
+   */
+  readonly migrations?: Readonly<Record<string, PluginMigration>>
 
   readonly on?: { readonly [E in EventName]?: EventHandler<E, Ctx<C, S, T>> }
-  readonly intercept?: { readonly [I in InterceptorName]?: InterceptorRegistration<I, Ctx<C, S, T>> }
+  readonly intercept?: {
+    readonly [I in InterceptorName]?: InterceptorRegistration<I, InterceptorCtx<I, C, S, T>>
+  }
   readonly providers?: Providers<Ctx<C, S, T>>
   readonly routes?: { readonly [K in RouteKey]?: RouteDefinition<Ctx<C, S, T>, P> }
   readonly jobs?: Readonly<Record<string, JobDefinition<Ctx<C, S, T>>>>
@@ -62,12 +76,6 @@ export interface PluginDefinition<
    */
   readonly cron?: readonly { readonly schedule: string; readonly job: string; readonly payload?: Json }[]
   readonly ui?: UiContributions<P>
-
-  /**
-   * 逃生舱：只在上面的字段表达不了时使用（例如需要维持一条常驻的出站连接）。
-   * 返回的清理函数会在插件停用或换代时调用。
-   */
-  readonly setup?: (args: { ctx: Ctx<C, S, T> }) => Promise<void | (() => Promise<void>)>
 }
 
 /* eslint-disable @typescript-eslint/no-empty-object-type -- 这里的 {} 表示"一项都没有声明" */
@@ -86,7 +94,10 @@ export function table<Row extends object>(): TableDef<Row> {
   return { kind: 'table' }
 }
 
-/** 敏感设置项：加密存储，后台用密码框显示，永远不会回传到浏览器。 */
+/**
+ * 敏感设置项：加密存储，后台用密码框显示，永远不会回传到浏览器。
+ * 在 manifest 的 JSON Schema 里标成 `writeOnly`，和核心的机密设置项是同一个标记（ADR-0028）。
+ */
 export function secret() {
-  return z.string().min(1).meta({ secret: true })
+  return z.string().min(1).meta({ writeOnly: true })
 }

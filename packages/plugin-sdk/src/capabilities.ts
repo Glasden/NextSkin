@@ -1,5 +1,5 @@
 /**
- * 插件可以申请的数据访问能力。
+ * 插件可以申请的数据访问能力。都只读核心数据，或者读写插件自己的数据：插件不写核心数据。
  *
  * 这里只列"从贡献清单看不出来"的权限。注册了哪些路由、事件、拦截器、Provider、UI，
  * 本身就写在 manifest 里，不需要再申请。下面每一项都会在安装时逐条展示给管理员。
@@ -12,34 +12,25 @@ export const capabilities = [
   'users.read',
   /** 额外可见：邮箱、积分、语言 */
   'users.readPrivate',
-  /** 调整积分；核心记流水，必须给出原因 */
-  'users.score',
   'players.read',
   /** 材质元数据 */
   'textures.read',
   /** 材质 PNG 原始字节 */
   'textures.readFile',
-  'notifications.send',
   /** 按插件隔离的 KV 存储（`ctx.kv`） */
   'storage.kv',
   /** 插件自有表（`ctx.db`），表名自动加插件前缀 */
   'storage.tables',
-  /** 在主域运行插件自己的前端代码：等同于以当前登录用户（包括管理员）的身份行事 */
-  'ui.script',
 ] as const
 
 export type Capability = (typeof capabilities)[number]
 
 /**
  * 安装界面需要醒目提示的能力。
- * 另外，提供 passwordHasher / login / mail 这几类 Provider 的插件会接触到明文密码、
- * 第三方身份或邮件内容，同样按高风险展示（由核心根据 manifest 判断）。
+ * 另外，提供 passwordHasher / login 这两类 Provider 的插件会接触到明文密码或第三方身份，
+ * 同样按高风险展示（由核心根据 manifest 判断）。
  */
-export const highRiskCapabilities = [
-  'users.readPrivate',
-  'textures.readFile',
-  'ui.script',
-] as const satisfies readonly Capability[]
+export const highRiskCapabilities = ['users.readPrivate', 'textures.readFile'] as const satisfies readonly Capability[]
 
 export type Has<C extends readonly Capability[], K extends Capability> = K extends C[number] ? true : false
 export type Or<A extends boolean, B extends boolean> = A extends true ? true : B

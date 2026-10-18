@@ -5,8 +5,8 @@ import type { UserActor } from './dto'
  * 插件 HTTP 路由，统一挂在 `/plugins/{id}/` 下。
  *
  * 键的格式是 'METHOD /path'，路径参数写 `:name`，例如 'DELETE /codes/:code'。
- * 核心统一处理：登录态、权限、CSRF（Cookie 登录的非 GET 请求校验 Origin）、限流、请求体大小。
- * 插件 host 模式下请求体会被完整读入后转发，所以有大小上限。
+ * 核心统一处理：登录态（只认会话 Cookie）、权限、CSRF（非 GET 请求校验 Origin）、限流、请求体大小。
+ * 请求体完整读入后才交给插件，所以有大小上限；响应体同样完整读出，不超过 10 MiB，不支持流式响应。
  */
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RouteKey = `${HttpMethod} /${string}`

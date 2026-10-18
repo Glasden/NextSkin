@@ -1,6 +1,9 @@
-import type { MailMessage as ProviderMessage } from '@nextskin/plugin-sdk'
-
-export interface MailMessage extends ProviderMessage {
+export interface MailMessage {
+  readonly to: string
+  readonly subject: string
+  readonly html: string
+  readonly text: string
+  readonly replyTo?: string
   readonly from: { address: string; name: string }
 }
 
