@@ -411,13 +411,22 @@ export function createPluginSystem(options: {
       const execution = plugin.known.loaded.invoke(structuredClone(call), structuredClone(context))
       const result = await Promise.race([
         execution.then(
-          (value) => structuredClone(value),
+          (value) => {
+            // 插件侧的计时和这里不完全同步：过了期限才到的结果按超时处理
+            if (Date.now() >= started + opts.timeoutMs)
+              throw new PluginInvocationError(id, 'timeout', `插件在 ${opts.timeoutMs} ms 内没有完成`)
+            return structuredClone(value)
+          },
           (error: unknown) => {
             const name = error instanceof Error ? error.name : ''
             throw new PluginInvocationError(
               id,
-              name === 'PluginSettingsInvalidError' ? 'settings_invalid' : 'error',
-              errorMessage(error),
+              name === 'PluginSettingsInvalidError'
+                ? 'settings_invalid'
+                : name === 'PluginTimeoutError'
+                  ? 'timeout'
+                  : 'error',
+              name === 'PluginTimeoutError' ? `插件在 ${opts.timeoutMs} ms 内没有完成` : errorMessage(error),
             )
           },
         ),
@@ -437,6 +446,8 @@ export function createPluginSystem(options: {
       clearTimeout(timer)
       invocations.delete(invocationId)
       controller.abort()
+      // 超时了插件那边可能还在跑：让它的 ctx.signal 也中止
+      plugin.known.loaded.cancel(invocationId)
       // 第一版没有指标系统，只记日志：插件 id、调用点、耗时、结果（ADR-0033）
       log(`[plugins] ${id} ${point} ${Date.now() - started}ms ${outcome}`)
     }
@@ -642,21 +653,25 @@ export function createPluginSystem(options: {
           )
           throw new DomainError('plugin_unavailable')
         }
-        breakers.delete(key)
-        // 插件侧可能被完全控制：返回值在这里再检查一遍
+        // 插件侧可能被完全控制：返回值在这里再检查一遍，合法的返回值才清掉失败计数
         const deny = outcome as InterceptOutcome
-        if (deny === null) continue
+        if (deny === null) {
+          breakers.delete(key)
+          continue
+        }
         if (
           typeof deny === 'object' &&
           deny.action === 'deny' &&
           typeof deny.code === 'string' &&
           typeof deny.message === 'string'
-        )
+        ) {
+          breakers.delete(key)
           throw new DomainError('registration_denied', {
             plugin: id,
             reason: [...deny.code].slice(0, 64).join(''),
             message: [...deny.message].slice(0, 200).join(''),
           })
+        }
         recordFailure(key)
         throw new DomainError('plugin_unavailable')
       }

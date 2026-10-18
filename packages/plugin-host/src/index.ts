@@ -24,6 +24,7 @@ export {
 export {
   loadPlugin,
   PluginSettingsInvalidError,
+  PluginTimeoutError,
   MAX_FETCH_BODY_BYTES,
   MAX_RESPONSE_BYTES,
   type LoadedPlugin,

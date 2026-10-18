@@ -1,0 +1,111 @@
+import { definePlugin } from '@nextskin/plugin-sdk'
+import { expect, test, vi } from 'vitest'
+import { z } from 'zod'
+import type { AnyPluginDefinition } from './manifest.ts'
+import type { CoreRpc, InvocationContext, PluginCall } from './protocol.ts'
+import { loadPlugin, PluginSettingsInvalidError } from './runtime.ts'
+
+const context: InvocationContext = {
+  invocationId: 'invocation',
+  settings: {},
+  site: { url: 'https://skin.example.test', name: 'Test' },
+  locale: 'en',
+  timeoutMs: 2000,
+}
+const call: PluginCall = {
+  kind: 'intercept',
+  name: 'user.register',
+  input: { email: 'a@example.test', nickname: 'Alex', playerName: 'Alex', ip: '192.0.2.1', extra: {} },
+  scope: { requestId: 'request', actor: { kind: 'system' }, locale: 'en', ip: '192.0.2.1' },
+}
+const load = (definition: AnyPluginDefinition, rpc: CoreRpc = vi.fn<CoreRpc>()) =>
+  loadPlugin({
+    id: 'example',
+    version: '1.0.0',
+    definition,
+    messages: {},
+    dialect: 'sqlite',
+    fallbackLocale: 'zh-CN',
+    rpc,
+  })
+
+test('事务内拦截器只有本地上下文和 db，即使申请了其他能力', async () => {
+  let keys: string[] = []
+  const plugin = load(
+    definePlugin({
+      capabilities: [
+        'storage.tables',
+        'storage.kv',
+        'users.read',
+        'users.readPrivate',
+        'players.read',
+        'textures.read',
+        'textures.readFile',
+      ],
+      intercept: {
+        'user.register': ({ ctx }) => {
+          keys = Object.keys(ctx).sort()
+          expect(Object.isFrozen(ctx)).toBe(true)
+          return Promise.resolve()
+        },
+      },
+    }),
+  )
+  expect(await plugin.invoke(call, context)).toBeNull()
+  expect(keys).toEqual(['db', 'log', 'plugin', 'settings', 'signal', 'site', 't'])
+  plugin.unload()
+})
+
+test('设置不通过 schema 时抛 PluginSettingsInvalidError，不执行处理函数', async () => {
+  const handler = vi.fn(async () => {})
+  const plugin = load(
+    definePlugin({
+      capabilities: [],
+      settings: z.object({ count: z.number().positive() }),
+      intercept: { 'user.register': handler },
+    }),
+  )
+  await expect(plugin.invoke(call, { ...context, settings: { count: -1 } })).rejects.toBeInstanceOf(
+    PluginSettingsInvalidError,
+  )
+  expect(handler).not.toHaveBeenCalled()
+  plugin.unload()
+})
+
+test('unload abort 所有在途调用的 ctx.signal', async () => {
+  const signals: AbortSignal[] = []
+  const plugin = load(
+    definePlugin({
+      capabilities: [],
+      jobs: {
+        wait: {
+          handler: async ({ ctx }) => {
+            signals.push(ctx.signal)
+            await new Promise<void>((resolve) => ctx.signal.addEventListener('abort', () => resolve(), { once: true }))
+          },
+        },
+      },
+    }),
+  )
+  const first = plugin.invoke({ kind: 'job', name: 'wait', payload: {}, attempt: 1 }, context)
+  const second = plugin.invoke(
+    { kind: 'job', name: 'wait', payload: {}, attempt: 1 },
+    { ...context, invocationId: 'second' },
+  )
+  expect(signals).toHaveLength(2)
+  expect(signals.every((s) => !s.aborted)).toBe(true)
+  plugin.unload()
+  // 停用之后才返回的结果不算数
+  await expect(first).rejects.toThrow('plugin unloaded')
+  await expect(second).rejects.toThrow('plugin unloaded')
+  expect(signals.every((s) => s.aborted)).toBe(true)
+})
+
+test('拦截器的非法返回值按失败处理', async () => {
+  const plugin = load({
+    capabilities: [],
+    intercept: { 'user.register': () => Promise.resolve({ action: 'allow' }) },
+  } as unknown as AnyPluginDefinition)
+  await expect(plugin.invoke(call, context)).rejects.toThrow('拦截器只能')
+  plugin.unload()
+})

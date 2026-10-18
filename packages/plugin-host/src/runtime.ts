@@ -21,8 +21,18 @@ export const MAX_RESPONSE_BYTES = 10 * 1024 * 1024
 export interface LoadedPlugin {
   readonly id: string
   invoke(call: PluginCall, context: InvocationContext): Promise<unknown>
+  /** 核心那边已经不等这次调用了（超时）：abort 它的 `ctx.signal`。调用已经结束时什么也不做 */
+  cancel(invocationId: string): void
   /** 停用或换代：abort 所有进行中调用的 `ctx.signal` */
   unload(): void
+}
+
+/** 调用超过了核心给的时间 */
+export class PluginTimeoutError extends Error {
+  override name = 'PluginTimeoutError'
+  constructor() {
+    super('plugin call timed out')
+  }
 }
 
 /** 存着的设置通不过插件自己的 schema：这次调用不执行处理函数 */
@@ -43,7 +53,7 @@ export function loadPlugin(options: {
 }): LoadedPlugin {
   const { id, version, definition, messages, dialect, rpc } = options
   const granted = new Set<string>(definition.capabilities as readonly string[])
-  const active = new Set<AbortController>()
+  const active = new Map<string, AbortController>()
   const settingsSchema = definition.settings as z.ZodObject | undefined
 
   function parseSettings(values: Readonly<Record<string, Json>>): unknown {
@@ -211,17 +221,23 @@ export function loadPlugin(options: {
     id,
     async invoke(call, context) {
       const controller = new AbortController()
-      active.add(controller)
-      const timer = setTimeout(() => controller.abort(new Error('plugin call timed out')), context.timeoutMs)
+      active.set(context.invocationId, controller)
+      const timer = setTimeout(() => controller.abort(new PluginTimeoutError()), context.timeoutMs)
       try {
-        return await run(call, context, controller.signal)
+        const result = await run(call, context, controller.signal)
+        // 超时或停用之后才返回的结果不算数：处理函数可能只是在 signal 中止后提前收了尾
+        if (controller.signal.aborted) throw controller.signal.reason
+        return result
       } finally {
         clearTimeout(timer)
-        active.delete(controller)
+        if (active.get(context.invocationId) === controller) active.delete(context.invocationId)
       }
     },
+    cancel(invocationId) {
+      active.get(invocationId)?.abort(new PluginTimeoutError())
+    },
     unload() {
-      for (const controller of active) controller.abort(new Error('plugin unloaded'))
+      for (const controller of active.values()) controller.abort(new Error('plugin unloaded'))
       active.clear()
     },
   }
