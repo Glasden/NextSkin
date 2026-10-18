@@ -169,9 +169,18 @@ test('通行密钥：添加、改名，用它登录，删除', async ({ page }) 
   await rename.getByRole('button', { name: t('user.security.passkeys.renameSubmit') }).click()
   await expect(section.getByText('工作电脑')).toBeVisible()
 
-  // 用通行密钥登录不经过两步验证，也不用输入邮箱
-  await signOut(page, name)
+  // 用通行密钥登录不经过两步验证，也不用输入邮箱。登录页还会把通行密钥挂在邮箱框的自动填充上，虚拟认证器
+  // 有时不等选择就应答它、抢在点击之前登录，有时不应答，所以让浏览器报告不支持自动填充，只走按钮。
+  // 清 Cookie 退出，只打开一次登录页：认证参数是页面打开以后才取的，取到之前点按钮只会报错
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = () => Promise.resolve(false)
+  })
+  await page.context().clearCookies()
+  const options = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === '/api/auth/passkey/generate-authenticate-options',
+  )
   await page.goto(`/sign-in?next=${encodeURIComponent('/user/security')}`)
+  await options
   await page.getByRole('button', { name: t('auth.signIn.passkey') }).click()
   await expect(page).toHaveURL('/user/security')
   const session = (await page.evaluate(() => fetch('/api/auth/get-session').then((res) => res.json()))) as {

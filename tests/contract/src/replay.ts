@@ -66,6 +66,15 @@ export async function sendCase(send: Send, contractCase: ContractCase): Promise<
   return send(resolveRequest(contractCase, etag))
 }
 
+/**
+ * textures 属性的 timestamp 应当落在回放期间。经过 Next standalone 回放时，timestamp 由服务端进程取，区间由测试进程取：
+ * Windows 上两个进程各自读的 Date.now() 实测会差 1 毫秒，响应快的用例里 timestamp 会比测试进程随后读到的时间还晚。
+ * 两端各放宽一秒，仍然分得出毫秒和秒
+ */
+function timeWindow(startedAt: number) {
+  return { from: startedAt - 1000, to: Date.now() + 1000 }
+}
+
 /** 返回不一致之处；空数组表示与 BS 一致 */
 export async function checkCase(
   send: Send,
@@ -78,7 +87,7 @@ export async function checkCase(
   if (!expected) return [`没有 ${expectedId} 的录制结果；请运行 pnpm --filter @nextskin/contract-tests record`]
   return compareResponse(expected, actual, contractCase.body ?? 'exact', {
     publicKey: context.publicKey,
-    timeWindow: { from: context.startedAt, to: Date.now() },
+    timeWindow: timeWindow(context.startedAt),
   })
 }
 
@@ -126,7 +135,7 @@ export async function checkScenario(
     const requestBody = typeof request.body === 'string' ? parseJson(request.body) : undefined
     for (const problem of compareResponse(expected, actual, step.body ?? 'exact', {
       publicKey: context.publicKey,
-      timeWindow: { from: context.startedAt, to: Date.now() },
+      timeWindow: timeWindow(context.startedAt),
       scenario: { seenAccessTokens, clientTokens, requestBody },
     }))
       problems.push(`${label}：${problem}`)

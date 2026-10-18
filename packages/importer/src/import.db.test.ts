@@ -1,6 +1,7 @@
-import { generateKeyPairSync } from 'node:crypto'
+import { generateKeyPair } from 'node:crypto'
 import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
+import { promisify } from 'node:util'
 import {
   coreMigrations,
   insertReturningId,
@@ -36,14 +37,16 @@ let target: TestDatabase<CoreDatabase>
 let run: ReturnType<typeof importer>
 let signingKey: string
 
+// 4096 位的 RSA 要随机找大素数，耗时没有上限；pnpm check 并行跑时 CI 上会超过钩子默认的 10 秒
 beforeAll(async () => {
-  env = await createEnvironment()
-  signingKey = generateKeyPairSync('rsa', {
+  const key = promisify(generateKeyPair)('rsa', {
     modulusLength: 4096,
     privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
     publicKeyEncoding: { type: 'spki', format: 'pem' },
-  }).privateKey
-})
+  })
+  env = await createEnvironment()
+  signingKey = (await key).privateKey
+}, 60_000)
 afterAll(async () => env?.cleanup())
 beforeEach(async () => {
   await env.resetStorage()

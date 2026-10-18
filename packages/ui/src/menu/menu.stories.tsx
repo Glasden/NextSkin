@@ -57,6 +57,8 @@ export const UserMenu: Story = {
     await waitFor(() => expect(screen.getByRole('menuitem', { name: '用户中心' })).toHaveFocus())
     await userEvent.keyboard('{End}{Enter}')
     await expect(onSignOut).toHaveBeenCalledOnce()
+    // 等退场的菜单卸载再点：不然下面的 findByRole 找到的是正在关闭的那个，截图时菜单已经关了
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
     await userEvent.click(trigger)
     await screen.findByRole('menu')
   },
