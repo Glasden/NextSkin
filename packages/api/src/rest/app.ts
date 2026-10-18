@@ -1,3 +1,4 @@
+import { registerAdmin } from './admin.ts'
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { DomainError, type Core } from '@nextskin/domain'
 import type { MiddlewareHandler } from 'hono'
@@ -112,6 +113,7 @@ export function createRestApp(
   registerRegistration(app, core)
   registerCloset(app, core)
   registerReports(app, core)
+  registerAdmin(app, core)
   registerPlayers(app, core)
   registerCheckIn(app, core)
   registerUser(app, core, rateLimiter)

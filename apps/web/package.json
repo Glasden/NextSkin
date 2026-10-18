@@ -5,6 +5,7 @@
   "description": "Next.js 页面，只做 UI（ADR-0003）",
   "type": "module",
   "scripts": {
+    "set-role": "node scripts/set-role.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

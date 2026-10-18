@@ -1,6 +1,7 @@
 import type { CoreDatabase, IsoTimestamp } from '@nextskin/db'
 import type { Actor } from '@nextskin/plugin-sdk'
-import type { Transaction } from 'kysely'
+import type { Selectable, Transaction } from 'kysely'
+import { claimReport, settleReport } from '../admin/report-resolution.ts'
 import type { Events } from '../events/emit.ts'
 import { adjustScore } from '../score/adjust.ts'
 import type { TextureRow } from './dto.ts'
@@ -139,11 +140,29 @@ export function createTextureRemoval(events: Events, files: TextureFiles) {
       refund: boolean
       now: IsoTimestamp
       deletedAccountUid?: number
+      /** 管理员删除不退上传者存储费，默认保留自删的退款行为。 */
+      refundUploader?: boolean
+      /**
+       * 管理员删除：处理人、IP 和奖励。经由某条举报删除时，那条举报已经由调用方推进了状态（claimed），
+       * 在这里和其余待处理的举报一起按举报人 uid 升序结算，不打乱加锁顺序（docs/schema.md）
+       */
+      review?: {
+        resolverId: number
+        ip: string | null
+        reward: number
+        claimed?: Selectable<CoreDatabase['reports']>
+      }
     },
-  ): Promise<{ refunded: number }> {
+  ): Promise<{ refunded: number; resolvedReports: number }> {
     const { actor, refund, now } = options
     let refunded = await cleanup(tx, row, { ...options, deleting: true })
-    if (refund && row.uploader_id !== null && row.uploader_id !== options.deletedAccountUid && row.score_paid > 0) {
+    if (
+      refund &&
+      options.refundUploader !== false &&
+      row.uploader_id !== null &&
+      row.uploader_id !== options.deletedAccountUid &&
+      row.score_paid > 0
+    ) {
       await adjustScore(tx, {
         uid: row.uploader_id,
         delta: row.score_paid,
@@ -153,10 +172,39 @@ export function createTextureRemoval(events: Events, files: TextureFiles) {
       })
       if (actor.kind === 'user' && actor.uid === row.uploader_id) refunded += row.score_paid
     }
+    const claimed = options.review?.claimed
+    const pending = await tx
+      .selectFrom('reports')
+      .select(['id', 'reporter_id'])
+      .where('texture_id', '=', row.id)
+      .where('status', '=', 'pending')
+      .execute()
+    // 举报人为空的排在最后（Infinity - Infinity 是 NaN，接着按 id 比）：四种数据库对 NULL 的排序不同，在这里统一
+    const queue = [...pending, ...(claimed ? [claimed] : [])].sort(
+      (a, b) => (a.reporter_id ?? Infinity) - (b.reporter_id ?? Infinity) || a.id - b.id,
+    )
+    let resolvedReports = 0
+    for (const { id } of queue) {
+      const report =
+        id === claimed?.id
+          ? claimed
+          : await claimReport(tx, id, 'deleteTexture', options.review?.resolverId ?? null, now)
+      if (!report) continue
+      if (report !== claimed) resolvedReports++
+      await settleReport(tx, events, report, {
+        actor,
+        action: 'deleteTexture',
+        reward: options.review?.reward ?? 0,
+        ip: options.review?.ip ?? null,
+        management: options.review !== undefined,
+        deletedAccountUid: options.deletedAccountUid,
+        now,
+      })
+    }
     await tx.deleteFrom('textures').where('id', '=', row.id).execute()
     const fileDeleted = await files.release(tx, row.hash, now)
     await events.emit(tx, 'texture.deleted', actor, { tid: row.id, hash: row.hash, type: row.type, fileDeleted }, now)
-    return { refunded }
+    return { refunded, resolvedReports }
   }
   return { cleanup, remove }
 }

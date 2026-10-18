@@ -12,6 +12,7 @@
     "i18n",
     "lib",
     "e2e",
+    "scripts",
     "*.ts",
     "*.mjs",
     "next-env.d.ts",

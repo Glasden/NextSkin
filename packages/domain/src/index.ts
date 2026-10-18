@@ -46,3 +46,14 @@ export type { TextureSummary, TextureDetail, TextureListInput } from './textures
 
 export type { ClosetItem } from './closet/service.ts'
 export type { Report, OwnReport } from './reports/service.ts'
+
+export { can, hasAdminAccess, outranks, type CorePermission } from './access/permissions.ts'
+export type {
+  AdminActor,
+  ReportAction,
+  AssignableRole,
+  AdminReport,
+  AdminUser,
+  AuditEntry,
+  AdminOverview,
+} from './admin/types.ts'

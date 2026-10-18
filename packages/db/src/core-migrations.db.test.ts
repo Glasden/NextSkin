@@ -92,6 +92,7 @@ beforeAll(async () => {
 })
 afterAll(async () => database?.cleanup())
 beforeEach(async () => {
+  await db.deleteFrom('audit_logs').execute()
   await db.deleteFrom('reports').execute()
   await db.deleteFrom('jobs').execute()
   await db.deleteFrom('failed_jobs').execute()
@@ -141,6 +142,8 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0028_create_closet_items',
     '0029_create_textures_library_indexes',
     '0030_create_reports',
+    '0031_create_audit_logs',
+    '0032_resolve_orphaned_reports',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -666,4 +669,50 @@ test('举报列、默认实付、唯一键、枚举约束和全部外键置空',
       { reason: 'b', status: 'pending', created_at: timestamp },
     ])
     .execute()
+})
+
+test('审计日志列、操作者 CHECK，删除账号和对象仍保留原始 id', async () => {
+  const value = {
+    actor_type: 'user' as const,
+    actor_user_id: userId,
+    actor_plugin_id: null,
+    action: 'texture.delete',
+    subject_type: 'texture',
+    subject_id: skinId,
+    details: JSON.stringify({ name: '测试材质' }),
+    ip: '2001:db8::1',
+    created_at: timestamp,
+  }
+  const id = await insertReturningId(db, 'audit_logs', value)
+  expect(await db.selectFrom('audit_logs').selectAll().where('id', '=', id).executeTakeFirstOrThrow()).toEqual({
+    id,
+    ...value,
+  })
+  const table = (await db.introspection.getTables()).find((t) => t.name === 'audit_logs')!
+  expect(table.columns.map((c) => c.name).sort()).toEqual(
+    [
+      'id',
+      'actor_type',
+      'actor_user_id',
+      'actor_plugin_id',
+      'action',
+      'subject_type',
+      'subject_id',
+      'details',
+      'ip',
+      'created_at',
+    ].sort(),
+  )
+  await expect(sql`update audit_logs set actor_type = 'invalid' where id = ${id}`.execute(db)).rejects.toThrow()
+  for (const actor_type of ['user', 'system', 'plugin'] as const)
+    await db
+      .insertInto('audit_logs')
+      .values({ ...value, actor_type })
+      .execute()
+  await db.deleteFrom('textures').where('id', '=', skinId).execute()
+  await db.deleteFrom('users').where('id', '=', userId).execute()
+  expect(await db.selectFrom('audit_logs').selectAll().where('id', '=', id).executeTakeFirstOrThrow()).toEqual({
+    id,
+    ...value,
+  })
 })

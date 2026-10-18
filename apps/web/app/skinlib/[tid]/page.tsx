@@ -1,3 +1,4 @@
+import { can } from '@nextskin/domain'
 import { Badge, Link, PlayerHead, SkinViewer } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
@@ -8,6 +9,7 @@ import { getServer } from '../../../lib/server'
 import { getSessionUser } from '../../../lib/session'
 import { headSrc, textureFileUrl } from '../../../lib/textures'
 import type { ApplyPlayer } from '../../user/closet/apply-texture-dialog'
+import { TextureAdminActions } from './admin-actions'
 import { TextureOwnerActions } from './owner-actions'
 import { ReportTexture, TextureViewerActions } from './viewer-actions'
 
@@ -71,6 +73,11 @@ export default async function TexturePage({ params }: { params: Promise<{ tid: s
   const type = t(`types.${texture.type}`)
   const management = texture.management
   const settings = management ? await core.settings.read(['texture.nameRegex']) : null
+  // 别人的材质：有 textures.manage 的人可以删除（ADR-0027）。上传者自己走上面的 management
+  const adminImpact =
+    user && !management && can(user.role, 'textures.manage')
+      ? await core.admin.textureDeletionImpact(user.uid, texture.tid)
+      : null
   const uploaded = format.dateTime(new Date(texture.uploadedAt), { dateStyle: 'medium' })
 
   return (
@@ -209,6 +216,10 @@ export default async function TexturePage({ params }: { params: Promise<{ tid: s
               management={management}
               nameRegex={settings['texture.nameRegex']}
             />
+          )}
+
+          {adminImpact && (
+            <TextureAdminActions texture={{ tid: texture.tid, name: texture.name }} impact={adminImpact} />
           )}
         </aside>
       </div>

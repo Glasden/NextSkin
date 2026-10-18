@@ -34,6 +34,11 @@
     }
   },
   "errors": {
+    "permission_denied": "You don't have permission for this admin action.",
+    "user_not_manageable": "You can only manage users whose role is below yours, and you can't change your own role.",
+    "user_not_found": "This user could not be found. They may have deleted their account.",
+    "report_not_found": "This report could not be found.",
+    "report_already_handled": "Someone has already handled this report. Refresh the page to see the outcome.",
     "invalid_request": "The request is malformed. Refresh the page and try again.",
     "invalid_value": "This value is in the wrong format.",
     "invalid_origin": "The request came from an untrusted origin. Refresh the page and try again.",
@@ -85,6 +90,8 @@
   },
   "score": {
     "reasons": {
+      "reportRefunded": "Report accepted: cost refunded",
+      "reportRewarded": "Reward for an accepted report",
       "initial": "Sign-up bonus",
       "import": "Imported from the old site",
       "playerCreated": "Added a player",
@@ -204,7 +211,8 @@
     },
     "menu": {
       "signOut": "Sign out",
-      "signOutFailed": "Couldn't sign out. Try again later."
+      "signOutFailed": "Couldn't sign out. Try again later.",
+      "admin": "Admin"
     },
     "banned": {
       "title": "Account banned",
@@ -721,6 +729,194 @@
       "reportSent": "Report submitted. You can follow it under “My reports”.",
       "viewReports": "My reports",
       "failed": "That didn’t work. Please try again later."
+    },
+    "admin": {
+      "title": "Moderation",
+      "description": "This texture belongs to someone else. You can delete it as an admin.",
+      "delete": "Delete texture",
+      "deleteTitle": "Delete {name}?",
+      "deleteHint": "{closets, plural, =0 {Nobody has it in their closet. } one {It will be removed from # closet with the fee refunded, and players using it switch back to the default skin. } other {It will be removed from # closets with fees refunded, and players using it switch back to the default skin. }}The uploader’s storage fee isn’t refunded. {reports, plural, =0 {} one {# pending report on this texture will be accepted. } other {# pending reports on this texture will be accepted. }}This can’t be undone.",
+      "deleteConfirm": "Delete texture",
+      "deleted": "Deleted {name}{reports, plural, =0 {} one {; # report accepted} other {; # reports accepted}}",
+      "failed": "That didn’t work. Please try again later."
+    }
+  },
+  "admin": {
+    "nav": {
+      "label": "Admin",
+      "overview": "Overview",
+      "reports": "Reports",
+      "users": "Users",
+      "audit": "Audit log"
+    },
+    "roles": {
+      "banned": "Banned",
+      "user": "User",
+      "admin": "Admin",
+      "superadmin": "Super admin"
+    },
+    "userGone": "Deleted user",
+    "you": "You",
+    "pagination": "Pages",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page}",
+    "failed": "That didn’t work. Please try again later.",
+    "overview": {
+      "title": "Admin",
+      "description": "How the site is doing and the latest admin actions.",
+      "stats": "Site overview",
+      "pendingReports": "Pending reports",
+      "users": "Users",
+      "textures": "Textures",
+      "registeredToday": "Signed up today",
+      "pendingAlert": "{count, plural, one {# report is} other {# reports are}} waiting to be handled.",
+      "pendingAction": "Handle reports",
+      "recentAudit": "Latest admin actions",
+      "allAudit": "View all",
+      "noAudit": "No admin actions yet."
+    },
+    "reports": {
+      "title": "Reports",
+      "count": "{count}",
+      "description": "Textures reported by players. Pending reports are listed oldest first, so they get handled in order.",
+      "policy": "Accepting a report refunds what the reporter paid{reward, plural, =0 {} one {, plus a reward of # point} other {, plus a reward of # points}}. Rejected reports aren’t refunded.",
+      "tabsLabel": "Report status",
+      "status": {
+        "pending": "Pending",
+        "resolved": "Accepted",
+        "rejected": "Rejected"
+      },
+      "tableLabel": "{status} reports",
+      "columns": {
+        "texture": "Texture",
+        "uploader": "Uploader",
+        "reporter": "Reporter",
+        "reason": "Reason",
+        "createdAt": "Submitted",
+        "resolution": "Outcome",
+        "resolver": "Handled by",
+        "resolvedAt": "Handled",
+        "actions": "Actions"
+      },
+      "empty": {
+        "pending": "No pending reports.",
+        "resolved": "No reports have been accepted yet.",
+        "rejected": "No reports have been rejected yet."
+      },
+      "textureGone": "Texture deleted",
+      "private": "Private",
+      "closets": "{likes, plural, one {In # closet} other {In # closets}}",
+      "paid": "{score, plural, one {Paid # point} other {Paid # points}}",
+      "resolutions": {
+        "dismissed": "Rejected",
+        "textureDeleted": "Texture deleted",
+        "uploaderBanned": "Uploader banned"
+      },
+      "selfDeleted": "Deleted by the uploader",
+      "resolverGone": "Deleted user #{uid}",
+      "handle": "Handle",
+      "handleLabel": "Handle report #{id}",
+      "dismiss": "Reject",
+      "dismissTitle": "Reject the report on {name}?",
+      "dismissHint": "{paid, plural, =0 {} one {The reporter’s # point won’t be refunded. } other {The reporter’s # points won’t be refunded. }}This closes the report and can’t be undone.",
+      "dismissConfirm": "Reject report",
+      "dismissed": "Rejected report #{id}",
+      "deleteTexture": "Delete texture",
+      "deleteTitle": "Delete {name}?",
+      "deleteHint": "{closets, plural, =0 {Nobody has it in their closet. } one {It will be removed from # closet with the fee refunded, and players using it switch back to the default skin. } other {It will be removed from # closets with fees refunded, and players using it switch back to the default skin. }}The uploader’s storage fee isn’t refunded. {others, plural, =0 {} one {# other pending report on this texture will be accepted too. } other {# other pending reports on this texture will be accepted too. }}{paid, plural, =0 {} one {The reporter gets back # point. } other {The reporter gets back # points. }}{reward, plural, =0 {} one {The reporter is rewarded # point. } other {The reporter is rewarded # points. }}This can’t be undone.",
+      "deleteConfirm": "Delete texture",
+      "deleted": "Deleted {name}{others, plural, =0 {} one {; # other report accepted too} other {; # other reports accepted too}}",
+      "banUploader": "Ban uploader",
+      "banTitle": "Ban {nickname}?",
+      "banHint": "Once banned, they only see a notice when they sign in, can’t change players or textures, and their players show the default skin in game. The texture stays; choose “Delete texture” to remove it. {paid, plural, =0 {} one {The reporter gets back # point. } other {The reporter gets back # points. }}{reward, plural, =0 {} one {The reporter is rewarded # point. } other {The reporter is rewarded # points. }}This closes the report.",
+      "banConfirm": "Ban uploader",
+      "banned": "Banned {nickname}",
+      "banUnavailable": "The uploader has deleted their account, or you can’t ban them"
+    },
+    "users": {
+      "title": "Users",
+      "count": "{count}",
+      "description": "Find users, ban or unban them, and appoint or remove admins. You can only manage users whose role is below yours.",
+      "searchLabel": "Search users",
+      "searchPlaceholder": "UID, email or nickname",
+      "search": "Search",
+      "roleLabel": "Filter by role",
+      "roleAll": "All",
+      "tableLabel": "Users",
+      "columns": {
+        "uid": "UID",
+        "user": "User",
+        "email": "Email",
+        "role": "Role",
+        "score": "Points",
+        "registeredAt": "Signed up",
+        "actions": "Actions"
+      },
+      "unverified": "Unverified",
+      "empty": "No users match.",
+      "manage": "Manage",
+      "manageLabel": "Manage {nickname}",
+      "ban": "Ban",
+      "banTitle": "Ban {nickname}?",
+      "banHint": "Once banned, they only see a notice when they sign in, can’t change players or textures, and their players show the default skin in game. {admin, select, true {They lose their admin role and come back as a regular user when unbanned; appoint them again if needed. } other {}}You can unban them at any time.",
+      "banConfirm": "Ban user",
+      "banned": "Banned {nickname}",
+      "unban": "Unban",
+      "unbanTitle": "Unban {nickname}?",
+      "unbanHint": "They become a regular user again and can use the site as usual.",
+      "unbanConfirm": "Unban user",
+      "unbanned": "Unbanned {nickname}",
+      "appoint": "Make admin",
+      "appointTitle": "Make {nickname} an admin?",
+      "appointHint": "Admins can handle reports, delete any texture, ban and unban regular users, and read the audit log.",
+      "appointConfirm": "Make admin",
+      "appointed": "{nickname} is now an admin",
+      "revoke": "Remove admin",
+      "revokeTitle": "Remove {nickname}’s admin role?",
+      "revokeHint": "They become a regular user and can no longer open the admin area.",
+      "revokeConfirm": "Remove admin",
+      "revoked": "{nickname} is no longer an admin"
+    },
+    "audit": {
+      "title": "Audit log",
+      "description": "Every admin action is recorded here: who did what to which object, when, and from which IP. Records are never pruned automatically.",
+      "tableLabel": "Audit log",
+      "columns": {
+        "time": "Time",
+        "actor": "Actor",
+        "action": "Action",
+        "subject": "Object",
+        "details": "Details",
+        "ip": "IP"
+      },
+      "actions": {
+        "reportResolve": "Handled report",
+        "textureDelete": "Deleted texture",
+        "userSetRole": "Changed role"
+      },
+      "subjects": {
+        "user": "User #{id}",
+        "texture": "Texture #{id}",
+        "report": "Report #{id}",
+        "other": "{type} #{id}"
+      },
+      "actorSystem": "System",
+      "actorPlugin": "Plugin {id}",
+      "actorGone": "Deleted user #{uid}",
+      "details": {
+        "reportResolve": "{action}{refunded, plural, =0 {} other {, refunded #}}{rewarded, plural, =0 {} other {, rewarded #}}",
+        "textureDelete": "{name} ({type})",
+        "userSetRole": "{from} → {to}",
+        "viaReport": "via report #{id}"
+      },
+      "filterActor": "Only actor #{uid}",
+      "filterSubject": "Only {subject}",
+      "clearFilter": "Clear filter",
+      "filterByActor": "Only this actor’s actions",
+      "filterBySubject": "Only records for this object",
+      "empty": "No admin actions yet.",
+      "emptyFiltered": "No records match."
     }
   }
 }

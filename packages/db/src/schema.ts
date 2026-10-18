@@ -60,6 +60,19 @@ export interface ClosetItemsTable {
   created_at: IsoTimestamp
 }
 
+export interface AuditLogsTable {
+  id: Generated<number>
+  actor_type: 'user' | 'system' | 'plugin'
+  actor_user_id: number | null
+  actor_plugin_id: string | null
+  action: string
+  subject_type: string
+  subject_id: number
+  details: string
+  ip: string | null
+  created_at: IsoTimestamp
+}
+
 export interface ReportsTable {
   id: Generated<number>
   texture_id: number | null
@@ -347,6 +360,7 @@ export interface CoreDatabase {
   score_transactions: ScoreTransactionsTable
   users: UsersTable
   texture_files: TextureFilesTable
+  audit_logs: AuditLogsTable
   reports: ReportsTable
   closet_items: ClosetItemsTable
   textures: TexturesTable

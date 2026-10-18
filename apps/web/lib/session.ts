@@ -1,6 +1,7 @@
 import { requestRoot } from '@nextskin/api'
+import { can, hasAdminAccess, type CorePermission } from '@nextskin/domain'
 import { headers } from 'next/headers'
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { cache } from 'react'
 import { getServer } from './server'
 
@@ -19,6 +20,16 @@ export const getSessionUser = cache(async () => {
 export async function requireUser(path: string) {
   const user = await getSessionUser()
   if (!user) redirect(`/sign-in?next=${encodeURIComponent(path)}`)
+  return user
+}
+
+/**
+ * 后台的页面用：没有登录时跳到登录页；没有这项权限（不传时是任何一项后台权限）返回 404（ADR-0027）。
+ * 只决定页面显示什么，防线在领域层：查询和用例按数据库里的角色再检查一遍
+ */
+export async function requireAdmin(path: string, permission?: CorePermission) {
+  const user = await requireUser(path)
+  if (permission ? !can(user.role, permission) : !hasAdminAccess(user.role)) notFound()
   return user
 }
 

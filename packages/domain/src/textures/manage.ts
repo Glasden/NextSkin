@@ -146,11 +146,12 @@ export function createTextureManagement(options: {
         const user = await lockUser(tx, actor.uid)
         assertPlayerManagementAllowed(user, values['auth.requireEmailVerification'])
         const row = await owned(tx, actor, tid)
-        return removal.remove(tx, row, {
+        const { refunded } = await removal.remove(tx, row, {
           actor: { kind: 'user', uid: actor.uid, role: user.role },
           refund: values['score.refundOnDelete'],
           now: toIsoTimestamp(now()),
         })
+        return { refunded }
       })
     },
   }

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import NextLink from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Logout } from 'pixelarticons/react/Logout.js'
+import { Tools } from 'pixelarticons/react/Tools.js'
 import { useState } from 'react'
 import { postJson } from '../../lib/api-client'
 import { userNavItems } from './user-nav'
@@ -24,8 +25,8 @@ function useSignOut() {
   }
 }
 
-/** 页头右上角的用户菜单：用户中心的各个分区和退出登录 */
-export function UserMenu({ nickname }: { nickname: string }) {
+/** 页头右上角的用户菜单：用户中心的各个分区、管理后台（有后台权限时）和退出登录 */
+export function UserMenu({ nickname, admin }: { nickname: string; admin: boolean }) {
   const t = useTranslations('user')
   const signOut = useSignOut()
   return (
@@ -35,6 +36,14 @@ export function UserMenu({ nickname }: { nickname: string }) {
           {t(`nav.${label}`)}
         </MenuLinkItem>
       ))}
+      {admin && (
+        <>
+          <MenuSeparator />
+          <MenuLinkItem render={<NextLink href="/admin" />} icon={<Tools />}>
+            {t('menu.admin')}
+          </MenuLinkItem>
+        </>
+      )}
       <MenuSeparator />
       <MenuItem icon={<Logout />} onClick={() => void signOut()}>
         {t('menu.signOut')}

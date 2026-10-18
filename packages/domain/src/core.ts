@@ -1,3 +1,4 @@
+import { createAdmin } from './admin/service.ts'
 import { createCloset } from './closet/service.ts'
 import { createReports } from './reports/service.ts'
 import { toIsoTimestamp, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
@@ -108,6 +109,7 @@ export function createCore(options: CoreOptions) {
   })
   return {
     players: { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events, now) },
+    admin: createAdmin(textureOptions),
     closet: createCloset(textureOptions),
     reports: createReports(textureOptions),
     renders,

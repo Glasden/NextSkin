@@ -8,6 +8,11 @@ import type { AppEnv } from '../env.ts'
 
 type ErrorCode = keyof Messages['errors']
 const statuses = {
+  permission_denied: 403,
+  user_not_manageable: 403,
+  user_not_found: 404,
+  report_not_found: 404,
+  report_already_handled: 409,
   closet_item_exists: 409,
   closet_item_not_found: 404,
   texture_type_mismatch: 400,

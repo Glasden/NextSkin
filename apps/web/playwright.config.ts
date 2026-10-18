@@ -17,6 +17,8 @@ const accountDataDirectory = (process.env.NEXTSKIN_E2E_ACCOUNT_DATA_DIR ??= mkdt
   join(tmpdir(), 'nextskin-e2e-account-'),
 ))
 const server = { NEXTSKIN_SECRET: secret, HOSTNAME: '127.0.0.1' }
+// 后台的用例（e2e/admin.spec.ts）用 set-role 脚本设定超级管理员，要用同一个密钥打开 account 服务的数据目录
+process.env.NEXTSKIN_E2E_SECRET = secret
 
 export default defineConfig({
   testDir: 'e2e',
@@ -27,12 +29,12 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts'],
+      testIgnore: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts', 'admin.spec.ts'],
     },
     {
       name: 'account',
       use: { ...devices['Desktop Chrome'], baseURL: accountSite },
-      testMatch: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts'],
+      testMatch: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts', 'admin.spec.ts'],
     },
   ],
   // e2e 任务依赖 build（turbo.json），这里启动 standalone 产物；静态资源要按 Next 文档手动复制进去

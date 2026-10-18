@@ -34,6 +34,11 @@
     }
   },
   "errors": {
+    "permission_denied": "你没有这项管理权限。",
+    "user_not_manageable": "只能管理角色比你低的用户，也不能改自己的角色。",
+    "user_not_found": "找不到这个用户，对方可能已经注销了。",
+    "report_not_found": "找不到这条举报。",
+    "report_already_handled": "这条举报已经有人处理过了，刷新页面看看结果。",
     "invalid_request": "请求的格式不对，请刷新页面后重试。",
     "invalid_value": "填写的内容格式不对。",
     "invalid_origin": "请求来源不受信任，请刷新页面后重试。",
@@ -85,6 +90,8 @@
   },
   "score": {
     "reasons": {
+      "reportRefunded": "举报被采纳，退还花费",
+      "reportRewarded": "举报被采纳的奖励",
       "initial": "注册赠送",
       "import": "从旧站导入",
       "playerCreated": "添加角色",
@@ -204,7 +211,8 @@
     },
     "menu": {
       "signOut": "退出登录",
-      "signOutFailed": "没能退出登录，请稍后重试。"
+      "signOutFailed": "没能退出登录，请稍后重试。",
+      "admin": "管理后台"
     },
     "banned": {
       "title": "账号已被封禁",
@@ -721,6 +729,194 @@
       "reportSent": "已提交举报，处理结果在“我的举报”里",
       "viewReports": "我的举报",
       "failed": "没有成功，请稍后重试。"
+    },
+    "admin": {
+      "title": "管理",
+      "description": "这是别人的材质。你有管理权限，可以删除它。",
+      "delete": "删除材质",
+      "deleteTitle": "删除 {name}？",
+      "deleteHint": "{closets, plural, =0 {没有人收藏它。} other {它会从 # 个衣柜里移除并退还衣柜费，正在用它的角色换回默认皮肤。}}上传者的存储费不退。{reports, plural, =0 {} other {这个材质上 # 条待处理的举报一并采纳。}}无法恢复。",
+      "deleteConfirm": "删除材质",
+      "deleted": "已删除 {name}{reports, plural, =0 {} other {，# 条举报一并采纳}}",
+      "failed": "没有成功，请稍后重试。"
+    }
+  },
+  "admin": {
+    "nav": {
+      "label": "管理后台",
+      "overview": "概览",
+      "reports": "举报",
+      "users": "用户",
+      "audit": "审计日志"
+    },
+    "roles": {
+      "banned": "已封禁",
+      "user": "用户",
+      "admin": "管理员",
+      "superadmin": "超级管理员"
+    },
+    "userGone": "已注销的用户",
+    "you": "你",
+    "pagination": "分页",
+    "previous": "上一页",
+    "next": "下一页",
+    "page": "第 {page} 页",
+    "failed": "没有成功，请稍后重试。",
+    "overview": {
+      "title": "管理后台",
+      "description": "站点的概况和最近的管理操作。",
+      "stats": "站点概况",
+      "pendingReports": "待处理举报",
+      "users": "用户",
+      "textures": "材质",
+      "registeredToday": "今天注册",
+      "pendingAlert": "有 {count, plural, other {#}} 条举报等待处理。",
+      "pendingAction": "去处理",
+      "recentAudit": "最近的管理操作",
+      "allAudit": "查看全部",
+      "noAudit": "还没有管理操作。"
+    },
+    "reports": {
+      "title": "举报",
+      "count": "{count} 条",
+      "description": "玩家举报的材质。待处理的从早到晚排，先来先处理。",
+      "policy": "采纳后退还举报人付的花费{reward, plural, =0 {} other {，并奖励 # 积分}}；驳回不退。",
+      "tabsLabel": "举报状态",
+      "status": {
+        "pending": "待处理",
+        "resolved": "已采纳",
+        "rejected": "已驳回"
+      },
+      "tableLabel": "{status}的举报",
+      "columns": {
+        "texture": "材质",
+        "uploader": "上传者",
+        "reporter": "举报人",
+        "reason": "理由",
+        "createdAt": "提交时间",
+        "resolution": "处理结果",
+        "resolver": "处理人",
+        "resolvedAt": "处理时间",
+        "actions": "操作"
+      },
+      "empty": {
+        "pending": "没有待处理的举报。",
+        "resolved": "还没有采纳过举报。",
+        "rejected": "还没有驳回过举报。"
+      },
+      "textureGone": "材质已删除",
+      "private": "私有",
+      "closets": "{likes, plural, other {# 个衣柜}}",
+      "paid": "花费 {score, plural, other {#}} 积分",
+      "resolutions": {
+        "dismissed": "驳回",
+        "textureDeleted": "删除了材质",
+        "uploaderBanned": "封禁了上传者"
+      },
+      "selfDeleted": "上传者自己删除",
+      "resolverGone": "已注销的用户 #{uid}",
+      "handle": "处理",
+      "handleLabel": "处理举报 #{id}",
+      "dismiss": "驳回",
+      "dismissTitle": "驳回对 {name} 的举报？",
+      "dismissHint": "{paid, plural, =0 {} other {举报人付的 # 积分不退还。}}驳回后这条举报就处理完了，无法撤销。",
+      "dismissConfirm": "驳回举报",
+      "dismissed": "已驳回举报 #{id}",
+      "deleteTexture": "删除材质",
+      "deleteTitle": "删除 {name}？",
+      "deleteHint": "{closets, plural, =0 {没有人收藏它。} other {它会从 # 个衣柜里移除并退还衣柜费，正在用它的角色换回默认皮肤。}}上传者的存储费不退。{others, plural, =0 {} other {这个材质上另外 # 条待处理的举报一并采纳。}}{paid, plural, =0 {} other {举报人拿回 # 积分花费。}}{reward, plural, =0 {} other {举报人获得 # 积分奖励。}}无法恢复。",
+      "deleteConfirm": "删除材质",
+      "deleted": "已删除 {name}{others, plural, =0 {} other {，另外 # 条举报一并采纳}}",
+      "banUploader": "封禁上传者",
+      "banTitle": "封禁 {nickname}？",
+      "banHint": "封禁后对方登录只能看到封禁说明，不能修改角色和材质，角色在游戏里换回默认皮肤。材质留着，要删除请另选“删除材质”。{paid, plural, =0 {} other {举报人拿回 # 积分花费。}}{reward, plural, =0 {} other {举报人获得 # 积分奖励。}}",
+      "banConfirm": "封禁上传者",
+      "banned": "已封禁 {nickname}",
+      "banUnavailable": "上传者已注销，或者你不能封禁对方"
+    },
+    "users": {
+      "title": "用户",
+      "count": "{count} 个",
+      "description": "搜索用户，封禁、解封或任免管理员。只能操作角色比自己低的用户。",
+      "searchLabel": "搜索用户",
+      "searchPlaceholder": "UID、邮箱或昵称",
+      "search": "搜索",
+      "roleLabel": "按角色筛选",
+      "roleAll": "全部",
+      "tableLabel": "用户列表",
+      "columns": {
+        "uid": "UID",
+        "user": "用户",
+        "email": "邮箱",
+        "role": "角色",
+        "score": "积分",
+        "registeredAt": "注册时间",
+        "actions": "操作"
+      },
+      "unverified": "未验证",
+      "empty": "没有符合条件的用户。",
+      "manage": "管理",
+      "manageLabel": "管理 {nickname}",
+      "ban": "封禁",
+      "banTitle": "封禁 {nickname}？",
+      "banHint": "封禁后对方登录只能看到封禁说明，不能修改角色和材质，角色在游戏里换回默认皮肤。{admin, select, true {对方会失去管理员身份，解封后是普通用户，要重新任命。} other {}}可以随时解封。",
+      "banConfirm": "封禁用户",
+      "banned": "已封禁 {nickname}",
+      "unban": "解封",
+      "unbanTitle": "解封 {nickname}？",
+      "unbanHint": "解封后对方是普通用户，可以照常登录和使用。",
+      "unbanConfirm": "解封用户",
+      "unbanned": "已解封 {nickname}",
+      "appoint": "设为管理员",
+      "appointTitle": "把 {nickname} 设为管理员？",
+      "appointHint": "管理员可以处理举报、删除任何材质、封禁和解封普通用户，并查看审计日志。",
+      "appointConfirm": "设为管理员",
+      "appointed": "已把 {nickname} 设为管理员",
+      "revoke": "取消管理员",
+      "revokeTitle": "取消 {nickname} 的管理员身份？",
+      "revokeHint": "对方变回普通用户，不能再进管理后台。",
+      "revokeConfirm": "取消管理员",
+      "revoked": "已取消 {nickname} 的管理员身份"
+    },
+    "audit": {
+      "title": "审计日志",
+      "description": "后台的每一次管理操作都记在这里：谁、什么时候、从哪个 IP、对什么做了什么。记录不会自动清理。",
+      "tableLabel": "审计日志",
+      "columns": {
+        "time": "时间",
+        "actor": "操作者",
+        "action": "动作",
+        "subject": "对象",
+        "details": "详情",
+        "ip": "IP"
+      },
+      "actions": {
+        "reportResolve": "处理举报",
+        "textureDelete": "删除材质",
+        "userSetRole": "更改角色"
+      },
+      "subjects": {
+        "user": "用户 #{id}",
+        "texture": "材质 #{id}",
+        "report": "举报 #{id}",
+        "other": "{type} #{id}"
+      },
+      "actorSystem": "系统",
+      "actorPlugin": "插件 {id}",
+      "actorGone": "已注销的用户 #{uid}",
+      "details": {
+        "reportResolve": "{action}{refunded, plural, =0 {} other {，退还 # 积分}}{rewarded, plural, =0 {} other {，奖励 # 积分}}",
+        "textureDelete": "{name}（{type}）",
+        "userSetRole": "{from} → {to}",
+        "viaReport": "经由举报 #{id}"
+      },
+      "filterActor": "只看操作者 #{uid}",
+      "filterSubject": "只看 {subject}",
+      "clearFilter": "清除筛选",
+      "filterByActor": "只看这个人的操作",
+      "filterBySubject": "只看这个对象的记录",
+      "empty": "还没有管理操作。",
+      "emptyFiltered": "没有符合条件的记录。"
     }
   }
 }

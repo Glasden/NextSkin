@@ -34,6 +34,9 @@ import * as createTexturesLibraryIndexes from './0029_create_textures_library_in
 
 import * as createReports from './0030_create_reports.ts'
 
+import * as createAuditLogs from './0031_create_audit_logs.ts'
+import * as resolveOrphanedReports from './0032_resolve_orphaned_reports.ts'
+
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
   '0002_create_texture_files': createTextureFiles,
@@ -65,4 +68,6 @@ export const coreMigrations: Record<string, Migration> = {
   '0028_create_closet_items': createClosetItems,
   '0029_create_textures_library_indexes': createTexturesLibraryIndexes,
   '0030_create_reports': createReports,
+  '0031_create_audit_logs': createAuditLogs,
+  '0032_resolve_orphaned_reports': resolveOrphanedReports,
 }

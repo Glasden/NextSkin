@@ -55,8 +55,14 @@ export function coreConfigFromEnv(
   }
 }
 
-/** 连接数据库、执行核心迁移、启动任务执行器，返回领域层的入口。启动器落地之前，由 Web 进程在启动时调用。 */
-export async function openCore(config: CoreConfig): Promise<{ core: Core; close(): Promise<void> }> {
+/**
+ * 连接数据库、执行核心迁移、启动任务执行器，返回领域层的入口。启动器落地之前，由 Web 进程在启动时调用。
+ * 命令行脚本（例如 `pnpm set-role`）传 `startJobs: false`：只执行自己的用例，不去认领后台任务
+ */
+export async function openCore(
+  config: CoreConfig,
+  options: { startJobs?: boolean } = {},
+): Promise<{ core: Core; close(): Promise<void> }> {
   if (config.database.dialect === 'sqlite') await mkdir(dirname(config.database.file), { recursive: true })
   const db = createDatabase<CoreDatabase>(config.database)
   try {
@@ -70,7 +76,7 @@ export async function openCore(config: CoreConfig): Promise<{ core: Core; close(
       secretKey: config.secretKey,
       production: config.production,
     })
-    core.jobs.start()
+    if (options.startJobs !== false) core.jobs.start()
     return {
       core,
       async close() {

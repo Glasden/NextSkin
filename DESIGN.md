@@ -169,7 +169,7 @@
 
 ## 6. 组件清单
 
-落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、IconButton、Form、Field、Input、Textarea、Checkbox、Switch、Select、SegmentedControl、Tabs、FileDrop、Dialog、Toast、Alert、Badge、Stage、SkinFigure、SkinViewer、FigurePlaceholder、NameTag、PlayerCard、PlayerHead、TextureCard、TexturePicker、Nav、Logo、Link、Menu、Tooltip、EmptyState、Pagination、QrCode。
+落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、IconButton、Form、Field、Input、Textarea、Checkbox、Switch、Select、SegmentedControl、Tabs、Table、FileDrop、Dialog、Toast、Alert、Badge、Stage、SkinFigure、SkinViewer、FigurePlaceholder、NameTag、PlayerCard、PlayerHead、TextureCard、TexturePicker、Nav、Logo、Link、Menu、Tooltip、EmptyState、Pagination、QrCode。
 
 | 组件 | 何时用 | 何时不用 |
 |---|---|---|
@@ -193,7 +193,7 @@
 | Alert | 页面内持续存在的提示 | 一次性的操作反馈 |
 | Badge | 跟在标题或列表项后面的短状态，例如“已开启”“未验证”。像素字体，文字本身说明状态 | 用户产生的内容（昵称、材质名）；可以点的筛选条件改用 Chip |
 | Notice | 全站公告，放在页头下方 | 只和当前页面有关的提示，改用 Alert |
-| Table | 后台数据列表 | 前台展示材质，改用 TextureCard 网格 |
+| Table | 后台数据列表：表头用像素字体，数字列靠右；窄屏在表格自己的容器里横向滚动 | 前台展示材质，改用 TextureCard 网格 |
 | TextureCard | 皮肤库、衣柜里的材质；选中（已在衣柜）时加粗边框并显示勾选角标 | — |
 | TexturePicker | 从一组材质里选一件，例如给角色换皮肤时从衣柜里挑：×3 的迷你卡片，选中的样子同 TextureCard | 浏览材质、去详情页，改用 TextureCard |
 | Stage | 摆放材质的展台：登录页插图、3D 预览、领奖台；大展台加 `grid` | — |
@@ -211,7 +211,7 @@
 | Menu | 一组跳转和操作，例如页头的用户菜单；衣柜卡片右上角的“更多”用 `trigger` 换成 IconButton | 少于两项时直接放按钮或链接 |
 | Tooltip | 图标按钮的名称这类补充说明。触屏设备上不显示 | 必须读到的内容 |
 | QrCode | 要用手机扫的内容，例如两步验证给验证器的地址。亮色、暗色主题下都是浅底深色，每个模块 4px | 用户可以直接点的地址，给 Link |
-| Pagination | 前台列表的分页，例如皮肤库、衣柜：页码都是链接，不需要 JS；窄屏只显示“当前页 / 总页数” | 后台表格以后另定 |
+| Pagination | 列表的分页，例如皮肤库、衣柜、后台表格（每页 50 行）：页码都是链接，不需要 JS；窄屏只显示“当前页 / 总页数” | — |
 | EmptyState、Skeleton | 见各自 story | |
 
 ## 7. 状态模式
