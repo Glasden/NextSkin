@@ -26,9 +26,15 @@ const setupNewDataDirectory = (process.env.NEXTSKIN_E2E_SETUP_NEW_DATA_DIR ??= m
 const setupImportDataDirectory = (process.env.NEXTSKIN_E2E_SETUP_IMPORT_DATA_DIR ??= mkdtempSync(
   join(tmpdir(), 'nextskin-e2e-setup-import-'),
 ))
+// 插件（e2e/plugins.spec.ts）也另起一个服务：启用邀请码之后注册都要填邀请码，会让共用站点的其他用例注册失败
+const pluginsPort = 3104
+const pluginsSite = `http://localhost:${pluginsPort}`
+const pluginsDataDirectory = (process.env.NEXTSKIN_E2E_PLUGINS_DATA_DIR ??= mkdtempSync(
+  join(tmpdir(), 'nextskin-e2e-plugins-'),
+))
 const oldSiteDirectory = (process.env.NEXTSKIN_E2E_OLD_SITE_DIR ??= mkdtempSync(join(tmpdir(), 'nextskin-e2e-bs-')))
 const server = { NEXTSKIN_SECRET: secret, HOSTNAME: '127.0.0.1' }
-// 后台的用例（e2e/admin.spec.ts）用 set-role 脚本设定超级管理员，要用同一个密钥打开 account 服务的数据目录
+// 后台和插件的用例（e2e/admin.spec.ts、plugins.spec.ts）用 set-role 脚本设定超级管理员，要用同一个密钥打开服务的数据目录
 process.env.NEXTSKIN_E2E_SECRET = secret
 
 export default defineConfig({
@@ -40,13 +46,21 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts', 'admin.spec.ts', 'setup.spec.ts'],
+      testIgnore: [
+        'account.spec.ts',
+        'skinlib.spec.ts',
+        'closet.spec.ts',
+        'admin.spec.ts',
+        'setup.spec.ts',
+        'plugins.spec.ts',
+      ],
     },
     {
       name: 'account',
       use: { ...devices['Desktop Chrome'], baseURL: accountSite },
       testMatch: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts', 'admin.spec.ts'],
     },
+    { name: 'plugins', use: { ...devices['Desktop Chrome'], baseURL: pluginsSite }, testMatch: ['plugins.spec.ts'] },
     // 每个用例自己指定站点（两个未初始化的服务），用例之间不共享状态
     { name: 'setup', use: { ...devices['Desktop Chrome'] }, testMatch: ['setup.spec.ts'] },
   ],
@@ -71,6 +85,15 @@ export default defineConfig({
       ].join(' && '),
       env: { ...server, PORT: String(accountPort), NEXTSKIN_DATA_DIR: accountDataDirectory },
       url: accountSite,
+      reuseExistingServer: false,
+    },
+    {
+      command: [
+        `node ../../tests/contract/scripts/seed-sqlite.ts ${pluginsDataDirectory} ${pluginsSite}`,
+        'node .next/standalone/apps/web/server.js',
+      ].join(' && '),
+      env: { ...server, PORT: String(pluginsPort), NEXTSKIN_DATA_DIR: pluginsDataDirectory },
+      url: pluginsSite,
       reuseExistingServer: false,
     },
     {

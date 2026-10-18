@@ -1,0 +1,236 @@
+import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { createTranslator } from '@nextskin/i18n'
+import { expect, test, type Page } from '@playwright/test'
+
+// 两个参考插件在核心进程内跑通（ADR-0033"验收：参考插件"）：后台启用、插件的设置、插件加的页面和导航、
+// 注册表单上的字段和事务内的拦截器。跑在自己的服务上（playwright.config.ts 的 plugins 项目）：启用邀请码之后
+// 注册都要填邀请码，和别的用例共用一个站点会让它们注册失败
+const t = createTranslator('zh-CN')
+const suffix = String(Date.now()).slice(-6)
+const password = 'correct horse battery staple'
+
+test.use({ locale: 'zh-CN' })
+
+type Messages = { [key: string]: string | Messages }
+
+/** 插件自己的文案（不带参数的那些），和插件一起发布在 locales 目录里 */
+function pluginText(id: string) {
+  const messages = JSON.parse(
+    readFileSync(fileURLToPath(new URL(`../../../plugins/${id}/locales/zh-CN.json`, import.meta.url)), 'utf8'),
+  ) as Messages
+  return (key: string) => {
+    const value = key
+      .split('.')
+      .reduce<string | Messages | undefined>(
+        (node, part) => (typeof node === 'object' ? node[part] : undefined),
+        messages,
+      )
+    if (typeof value !== 'string') throw new Error(`插件 ${id} 没有文案 ${key}`)
+    return value
+  }
+}
+
+async function register(page: Page, ip: string, name: string) {
+  await page.context().setExtraHTTPHeaders({ 'x-forwarded-for': ip })
+  const email = `${name.toLowerCase()}@example.test`
+  const response = await page.request.post('/api/register', { data: { email, password, playerName: name } })
+  expect(response.status()).toBe(201)
+  return email
+}
+
+/** 第一个超级管理员由脚本设定（ADR-0027），直接改这个服务的数据目录 */
+function setRole(email: string, role: string) {
+  execFileSync(process.execPath, ['scripts/set-role.ts', email, role], {
+    cwd: fileURLToPath(new URL('..', import.meta.url)),
+    env: {
+      ...process.env,
+      NEXTSKIN_DATA_DIR: process.env.NEXTSKIN_E2E_PLUGINS_DATA_DIR,
+      NEXTSKIN_SECRET: process.env.NEXTSKIN_E2E_SECRET,
+    },
+  })
+}
+
+/** 在后台的插件页启用或停用一个插件，确认框里写着插件的名字 */
+async function toggle(page: Page, id: string, name: string, action: 'enable' | 'disable') {
+  await page.goto(`/admin/plugins/${id}`)
+  await page.getByRole('button', { name: t(`admin.plugins.${action}`) }).click()
+  const dialog = page.getByRole('alertdialog', { name: t(`admin.plugins.${action}Title`, { name }) })
+  await dialog.getByRole('button', { name: t(`admin.plugins.${action}Confirm`), exact: true }).click()
+  await expect(page.getByText(t(`admin.plugins.${action}d`, { name }))).toBeVisible()
+  await expect(
+    page.getByText(t(`admin.plugins.status.${action === 'enable' ? 'enabled' : 'disabled'}`), { exact: true }),
+  ).toBeVisible()
+}
+
+test('邀请码：启用后注册要填邀请码，每个码只能用一次；停用后注册恢复原样', async ({ page, browser }) => {
+  const ic = pluginText('invitation-codes')
+  const name = ic('plugin.name')
+  const nav = page.getByRole('navigation', { name: t('admin.nav.label') })
+  setRole(await register(page, '203.0.113.140', `Inv${suffix}`), 'superadmin')
+
+  // 插件列表里有它，没启用时后台导航里没有它的页面
+  await page.goto('/admin/plugins')
+  const list = page.getByRole('table', { name: t('admin.plugins.tableLabel') })
+  await expect(list.getByRole('link', { name, exact: true })).toBeVisible()
+  await expect(nav.getByRole('link', { name: ic('page.codes') })).toHaveCount(0)
+  expect((await page.request.get('/admin/plugins/invitation-codes/codes')).status()).toBe(404)
+
+  await toggle(page, 'invitation-codes', name, 'enable')
+
+  // 注册页多了邀请码一栏；不填就注册不了
+  const visitorContext = await browser.newContext({ locale: 'zh-CN' })
+  const visitor = await visitorContext.newPage()
+  await visitor.context().setExtraHTTPHeaders({ 'x-forwarded-for': '203.0.113.141' })
+  const missing = await visitor.request.post('/api/register', {
+    data: { email: `nocode${suffix}@example.test`, password, playerName: `NoCode${suffix}` },
+  })
+  expect(missing.status()).toBe(400)
+  expect(((await missing.json()) as { error: { fields: Record<string, unknown> } }).error.fields).toHaveProperty([
+    'invitation-codes.code',
+  ])
+
+  // 后台导航里的“邀请码”：生成两个
+  await page.goto('/admin')
+  await nav.getByRole('link', { name: ic('page.codes') }).click()
+  await expect(page).toHaveURL(/\/admin\/plugins\/invitation-codes\/codes$/)
+  const table = page.getByRole('table', { name: ic('page.codes') })
+  await expect(table.getByText(t('pluginView.empty'))).toBeVisible()
+  await page.getByRole('button', { name: ic('action.generate') }).click()
+  const generate = page.getByRole('dialog', { name: ic('action.generate') })
+  await generate.getByLabel(ic('field.count')).fill('2')
+  await generate.getByRole('button', { name: ic('action.generate') }).click()
+  await expect(page.getByText(t('pluginView.done'))).toBeVisible()
+  await expect(table.locator('tbody tr')).toHaveCount(2)
+  await expect(page.getByText(t('pluginView.count', { count: 2 }))).toBeVisible()
+  const [used, spare] = await table.locator('tbody code').allTextContents()
+  if (!used || !spare) throw new Error('没有读到生成的邀请码')
+
+  // 填错的码被插件拒绝，提示是插件写的；填对的注册成功，进入用户中心
+  const visitorName = `Guest${suffix}`
+  await visitor.goto('/sign-up')
+  await visitor.getByLabel(t('auth.email')).fill(`${visitorName.toLowerCase()}@example.test`)
+  await visitor.getByLabel(t('auth.password')).fill(password)
+  await visitor.getByLabel(t('auth.signUp.playerName')).fill(visitorName)
+  const codeInput = visitor.getByLabel(ic('field.code'))
+  await expect(codeInput).toHaveAccessibleDescription(ic('field.codeHelp'))
+  await codeInput.fill('NOT-A-REAL-CODE')
+  await visitor.getByRole('button', { name: t('auth.signUp.submit') }).click()
+  await expect(visitor.getByText(ic('error.invalidCode'))).toBeVisible()
+  // 输入时大小写和分隔符随意，插件统一处理
+  await codeInput.fill(used.toLowerCase().replace(/(.{4})(?=.)/g, '$1-'))
+  await visitor.getByRole('button', { name: t('auth.signUp.submit') }).click()
+  await visitor.waitForURL('/user')
+  await visitorContext.close()
+
+  // 用过的码标成已使用，使用者显示成刚注册的用户
+  await page.reload()
+  const usedRow = table.getByRole('row').filter({ hasText: used })
+  await expect(usedRow.getByText(ic('status.used'), { exact: true })).toBeVisible()
+  await expect(usedRow.getByRole('link', { name: visitorName })).toBeVisible()
+
+  // 同一个码不能再用：拦截器拒绝，整个注册回滚
+  const again = await page.request.post('/api/register', {
+    headers: { 'x-forwarded-for': '203.0.113.142' },
+    data: {
+      email: `again${suffix}@example.test`,
+      password,
+      playerName: `Again${suffix}`,
+      plugins: { 'invitation-codes': { code: used } },
+    },
+  })
+  expect(again.status()).toBe(403)
+  expect(await again.json()).toMatchObject({
+    error: { code: 'registration_denied', plugin: 'invitation-codes', reason: 'invalid_code' },
+  })
+  expect((await page.request.get(`/csl/Again${suffix}.json`)).status()).toBe(404)
+
+  // 删掉没用过的码：先确认
+  await page.getByRole('button', { name: `${ic('action.delete')} ${spare}` }).click()
+  const confirm = page.getByRole('alertdialog', { name: ic('action.delete') })
+  await expect(confirm).toContainText(ic('confirm.delete'))
+  await confirm.getByRole('button', { name: ic('action.delete') }).click()
+  await expect(table.locator('tbody tr')).toHaveCount(1)
+  await expect(table.getByText(spare)).toHaveCount(0)
+
+  // 搜索是插件的路由处理的
+  await page.getByRole('searchbox', { name: t('pluginView.searchLabel', { title: ic('page.codes') }) }).fill('ZZZZ')
+  await page.getByRole('button', { name: t('pluginView.search') }).click()
+  await expect(table.getByText(t('pluginView.emptySearch'))).toBeVisible()
+
+  // 停用后注册不再要邀请码，导航里的页面也没了；启用和停用都记在审计日志里
+  await toggle(page, 'invitation-codes', name, 'disable')
+  await expect(nav.getByRole('link', { name: ic('page.codes') })).toHaveCount(0)
+  const laterContext = await browser.newContext({ locale: 'zh-CN' })
+  await register(await laterContext.newPage(), '203.0.113.143', `After${suffix}`)
+  await laterContext.close()
+  await page.goto('/admin/audit')
+  const log = page.getByRole('table', { name: t('admin.audit.tableLabel') })
+  const rows = log
+    .getByRole('row')
+    .filter({ has: page.getByRole('link', { name: t('admin.audit.subjects.plugin', { name }), exact: true }) })
+  await expect(rows.getByRole('cell', { name: t('admin.audit.actions.pluginEnable'), exact: true })).toBeVisible()
+  await expect(rows.getByRole('cell', { name: t('admin.audit.actions.pluginDisable'), exact: true })).toBeVisible()
+})
+
+test('CDN 刷新：设置里的密钥不回显；插件的表单页把插件给的错误显示出来', async ({ page }) => {
+  const cdn = pluginText('cdn-refresh')
+  const name = cdn('plugin.name')
+  const secretValue = `e2e-secret-${suffix}`
+  setRole(await register(page, '203.0.113.150', `Cdn${suffix}`), 'superadmin')
+
+  // 设置：选服务商、填密钥；保存后密钥只显示“已设置”，页面里没有它的值
+  await page.goto('/admin/plugins/cdn-refresh')
+  const settings = page.getByRole('form', { name: t('admin.plugins.settings.label', { name }) })
+  await settings.getByRole('combobox', { name: cdn('settings.provider.label') }).click()
+  await page.getByRole('option', { name: cdn('settings.provider.options.tencent') }).click()
+  await settings.getByLabel(cdn('settings.baseUrl.label')).fill('https://cdn.example.test')
+  await settings.getByLabel(cdn('settings.accessKeyId.label'), { exact: true }).fill('AKIDexample')
+  // 机密设置项的名字后面跟着“未设置”或“已设置”
+  const secretLabel = cdn('settings.accessKeySecret.label')
+  await settings
+    .getByRole('textbox', { name: `${secretLabel} ${t('admin.settings.secret.unset')}`, exact: true })
+    .fill(secretValue)
+  await settings.getByRole('button', { name: t('admin.settings.save') }).click()
+  await expect(page.getByText(t('admin.settings.saved', { count: 4 }))).toBeVisible()
+  await page.reload()
+  await expect(
+    settings.getByRole('textbox', { name: `${secretLabel} ${t('admin.settings.secret.set')}`, exact: true }),
+  ).toHaveValue('')
+  await expect(settings.getByRole('combobox', { name: cdn('settings.provider.label') })).toHaveText(
+    cdn('settings.provider.options.tencent'),
+  )
+  expect(await page.content()).not.toContain(secretValue)
+
+  // 启用后后台导航里多了“刷新 CDN”；别的站点的地址被插件拒绝，错误显示在表单里，填写的内容还在
+  await toggle(page, 'cdn-refresh', name, 'enable')
+  await page
+    .getByRole('navigation', { name: t('admin.nav.label') })
+    .getByRole('link', { name: cdn('page.refresh') })
+    .click()
+  await expect(page.getByRole('heading', { name: cdn('page.refresh'), level: 1 })).toBeVisible()
+  const paths = page.getByLabel(cdn('field.paths'))
+  await paths.fill('https://elsewhere.example/csl/Steve.json')
+  await page.getByRole('button', { name: cdn('action.refresh') }).click()
+  await expect(page.getByText(t('pluginView.failed', { message: cdn('error.invalidPaths') }))).toBeVisible()
+  await expect(paths).toHaveValue('https://elsewhere.example/csl/Steve.json')
+
+  // 改设置记在审计日志里，一项一行，密钥只记“已更换”
+  await page.goto('/admin/audit')
+  const log = page.getByRole('table', { name: t('admin.audit.tableLabel') })
+  const rows = log
+    .getByRole('row')
+    .filter({ has: page.getByRole('link', { name: t('admin.audit.subjects.plugin', { name }), exact: true }) })
+  await expect(rows.getByRole('cell', { name: t('admin.audit.actions.pluginSettings'), exact: true })).toHaveCount(4)
+  await expect(
+    rows.getByRole('cell', {
+      name: t('admin.audit.details.pluginSetting', {
+        label: secretLabel,
+        change: t('admin.audit.details.settingUpdate.secret'),
+      }),
+      exact: true,
+    }),
+  ).toBeVisible()
+  expect(await page.content()).not.toContain(secretValue)
+})
