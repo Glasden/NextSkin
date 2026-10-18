@@ -117,6 +117,10 @@ export function createScheduler(options: {
       nextRunAt(cron, 'UTC', now())
       entries.set(entry.name, { ...entry, cron })
     },
+    /** 插件停用时去掉它的条目；`job_schedules` 里的行留着，重新启用后接着按原来的时间算 */
+    remove(name: string): void {
+      entries.delete(name)
+    },
     start(): void {
       if (running) return
       running = true

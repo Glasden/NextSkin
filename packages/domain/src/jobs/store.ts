@@ -163,3 +163,77 @@ export async function failJob(
   }
   return db.isTransaction ? fail(db) : transactionWithRetry(db, fail)
 }
+
+export interface DeadLetter {
+  id: number
+  name: string
+  attempts: number
+  lastError: string | null
+  createdAt: IsoTimestamp
+  failedAt: IsoTimestamp
+}
+
+/** 某一组任务的死信，最新的在前。`prefix` 是任务名前缀，例如 `plugin:<id>:`，不能含 `%` 和 `_` */
+export async function listDeadLetters(
+  db: Kysely<CoreDatabase>,
+  options: { prefix: string; limit: number },
+): Promise<DeadLetter[]> {
+  const rows = await db
+    .selectFrom('failed_jobs')
+    .select(['id', 'name', 'attempts', 'last_error', 'created_at', 'failed_at'])
+    // 前缀里只有小写字母、数字、连字符和冒号，没有 LIKE 的通配符；SQLite 的 LIKE 不分大小写，读出后再按前缀筛一遍
+    .where('name', 'like', `${options.prefix}%`)
+    .orderBy('failed_at', 'desc')
+    .orderBy('id', 'desc')
+    .limit(options.limit)
+    .execute()
+  return rows
+    .filter((row) => row.name.startsWith(options.prefix))
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      attempts: row.attempts,
+      lastError: row.last_error,
+      createdAt: row.created_at,
+      failedAt: row.failed_at,
+    }))
+}
+
+/**
+ * 把死信放回队列，attempts 从 0 开始；同一去重键的任务已经在队列里时直接丢掉这条（ADR-0021）。
+ * 返回 false 表示没有这条死信，或它不属于 `prefix`
+ */
+export async function retryDeadLetter(
+  db: Kysely<CoreDatabase>,
+  options: { id: number; prefix: string; now: IsoTimestamp },
+): Promise<boolean> {
+  const retry = async (tx: Kysely<CoreDatabase>): Promise<boolean> => {
+    const row = await tx.selectFrom('failed_jobs').selectAll().where('id', '=', options.id).executeTakeFirst()
+    if (!row || !row.name.startsWith(options.prefix)) return false
+    await insertOrIgnore(
+      tx,
+      'jobs',
+      {
+        name: row.name,
+        payload: row.payload,
+        dedupe_key: row.dedupe_key,
+        run_at: options.now,
+        created_at: row.created_at,
+      },
+      ['name', 'dedupe_key'],
+    )
+    await tx.deleteFrom('failed_jobs').where('id', '=', row.id).execute()
+    return true
+  }
+  return db.isTransaction ? retry(db) : transactionWithRetry(db, retry)
+}
+
+export async function deleteDeadLetter(
+  db: Kysely<CoreDatabase>,
+  options: { id: number; prefix: string },
+): Promise<boolean> {
+  const row = await db.selectFrom('failed_jobs').select('name').where('id', '=', options.id).executeTakeFirst()
+  if (!row || !row.name.startsWith(options.prefix)) return false
+  const result = await db.deleteFrom('failed_jobs').where('id', '=', options.id).executeTakeFirstOrThrow()
+  return result.numDeletedRows > 0n
+}

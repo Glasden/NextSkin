@@ -2,8 +2,22 @@ import type { CoreDatabase, IsoTimestamp } from '@nextskin/db'
 import type { Actor } from '@nextskin/plugin-sdk'
 import type { Transaction } from 'kysely'
 
-type AuditAction = 'site.setup' | 'report.resolve' | 'texture.delete' | 'user.setRole' | 'setting.update'
+type AuditAction =
+  | 'site.setup'
+  | 'report.resolve'
+  | 'texture.delete'
+  | 'user.setRole'
+  | 'setting.update'
+  | 'plugin.enable'
+  | 'plugin.disable'
+  | 'plugin.settings'
+  | 'plugin.deadLetter'
+// 插件和设置项一样没有整数 id，subject_id 记 0，插件 id 放在 details 里（ADR-0028 的做法）
 const subjects: Record<AuditAction, string> = {
+  'plugin.enable': 'plugin',
+  'plugin.disable': 'plugin',
+  'plugin.settings': 'plugin',
+  'plugin.deadLetter': 'plugin',
   'site.setup': 'user',
   'setting.update': 'setting',
   'report.resolve': 'report',

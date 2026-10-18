@@ -11,7 +11,7 @@ import { createPlayer, retryOnPlayerUuidRace, validatePlayerName } from './creat
 import { lockTexture } from '../textures/manage.ts'
 import { toNameKey } from './queries.ts'
 
-function toPlayer(row: Selectable<PlayersTable>): Player {
+export function toPlayer(row: Selectable<PlayersTable>): Player {
   return {
     pid: row.id,
     uid: row.user_id,

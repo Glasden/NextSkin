@@ -15,6 +15,11 @@ export interface JobHandler {
   concurrency?: number
   /** 进死信时替换载荷，去掉链接里的令牌这类敏感内容 */
   deadLetterPayload?(payload: unknown): unknown
+  /**
+   * 记进 last_error 的文字；默认只记固定的错误码。插件任务记插件抛出的消息（ADR-0021），
+   * 返回 null 时退回错误码
+   */
+  errorText?(error: unknown): string | null
 }
 
 export interface JobRunnerOptions {
@@ -44,7 +49,7 @@ export function backoffMs(attempt: number, random: number): number {
 
 /**
  * 只记固定的错误码：外部服务和异常消息里可能带着收件地址、令牌（不变量 11）。
- * 插件任务的消息以后由插件运行时自己记录。
+ * 插件任务的消息由处理函数的 errorText 给出。
  */
 function errorCode(error: unknown): string {
   if (error instanceof JobTimeoutError) return 'timeout'
@@ -155,14 +160,23 @@ export function createJobRunner(options: JobRunnerOptions) {
     } catch (error) {
       const code = errorCode(error)
       log(`[jobs] failed ${job.name} code=${code} attempt=${job.attempts}`)
+      const text = (error instanceof JobTimeoutError ? null : describe(handler, error)) ?? code
       if (job.attempts >= maxAttempts)
-        await failJob(db, lease, { error: code, now: at(), payload: deadLetter(handler, job.payload) })
-      else await rescheduleJob(db, lease, { runAt: at(backoffMs(job.attempts, random())), error: code })
+        await failJob(db, lease, { error: text, now: at(), payload: deadLetter(handler, job.payload) })
+      else await rescheduleJob(db, lease, { runAt: at(backoffMs(job.attempts, random())), error: text })
       return
     } finally {
       clearTimeout(timeout)
     }
     await completeJob(db, lease)
+  }
+
+  function describe(handler: JobHandler, error: unknown): string | null {
+    try {
+      return handler.errorText?.(error) ?? null
+    } catch {
+      return null
+    }
   }
 
   /** 脱敏函数出错时存 null：既不能让任务卡在 jobs 里反复重来，也不能退回去存原始载荷 */

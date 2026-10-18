@@ -1,4 +1,7 @@
+import { randomUUID } from 'node:crypto'
 import { isSiteInitialized } from '../setup/initialized.ts'
+import { collectPluginFields } from '../plugins/form-fields.ts'
+import type { PluginSystem } from '../plugins/system.ts'
 import {
   countRows,
   insertOrIgnore,
@@ -26,6 +29,8 @@ export interface RegisterInput {
   playerName?: string
   ip: string
   locale: string | null
+  /** 插件加在注册表单上的字段，按插件 id 分组：`{ [插件 id]: { [字段名]: 值 } }` */
+  plugins?: Readonly<Record<string, unknown>>
 }
 
 export function createRegister(
@@ -34,6 +39,7 @@ export function createRegister(
   auth: AuthService,
   mail: MailService,
   events: Events,
+  plugins: Pick<PluginSystem, 'registerFields' | 'interceptRegister'>,
 ) {
   return async function register(input: RegisterInput): Promise<{ uid: number }> {
     if (!(await isSiteInitialized(db))) throw new DomainError('setup_required')
@@ -47,6 +53,7 @@ export function createRegister(
       'player.nameRegex',
       'player.nameLength',
       'player.uuidAlgorithm',
+      'site.locale',
     ])
     if (!values['auth.registration.enabled']) throw new DomainError('registration_disabled')
     const email = validateEmail(input.email, values['auth.registration.emailDomains'])
@@ -62,17 +69,31 @@ export function createRegister(
     } else {
       nickname = validateNickname(input.nickname ?? '')
     }
+    const extra = collectPluginFields(plugins.registerFields(), input.plugins)
     const limit = values['auth.registration.perIpLimit']
     if (limit > 0 && (await countRows(db.selectFrom('users').where('registration_ip', '=', input.ip))) >= limit)
       throw new DomainError('ip_limit_reached', { limit })
     const password = await hashPassword(input.password)
+    const scope = {
+      requestId: randomUUID(),
+      // 注册的人这时还不是用户
+      actor: { kind: 'system' as const },
+      locale: input.locale ?? values['site.locale'],
+      ip: input.ip,
+    }
     const uid = await retryOnPlayerUuidRace(db, () =>
       transactionWithRetry(db, async (tx) => {
         if (limit > 0 && (await countRows(tx.selectFrom('users').where('registration_ip', '=', input.ip))) >= limit)
           throw new DomainError('ip_limit_reached', { limit })
         const registeredAt = toIsoTimestamp(new Date())
         const now = writeAuthDate(tx, registeredAt)
-        // 插件运行时落地后，在这里调用 user.register 拦截器（同一事务）。
+        // 事务内的拦截器（ADR-0033）：插件的写入随注册一起提交或回滚；事务重跑时它也跟着再调用一次
+        await plugins.interceptRegister(
+          tx,
+          { email, nickname, playerName: withPlayer ? nickname : null, ip: input.ip },
+          extra,
+          scope,
+        )
         const inserted = await insertOrIgnore(
           tx,
           'users',
@@ -135,13 +156,14 @@ export function createRegister(
             reason: 'score.reasons.initial',
             now: registeredAt,
           })
-        // 插件运行时落地后，extra 换成各插件自己贡献的注册表单字段
+        // 每个插件只收到它自己加的表单字段
         await events.emit(
           tx,
           'user.registered',
           { kind: 'user', uid: user.id, role: 'user' },
           { user: { uid: user.id, nickname, role: 'user', avatarTid: null, registeredAt }, extra: {} },
           registeredAt,
+          { extra },
         )
         return user.id
       }),

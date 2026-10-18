@@ -10,7 +10,12 @@ import { TEXTURE_SWEEP_JOB, createTextureSweep } from './textures/sweep.ts'
 import { createAdmin } from './admin/service.ts'
 import { createCloset } from './closet/service.ts'
 import { createReports } from './reports/service.ts'
-import { toIsoTimestamp, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
+import { dialectOf, toIsoTimestamp, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
+import { createPluginDbGateway } from './plugins/db/gateway.ts'
+import { createPluginSystem, type OfficialPlugin } from './plugins/system.ts'
+import type { loadPlugin } from '@nextskin/plugin-host'
+import { createPluginAdmin } from './plugins/admin.ts'
+import { PLUGIN_KV_CLEANUP_JOB } from './plugins/kv.ts'
 import type { Kysely } from 'kysely'
 import { createAuthService } from './auth/service.ts'
 import { createEvents } from './events/emit.ts'
@@ -59,6 +64,17 @@ export interface CoreOptions {
   mailTransport?: MailTransport
   /** 任务执行器的参数，测试用来控制时钟和轮询 */
   jobs?: Omit<JobRunnerOptions, 'db' | 'handlers'>
+  plugins?: {
+    /** 随发行包分发的官方插件，在核心进程内运行（ADR-0009） */
+    official?: readonly OfficialPlugin[]
+    /** SQLite 的数据库文件：插件的读查询走专用的只读 worker 连接（ADR-0033） */
+    sqliteFile?: string
+    /** 每个实例多久读一次插件的启用集合，默认 5 秒 */
+    syncIntervalMs?: number
+    log?: (line: string) => void
+    /** 测试用：替换进程内的插件加载 */
+    load?: typeof loadPlugin
+  }
 }
 
 export function createCore(options: CoreOptions) {
@@ -112,6 +128,26 @@ export function createCore(options: CoreOptions) {
     log: options.jobs?.log,
     timeZone: async () => (await settings.read(['site.timeZone']))['site.timeZone'],
   })
+  const pluginDb = createPluginDbGateway({ db: options.db, sqliteFile: options.plugins?.sqliteFile })
+  const plugins = createPluginSystem({
+    db: options.db,
+    dialect: dialectOf(options.db),
+    secretKey: options.secretKey,
+    settings,
+    jobs,
+    handlers,
+    events,
+    schedules,
+    storage: options.textureStorage,
+    gateway: pluginDb,
+    official: options.plugins?.official ?? [],
+    now,
+    syncIntervalMs: options.plugins?.syncIntervalMs,
+    log: options.plugins?.log,
+    load: options.plugins?.load,
+  })
+  handlers.set(PLUGIN_KV_CLEANUP_JOB, { run: () => plugins.kv.cleanup() })
+  schedules.add({ name: PLUGIN_KV_CLEANUP_JOB, job: PLUGIN_KV_CLEANUP_JOB, cron: '37 4 * * *' })
   schedules.add({ name: AUTH_CLEANUP_JOB, job: AUTH_CLEANUP_JOB, cron: '17 4 * * *' })
   schedules.add({ name: AUDIT_CLEANUP_JOB, job: AUDIT_CLEANUP_JOB, cron: '27 4 * * *' })
   schedules.add({ name: TEXTURE_SWEEP_JOB, job: TEXTURE_SWEEP_JOB, cron: '47 4 * * 0' })
@@ -189,7 +225,12 @@ export function createCore(options: CoreOptions) {
     closet,
     reports: createReports(textureOptions),
     renders,
-    shutdown: () => imagePool.close(),
+    plugins: Object.assign(plugins, { admin: createPluginAdmin({ db: options.db, plugins, now }) }),
+    async shutdown() {
+      await plugins.stop()
+      await pluginDb.close()
+      await imagePool.close()
+    },
     textures: {
       ...createTextureQueries(options.db, options.textureStorage),
       ...createTextureLibraryQueries(options.db, settings),
@@ -203,7 +244,7 @@ export function createCore(options: CoreOptions) {
     schedules,
     events: { subscribe: events.subscribe },
     users: {
-      register: createRegister(options.db, settings, auth, mail, events),
+      register: createRegister(options.db, settings, auth, mail, events, plugins),
       checkIn: createCheckIn(options.db, settings),
       ...createUserQueries(options.db, settings),
       ...createUserManagement(options, settings, mail, jobs, events, removal, now),

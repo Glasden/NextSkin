@@ -82,3 +82,10 @@ export type {
 export { createMemorySessionCache, type YggdrasilSessionCache, type JoinSession } from './yggdrasil/sessions.ts'
 
 export type { PodiumEntry, Podium, SiteStats } from './home/queries.ts'
+
+export type { OfficialPlugin, PluginFormField, PluginRouteRequest } from './plugins/system.ts'
+export type { PluginSummary, PluginDetail } from './plugins/admin.ts'
+export type { PluginSettingView } from './plugins/settings.ts'
+export type { DeadLetter } from './jobs/store.ts'
+export { pluginFieldKey } from './plugins/form-fields.ts'
+export { canPlugin } from './access/permissions.ts'

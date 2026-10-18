@@ -22,8 +22,34 @@ function encryptionKey(secretKey: string) {
   return Buffer.from(hkdfSync('sha256', secretKey, salt, info, 32))
 }
 
-function aad(key: CoreSettingKey) {
-  return Buffer.from(`${coreSettingsNamespace}:${key}`, 'utf8')
+/**
+ * 加密一个设置值的 JSON。附加数据是 `<namespace>:<键>`：密文搬到别的键或别的插件下就解不开。
+ * 插件的机密设置项也用它（namespace 是 `plugin:<id>`）
+ */
+export function encryptSettingJson(json: string, namespace: string, key: string, secretKey: string): string {
+  validateSecretKey(secretKey)
+  const iv = randomBytes(12)
+  const cipher = createCipheriv('aes-256-gcm', encryptionKey(secretKey), iv)
+  cipher.setAAD(Buffer.from(`${namespace}:${key}`, 'utf8'))
+  const data = Buffer.concat([cipher.update(json, 'utf8'), cipher.final()])
+  return JSON.stringify({
+    v: 1,
+    iv: iv.toString('base64'),
+    tag: cipher.getAuthTag().toString('base64'),
+    data: data.toString('base64'),
+  })
+}
+
+/** 解不开时抛错；调用方给出不带底层错误的消息（底层错误里可能有设置值） */
+export function decryptSettingJson(stored: string, namespace: string, key: string, secretKey: string): string {
+  const envelope = envelopeSchema.parse(JSON.parse(stored))
+  const iv = Buffer.from(envelope.iv, 'base64')
+  const tag = Buffer.from(envelope.tag, 'base64')
+  if (iv.length !== 12 || tag.length !== 16) throw new Error()
+  const decipher = createDecipheriv('aes-256-gcm', encryptionKey(secretKey), iv)
+  decipher.setAAD(Buffer.from(`${namespace}:${key}`, 'utf8'))
+  decipher.setAuthTag(tag)
+  return Buffer.concat([decipher.update(Buffer.from(envelope.data, 'base64')), decipher.final()]).toString('utf8')
 }
 
 export function encodeSettingValue<K extends CoreSettingKey>(
@@ -36,16 +62,7 @@ export function encodeSettingValue<K extends CoreSettingKey>(
     const definition = coreSettingsRegistry[key]
     const json = JSON.stringify(definition.schema.parse(value))
     if (!definition.secret) return json
-    const iv = randomBytes(12)
-    const cipher = createCipheriv('aes-256-gcm', encryptionKey(options.secretKey), iv)
-    cipher.setAAD(aad(key))
-    const data = Buffer.concat([cipher.update(json, 'utf8'), cipher.final()])
-    return JSON.stringify({
-      v: 1,
-      iv: iv.toString('base64'),
-      tag: cipher.getAuthTag().toString('base64'),
-      data: data.toString('base64'),
-    })
+    return encryptSettingJson(json, coreSettingsNamespace, key, options.secretKey)
   } catch {
     throw new Error(`设置项 ${key} 的值不符合它的类型；请检查要写入的值`)
   }
@@ -58,20 +75,9 @@ export function decodeSettingValue<K extends CoreSettingKey>(
 ): CoreSettingValue<K> {
   try {
     const definition = coreSettingsRegistry[key]
-    let value: unknown = JSON.parse(stored)
-    if (definition.secret) {
-      const envelope = envelopeSchema.parse(value)
-      const iv = Buffer.from(envelope.iv, 'base64')
-      const tag = Buffer.from(envelope.tag, 'base64')
-      if (iv.length !== 12 || tag.length !== 16) throw new Error()
-      const decipher = createDecipheriv('aes-256-gcm', encryptionKey(secretKey), iv)
-      decipher.setAAD(aad(key))
-      decipher.setAuthTag(tag)
-      const json = Buffer.concat([decipher.update(Buffer.from(envelope.data, 'base64')), decipher.final()]).toString(
-        'utf8',
-      )
-      value = JSON.parse(json)
-    }
+    const value: unknown = JSON.parse(
+      definition.secret ? decryptSettingJson(stored, coreSettingsNamespace, key, secretKey) : stored,
+    )
     return definition.schema.parse(value) as CoreSettingValue<K>
   } catch {
     // 不保留 cause：zod/crypto 的底层错误可能包含设置值。

@@ -15,6 +15,7 @@
   "dependencies": {
     "@nextskin/plugin-sdk": "workspace:*",
     "kysely": "catalog:",
+    "use-intl": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
