@@ -1,0 +1,27 @@
+{
+  "name": "@nextskin/plugin-cdn-refresh",
+  "version": "1.0.0",
+  "private": true,
+  "description": "材质和角色的地址变了之后刷新 CDN 缓存：阿里云、腾讯云、Azure Front Door（官方插件，ADR-0033）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./official": "./src/official.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "nextskin": {
+    "id": "cdn-refresh"
+  },
+  "dependencies": {
+    "@nextskin/plugin-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@nextskin/plugin-host": "workspace:*",
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

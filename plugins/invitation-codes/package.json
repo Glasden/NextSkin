@@ -1,0 +1,31 @@
+{
+  "name": "@nextskin/plugin-invitation-codes",
+  "version": "1.0.0",
+  "private": true,
+  "description": "邀请码注册：注册表单加一个邀请码字段，后台生成和管理邀请码（官方插件，ADR-0033）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./official": "./src/official.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run",
+    "test:db": "vitest run --config vitest.db.config.ts"
+  },
+  "nextskin": {
+    "id": "invitation-codes"
+  },
+  "dependencies": {
+    "@nextskin/plugin-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@nextskin/db": "workspace:*",
+    "@nextskin/domain": "workspace:*",
+    "@nextskin/plugin-host": "workspace:*",
+    "@types/node": "catalog:",
+    "kysely": "catalog:",
+    "vitest": "catalog:"
+  }
+}

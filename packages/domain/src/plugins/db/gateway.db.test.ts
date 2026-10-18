@@ -388,6 +388,35 @@ const attacks: [string, () => unknown, boolean?][] = [
   ]),
   ...['begin', 'commit', 'rollback'].map((kind): [string, () => unknown] => [kind, () => ({ kind })]),
 ]
+test('is null、is not null 和布尔的立即值可以用，四种数据库结果一致', async () => {
+  await plugin
+    .insertInto('codes')
+    .values([row('nul1'), { ...row('nul2'), used_by: 7 }])
+    .execute()
+  const unused = await plugin
+    .selectFrom('codes')
+    .select('code')
+    .where('code', 'like', 'nul%')
+    .where('used_by', 'is', null)
+    .execute()
+  expect(unused).toEqual([{ code: 'nul1' }])
+  const used = await plugin
+    .updateTable('codes')
+    .set({ status: 'used' })
+    .where('code', 'like', 'nul%')
+    .where((eb) => eb.or([eb('used_by', 'is not', null), eb('code', '=', 'none')]))
+    .executeTakeFirst()
+  expect(used.numUpdatedRows).toBe(1n)
+  await plugin.deleteFrom('codes').where('code', 'like', 'nul%').execute()
+  expect(() =>
+    sanitizePluginQuery(plugin.selectFrom('codes').select('code').where('used_by', 'is', null).toOperationNode(), {
+      pluginId: 'invite-codes',
+      tables,
+      allowDdl: false,
+    }),
+  ).not.toThrow()
+})
+
 test.each(attacks)('拒绝：%s', async (_name, make, allowDdl = false) => {
   await expect(gateway.execute({ ...scope, allowDdl }, structuredClone(make()))).rejects.toMatchObject({
     code: 'rejected',

@@ -106,7 +106,15 @@
     "import_textures_unreadable": "The textures directory is missing or unreadable. Check the path and the process permissions.",
     "import_site_url_invalid": "The site URL is invalid. Enter a URL starting with http:// or https://.",
     "site_name_invalid": "The site name must contain 1–64 characters. Adjust it and try again.",
-    "site_url_invalid": "The site URL is missing or invalid. Enter a URL starting with http:// or https://."
+    "site_url_invalid": "The site URL is missing or invalid. Enter a URL starting with http:// or https://.",
+    "plugin_unavailable": "A plugin on this site is having trouble, so this couldn't be completed. Please try again later, and contact the site administrator if it keeps happening.",
+    "registration_denied": "{message}",
+    "plugin_route_not_found": "This address doesn't exist. The plugin that provides it may have been disabled.",
+    "plugin_timeout": "The plugin took too long to respond. Please try again later.",
+    "plugin_error": "The plugin ran into an error. Please try again later.",
+    "plugin_not_found": "This plugin could not be found.",
+    "plugin_migration_failed": "The plugin's tables couldn't be set up, so it wasn't enabled. The reason is shown on the plugins page.",
+    "dead_letter_not_found": "This failed job could not be found. It may already have been retried or deleted."
   },
   "score": {
     "reasons": {

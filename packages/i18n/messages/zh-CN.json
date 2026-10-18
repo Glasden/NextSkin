@@ -106,7 +106,15 @@
     "import_textures_unreadable": "材质目录不存在或者读不了。请确认路径，以及 NextSkin 进程有读取权限。",
     "import_site_url_invalid": "站点地址要以 http:// 或 https:// 开头。",
     "site_name_invalid": "站点名称要在 1 到 64 个字符之间。",
-    "site_url_invalid": "站点地址要以 http:// 或 https:// 开头。"
+    "site_url_invalid": "站点地址要以 http:// 或 https:// 开头。",
+    "plugin_unavailable": "站点的插件暂时出了问题，这个操作没能完成。请稍后重试，一直这样的话请联系站点管理员。",
+    "registration_denied": "{message}",
+    "plugin_route_not_found": "找不到这个地址，提供它的插件可能已经停用了。",
+    "plugin_timeout": "插件处理得太久了，请稍后重试。",
+    "plugin_error": "插件出错了，请稍后重试。",
+    "plugin_not_found": "找不到这个插件。",
+    "plugin_migration_failed": "插件的数据表没有建好，所以没有启用。原因显示在插件页上。",
+    "dead_letter_not_found": "找不到这个失败的任务，可能已经重试过或删掉了。"
   },
   "score": {
     "reasons": {

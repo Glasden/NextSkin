@@ -60,11 +60,12 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(6)
+  expect(routes).toHaveLength(11)
   for (const route of routes) {
     const path = route.path
       .slice('/api'.length)
-      .replace(/:(?:id|tid|uid)/g, '7')
+      .replace(/^\/admin\/plugins\/:id/, '/admin/plugins/missing')
+      .replace(/:(?:id|tid|uid|job)/g, '7')
       .replace(':key', 'yggdrasil.signingKey')
     const body = route.path.endsWith('/settings')
       ? { values: {} }

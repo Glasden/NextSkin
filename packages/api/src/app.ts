@@ -11,6 +11,7 @@ import { registerLegacy } from './protocol/legacy.ts'
 import { registerTextures } from './protocol/textures.ts'
 import { registerUsm } from './protocol/usm.ts'
 import { registerYggdrasil, yggdrasilError } from './protocol/yggdrasil.ts'
+import { registerPluginRoutes } from './plugins.ts'
 import { registerRender } from './render.ts'
 import { createRestApp } from './rest/app.ts'
 import { createMemoryRateLimiter } from './rest/rate-limit.ts'
@@ -67,6 +68,7 @@ export function createApp(options: { core: Core; importer?: ImportGateway }) {
   registerUsm(app, core)
   registerCsl(app, core)
   registerRender(app, core)
+  registerPluginRoutes(app, core)
   // REST 的通配中间件排在协议处理器后，避免协议请求经过 REST 的校验和设置读取。
   app.route('/api', createRestApp(core, { uploadRateLimiter, importer }))
   return app

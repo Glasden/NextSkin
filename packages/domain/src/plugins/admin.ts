@@ -84,6 +84,8 @@ export function createPluginAdmin(options: { db: Kysely<CoreDatabase>; plugins: 
   }
 
   async function setEnabled(actor: AdminActor, id: string, enabled: boolean): Promise<void> {
+    // 先查权限再查插件：没有权限的人看不出插件存不存在
+    await authorizeRead(actor)
     const known = plugin(id)
     const timestamp = () => toIsoTimestamp(now())
     if (enabled) {
@@ -204,6 +206,7 @@ export function createPluginAdmin(options: { db: Kysely<CoreDatabase>; plugins: 
       return listDeadLetters(db, { prefix: `plugin:${id}:`, limit: DEAD_LETTER_LIMIT })
     },
     async retryDeadLetter(actor: AdminActor, id: string, jobId: number): Promise<void> {
+      await authorizeRead(actor)
       plugin(id)
       await transactionWithRetry(db, async (tx) => {
         const eventActor = await authorize(tx, actor)
@@ -220,6 +223,7 @@ export function createPluginAdmin(options: { db: Kysely<CoreDatabase>; plugins: 
       })
     },
     async deleteDeadLetter(actor: AdminActor, id: string, jobId: number): Promise<void> {
+      await authorizeRead(actor)
       plugin(id)
       await transactionWithRetry(db, async (tx) => {
         const eventActor = await authorize(tx, actor)

@@ -20,6 +20,8 @@ const route = createRoute({
             password: z.string(),
             nickname: z.string().optional(),
             playerName: z.string().optional(),
+            /** 插件加在注册表单上的字段：按插件 id 分组（ADR-0033） */
+            plugins: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
           }),
         },
       },

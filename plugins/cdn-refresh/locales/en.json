@@ -1,0 +1,41 @@
+{
+  "page": { "refresh": "Refresh CDN" },
+  "field": {
+    "paths": "Addresses to refresh",
+    "pathsHelp": "One per line, as a full address or a path starting with /, on this site only. The plugin already refreshes automatically when a player changes textures or is renamed and when a texture is deleted; use this to refresh anything it missed.",
+    "pathsPlaceholder": "/csl/Steve.json"
+  },
+  "action": { "refresh": "Refresh" },
+  "refresh": {
+    "queued": "Queued {count, plural, one {# address} other {# addresses}}. Failed refreshes are retried automatically; jobs that keep failing are shown on the plugins page."
+  },
+  "error": { "invalidPaths": "An address is malformed or not on this site. At most 1000 at a time." },
+  "permission": { "refresh": "Refresh the CDN cache manually" },
+  "settings": {
+    "provider": {
+      "label": "CDN provider",
+      "help": "Whose CDN this site sits behind.",
+      "options": { "aliyun": "Alibaba Cloud CDN", "tencent": "Tencent Cloud CDN", "azure": "Azure Front Door" }
+    },
+    "baseUrl": {
+      "label": "Site address on the CDN",
+      "help": "Fill this in when the CDN domain differs from the site address, e.g. https://cdn.example.com. Leave empty to use the site address."
+    },
+    "accessKeyId": {
+      "label": "Key ID",
+      "help": "Your Alibaba Cloud AccessKey ID, Tencent Cloud SecretId, or the application (client) ID of an Azure app registration."
+    },
+    "accessKeySecret": {
+      "label": "Key secret",
+      "help": "Your Alibaba Cloud AccessKey Secret, Tencent Cloud SecretKey, or the Azure app's client secret. Permission to refresh the cache is all it needs."
+    },
+    "azureTenantId": {
+      "label": "Azure tenant ID",
+      "help": "Only needed for Azure Front Door, as are the fields below."
+    },
+    "azureSubscriptionId": { "label": "Azure subscription ID" },
+    "azureResourceGroup": { "label": "Azure resource group" },
+    "azureProfile": { "label": "Front Door profile name" },
+    "azureEndpoint": { "label": "Front Door endpoint name" }
+  }
+}

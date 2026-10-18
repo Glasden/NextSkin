@@ -529,8 +529,14 @@ class Rebuilder {
         if (!opts.allowSelectAll) this.fail('select-all not allowed here')
         return this.selectAll(value, depth)
       case 'ValueNode': {
-        // 立即值会被直接拼进 SQL；DML 里一律走参数
-        const n = this.node(value, 'ValueNode', ['value'], depth)
+        // 立即值会被直接拼进 SQL；DML 里一律走参数。唯一的例外是 null 和布尔：
+        // Kysely 把 `is null`、`is not true` 的右边编成立即值，MySQL 和 PostgreSQL 的 IS 后面不能跟参数
+        const n = this.node(value, 'ValueNode', ['value', 'immediate'], depth)
+        if (n.immediate !== undefined) {
+          if (n.immediate !== true || (n.value !== null && typeof n.value !== 'boolean'))
+            this.fail('ValueNode.immediate is only allowed for null and booleans')
+          return freeze({ kind: 'ValueNode', value: n.value, immediate: true })
+        }
         return freeze({ kind: 'ValueNode', value: this.primitive(n.value) })
       }
       case 'ValueListNode': {

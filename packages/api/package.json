@@ -16,6 +16,7 @@
     "@hono/zod-openapi": "1.6.3",
     "@nextskin/domain": "workspace:*",
     "@nextskin/i18n": "workspace:*",
+    "@nextskin/plugin-host": "workspace:*",
     "hono": "catalog:",
     "zod": "catalog:"
   },

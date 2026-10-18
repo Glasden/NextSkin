@@ -77,6 +77,14 @@ const statuses = {
   player_name_taken: 409,
   registration_disabled: 403,
   ip_limit_reached: 403,
+  plugin_unavailable: 503,
+  registration_denied: 403,
+  plugin_route_not_found: 404,
+  plugin_timeout: 504,
+  plugin_error: 502,
+  plugin_not_found: 404,
+  plugin_migration_failed: 500,
+  dead_letter_not_found: 404,
 } as const satisfies Partial<Record<ErrorCode, number>>
 type ResponseCode = keyof typeof statuses
 const fieldNames: Partial<Record<ResponseCode, string>> = {
@@ -112,7 +120,11 @@ const fieldNames: Partial<Record<ResponseCode, string>> = {
 
 const fieldErrorSchema = z.object({ code: z.string(), message: z.string() })
 export const errorSchema = z.object({
-  error: fieldErrorSchema.extend({ fields: z.record(z.string(), fieldErrorSchema).optional() }),
+  error: fieldErrorSchema.extend({
+    fields: z.record(z.string(), fieldErrorSchema).optional(),
+    plugin: z.string().optional(),
+    reason: z.string().optional(),
+  }),
 })
 
 export function createErrorResponse(
@@ -139,7 +151,14 @@ export function createErrorResponse(
       }),
     )
     const messageKey: `errors.${ResponseCode}` = `errors.${code}`
-    const error = { code, message: translate(messageKey, params) }
+    const error = {
+      code,
+      message: translate(messageKey, params),
+      // 插件拒绝注册时给的机器可读原因（SDK 的 Deny.code）
+      ...(code === 'registration_denied' && params
+        ? { plugin: String(params.plugin), reason: String(params.reason) }
+        : {}),
+    }
     const field = fieldOverrides[code] ?? fieldNames[code]
     const fields = invalidFields
       ? Object.fromEntries(

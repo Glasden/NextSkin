@@ -1,0 +1,31 @@
+{
+  "field": {
+    "code": "邀请码",
+    "codeHelp": "本站只接受受邀注册，向站点管理员要一个邀请码。",
+    "count": "生成几个",
+    "expiresInDays": "有效天数",
+    "expiresInDaysHelp": "不填就用插件设置里的默认值；0 表示永不过期。"
+  },
+  "error": {
+    "invalidCode": "邀请码无效、已经用过或者过期了。",
+    "invalidCount": "一次能生成 1 到 100 个，有效天数在 0 到 3650 之间。"
+  },
+  "page": { "codes": "邀请码" },
+  "column": {
+    "code": "邀请码",
+    "status": "状态",
+    "usedBy": "使用者",
+    "createdAt": "生成时间",
+    "expiresAt": "过期时间"
+  },
+  "status": { "unused": "未使用", "used": "已使用", "expired": "已过期" },
+  "action": { "generate": "生成邀请码", "delete": "删除" },
+  "confirm": { "delete": "删掉之后这个码就不能再用来注册了。已经用它注册的账号不受影响。" },
+  "permission": { "manage": "生成、查看和删除邀请码" },
+  "settings": {
+    "defaultExpiresInDays": {
+      "label": "默认有效天数",
+      "help": "生成邀请码时不填有效天数就用这个。0 表示永不过期。"
+    }
+  }
+}

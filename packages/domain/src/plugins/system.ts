@@ -648,8 +648,11 @@ export function createPluginSystem(options: {
           )
         } catch (error) {
           recordFailure(key)
+          // 插件抛出的消息由插件负责，留给作者排查；核心自己的错误消息里不带请求数据
           log(
-            `[plugins] ${id} intercept_failed ${name} ${error instanceof PluginInvocationError ? error.reason : 'error'}`,
+            error instanceof PluginInvocationError
+              ? `[plugins] ${id} intercept_failed ${name} ${error.reason} ${[...error.message].slice(0, 300).join('')}`
+              : `[plugins] ${id} intercept_failed ${name} error`,
           )
           throw new DomainError('plugin_unavailable')
         }

@@ -2,6 +2,7 @@ import type { ImportGateway } from '../import-gateway.ts'
 import { registerSetup } from './setup.ts'
 import { registerImport } from './import.ts'
 import { registerAdmin } from './admin.ts'
+import { registerPluginAdmin } from './plugins.ts'
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { DomainError, type Core } from '@nextskin/domain'
 import type { MiddlewareHandler } from 'hono'
@@ -132,6 +133,7 @@ export function createRestApp(
   registerCloset(app, core)
   registerReports(app, core)
   registerAdmin(app, core)
+  registerPluginAdmin(app, core)
   registerSetup(app, core, options.importer)
   if (options.importer) {
     registerImport(app, core, options.importer)
