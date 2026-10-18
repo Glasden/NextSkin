@@ -1,1 +1,9 @@
-export { renderResetPassword, renderVerifyEmail, type LinkMailInput, type RenderedMail } from './mail.ts'
+export {
+  renderResetPassword,
+  renderVerifyEmail,
+  renderConfirmEmailChange,
+  renderEmailChanged,
+  type LinkMailInput,
+  type NoticeMailInput,
+  type RenderedMail,
+} from './mail.ts'

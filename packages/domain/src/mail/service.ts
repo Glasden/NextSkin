@@ -1,9 +1,10 @@
 import { isIsoTimestamp, toIsoTimestamp, type CoreDatabase } from '@nextskin/db'
-import { renderResetPassword, renderVerifyEmail } from '@nextskin/email'
+import { renderResetPassword, renderVerifyEmail, renderConfirmEmailChange, renderEmailChanged } from '@nextskin/email'
 import { matchLocale } from '@nextskin/i18n'
 import type { Kysely } from 'kysely'
 import { z } from 'zod'
 import { EMAIL_VERIFICATION_TTL_SECONDS, RESET_PASSWORD_TTL_SECONDS } from '../auth/password-policy.ts'
+import { EMAIL_CHANGE_TTL_SECONDS } from '../users/email-change-token.ts'
 import { DomainError } from '../errors.ts'
 import type { JobHandler, JobRunner } from '../jobs/runner.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
@@ -15,16 +16,19 @@ export const MAIL_JOB = 'core:mail'
 const templates = {
   verifyEmail: { render: renderVerifyEmail, ttl: EMAIL_VERIFICATION_TTL_SECONDS },
   resetPassword: { render: renderResetPassword, ttl: RESET_PASSWORD_TTL_SECONDS },
+  confirmEmailChange: { render: renderConfirmEmailChange, ttl: EMAIL_CHANGE_TTL_SECONDS },
 }
 
 /** 任务里只存渲染需要的输入；链接带着令牌，进死信时去掉（ADR-0021） */
-const mailPayload = z.object({
-  template: z.enum(['verifyEmail', 'resetPassword']),
-  to: z.string(),
-  uid: z.number(),
-  url: z.string(),
-  expiresAt: z.string().refine(isIsoTimestamp),
-})
+const recipient = z.object({ to: z.string(), uid: z.number() })
+const mailPayload = z.discriminatedUnion('template', [
+  recipient.extend({
+    template: z.enum(['verifyEmail', 'resetPassword', 'confirmEmailChange']),
+    url: z.string(),
+    expiresAt: z.string().refine(isIsoTimestamp),
+  }),
+  recipient.extend({ template: z.literal('emailChanged') }),
+])
 
 export function createMailService(
   db: Kysely<CoreDatabase>,
@@ -51,25 +55,27 @@ export function createMailService(
       async run({ payload }) {
         const mail = mailPayload.parse(payload)
         // 链接已经失效，发出去也没用
-        if (mail.expiresAt <= toIsoTimestamp(new Date())) return
+        if (mail.template !== 'emailChanged' && mail.expiresAt <= toIsoTimestamp(new Date())) return
         if (!(await configured())) throw new DomainError('mail_not_configured')
         const [user, values] = await Promise.all([
           db.selectFrom('users').select(['nickname', 'locale']).where('id', '=', mail.uid).executeTakeFirst(),
           settings.read(['site.name', 'site.locale', 'mail.from']),
         ])
         if (!user) return
-        const { render, ttl } = templates[mail.template]
-        await transport.send({
-          to: mail.to,
-          from: values['mail.from'],
-          ...render({
-            locale: (user.locale ? matchLocale(user.locale) : null) ?? values['site.locale'],
-            siteName: values['site.name'],
-            nickname: user.nickname,
-            url: mail.url,
-            expiresInHours: ttl / 3600,
-          }),
-        })
+        const input = {
+          locale: (user.locale ? matchLocale(user.locale) : null) ?? values['site.locale'],
+          siteName: values['site.name'],
+          nickname: user.nickname,
+        }
+        const rendered =
+          mail.template === 'emailChanged'
+            ? renderEmailChanged(input)
+            : templates[mail.template].render({
+                ...input,
+                url: mail.url,
+                expiresInHours: templates[mail.template].ttl / 3600,
+              })
+        await transport.send({ to: mail.to, from: values['mail.from'], ...rendered })
       },
       deadLetterPayload(payload) {
         const parsed = mailPayload.safeParse(payload)

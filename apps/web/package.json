@@ -18,6 +18,7 @@
     "@nextskin/i18n": "workspace:*",
     "@nextskin/skin": "workspace:*",
     "@nextskin/ui": "workspace:*",
+    "@simplewebauthn/browser": "13.3.0",
     "next": "catalog:",
     "next-intl": "catalog:",
     "pixelarticons": "catalog:",

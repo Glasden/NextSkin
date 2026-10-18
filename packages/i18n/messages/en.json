@@ -21,6 +21,16 @@
       "body": "We received a request to reset your password. Click the button below to choose a new one. The link expires in {hours, plural, one {# hour} other {# hours}}.",
       "action": "Reset password",
       "ignore": "If you didn't ask for this, you can ignore this email. Your password won't change."
+    },
+    "confirmEmailChange": {
+      "subject": "Confirm your new email for {siteName}",
+      "body": "After confirmation, use this email address to sign in and reset your password. Confirm using the button below. The link expires in {hours, plural, one {# hour} other {# hours}}.",
+      "action": "Confirm new email",
+      "ignore": "If you did not request this change, ignore this email."
+    },
+    "emailChanged": {
+      "subject": "Your account email for {siteName} has changed",
+      "body": "Your account email has changed. If you did not make this change, contact the site administrator."
     }
   },
   "errors": {
@@ -49,7 +59,13 @@
     "unauthenticated": "Sign in first.",
     "user_banned": "Your account has been banned. Contact the site administrator if you have questions.",
     "player_not_found": "This player doesn't exist. It may have been deleted.",
-    "check_in_too_early": "It's not time for your next check-in yet. Come back later."
+    "check_in_too_early": "It's not time for your next check-in yet. Come back later.",
+    "password_incorrect": "The current password is incorrect.",
+    "email_unchanged": "The new email is the same as your current email.",
+    "locale_invalid": "Choose a language supported by this site.",
+    "email_change_link_invalid": "This email change link is invalid or expired. Request a new one.",
+    "admin_cannot_delete_self": "Administrators cannot delete their own accounts.",
+    "too_many_requests": "Too many attempts. Please try again later."
   },
   "score": {
     "reasons": {
@@ -74,7 +90,11 @@
       "submit": "Sign in",
       "invalidCredentials": "The email or password isn't right. Check them and try again.",
       "tooManyAttempts": "Too many attempts. Wait a few minutes and try again.",
-      "failed": "Couldn't sign in. Try again later."
+      "failed": "Couldn't sign in. Try again later.",
+      "or": "or",
+      "passkey": "Sign in with a passkey",
+      "passkeyFailed": "Could not sign in with a passkey. Try again, or use your password.",
+      "passkeyExpired": "That took too long. Please try again."
     },
     "signUp": {
       "title": "Sign up",
@@ -116,13 +136,46 @@
       "done": "Thanks for verifying. You can now use every feature.",
       "invalidLink": "This verification link has expired or has already been used. Sign in to send a new one.",
       "home": "Go to home page"
+    },
+    "twoFactor": {
+      "title": "Two-step verification",
+      "description": "Open the authenticator app on your phone and enter the 6-digit code it shows.",
+      "backupDescription": "Enter one of the backup codes you saved when you turned on two-step verification.",
+      "code": "Code",
+      "backupCode": "Backup code",
+      "backupHint": "Case-sensitive. Each backup code works only once.",
+      "trust": "Don’t ask again on this device for 30 days",
+      "submit": "Verify",
+      "useBackup": "Use a backup code",
+      "useApp": "Use the authenticator app",
+      "invalidCode": "That code is incorrect. Enter the code your authenticator shows right now.",
+      "invalidBackupCode": "That backup code is incorrect or has already been used.",
+      "expired": "This sign-in has expired. Please enter your password again.",
+      "tooManyAttempts": "Too many incorrect codes. Please enter your password again.",
+      "locked": "Too many incorrect codes in a row. Two-step verification is locked for now; try again in 15 minutes.",
+      "rateLimited": "Too many attempts. Please wait a moment and try again.",
+      "failed": "Could not verify. Please try again later.",
+      "signInAgain": "Sign in again",
+      "lost": "Lost both your phone and your backup codes? Ask the site administrator to turn off two-step verification."
+    },
+    "confirmEmail": {
+      "title": "Confirm your new email",
+      "description": "Change your account email to {email}? After you confirm, use this address to sign in and to reset your password.",
+      "submit": "Confirm",
+      "doneTitle": "Email changed",
+      "done": "From now on, sign in with {email}.",
+      "invalidLink": "This link has expired or has already been used. If you still want to change your email, start again from your profile.",
+      "profile": "Go to your profile",
+      "failed": "Could not change your email. Please try again later."
     }
   },
   "user": {
     "nav": {
       "label": "User center",
       "dashboard": "Dashboard",
-      "players": "Players"
+      "players": "Players",
+      "profile": "Profile",
+      "security": "Sign-in & security"
     },
     "menu": {
       "signOut": "Sign out",
@@ -199,6 +252,160 @@
       "emptyDescription": "Add a player to get a name to use in the game.",
       "verifyFirst": "Verify your email before adding, renaming or deleting players.",
       "failed": "That didn't work. Try again later."
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "The name shown on this site, your interface language, and the email you sign in with.",
+      "summary": {
+        "title": "Account",
+        "roles": {
+          "admin": "Admin",
+          "superadmin": "Super admin"
+        },
+        "uid": "UID",
+        "email": "Email",
+        "verified": "Verified",
+        "unverified": "Unverified",
+        "registeredAt": "Joined",
+        "score": "Score"
+      },
+      "basics": {
+        "title": "Basics",
+        "description": "Your nickname is the name shown on this site. It has nothing to do with your players’ names in the game.",
+        "nickname": "Nickname",
+        "nicknameHint": "1 to 255 characters. Others may use the same nickname.",
+        "locale": "Language",
+        "localeHint": "Emails from this site use this language too.",
+        "save": "Save",
+        "saved": "Saved",
+        "failed": "Could not save. Please try again later."
+      },
+      "email": {
+        "title": "Email",
+        "description": "You use your email to sign in and to reset your password. Changing it requires your current password, and the new address takes effect only after you open the link in the confirmation email.",
+        "descriptionNoMail": "You use your email to sign in. This site can’t send email, so a new address takes effect immediately and is not verified.",
+        "unverified": "{email} is not verified yet.",
+        "new": "New email",
+        "password": "Current password",
+        "submit": "Send confirmation email",
+        "submitNow": "Change email",
+        "pendingTitle": "Confirmation email sent",
+        "pending": "We sent a confirmation email to {email}. The link is valid for 1 hour. Until you open it, keep using your current email to sign in and to reset your password.",
+        "changed": "Your email is now {email}",
+        "failed": "Could not change your email. Please try again later."
+      },
+      "delete": {
+        "title": "Delete account",
+        "description": "Once deleted, your account and everything in it can’t be recovered. You can sign up again with the same email later, but it will be a brand-new account.",
+        "adminBlocked": "Admins can’t delete their own account, so that the site always has an admin. To delete it, give up your admin role first.",
+        "button": "Delete account",
+        "dialogTitle": "Permanently delete your account?",
+        "dialogDescription": "All of the following will be deleted and can’t be recovered.",
+        "impactPlayers": "{count, plural, one {# player} other {# players}}",
+        "impactOauthClients": "{count, plural, one {# OAuth app} other {# OAuth apps}}; services that use them stop working immediately",
+        "impactScore": "{score} points",
+        "impactSecurity": "Your password, two-step verification, passkeys, and sign-ins on every device",
+        "password": "Current password",
+        "confirm": "Delete my account",
+        "failed": "Could not delete your account. Please try again later."
+      }
+    },
+    "security": {
+      "title": "Sign-in & security",
+      "description": "Manage how you sign in to this site. Most changes here ask for your current password first.",
+      "copyFailed": "Could not copy. Please select the text and copy it yourself.",
+      "overview": {
+        "title": "Account protection",
+        "passwordSet": "Set",
+        "on": "On",
+        "off": "Off",
+        "none": "None",
+        "passkeyCount": "{count, plural, other {#}}"
+      },
+      "password": {
+        "title": "Password",
+        "description": "After you change it, you’re signed out on every other device. This device stays signed in.",
+        "current": "Current password",
+        "new": "New password",
+        "submit": "Change password",
+        "changed": "Password changed. You’ve been signed out on other devices",
+        "wrong": "Your current password is incorrect. Check it and try again.",
+        "tooManyAttempts": "Too many attempts. Please try again in a few minutes.",
+        "failed": "Could not change your password. Please try again later."
+      },
+      "twoFactor": {
+        "title": "Two-step verification",
+        "offDescription": "When it’s on, signing in with your password also asks for the 6-digit code from an authenticator app. Someone who knows your password still can’t sign in without your phone.",
+        "onDescription": "Signing in with your password also asks for the 6-digit code from your authenticator app, or a backup code.",
+        "launcherNote": "Two-step verification protects signing in on the website only. Signing in to a game launcher with your email and password doesn’t ask for a code.",
+        "lostAccess": "If you lose both your phone and your backup codes, ask the site administrator to turn off two-step verification.",
+        "enable": "Turn on two-step verification",
+        "step": "Step {step} of 3.",
+        "passwordStep": "First, enter your current password to confirm it’s you.",
+        "continue": "Continue",
+        "scanStep": "Scan the QR code with an authenticator app (such as Google Authenticator or Microsoft Authenticator), then enter the 6-digit code it shows.",
+        "qrLabel": "QR code for two-step verification",
+        "manualKey": "Can’t scan the code? Enter this key in your authenticator instead:",
+        "copyKey": "Copy key",
+        "keyCopied": "Key copied",
+        "code": "Code",
+        "codeHint": "The 6-digit code from your authenticator. It changes every 30 seconds.",
+        "verify": "Verify and turn on",
+        "invalidCode": "That code is incorrect. Enter the code your authenticator shows right now, and make sure your phone’s clock is correct.",
+        "tooManyAttempts": "Too many attempts. Please wait a moment and try again.",
+        "codesStep": "Two-step verification is on. Keep these backup codes somewhere safe: if your phone isn’t with you, you can sign in with a backup code instead.",
+        "done": "I’ve saved my backup codes",
+        "enabled": "Two-step verification is on",
+        "remaining": "{count, plural, =0 {You’ve used all your backup codes. Generate new ones.} one {# backup code left.} other {# backup codes left.}}",
+        "regenerate": "Generate new backup codes",
+        "regenerateDescription": "Once you generate new backup codes, all your old ones stop working.",
+        "regenerateSubmit": "Generate new codes",
+        "regenerated": "Your old backup codes no longer work.",
+        "disable": "Turn off two-step verification",
+        "disableTitle": "Turn off two-step verification?",
+        "disableDescription": "Once it’s off, anyone who knows your password can sign in to your account, and your backup codes stop working.",
+        "disabled": "Two-step verification is off",
+        "failed": "That didn’t work. Please try again later."
+      },
+      "backupCodes": {
+        "label": "Backup codes",
+        "onlyOnce": "These backup codes are shown only once. Each one works only once.",
+        "copy": "Copy",
+        "copied": "Backup codes copied",
+        "download": "Download",
+        "fileName": "backup-codes.txt",
+        "fileHeader": "Two-step verification backup codes for {siteName}. Each one works only once."
+      },
+      "passkeys": {
+        "title": "Passkeys",
+        "description": "A passkey is stored on your device or in your password manager. Sign in with your fingerprint, face, or screen lock instead of a password — and phishing sites can’t steal it.",
+        "empty": "No passkeys yet.",
+        "unsupported": "This browser doesn’t support passkeys.",
+        "add": "Add a passkey",
+        "addDescription": "Give it a name so you can tell which one it is later. Then click “Create” and follow your browser’s prompts.",
+        "reauthTitle": "Sign in again",
+        "reauthDescription": "To keep your account safe, you need to have signed in within the last 10 minutes to add a passkey. You’ll come back to this page after signing in.",
+        "reauth": "Sign in again",
+        "name": "Name",
+        "namePlaceholder": "e.g. Work laptop",
+        "create": "Create",
+        "added": "Passkey {name} added",
+        "unnamed": "Unnamed passkey",
+        "addedAt": "Added {time}",
+        "synced": "Synced",
+        "cancelled": "Cancelled. No passkey was added.",
+        "duplicate": "This device already has a passkey for this site.",
+        "rename": "Rename",
+        "renameTitle": "Rename passkey",
+        "renameSubmit": "Save",
+        "renamed": "Renamed",
+        "delete": "Delete",
+        "deleteTitle": "Delete passkey {name}?",
+        "deleteDescription": "You won’t be able to sign in with it anymore. The copy saved on your device or in your password manager has to be deleted there separately.",
+        "deleteConfirm": "Delete passkey",
+        "deleted": "Passkey {name} deleted",
+        "failed": "That didn’t work. Please try again later."
+      }
     }
   }
 }

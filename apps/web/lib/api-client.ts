@@ -36,6 +36,16 @@ export async function sendJson(
   }
 }
 
+/** GET 一个 JSON 接口，例如 Better Auth 生成通行密钥参数的接口 */
+export async function getJson(path: string): Promise<{ status: number; data: unknown }> {
+  try {
+    const response = await fetch(path, { headers: { Accept: 'application/json' } })
+    return { status: response.status, data: await response.json().catch(() => null) }
+  } catch {
+    return { status: 0, data: null }
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }

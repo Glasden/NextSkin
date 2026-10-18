@@ -26,6 +26,7 @@ import * as createFailedJobs from './0023_create_failed_jobs.ts'
 import * as createScoreTransactions from './0024_create_score_transactions.ts'
 
 import * as addPlayersScorePaid from './0025_add_players_score_paid.ts'
+import * as addUsersEmailVersion from './0026_add_users_email_version.ts'
 
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
@@ -53,4 +54,5 @@ export const coreMigrations: Record<string, Migration> = {
   '0023_create_failed_jobs': createFailedJobs,
   '0024_create_score_transactions': createScoreTransactions,
   '0025_add_players_score_paid': addPlayersScorePaid,
+  '0026_add_users_email_version': addUsersEmailVersion,
 }

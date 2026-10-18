@@ -21,6 +21,16 @@
       "body": "我们收到了重设密码的请求。点击下面的按钮设置新密码，链接 {hours, plural, other {# 小时}}内有效。",
       "action": "重设密码",
       "ignore": "如果不是你本人操作，忽略这封邮件即可，你的密码不会改变。"
+    },
+    "confirmEmailChange": {
+      "subject": "确认你在 {siteName} 的新邮箱",
+      "body": "确认后，登录和找回密码都将改用这个邮箱地址。点击下面的按钮确认，链接 {hours, plural, other {# 小时}}内有效。",
+      "action": "确认新邮箱",
+      "ignore": "如果不是你本人操作，忽略这封邮件即可。"
+    },
+    "emailChanged": {
+      "subject": "你在 {siteName} 的账号邮箱已更改",
+      "body": "你的账号邮箱已经更改。如果不是你本人操作，请联系站点管理员。"
     }
   },
   "errors": {
@@ -49,7 +59,13 @@
     "unauthenticated": "请先登录。",
     "user_banned": "你的账号已被封禁，有疑问请联系站点管理员。",
     "player_not_found": "找不到这个角色，它可能已经被删除了。",
-    "check_in_too_early": "还没到下次签到的时间，晚点再来。"
+    "check_in_too_early": "还没到下次签到的时间，晚点再来。",
+    "password_incorrect": "当前密码不对，请重新输入。",
+    "email_unchanged": "新邮箱与当前邮箱相同。",
+    "locale_invalid": "请选择本站支持的语言。",
+    "email_change_link_invalid": "改邮箱的链接已失效，请重新申请。",
+    "admin_cannot_delete_self": "管理员不能删除自己的账号。",
+    "too_many_requests": "尝试次数太多，请稍后重试。"
   },
   "score": {
     "reasons": {
@@ -74,7 +90,11 @@
       "submit": "登录",
       "invalidCredentials": "邮箱或密码不对，请检查后重试。",
       "tooManyAttempts": "尝试次数太多了，请过几分钟再试。",
-      "failed": "没能登录，请稍后重试。"
+      "failed": "没能登录，请稍后重试。",
+      "or": "或者",
+      "passkey": "用通行密钥登录",
+      "passkeyFailed": "没能用通行密钥登录，请重试，或者改用密码。",
+      "passkeyExpired": "等待的时间太长了，请再试一次。"
     },
     "signUp": {
       "title": "注册",
@@ -116,13 +136,46 @@
       "done": "感谢验证，现在可以使用全部功能了。",
       "invalidLink": "这个验证链接已经失效或用过了。登录后可以重新发送验证邮件。",
       "home": "前往首页"
+    },
+    "twoFactor": {
+      "title": "两步验证",
+      "description": "打开手机上的验证器应用，输入它显示的 6 位数字。",
+      "backupDescription": "输入开启两步验证时保存的备用码。",
+      "code": "验证码",
+      "backupCode": "备用码",
+      "backupHint": "区分大小写，每个备用码只能用一次。",
+      "trust": "这台设备 30 天内不再询问",
+      "submit": "验证",
+      "useBackup": "改用备用码",
+      "useApp": "改用验证器",
+      "invalidCode": "验证码不对，请输入验证器上现在显示的数字。",
+      "invalidBackupCode": "备用码不对，或者已经用过了。",
+      "expired": "这次登录已经过期，请重新输入密码。",
+      "tooManyAttempts": "输错的次数太多，请重新输入密码。",
+      "locked": "连续输错太多次，两步验证暂时锁定。请过 15 分钟再试。",
+      "rateLimited": "尝试得太频繁了，请稍等片刻再试。",
+      "failed": "没能验证，请稍后重试。",
+      "signInAgain": "重新登录",
+      "lost": "手机和备用码都丢了？请联系站点管理员关闭两步验证。"
+    },
+    "confirmEmail": {
+      "title": "确认新邮箱",
+      "description": "把账号的邮箱改成 {email}？确认之后，登录和找回密码都改用这个地址。",
+      "submit": "确认修改",
+      "doneTitle": "邮箱已修改",
+      "done": "以后请用 {email} 登录。",
+      "invalidLink": "这个链接已经失效或用过了。需要的话，请在个人资料里重新修改邮箱。",
+      "profile": "前往个人资料",
+      "failed": "没能修改邮箱，请稍后重试。"
     }
   },
   "user": {
     "nav": {
       "label": "用户中心",
       "dashboard": "仪表盘",
-      "players": "角色"
+      "players": "角色",
+      "profile": "个人资料",
+      "security": "登录与安全"
     },
     "menu": {
       "signOut": "退出登录",
@@ -199,6 +252,160 @@
       "emptyDescription": "添加一个角色，就有了在游戏里用的名字。",
       "verifyFirst": "验证邮箱之后，才能添加、改名和删除角色。",
       "failed": "没有成功，请稍后重试。"
+    },
+    "profile": {
+      "title": "个人资料",
+      "description": "你在本站显示的名字、界面语言和登录用的邮箱。",
+      "summary": {
+        "title": "账号",
+        "roles": {
+          "admin": "管理员",
+          "superadmin": "超级管理员"
+        },
+        "uid": "UID",
+        "email": "邮箱",
+        "verified": "已验证",
+        "unverified": "未验证",
+        "registeredAt": "注册时间",
+        "score": "积分"
+      },
+      "basics": {
+        "title": "基本资料",
+        "description": "昵称是你在本站显示的名字，和游戏里的角色名无关。",
+        "nickname": "昵称",
+        "nicknameHint": "1 到 255 个字符，可以和别人重名。",
+        "locale": "界面语言",
+        "localeHint": "本站发给你的邮件也用这种语言。",
+        "save": "保存",
+        "saved": "已保存",
+        "failed": "没能保存，请稍后重试。"
+      },
+      "email": {
+        "title": "邮箱",
+        "description": "邮箱用来登录和找回密码。修改时要输入当前密码，新邮箱要点开确认邮件里的链接才生效。",
+        "descriptionNoMail": "邮箱用来登录。本站没有配置邮件发送，修改后立即生效，新邮箱不会经过验证。",
+        "unverified": "{email} 还没有验证。",
+        "new": "新邮箱",
+        "password": "当前密码",
+        "submit": "发送确认邮件",
+        "submitNow": "修改邮箱",
+        "pendingTitle": "确认邮件已发出",
+        "pending": "确认邮件已经发到 {email}，链接 1 小时内有效。点开链接之前，登录和找回密码仍然用现在的邮箱。",
+        "changed": "邮箱已改为 {email}",
+        "failed": "没能修改邮箱，请稍后重试。"
+      },
+      "delete": {
+        "title": "删除账号",
+        "description": "删除后，账号和名下的数据都无法恢复。以后可以用同一个邮箱重新注册，但那是一个全新的账号。",
+        "adminBlocked": "管理员不能删除自己的账号，免得站点没有管理员。需要删除时，请先取消管理员身份。",
+        "button": "删除账号",
+        "dialogTitle": "永久删除你的账号？",
+        "dialogDescription": "下面这些会一起删除，无法恢复。",
+        "impactPlayers": "{count, plural, other {# 个角色}}",
+        "impactOauthClients": "{count, plural, other {# 个 OAuth 应用}}，接入它们的第三方服务会立即失效",
+        "impactScore": "{score} 积分",
+        "impactSecurity": "密码、两步验证、通行密钥，以及所有设备上的登录",
+        "password": "当前密码",
+        "confirm": "永久删除账号",
+        "failed": "没能删除账号，请稍后重试。"
+      }
+    },
+    "security": {
+      "title": "登录与安全",
+      "description": "管理登录本站的方式。这里的改动大多要先输入当前密码。",
+      "copyFailed": "没能复制，请手动选中后复制。",
+      "overview": {
+        "title": "账号保护",
+        "passwordSet": "已设置",
+        "on": "已开启",
+        "off": "未开启",
+        "none": "未添加",
+        "passkeyCount": "{count, plural, other {# 个}}"
+      },
+      "password": {
+        "title": "密码",
+        "description": "修改后，其他设备上的登录都会退出，这台设备保持登录。",
+        "current": "当前密码",
+        "new": "新密码",
+        "submit": "修改密码",
+        "changed": "密码已修改，其他设备上的登录已退出",
+        "wrong": "当前密码不对，请检查后重试。",
+        "tooManyAttempts": "尝试次数太多了，请过几分钟再试。",
+        "failed": "没能修改密码，请稍后重试。"
+      },
+      "twoFactor": {
+        "title": "两步验证",
+        "offDescription": "开启后，用密码登录时还要输入验证器应用上的 6 位数字。别人知道了你的密码，没有你的手机也登录不了。",
+        "onDescription": "用密码登录时，还要输入验证器应用上的 6 位数字，或者一个备用码。",
+        "launcherNote": "两步验证只保护网页登录。在启动器里用邮箱和密码登录时，不会要求输入验证码。",
+        "lostAccess": "手机和备用码都丢了的话，请联系站点管理员关闭两步验证。",
+        "enable": "开启两步验证",
+        "step": "第 {step} 步，共 3 步。",
+        "passwordStep": "先输入当前密码，确认是你本人。",
+        "continue": "继续",
+        "scanStep": "用验证器应用（例如 Google Authenticator、Microsoft Authenticator）扫描二维码，再输入它显示的 6 位数字。",
+        "qrLabel": "两步验证的二维码",
+        "manualKey": "扫不了二维码时，在验证器里手动输入这个密钥：",
+        "copyKey": "复制密钥",
+        "keyCopied": "已复制密钥",
+        "code": "验证码",
+        "codeHint": "验证器上的 6 位数字，每 30 秒换一次。",
+        "verify": "验证并开启",
+        "invalidCode": "验证码不对。请输入验证器上现在显示的数字，并确认手机的时间是准确的。",
+        "tooManyAttempts": "尝试得太频繁了，请稍等片刻再试。",
+        "codesStep": "两步验证已经开启。把备用码保存在安全的地方：手机不在身边时，可以用备用码代替验证码登录。",
+        "done": "我已保存备用码",
+        "enabled": "两步验证已开启",
+        "remaining": "{count, plural, =0 {备用码已经用完了，请重新生成。} other {还剩 # 个备用码。}}",
+        "regenerate": "重新生成备用码",
+        "regenerateDescription": "生成新的备用码后，旧的备用码全部失效。",
+        "regenerateSubmit": "生成新的备用码",
+        "regenerated": "旧的备用码已经失效。",
+        "disable": "关闭两步验证",
+        "disableTitle": "关闭两步验证？",
+        "disableDescription": "关闭后，只要知道密码就能登录你的账号，备用码也会一起作废。",
+        "disabled": "两步验证已关闭",
+        "failed": "没有成功，请稍后重试。"
+      },
+      "backupCodes": {
+        "label": "备用码",
+        "onlyOnce": "备用码只显示这一次，每个只能用一次。",
+        "copy": "复制",
+        "copied": "已复制备用码",
+        "download": "下载",
+        "fileName": "backup-codes.txt",
+        "fileHeader": "{siteName} 的两步验证备用码，每个只能用一次。"
+      },
+      "passkeys": {
+        "title": "通行密钥",
+        "description": "通行密钥保存在你的设备或密码管理器里，用指纹、面容或设备的锁屏密码就能登录，不用输入密码，也不会被钓鱼网站骗走。",
+        "empty": "还没有通行密钥。",
+        "unsupported": "这个浏览器不支持通行密钥。",
+        "add": "添加通行密钥",
+        "addDescription": "给它起个名字，以后在这里认得出是哪一个。点“创建”后按浏览器的提示操作。",
+        "reauthTitle": "需要重新登录",
+        "reauthDescription": "为了安全，添加通行密钥前要在 10 分钟内登录过。重新登录后会回到这一页。",
+        "reauth": "重新登录",
+        "name": "名称",
+        "namePlaceholder": "例如：工作电脑",
+        "create": "创建",
+        "added": "已添加通行密钥 {name}",
+        "unnamed": "未命名的通行密钥",
+        "addedAt": "添加于 {time}",
+        "synced": "已同步",
+        "cancelled": "已取消，没有添加通行密钥。",
+        "duplicate": "这台设备上已经有本站的通行密钥了。",
+        "rename": "改名",
+        "renameTitle": "给通行密钥改名",
+        "renameSubmit": "保存",
+        "renamed": "已改名",
+        "delete": "删除",
+        "deleteTitle": "删除通行密钥 {name}？",
+        "deleteDescription": "删除后不能再用它登录本站。设备或密码管理器里保存的那一份，要在那边另外删除。",
+        "deleteConfirm": "删除通行密钥",
+        "deleted": "已删除通行密钥 {name}",
+        "failed": "没有成功，请稍后重试。"
+      }
     }
   }
 }

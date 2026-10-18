@@ -1,4 +1,4 @@
-import type { CoreDatabase } from '@nextskin/db'
+import { toIsoTimestamp, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
 import type { Kysely } from 'kysely'
 import { createAuthService } from './auth/service.ts'
 import { createEvents } from './events/emit.ts'
@@ -7,6 +7,7 @@ import { createMailService, MAIL_JOB } from './mail/service.ts'
 import type { MailTransport } from './mail/types.ts'
 import { createPlayerManagement } from './players/manage.ts'
 import { createCheckIn } from './users/check-in.ts'
+import { createUserManagement } from './users/manage.ts'
 import { createUserQueries } from './users/queries.ts'
 import { createScoreQueries } from './score/queries.ts'
 import { createRegister } from './users/register.ts'
@@ -44,6 +45,18 @@ export function createCore(options: CoreOptions) {
     settings,
     production: options.production,
     mail,
+    onPasswordChanged: (uid) =>
+      transactionWithRetry(options.db, async (tx) => {
+        const user = await tx.selectFrom('users').select('role').where('id', '=', uid).executeTakeFirst()
+        if (user)
+          await events.emit(
+            tx,
+            'user.profileUpdated',
+            { kind: 'user', uid, role: user.role },
+            { uid, fields: ['password'] },
+            toIsoTimestamp(new Date()),
+          )
+      }),
   })
   return {
     players: { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events) },
@@ -57,6 +70,7 @@ export function createCore(options: CoreOptions) {
       register: createRegister(options.db, settings, auth, mail, events),
       checkIn: createCheckIn(options.db, settings),
       ...createUserQueries(options.db, settings),
+      ...createUserManagement(options, settings, mail, jobs, events),
     },
     score: createScoreQueries(options.db),
     yggdrasil: { getSigningKey: createSigningKeyQuery(settings) },

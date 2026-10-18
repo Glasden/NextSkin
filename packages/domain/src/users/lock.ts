@@ -13,7 +13,11 @@ export async function lockUser(tx: Transaction<CoreDatabase>, uid: number) {
     .set((eb) => ({ role: eb.ref('role') }))
     .where('id', '=', uid)
     .execute()
-  const user = await tx.selectFrom('users').select(['role', 'email_verified']).where('id', '=', uid).executeTakeFirst()
+  const user = await tx
+    .selectFrom('users')
+    .select(['role', 'email_verified', 'email_version'])
+    .where('id', '=', uid)
+    .executeTakeFirst()
   if (!user) throw new DomainError('unauthenticated')
   return user
 }

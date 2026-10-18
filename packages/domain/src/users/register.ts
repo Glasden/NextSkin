@@ -8,7 +8,6 @@ import {
 } from '@nextskin/db'
 import { hashPassword } from 'better-auth/crypto'
 import type { Kysely } from 'kysely'
-import { z } from 'zod'
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '../auth/password-policy.ts'
 import type { AuthService } from '../auth/service.ts'
 import { DomainError } from '../errors.ts'
@@ -17,6 +16,7 @@ import type { MailService } from '../mail/service.ts'
 import { createPlayer, retryOnPlayerUuidRace, validatePlayerName } from '../players/create.ts'
 import { adjustScore } from '../score/adjust.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
+import { validateEmail, validateNickname } from './validation.ts'
 
 export interface RegisterInput {
   email: string
@@ -47,12 +47,7 @@ export function createRegister(
       'player.uuidAlgorithm',
     ])
     if (!values['auth.registration.enabled']) throw new DomainError('registration_disabled')
-    const email = input.email.trim().toLowerCase()
-    if (!z.email().safeParse(email).success || email.length > 255) throw new DomainError('email_invalid')
-    const domains = values['auth.registration.emailDomains']
-    const listed = domains.domains.includes(email.slice(email.lastIndexOf('@') + 1))
-    if ((domains.mode === 'allow' && !listed) || (domains.mode === 'deny' && listed))
-      throw new DomainError('email_domain_not_allowed')
+    const email = validateEmail(input.email, values['auth.registration.emailDomains'])
     if (input.password.length < MIN_PASSWORD_LENGTH)
       throw new DomainError('password_too_short', { min: MIN_PASSWORD_LENGTH })
     if (input.password.length > MAX_PASSWORD_LENGTH)
@@ -63,9 +58,7 @@ export function createRegister(
       if (!input.playerName?.trim()) throw new DomainError('player_name_required')
       nickname = validatePlayerName(input.playerName, values)
     } else {
-      nickname = input.nickname?.trim() ?? ''
-      if ([...nickname].length < 1 || [...nickname].length > 255)
-        throw new DomainError('nickname_invalid', { min: 1, max: 255 })
+      nickname = validateNickname(input.nickname ?? '')
     }
     const limit = values['auth.registration.perIpLimit']
     if (limit > 0 && (await countRows(db.selectFrom('users').where('registration_ip', '=', input.ip))) >= limit)

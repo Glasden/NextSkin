@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl'
 import NextLink from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Layout } from 'pixelarticons/react/Layout.js'
+import { Shield } from 'pixelarticons/react/Shield.js'
+import { User } from 'pixelarticons/react/User.js'
 import { Users } from 'pixelarticons/react/Users.js'
 
 /**
@@ -14,6 +16,8 @@ import { Users } from 'pixelarticons/react/Users.js'
 export const userNavItems = [
   { href: '/user', icon: Layout, label: 'dashboard' },
   { href: '/user/players', icon: Users, label: 'players' },
+  { href: '/user/profile', icon: User, label: 'profile' },
+  { href: '/user/security', icon: Shield, label: 'security' },
 ] as const
 
 export function UserNav() {

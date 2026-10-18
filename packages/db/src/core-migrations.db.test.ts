@@ -135,6 +135,7 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0023_create_failed_jobs',
     '0024_create_score_transactions',
     '0025_add_players_score_paid',
+    '0026_add_users_email_version',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -153,6 +154,7 @@ test('类型化写入完整引用关系，读回各列、默认值和认证字�
     avatar_texture_id: skinId,
     role: 'user',
     score: 0,
+    email_version: 0,
     created_at: timestamp,
     updated_at: timestamp,
   })
@@ -184,6 +186,7 @@ test('用户领域字段均可省略，认证可空字段保留 NULL', async () 
   expect(row).toMatchObject({
     role: 'user',
     score: 0,
+    email_version: 0,
     avatar_texture_id: null,
     image: null,
     two_factor_enabled: null,
@@ -461,4 +464,51 @@ test('角色实付积分列默认 0，且拒绝 null', async () => {
       .where('id', '=', playerId)
       .execute(),
   ).rejects.toThrow()
+})
+
+test('邮箱版本迁移为已有用户和新用户补 0，拒绝 NULL，自增表达式只加一次', async () => {
+  const upgrade = await createTestDatabase<CoreDatabase>()
+  try {
+    const previous = Object.fromEntries(
+      Object.entries(coreMigrations).filter(([name]) => name < '0026_add_users_email_version'),
+    )
+    await migrateToLatest(upgrade.db, previous)
+    const now = writeAuthDate(upgrade.db, timestamp)
+    const values = {
+      nickname: '升级前的用户',
+      email: 'before@example.test',
+      email_verified: false,
+      created_at: now,
+      updated_at: now,
+    }
+    const existing = await insertReturningId(upgrade.db, 'users', values)
+    expect(await migrateToLatest(upgrade.db, coreMigrations)).toEqual(['0026_add_users_email_version'])
+    const added = await insertReturningId(upgrade.db, 'users', { ...values, email: 'after@example.test' })
+    const version = async (uid: number) =>
+      (await upgrade.db.selectFrom('users').select('email_version').where('id', '=', uid).executeTakeFirstOrThrow())
+        .email_version
+    expect(await version(existing)).toBe(0)
+    expect(await version(added)).toBe(0)
+    for (const [email, expected] of [
+      ['new@example.test', 1],
+      ['before@example.test', 2],
+    ] as const) {
+      await upgrade.db
+        .updateTable('users')
+        .set((eb) => ({ email, email_version: eb('email_version', '+', 1) }))
+        .where('id', '=', existing)
+        .execute()
+      expect(await version(existing)).toBe(expected)
+      expect(await version(added)).toBe(0)
+    }
+    await expect(
+      upgrade.db
+        .updateTable('users')
+        .set({ email_version: null as unknown as number })
+        .where('id', '=', existing)
+        .execute(),
+    ).rejects.toThrow()
+  } finally {
+    await upgrade.cleanup()
+  }
 })

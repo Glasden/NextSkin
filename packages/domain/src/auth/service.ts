@@ -1,4 +1,4 @@
-import type { CoreDatabase, UserRole } from '@nextskin/db'
+import { readAuthBoolean, readAuthDate, type IsoTimestamp, type CoreDatabase, type UserRole } from '@nextskin/db'
 import type { Kysely } from 'kysely'
 import type { MailService } from '../mail/service.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
@@ -16,6 +16,7 @@ export interface AuthServiceOptions {
    */
   production: boolean
   mail: MailService
+  onPasswordChanged?: (uid: number) => Promise<void>
 }
 
 export interface SessionUser {
@@ -49,6 +50,7 @@ export function createAuthService(options: AuthServiceOptions) {
         siteName: values['site.name'],
         legacyPasswordSalt: async () => (await settings.read(['auth.legacyPasswordSalt']))['auth.legacyPasswordSalt'],
         mail: options.mail,
+        onPasswordChanged: options.onPasswordChanged,
       })
       cached = { key, auth }
     }
@@ -66,6 +68,51 @@ export function createAuthService(options: AuthServiceOptions) {
   }
 
   return {
+    /** @param requestRoot 客户端看到的站点地址；开发环境没有设置站点地址时，用它创建 Better Auth 实例 */
+    async security(
+      uid: number,
+      requestRoot = '',
+    ): Promise<{
+      twoFactorEnabled: boolean
+      backupCodesRemaining: number | null
+      passkeys: {
+        id: string
+        name: string | null
+        createdAt: IsoTimestamp | null
+        backedUp: boolean
+        deviceType: string
+      }[]
+    }> {
+      const user = await db.selectFrom('users').select('two_factor_enabled').where('id', '=', uid).executeTakeFirst()
+      const twoFactorEnabled = readAuthBoolean(user?.two_factor_enabled ?? false)
+      const auth = twoFactorEnabled ? await instance(requestRoot) : null
+      const codes = auth ? await auth.api.viewBackupCodes({ body: { userId: String(uid) } }) : null
+      const rows = await db
+        .selectFrom('passkeys')
+        .selectAll()
+        .where('user_id', '=', uid)
+        .orderBy('created_at')
+        .orderBy('id')
+        .execute()
+      return {
+        twoFactorEnabled,
+        backupCodesRemaining: codes?.backupCodes.length ?? null,
+        passkeys: rows.map((row) => ({
+          id: String(row.id),
+          name: row.name,
+          createdAt: row.created_at === null ? null : readAuthDate(row.created_at),
+          backedUp: readAuthBoolean(row.backed_up),
+          deviceType: row.device_type,
+        })),
+      }
+    },
+    /** 让 Better Auth 自己生成过期 Cookie，名称、Secure 前缀和属性与登录完全相同。 */
+    async clearSessionCookies(headers: Headers, requestRoot: string): Promise<string[]> {
+      const auth = await instance(requestRoot)
+      if (!auth) throw new Error('site_url_required')
+      const result = await auth.api.signOut({ headers, returnHeaders: true })
+      return result.headers.getSetCookie()
+    },
     /** 注册提交后调用；令牌由 Better Auth 自己签发，复用 /verify-email 的校验。 */
     async sendVerificationEmail(email: string): Promise<void> {
       const auth = await instance('')

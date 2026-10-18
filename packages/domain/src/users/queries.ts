@@ -1,4 +1,12 @@
-import { countRows, readAuthBoolean, type CoreDatabase, type IsoTimestamp, type UserRole } from '@nextskin/db'
+import {
+  countRows,
+  readAuthBoolean,
+  readAuthDate,
+  type CoreDatabase,
+  type IsoTimestamp,
+  type UserRole,
+} from '@nextskin/db'
+import type { PrivateUser } from '@nextskin/plugin-sdk'
 import type { Kysely } from 'kysely'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { nextCheckInAt } from './check-in.ts'
@@ -18,6 +26,28 @@ export interface UserOverview {
 
 export function createUserQueries(db: Kysely<CoreDatabase>, settings: ReturnType<typeof createSettingQueries>) {
   return {
+    async profile(uid: number): Promise<PrivateUser | null> {
+      const row = await db.selectFrom('users').selectAll().where('id', '=', uid).executeTakeFirst()
+      return row
+        ? {
+            uid: row.id,
+            nickname: row.nickname,
+            role: row.role,
+            avatarTid: row.avatar_texture_id,
+            registeredAt: readAuthDate(row.created_at),
+            email: row.email,
+            emailVerified: readAuthBoolean(row.email_verified),
+            score: row.score,
+            locale: row.locale,
+          }
+        : null
+    },
+    async deletionImpact(uid: number): Promise<{ players: number; oauthClients: number }> {
+      return {
+        players: await countRows(db.selectFrom('players').where('user_id', '=', uid)),
+        oauthClients: await countRows(db.selectFrom('oauth_clients').where('user_id', '=', uid)),
+      }
+    },
     async overview(uid: number): Promise<UserOverview | null> {
       const row = await db
         .selectFrom('users')

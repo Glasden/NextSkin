@@ -1,10 +1,18 @@
 import { createHash, generateKeyPairSync, randomBytes } from 'node:crypto'
-import { coreMigrations, migrateToLatest, type CoreDatabase } from '@nextskin/db'
+import {
+  coreMigrations,
+  countRows,
+  migrateToLatest,
+  toIsoTimestamp,
+  writeAuthDate,
+  type CoreDatabase,
+} from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import { isoCBOR } from '@simplewebauthn/server/helpers'
 import { afterAll, beforeAll, expect, test } from 'vitest'
 import { createCore, type Core } from '../core.ts'
 import { createAuth, type Auth } from './auth.ts'
+import { Browser } from './security.test-helper.ts'
 
 // 通行密钥的注册走完 Better Auth 的整条路径，在四种数据库上确认 passkeys 表存得下规范允许的数据。
 // 认证器的响应在这里现场构造（fmt: none 的 attestation），不依赖浏览器。
@@ -121,4 +129,39 @@ test.each([32, 1023])('注册 credential ID 为 %i 字节的通行密钥（1023 
     .where('credential_id', '=', credentialId.toString('base64url'))
     .executeTakeFirstOrThrow()
   expect(row).toEqual({ credential_id: credentialId.toString('base64url'), counter: 0 })
+})
+
+test('注册参数生成后会话超过十分钟，verify-registration 仍拒绝且不消费挑战', async () => {
+  const email = 'freshness@example.test'
+  const password = 'correct horse battery staple'
+  const { uid } = await core.users.register({
+    email,
+    password,
+    playerName: 'FreshPasskey',
+    ip: '127.0.0.1',
+    locale: null,
+  })
+  const browser = new Browser(core)
+  expect((await browser.request('/api/auth/sign-in/email', { email, password })).status).toBe(200)
+  const options = await browser.request('/api/auth/passkey/generate-register-options')
+  expect(options.status).toBe(200)
+  const { challenge } = (await options.json()) as { challenge: string }
+  const body = { response: registrationResponse(challenge, randomBytes(32)), name: 'Fresh key' }
+  const db = database.db
+  await db
+    .updateTable('sessions')
+    .set({ created_at: writeAuthDate(db, toIsoTimestamp(new Date(Date.now() - 601_000))) })
+    .where('user_id', '=', uid)
+    .execute()
+  const stale = await browser.request('/api/auth/passkey/verify-registration', body)
+  expect(stale.status).toBe(403)
+  expect(await stale.json()).toMatchObject({ code: 'SESSION_NOT_FRESH' })
+  expect(await countRows(db.selectFrom('passkeys').where('user_id', '=', uid))).toBe(0)
+  await db
+    .updateTable('sessions')
+    .set({ created_at: writeAuthDate(db, toIsoTimestamp(new Date())) })
+    .where('user_id', '=', uid)
+    .execute()
+  expect((await browser.request('/api/auth/passkey/verify-registration', body)).status).toBe(200)
+  expect(await countRows(db.selectFrom('passkeys').where('user_id', '=', uid))).toBe(1)
 })

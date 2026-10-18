@@ -169,7 +169,7 @@
 
 ## 6. 组件清单
 
-落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、IconButton、Form、Field、Input、Checkbox、Dialog、Toast、Alert、Stage、SkinFigure、FigurePlaceholder、NameTag、PlayerCard、Nav、Logo、Link、Menu、Tooltip、EmptyState。
+落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、IconButton、Form、Field、Input、Checkbox、Select、Dialog、Toast、Alert、Badge、Stage、SkinFigure、FigurePlaceholder、NameTag、PlayerCard、Nav、Logo、Link、Menu、Tooltip、EmptyState、QrCode。
 
 | 组件 | 何时用 | 何时不用 |
 |---|---|---|
@@ -179,6 +179,7 @@
 | Field | 包裹所有表单控件，统一标签、帮助文字和错误信息的位置 | — |
 | Input | 单行文本，放在 Field 里；和同一行的 Button 取相同尺寸 | 多行文本改用 Textarea |
 | Checkbox | 需要点“保存”才生效的选项、同意条款；标签文字写在组件里 | 立即生效的开关，改用 Switch |
+| Select | 从几个固定的选项里选一个，例如界面语言。放在 Field 里时 Field 设 `nativeLabel={false}`：触发器是按钮，原生 label 会把点击转给它 | 选项多到需要搜索时改用 Combobox；三到五个即时切换的选项改用 SegmentedControl |
 | Switch | 立即生效的开关设置 | 需要点“保存”才生效的表单，改用 Checkbox |
 | SegmentedControl | 三到五个互斥选项的即时切换，例如材质类型、3D 预览的动作 | 选项多或需要说明时，改用 Tabs 或 Select |
 | Chip | 可以多选的筛选条件 | 互斥的选项，改用 SegmentedControl |
@@ -188,6 +189,7 @@
 | Popover | 轻量、不打断流程的补充内容 | 包含表单提交 |
 | Toast | 操作结果的简短反馈，例如“设置已保存”。最多同时显示 3 条，5 秒后自动关闭，鼠标停在上面或焦点在里面时暂停；可以带一个操作，例如“撤销”。警告和错误会立即读出 | 需要用户操作或必须读到的内容，改用 Alert |
 | Alert | 页面内持续存在的提示 | 一次性的操作反馈 |
+| Badge | 跟在标题或列表项后面的短状态，例如“已开启”“未验证”。像素字体，文字本身说明状态 | 用户产生的内容（昵称、材质名）；可以点的筛选条件改用 Chip |
 | Notice | 全站公告，放在页头下方 | 只和当前页面有关的提示，改用 Alert |
 | Table | 后台数据列表 | 前台展示材质，改用 TextureCard 网格 |
 | TextureCard | 皮肤库、衣柜里的材质；选中（已在衣柜）时加粗边框并显示勾选角标 | — |
@@ -205,7 +207,8 @@
 | Nav | 用户中心、后台的分区导航：宽屏是侧栏，窄屏是页头下的一排；当前项除了底色还有一条强调色的色块 | 页面内的分组切换，改用 Tabs |
 | Menu | 一组跳转和操作，例如页头的用户菜单 | 少于两项时直接放按钮或链接 |
 | Tooltip | 图标按钮的名称这类补充说明。触屏设备上不显示 | 必须读到的内容 |
-| EmptyState、Skeleton、Pagination、Badge | 见各自 story | |
+| QrCode | 要用手机扫的内容，例如两步验证给验证器的地址。亮色、暗色主题下都是浅底深色，每个模块 4px | 用户可以直接点的地址，给 Link |
+| EmptyState、Skeleton、Pagination | 见各自 story | |
 
 ## 7. 状态模式
 

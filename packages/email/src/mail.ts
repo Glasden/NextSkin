@@ -122,7 +122,10 @@ ${input.content}
 </html>`)
 }
 
-function renderLinkMail(input: LinkMailInput, kind: 'verifyEmail' | 'resetPassword'): RenderedMail {
+function renderLinkMail(
+  input: LinkMailInput,
+  kind: 'verifyEmail' | 'resetPassword' | 'confirmEmailChange',
+): RenderedMail {
   const t = createTranslator(input.locale)
   const site = { siteName: input.siteName }
   const subject = t(`mail.${kind}.subject`, site)
@@ -153,4 +156,26 @@ export function renderVerifyEmail(input: LinkMailInput): RenderedMail {
 
 export function renderResetPassword(input: LinkMailInput): RenderedMail {
   return renderLinkMail(input, 'resetPassword')
+}
+
+export function renderConfirmEmailChange(input: LinkMailInput): RenderedMail {
+  return renderLinkMail(input, 'confirmEmailChange')
+}
+
+export type NoticeMailInput = Omit<LinkMailInput, 'url' | 'expiresInHours'>
+
+export function renderEmailChanged(input: NoticeMailInput): RenderedMail {
+  const t = createTranslator(input.locale)
+  const site = { siteName: input.siteName }
+  const subject = t('mail.emailChanged.subject', site)
+  const greeting = t('mail.greeting', { nickname: input.nickname })
+  const body = t('mail.emailChanged.body')
+  const footer = t('mail.footer', site)
+  const content = markup`<p style="${paragraph()}">${greeting}</p>
+<p style="${paragraph({ margin: 0 })}">${body}</p>`
+  return {
+    subject,
+    html: layout({ locale: input.locale, subject, siteName: input.siteName, preview: body, content, footer }),
+    text: [greeting, body, footer].join('\n\n'),
+  }
 }

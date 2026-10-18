@@ -8,6 +8,12 @@ import type { AppEnv } from '../env.ts'
 
 type ErrorCode = keyof Messages['errors']
 const statuses = {
+  password_incorrect: 400,
+  email_unchanged: 400,
+  locale_invalid: 400,
+  email_change_link_invalid: 400,
+  admin_cannot_delete_self: 403,
+  too_many_requests: 429,
   unauthenticated: 401,
   user_banned: 403,
   email_not_verified: 403,
@@ -35,6 +41,9 @@ const statuses = {
 } as const satisfies Partial<Record<ErrorCode, number>>
 type ResponseCode = keyof typeof statuses
 const fieldNames: Partial<Record<ResponseCode, string>> = {
+  password_incorrect: 'password',
+  email_unchanged: 'email',
+  locale_invalid: 'locale',
   email_invalid: 'email',
   email_domain_not_allowed: 'email',
   email_taken: 'email',

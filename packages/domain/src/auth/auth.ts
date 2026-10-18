@@ -4,7 +4,7 @@ import { passkey } from '@better-auth/passkey'
 import { dialectOf, type CoreDatabase } from '@nextskin/db'
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { APIError, createAuthMiddleware, isAPIError } from 'better-auth/api'
-import { hashPassword, verifyPassword } from 'better-auth/crypto'
+import { hashPassword } from 'better-auth/crypto'
 import { jwt, twoFactor } from 'better-auth/plugins'
 import type { Kysely } from 'kysely'
 import type { MailService } from '../mail/service.ts'
@@ -14,8 +14,9 @@ import {
   MIN_PASSWORD_LENGTH,
   RESET_PASSWORD_TTL_SECONDS,
 } from './password-policy.ts'
-import { isLegacyPasswordHash, verifyLegacyPassword } from './legacy-passwords.ts'
+import { isLegacyPasswordHash } from './legacy-passwords.ts'
 import { coreModelNaming, withNamingConvention } from './naming.ts'
+import { verifyStoredPassword } from './password.ts'
 import { serialSafety } from './serial-safety.ts'
 
 /** Better Auth 挂在这个路径下（Hono 的 /api/auth/*） */
@@ -34,6 +35,7 @@ export interface AuthConfig {
   /** BS 的全站盐（旧站 .env 的 SALT），只有校验旧摘要格式的密码时才读 */
   legacyPasswordSalt: () => Promise<string>
   mail?: MailService
+  onPasswordChanged?: (uid: number) => Promise<void>
 }
 
 /** sha256 + base64url。令牌只存这个值，会话服务器按同样的方式查表（ADR-0007） */
@@ -75,6 +77,14 @@ async function isAdmin(db: Kysely<CoreDatabase>, userId: string | number): Promi
 export function authOptions(config: AuthConfig) {
   const { db } = config
   const site = new URL(config.siteUrl)
+  async function passwordChanged(uid: string) {
+    try {
+      await config.onPasswordChanged?.(Number(uid))
+    } catch {
+      // 密码已经提交；通知失败不能改变结果，也不能记录用户数据。
+      console.warn('[auth] password_event_failed')
+    }
+  }
   return {
     appName: config.siteName,
     baseURL: config.siteUrl,
@@ -83,6 +93,7 @@ export function authOptions(config: AuthConfig) {
     // transaction 默认是 false：不打开的话，Better Auth 的多步写入不在同一个事务里（ADR-0007）
     database: { db, type: dialectOf(db), transaction: true },
     ...coreModelNaming(),
+    session: { ...coreModelNaming().session, freshAge: 600 },
     emailAndPassword: {
       enabled: true,
       disableSignUp: true,
@@ -95,13 +106,12 @@ export function authOptions(config: AuthConfig) {
           throw new APIError('SERVICE_UNAVAILABLE', { code: 'mail_not_configured' })
         await config.mail.send('resetPassword', user, url)
       },
+      // resetPassword 用 updateMany，account.update.after 只收到数量；此回调在它的事务提交后执行。
+      onPasswordReset: ({ user }) => passwordChanged(user.id),
       password: {
         hash: hashPassword,
         // 从 BS 导入的旧哈希在这里校验，登录成功后由下面的 after 钩子换成当前算法
-        verify: async ({ hash, password }) =>
-          isLegacyPasswordHash(hash)
-            ? verifyLegacyPassword({ hash, password, salt: await config.legacyPasswordSalt() })
-            : verifyPassword({ hash, password }),
+        verify: (input) => verifyStoredPassword(input, config.legacyPasswordSalt),
       },
     },
     emailVerification: {
@@ -110,6 +120,17 @@ export function authOptions(config: AuthConfig) {
         if (!config.mail || !(await config.mail.configured()))
           throw new APIError('SERVICE_UNAVAILABLE', { code: 'mail_not_configured' })
         await config.mail.send('verifyEmail', user, url)
+      },
+    },
+    databaseHooks: {
+      account: {
+        update: {
+          // with-hooks 的 queueAfterTransactionHook 保证在 Better Auth 提交之后执行。
+          after: async (account, ctx) => {
+            if (ctx?.path !== '/change-password' || account.providerId !== 'credential' || !account.password) return
+            await passwordChanged(account.userId)
+          },
+        },
       },
     },
     hooks: {
@@ -133,7 +154,8 @@ export function authOptions(config: AuthConfig) {
       }),
     },
     // /token：jwt 插件给会话签发 JWT，用不到；/update-user：昵称等字段改动要经过领域用例（不变量 4）
-    disabledPaths: ['/token', '/update-user'],
+    // /change-email、/delete-user：由领域用例代替，确认链接和删除事件必须在业务事务里（ADR-0023）
+    disabledPaths: ['/token', '/update-user', '/change-email', '/delete-user'],
     advanced: {
       ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
       database: { generateId: 'serial' },

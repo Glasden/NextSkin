@@ -8,9 +8,12 @@ import type { AppEnv } from '../env.ts'
 import { createErrorResponse, logError, restErrorCode } from './errors.ts'
 import { registerPlayers } from './players.ts'
 import { registerCheckIn } from './check-in.ts'
+import { registerUser } from './user.ts'
+import { createMemoryRateLimiter, type RateLimiter } from './rate-limit.ts'
 import { registerRegistration } from './register.ts'
 
-export function createRestApp(core: Core) {
+export function createRestApp(core: Core, options: { rateLimiter?: RateLimiter } = {}) {
+  const rateLimiter = options.rateLimiter ?? createMemoryRateLimiter()
   const errorResponse = createErrorResponse(core)
   const app = new OpenAPIHono<AppEnv>({
     strict: false,
@@ -28,6 +31,8 @@ export function createRestApp(core: Core) {
   app.onError((error, c) => {
     const code = restErrorCode(error)
     if (code === 'internal_error') logError(error)
+    if (code === 'too_many_requests' && error instanceof DomainError)
+      c.header('Retry-After', String(error.params?.retryAfter ?? 10))
     const respond = createErrorResponse(
       core,
       /\/players(?:\/|$)/.test(c.req.path)
@@ -68,6 +73,7 @@ export function createRestApp(core: Core) {
   registerRegistration(app, core)
   registerPlayers(app, core)
   registerCheckIn(app, core)
+  registerUser(app, core, rateLimiter)
   app.doc('/openapi.json', {
     openapi: '3.0.0',
     info: { title: 'NextSkin REST API', version: '1.0.0' },

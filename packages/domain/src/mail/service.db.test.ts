@@ -143,3 +143,59 @@ test('发送失败到次数用完进死信：载荷去掉链接，错误和日�
   expect(lines).toHaveLength(5)
   expect(JSON.stringify(lines)).not.toMatch(/SECRET_TOKEN_CANARY|steve@example|535/)
 })
+
+test('确认新邮箱发往载荷里的新地址，仍按用户语言渲染；通知不需要链接或期限', async () => {
+  await core.mail.send('confirmEmailChange', { id: String(uid), email: 'new@example.test' }, url)
+  const confirm = JSON.parse(
+    (await database.db.selectFrom('jobs').select('payload').executeTakeFirstOrThrow()).payload,
+  ) as { expiresAt: string }
+  expect(new Date(confirm.expiresAt).getTime() - Date.now()).toBeGreaterThan(3_590_000)
+  await core.jobs.enqueue(database.db, MAIL_JOB, { template: 'emailChanged', uid, to: 'old@example.test' })
+  await database.db.updateTable('users').set({ locale: 'en' }).where('id', '=', uid).execute()
+  await core.jobs.drain()
+  expect(messages).toHaveLength(2)
+  const confirmation = messages.find((m) => m.to === 'new@example.test')!
+  const notice = messages.find((m) => m.to === 'old@example.test')!
+  expect(confirmation.subject).toBe('Confirm your new email for NextSkin')
+  expect(confirmation.text).toContain(url)
+  expect(notice.subject).toBe('Your account email for NextSkin has changed')
+  expect(notice.text).not.toContain(url)
+  expect(notice.html).not.toMatch(/href=/)
+})
+
+test('确认新邮箱链接过期时丢弃，通知无期限；两种死信都不保留链接', async () => {
+  await core.jobs.enqueue(database.db, MAIL_JOB, {
+    template: 'confirmEmailChange',
+    uid,
+    to: 'new@example.test',
+    url,
+    expiresAt: toIsoTimestamp(new Date(0)),
+  })
+  await core.jobs.drain()
+  expect(messages).toEqual([])
+  send = () => Promise.reject(new Error('transport_failed'))
+  let clock = new Date()
+  core = createCore({
+    db: database.db,
+    secretKey,
+    production: false,
+    textureStorage: { read: () => Promise.resolve(null) },
+    mailTransport: { send: (message) => send(message) },
+    jobs: { now: () => clock, log: (line) => lines.push(line) },
+  })
+  await core.mail.send('confirmEmailChange', { id: String(uid), email: 'new@example.test' }, url)
+  await core.jobs.enqueue(database.db, MAIL_JOB, { template: 'emailChanged', uid, to: 'old@example.test' })
+  for (let i = 0; i < 5; i++) {
+    await core.jobs.drain()
+    clock = new Date(clock.getTime() + 3_600_000)
+  }
+  const dead = await database.db.selectFrom('failed_jobs').select('payload').orderBy('id').execute()
+  // 邮件并发执行，进入死信的顺序不保证与入队顺序相同。
+  expect(dead).toHaveLength(2)
+  expect(dead.map((row) => JSON.parse(row.payload) as unknown)).toEqual(
+    expect.arrayContaining([
+      { template: 'confirmEmailChange', to: 'new@example.test', uid },
+      { template: 'emailChanged', to: 'old@example.test', uid },
+    ]),
+  )
+})

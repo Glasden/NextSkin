@@ -9,6 +9,7 @@ export interface UsersTable {
   id: Generated<number>
   nickname: string
   email: string
+  email_version: Generated<number>
   email_verified: ColumnType<boolean | number, boolean, boolean>
   image: string | null
   two_factor_enabled: ColumnType<boolean | number | null, boolean | null | undefined, boolean | null>

@@ -1,0 +1,146 @@
+import { matchLocale } from '@nextskin/i18n'
+import { Badge } from '@nextskin/ui'
+import type { Metadata } from 'next'
+import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
+import { redirect } from 'next/navigation'
+import type { ReactNode } from 'react'
+import { getServer } from '../../../lib/server'
+import { requireUser } from '../../../lib/session'
+import { DeleteAccountDialog } from './delete-account-dialog'
+import { EmailForm } from './email-form'
+import { ProfileForm } from './profile-form'
+import { ResendVerificationButton } from '../resend-verification-button'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('user.profile')
+  return { title: t('title') }
+}
+
+/** 个人资料：昵称、界面语言、邮箱、删除账号（ADR-0023）。头像随材质一起做 */
+export default async function ProfilePage() {
+  const user = await requireUser('/user/profile')
+  const { core } = await getServer()
+  const [profile, impact, mailConfigured, locale, t, format] = await Promise.all([
+    core.users.profile(user.uid),
+    core.users.deletionImpact(user.uid),
+    core.mail.configured(),
+    getLocale(),
+    getTranslations('user.profile'),
+    getFormatter(),
+  ])
+  // 会话还在、用户已经被删掉的极少数情况
+  if (!profile) redirect('/sign-in')
+  const admin = profile.role === 'admin' || profile.role === 'superadmin'
+
+  return (
+    <div className="flex flex-col gap-8">
+      <header className="flex flex-col gap-1">
+        <h1 className="font-pixel text-pixel-2 text-text">{t('title')}</h1>
+        <p className="text-sm text-pretty text-text-muted">{t('description')}</p>
+      </header>
+
+      <section aria-labelledby="summary-heading" className="flex flex-col gap-3">
+        <h2 id="summary-heading" className="font-pixel text-pixel-1 text-text">
+          {t('summary.title')}
+        </h2>
+        <div className="flex flex-col gap-6 rounded-md border border-border bg-surface p-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <p className="truncate text-xl font-medium text-text">{profile.nickname}</p>
+            {admin && <Badge>{t(`summary.roles.${profile.role === 'superadmin' ? 'superadmin' : 'admin'}`)}</Badge>}
+          </div>
+          <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+            <Fact label={t('summary.email')}>
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="truncate" title={profile.email}>
+                  {profile.email}
+                </span>
+                {profile.emailVerified ? (
+                  <Badge tone="success">{t('summary.verified')}</Badge>
+                ) : (
+                  <Badge tone="warning">{t('summary.unverified')}</Badge>
+                )}
+              </span>
+            </Fact>
+            <Fact label={t('summary.uid')}>
+              <span className="font-mono tabular-nums">{profile.uid}</span>
+            </Fact>
+            <Fact label={t('summary.registeredAt')}>
+              <time dateTime={profile.registeredAt}>
+                {format.dateTime(new Date(profile.registeredAt), { dateStyle: 'medium' })}
+              </time>
+            </Fact>
+            <Fact label={t('summary.score')}>
+              <span className="tabular-nums">{format.number(profile.score)}</span>
+            </Fact>
+          </dl>
+        </div>
+      </section>
+
+      <Section id="basics" title={t('basics.title')} description={t('basics.description')}>
+        <ProfileForm
+          nickname={profile.nickname}
+          // 还没设置过语言的老用户，表单里先选中现在看到的语言
+          locale={(profile.locale && matchLocale(profile.locale)) || matchLocale(locale) || 'zh-CN'}
+        />
+      </Section>
+
+      <Section
+        id="email"
+        title={t('email.title')}
+        description={mailConfigured ? t('email.description') : t('email.descriptionNoMail')}
+      >
+        {!profile.emailVerified && mailConfigured && (
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm text-text">{t('email.unverified', { email: profile.email })}</p>
+            <ResendVerificationButton email={profile.email} />
+          </div>
+        )}
+        <EmailForm mailConfigured={mailConfigured} />
+      </Section>
+
+      <Section id="delete" title={t('delete.title')} description={t('delete.description')}>
+        {admin ? (
+          <p className="text-sm text-pretty text-text">{t('delete.adminBlocked')}</p>
+        ) : (
+          <div>
+            <DeleteAccountDialog players={impact.players} oauthClients={impact.oauthClients} score={profile.score} />
+          </div>
+        )}
+      </Section>
+    </div>
+  )
+}
+
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <dt className="text-sm text-text-muted">{label}</dt>
+      <dd className="min-w-0 text-base text-text">{children}</dd>
+    </div>
+  )
+}
+
+/** 一块设置：标题在卡片外面，与仪表盘的区块相同 */
+function Section({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string
+  title: string
+  description: string
+  children: ReactNode
+}) {
+  return (
+    <section id={id} aria-labelledby={`${id}-heading`} className="flex flex-col gap-3">
+      <h2 id={`${id}-heading`} className="font-pixel text-pixel-1 text-text">
+        {title}
+      </h2>
+      <div className="flex flex-col gap-4 rounded-md border border-border bg-surface p-6">
+        <p className="max-w-prose text-sm text-pretty text-text-muted">{description}</p>
+        {children}
+      </div>
+    </section>
+  )
+}

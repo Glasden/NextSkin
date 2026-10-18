@@ -28,3 +28,6 @@ export type { OwnedPlayer } from './players/queries.ts'
 export type { ScoreEntry } from './score/queries.ts'
 export type { Player, UserRole } from '@nextskin/plugin-sdk'
 export type { IsoTimestamp } from '@nextskin/db'
+
+export type { ChangeEmailResult } from './users/manage.ts'
+export type { PrivateUser } from '@nextskin/plugin-sdk'

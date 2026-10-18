@@ -12,6 +12,11 @@ export interface FieldProps {
   error?: ReactNode
   disabled?: boolean
   name?: string
+  /**
+   * 控件是一个按钮（例如 Select）时设为 false：标签渲染成 div，点标签只聚焦控件，不会像原生 label 那样把点击转给按钮
+   * （Base UI 的 nativeLabel）
+   */
+  nativeLabel?: boolean
   /** 一个表单控件，例如 Input */
   children: ReactNode
 }
@@ -19,7 +24,7 @@ export interface FieldProps {
 const errorClass = 'text-sm text-danger'
 
 /** 包裹表单控件，统一标签、说明和错误信息的位置，并把它们和控件关联起来（aria-describedby） */
-export function Field({ label, description, error, disabled, name, children }: FieldProps) {
+export function Field({ label, description, error, disabled, name, nativeLabel = true, children }: FieldProps) {
   return (
     <BaseField.Root
       name={name}
@@ -28,7 +33,13 @@ export function Field({ label, description, error, disabled, name, children }: F
       invalid={error ? true : undefined}
       className="flex flex-col gap-2"
     >
-      <BaseField.Label className="text-sm font-medium text-text data-disabled:text-text-muted">{label}</BaseField.Label>
+      <BaseField.Label
+        className="text-sm font-medium text-text data-disabled:text-text-muted"
+        nativeLabel={nativeLabel}
+        render={nativeLabel ? undefined : <div />}
+      >
+        {label}
+      </BaseField.Label>
       {children}
       {description && <BaseField.Description className="text-sm text-text-muted">{description}</BaseField.Description>}
       {error ? (
