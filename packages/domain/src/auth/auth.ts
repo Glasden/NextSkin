@@ -44,7 +44,7 @@ export function sha256(value: string): string {
 }
 
 /** 与设置加密用不同的派生参数，两者互不影响（settings/codec.ts） */
-function deriveSecret(secretKey: string): string {
+export function deriveSecret(secretKey: string): string {
   return Buffer.from(hkdfSync('sha256', secretKey, 'NextSkin Better Auth v1', 'better-auth secret', 32)).toString('hex')
 }
 

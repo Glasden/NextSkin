@@ -5,8 +5,9 @@ import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { redirect } from 'next/navigation'
 import { getServer } from '../../lib/server'
-import { requireUser } from '../../lib/session'
+import { getRequestRoot, requireUser } from '../../lib/session'
 import { CheckInButton } from './check-in-button'
+import { LauncherCopyButton } from './launcher-copy-button'
 import { VerifyEmailAlert } from './verify-email-alert'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -16,16 +17,24 @@ export async function generateMetadata(): Promise<Metadata> {
 
 // 展台上最多站几个角色：窄屏放三个，再宽一些放四个，其余的在旁边写个数
 const LINEUP = 4
+const LAUNCHER_STEPS = ['add', 'login', 'twoFactor'] as const
 
 export default async function DashboardPage() {
   const user = await requireUser('/user')
   const { core } = await getServer()
-  const [overview, players, history, settings, mailConfigured, t, format] = await Promise.all([
+  const [overview, players, history, settings, mailConfigured, root, t, format] = await Promise.all([
     core.users.overview(user.uid),
     core.players.listOwned(user.uid),
     core.score.recent(user.uid),
-    core.settings.read(['checkIn.score', 'score.perPlayer', 'auth.requireEmailVerification', 'site.announcement']),
+    core.settings.read([
+      'checkIn.score',
+      'score.perPlayer',
+      'auth.requireEmailVerification',
+      'site.announcement',
+      'site.url',
+    ]),
     core.mail.configured(),
+    getRequestRoot(),
     getTranslations('user.dashboard'),
     getFormatter(),
   ])
@@ -33,6 +42,9 @@ export default async function DashboardPage() {
   if (!overview) redirect('/sign-in')
   const { min, max } = settings['checkIn.score']
   const dateTime = (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short' })
+  // 填了站点地址就用它，与邮件里的链接一致；没填时按这次请求的地址。站点地址可能以 / 结尾，
+  // 拼出 `//api/yggdrasil` 会被 Next 308 跳转，旧版 Java 不跟随
+  const apiUrl = `${(settings['site.url'] || root).replace(/\/+$/, '')}/api/yggdrasil`
 
   return (
     <div className="flex flex-col gap-8">
@@ -90,6 +102,37 @@ export default async function DashboardPage() {
           </div>
         </section>
       )}
+      {/* 外置登录的快速配置（BS 的 ygg_show_config_section），总是显示（ADR-0030） */}
+      <section id="launcher" aria-labelledby="launcher-heading" className="flex flex-col gap-3">
+        <h2 id="launcher-heading" className="font-pixel text-pixel-1 text-text">
+          {t('launcher.title')}
+        </h2>
+        <div className="flex flex-col gap-6 rounded-md border border-border bg-surface p-6">
+          <div className="flex flex-col gap-3">
+            <p className="max-w-prose text-sm text-pretty text-text-muted">{t('launcher.description')}</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <code className="min-w-0 flex-1 rounded-sm border border-border bg-surface-sunken px-3 py-2 font-mono text-sm break-all text-text">
+                {apiUrl}
+              </code>
+              <LauncherCopyButton apiUrl={apiUrl} />
+            </div>
+            <p className="text-xs text-pretty text-text-muted">{t('launcher.dragHint')}</p>
+          </div>
+          <ol className="grid gap-6 border-t border-border pt-6 sm:grid-cols-3">
+            {LAUNCHER_STEPS.map((step, index) => (
+              <li key={step} className="flex gap-4 sm:flex-col sm:gap-2">
+                <span aria-hidden className="w-6 shrink-0 font-pixel text-pixel-3 text-text-muted tabular-nums">
+                  {index + 1}
+                </span>
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-base font-medium text-text">{t(`launcher.steps.${step}.title`)}</h3>
+                  <p className="text-sm text-pretty text-text-muted">{t(`launcher.steps.${step}.body`)}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
       <section aria-labelledby="history-heading" className="flex flex-col gap-3">
         <h2 id="history-heading" className="font-pixel text-pixel-1 text-text">
           {t('history')}

@@ -62,3 +62,20 @@ export type {
 
 export { settingControl, settingJsonSchema, type SettingControl, type JsonSchema } from './settings/form.ts'
 export type { SettingView } from './admin/settings.ts'
+
+export { YggdrasilError, type YggdrasilErrorKind } from './yggdrasil/errors.ts'
+export type {
+  AuthResponse,
+  LauncherLogin,
+  YggdrasilProfile,
+  AuthenticateInput,
+  RefreshInput,
+  ValidateInput,
+} from './yggdrasil/tokens.ts'
+export type { CredentialsInput } from './yggdrasil/credentials.ts'
+export type { JoinInput, HasJoinedInput } from './yggdrasil/join.ts'
+export type {
+  ResetTextureInput,
+  UploadTextureInput as YggdrasilUploadTextureInput,
+} from './yggdrasil/profile-textures.ts'
+export { createMemorySessionCache, type YggdrasilSessionCache, type JoinSession } from './yggdrasil/sessions.ts'

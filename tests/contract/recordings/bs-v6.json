@@ -6,7 +6,7 @@
       "usm-api": "1.2.3",
       "legacy-api": "1.1.3"
     },
-    "recordedAt": "2026-10-17T12:16:47.403Z"
+    "recordedAt": "2026-10-18T13:45:57.341Z"
   },
   "cases": {
     "csl/root": {
@@ -1449,7 +1449,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkwMDksInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNTkxOTUsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
             },
             {
               "name": "uploadableTextures",
@@ -1474,8 +1474,8 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkwNzcsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
-              "signature": "QH1ZXBPCDlW9hqUvEsoIwarhVoncQjXz3CSs6ohhAr+OAkcpcOXs6orVN61Cl6cx20lziTZd+YZ8C+ddGmd2E4sKOcfadplzfL8HHJS/m4vLxh8k0fgLKNIa7TPE2LQVM9rpGjuMgNXehH54NXgpYrL3foP646eGL3/wKNZAZdH/tu8u0noQVUJIqI1OggHhYze78wSqTbC1mZe1YPNMWq1x1+jT+6M0grLaISa8oBHAfyzgc5lvraCl36YWWh2IbA2E5eNCUHwygN9fow6xf1hJL4isVuKjXguWYuWxu1fUybqUcf6JwFtYCEc7Nw/h3w9TMmi7uk+j3vQDNIwdtd4YW8M1CNLCcPJKEMelLW1ztUcaVMxYJTpFER0ruOFajEaQe7F3DgvlzhbXX7kD3HWX/e0u/7B79xtn6/XPk8YkT8GacARkjZ6G7V+K4ekKWYYppeDyRCPGV75FvtTmUM0AY0DXPMNoJGjN1hXwCKgPQdCMdS936IRVp8gL/HAHltDQbdZOXIHie75TknJdC9MwdNrZgMeqYk9yjNY2crTA+qYBCdx5zb+/YD1B9DkQpSPfsiyx4j/LuWvxKczIdfDDulFt5IuS7k1vsWrxbKhO48+D+J3BiBvZewXMTV11dWHXyiNosu2fPW8hDHk0WOyJLoUb6difZcohJw6QLDY="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNTkyNjEsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "Yi3vQjdh5xzdUYEiqvDJmcIYyh6tfamoMnXQrc7LjdWlk2YyC8KGLIpAjVJQIbr3+pygRIPtEQvUbpCCp4C8FjW6pK04GUAI1M6KFXpk5CsWoFzj/XBz6l6OYxlsEVuIUhk3Urbycv3hIJq1g6GnPdW4EdSJ+0UAQHol5h4nCWt473ks8v1PsHjFxaSRPHmBZtdzXUOBolBp6EjyXaVk5yE/k2jkZ6uzD09MjAGLQgvnFYa5AVldDBr5T7xaRSiCaz0vmXLe/fzKc5+FgdsCrWVKKTTmE3BLXL4Gv9S0gF5918TuH7WHLDsHcwXUUz8DE0yln+i68sYDFrj/2rQp3h4ydSpInwSUz9L503PrIRE6TUKomRtTC6bvsftkAgDDDrjSnaVKUGubNGq1A8F7VUjpxI0gsSU2lNokCw1USLwtUJJrI2Xyvf8u60CS9shDiqE82uyzhZudcjX5mSJjIRmyxVT99KnPP521XjKRUjudxa2MLMXQFdsRiweztk5s5DRWWLdJY9Hqa1O/yK0f2Rg8SR9xD3731ov5fZiDlMzfJVP+1jY43vdvTIcPcOKv2JEl/XDdzjx2Qdi1wIVJqayGK2MQx1E47F8SLYA+g1FUyq185DG6bI7QcbDNbBnAfxGqWegjU6f8YM6HMQC7wjmszEJIKm6lqLKN0uJOzCw="
             },
             {
               "name": "uploadableTextures",
@@ -1501,7 +1501,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkxNDIsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNTkzMzcsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
             },
             {
               "name": "uploadableTextures",
@@ -1526,8 +1526,8 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkyMDQsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
-              "signature": "LYdZtzspmqrPOUa7l2Y993O6I/yWwWxmhq/ju/VU7fyx17h0UqpQipYb0GQe81N2aXP03xB5cLrldZf1Z/8wwU8Kg4W/Y2kKyYPD7EACyTcdM72ez26TTjkuMz0M6ig3WbgiR1zqlGq4U3D5U7UVB7ORA27MkBJQ4laifmsTCY8h/g4qyq+zPPBLBaUp7mO4zJtypYwreyV3aVZscXUi4JA0mKcB0qr92mjb7Dzlo+BQLiLYDIpVNthygPACeFfARNoLrGckV8Of7llnuQwIOOcHJFc9eX7fWzbLi52oY3q7AnmS4p4TXga5pGoXtrSbpb3dI3RG0yYUNVUhvZaaRqXjDFE4I/eMmlyn4JX6g75NJ2aYZ3GAPkRZflsHKLK/k+rtCoVW547zR/4El0C3+6XpejOrRrK4ofdQENHDW1Qm0D8dV56O9aSAJG8fwU4YTbRjoXsduAtlLU8nViem6q40H27YXBChDNwrkP8GHeDov3KXKdNQF5lS7/mqm89FZdGIgnGCQEnukwbC+Vq06LuTE9ktoqYZIESayrBaWQTaSa3NMt7ri2lAbBMICp/ufCLx90iw5Px04zg5jY5DtqPNfsY/XDf0rt/DWHaWtu3LmftG5LxghFezpooszf07d5U2kYuG7zi7bgQhOsDTj23FYRwQ2TVyVtwGlCgvKxU="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNTk0MDIsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "YyU7kg5NfZbXCcl/ZhMT6pOtrz495E3dUOG4JlOPKLU74eY8i6rAVw05ALC5wrgzeOQ6za5EtoTFzdrQcRuz/eANbPIt1bsE6hJRNQlXJ1K1ysCnhrrr1s7KEDjDVXtHW6mqp3K8bs0HbsBtIy4SbablLfcapRagV69sTyiT0jGCmTAKWX71lCr9ZJF6H05NhiNUwsz4n7UPQa3+RUWdV4Y5ZnDGXGGXmk1igScpX2/suKYNvmDu1ea6C05tIOHHM47j9CURWKehGaSlbVY4GcZz71BbLoDxiPFkElgA8wXv4JvsHNFoIr8m1bRP6mohPaDEUK4u1pEukfQRyNhW/JraU3nIEpd8G4vXcV+Jgu4Uxc5osrdsnoCyrkY2uGNLBFUFOXiOb6uN5vtB3uVNNu/lsSc5Uz9tMppokFErMBtkFMXJh4LDY8iTMpIxVGv+hHFuL9cVIetaYsgDxIqBBUQggQk1f6jJvplwHaGZg6meuD/E0q1SsQPnT6jQ5xuoAG0/ukEk182eS/cW8wu4AC7tL6HbynwM54qGOLldnxnOyskLdqTFnMpveSHhLvbgyNDx3tWW6AWlroH/lb0Pfu5s8iJEEdO+NUXmEftZ4uj2O9HofDqgKXjfyXPXFSppHwgeYhfa97AAjc7FzFOV5LwwC7yQi17fKLiMX/wYXXE="
             },
             {
               "name": "uploadableTextures",
@@ -1553,7 +1553,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkyNjgsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNTk0NjgsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
             },
             {
               "name": "uploadableTextures",
@@ -1578,8 +1578,8 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkzMzIsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
-              "signature": "UF/E+5YqZBVY0y/u8cGdmOMugRZenOSfes/qoKMJpZ4eZnBzllNQCwqkCOkIMirqu8EmvWBguMGM9ARsdPpfQzrlwGde+Uu1NsR8o0hrCB8YONRAoAKFhuVfjhNLBBEHEwqAYd7Ppc1UBaiWkZSyEs/bzCmYGC+Q4lAcHkcd3rL9dGVPkdTn8Q2JEcYmsCEaYTGvVQBwTQlUc4xrTy3UvyytqrwFlNNo8lzca04tW66g2PI2sTQ0cmj4TKxd7GSG983L7KpeJXEH1/25HirRrRpzW8JrLM+AGCjoOwZO/OpGPtZZZgZ5iINvLgQqJmky6G/LMLzYWOOU9vN4cIGk9UN1PVATr2EDecD3saG3hcNgGX5+St277Wc/49iqFus6KYfDjrje4+OhnjtKgHx8lKweAvD3REbPbrBCbXckZRZVlipZZbs0THrx5Vs0rqo/OO2lqsQewonqF4w7wJOOiQpgnbu34mu3yH7RkAI2xmqLkS0kHGCNQiLswTj+OCeNul2DO2AfHWf98EK0/+sdqbJabpIgvYwVOszCTAK1ki0SB/bhE2s3KrRIbdhoU3NObVOkCj/mY9nNoPsNt+0JHt5frhEmomeSBWZAFrFZvTPrtvGrwpsqR9ohcYctwenDIiBrwNWBbybtv73JMxGbnQPoelhNDMRG0Zn4PJ3uClA="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNTk1MzUsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "j9fYbjE2r+7W7mhQ9FAuovDiVMPzSc+f5XTYbPeFZlErcbjoU6xnhM00A5rcstdQUcdMDYjV2DR894CLb7tcsfQgaP/T8be4cTzZvIGz8zjvtUMO8xKBsmWvDRz9aCY5hMjxIIR0HrPCejIEQofLF73id4kSCE1qRUbvuCrD6JzgM6JDx1lzuEyMdQdKu3qkShXXN0DDEDTl7uKgYpQFgmGTJJlvmsPfXpsP09xvNCdwjdj3ai6VSwqSqleNEzbElZsjYbpWXKEflhDcZz0ZUXQzhtRPtcI7TrIwT5BYoqMf56tMidvInwQcQoCEKXUJ/7FKuubrY6AVw/gQh0zBpouxKcgrpjyOGBmaZcZBXovvgcm0ialKCqppm8QWG7XRNv/prhQ+UTriOlus5C88gybrS4L8znFoAwflx+b54h54gecy03ogVMclFsG/lBtCWV7puvmP+hYzOPSArztCmH6BofDLcygVe7JDcODFr710AZvzuJGE4I0CU5QeiBfxd2eF+EwxPboTy8XyWDpt1sNKdXPhasRskhI4zk3cX0EfHISMH+s/3iTQGj9N8+3ety7VzRxzCWfWmZWhntTNI+qUjXISqcxSjv8fhna+mcIhFNUTmPcMxyCs53yYv+XWW+sWK355/QDxz+hwejEV0cE9uSyZg9a4YQQKHbfYwB0="
             },
             {
               "name": "uploadableTextures",
@@ -1605,7 +1605,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDkzOTcsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNTk1OTksInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
             },
             {
               "name": "uploadableTextures",
@@ -1630,8 +1630,8 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk0NjAsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
-              "signature": "BEXkvrK6I+/Ac5rn5W+GNhDKLmwGcndiQA2mZwTQNjMoyjkNJ4U6PKZgYx6KScoUOGjWkbwfI+bl9WSBlkDv1OkljIQ0+WTKxSugZoxlChcs0ecUtcKzVa7Z/FsGjxE1diw9LjraAeZieWskCq/eUiL4HVzaOAtKpOqK6VD7d9BGQqRRToEqmurVYviqQER6fzbdu8wp9tQ9BemvHcNCQp7gTRsm+3kUxo7DpRHTd51V4BiIAKogaOOVwz3PeVd8IruJROUZs2TmbM0XYj8CNSdiLkv0eJMFjClbY8X2KYj5bdmuhNRiRRjOpsnkL0TGeHQ+WbCG92CyFPFZMDEs1UDEi9UUFeZYm3R9CsQuo9eHupQ2NapkRGjshl/+RMK+IYjZZypRI37GlqbHiJxZoQpLdtaH1I8ByqQMRu/lHTVNquSxFizeVDN2rYrDTtVgjOmj8lgVCLI4fafAUI1yUCQohGWDeDCEuiMUxuuey4uCrNmgU5XyuM9uhoZQCufcrez7djVDGKZJYjwHpDYR/uXspzptC/xCMgk8lFvLR5jRkU8/3vQT9WOf+Q4J/CV3MAvkJY4+oHH52abZmUeW4RUiS88azM966aKmeUQsGmDqJNxisrle/wDaWvwx90DsqRzGLCPxtmDsnkOTo/wDBMrIv2Ha7DbHzGaCp/BWjog="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNTk2NjEsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "c8VgicvOnFAvasY673Vl9ZRSXHilLgS+zw6JBGuV4L3W/xFJsqrnMMMvcqpDOl0JZ3xNzWTfXhaG+Ty4C5Z1DTZwl0RhZar+Zw4/3QcTwAEfr62wPyn9DMc7FyOrkMect/CggxPcwN3hiAw6equ3r05tyavdpK9/gmrI1zGVBCsdJxJQLkUya/Sd7rgb37jc3RgF1vjjw35ORlzXfPhGqLA9To3kiTBtRfINvbxJQ4NYKIngQAWgqRmWldHubMq7NgBEWymFlQGmwwlIyr1dinPO04yenKABEynZ7epfmavXOkXOEFuOPAyw/kltrZAp5Iye6+48vx8KtztFDdHltak53pXOPftunG39LLcVPU8ZkWViULSFX/kz194FEhUYdf9Ex6d2qnkpjdOj1eS+ELgljlYS8Fjvp1qHQZ1cdVa6uIZtp4kaiNxaMOQYXV0WjSWfv2FPzdQmvKclmTwwM+oFtyAtHuo3xmEBoMROZxZIaZvTY8q+Jq6n+0ekYojfTuDe6+wK9Tn+j3n/ZgJSUOTKy3X/cwgYcH50+4FBze9Af9Tfx4XR6yB0hfjiU+hHX9GDmgvp/gndhmJ7M25wpm7J2Xz6psUg65Ud7hrLfGXnQAX9q+yjoHMw8xpPdd0Wib776LI3ZLXiXJeWKxleR5LCAVo8FZ3Zql773+0Xcvc="
             },
             {
               "name": "uploadableTextures",
@@ -1657,7 +1657,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk1MjQsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNTk3MjUsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
             },
             {
               "name": "uploadableTextures",
@@ -1682,7 +1682,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk1NDMsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNTk3NDMsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
             },
             {
               "name": "uploadableTextures",
@@ -1707,8 +1707,8 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk2MDYsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
-              "signature": "FJBrIw5aJ3gFrNzpjbwQyzNfAaR0rifWjRgxl1/oQEkv6brrhaZNuYhhbh53pe6uoKSUBDY/RsnloAHjIec+8E4QtSaNwGzhTGT7UQVFtNuqHS0nn7aAYruDt0W0gCcK0x7l7qLdKEBXXpxXqpexH0dyInnosOqdv0fudgM0T14Cbc5VZXAVdNHQpkL79G9d0g4png5gnPwtP8dOgP0ydCZIVMjA3O4aE1R9Vj7MCFehjwf1w1w6MwfNHRZjSLz7rzUN2OzJ3Suq8gwnwHixXIKIn3d1W39cNRMELA+DZyv/W+nzJSWgWsktonlYSKsIMDewqkh5DVT2h+voRJofsp/5KJVulvzNL3OtqTrpwaSydyDDfLccxczPC+ZjlkbMWqnd7d5pqweSa01agIJWbclOunJDuNtodKUoV+Ex3EC/tU8bZ0hLgM6dVLLVSoZwt+/OUJvbjcNrI12fbOs4fIZ6NBm3pNCN3dwXQfelIbDaCskkjns7Uy9stpA1xv1mieGJR7da8dxGrhF1z6FsEUSRnPImxsmFGwEeM1sOXIRtFZ+NGEU9kRyVQs1cnt4YsSdQVUrMK2wO+F4OfD3S+gwJooepmSiafuAoQr+p8wlbvx4cH+KULHSavjrZWX1m+Q4z+Iy6cUnqbt7zp3yo/bQ9iamROqbmPTT09qRP99k="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNTk4MDUsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "ihouNRU/NInRq6kOuFgk5md5AfldYeLo8z2RcY6/PZjHNLZiihbUHC/ORvgEbM5XPZaaU0SgZKVZfy2xOo4e3fD5mhIepyNRyRoHv2ZvcL3INApmqqGDf8Bbj2otaiwAE8WQqVyC2bI6p6FruNxLS0d04kYHihtQxfuRiAujc/poGoYVfCHR3WX1nUxmk66dmQkZcwU7+drPKrtOGkgls2sRUlrzl2xH5EnqfvcORF7lHQ3rQJluJFddNFRc7+rZRqHFez+ELPIX8fKVe7UNIuZ0M77uyaHEXZpnSJ8GwLEKCuN4LWvKZuZiiys95Xb28EBe5EkkFPfjKXLZZWfgRNzlL/BedAnVp9Q4cu4T8mLO9TdZ+iH5Yr47DpRC38JWzVOQqwqSxlOZcWR0ppzYuSOIivH9NgicVU/atWEUlEw/wCDcO2LHmXiL9611NGwn+4kSH/6aNVq4+KPd55i72HOZRjfgSo+F3WawsqQfYkc0IK3lSMlZ+qI53C0sKHVr7t6SeEk5q/OwqZak25Z2mk9NDhjswokaKVlsOEBUdC4nbAuU0WEanYsWdKAfHywCr8xGtuc6K1HBZciSl6dTRcgIvvAdFAIEE7SKuFYhzyUZgPyNdSdH7nfXSPkdDHJx3bmET0UbyblhxTEKJ8WxCkk7O6nvNmy1Qz82YqInW4o="
             },
             {
               "name": "uploadableTextures",
@@ -1734,7 +1734,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk2NzIsInByb2ZpbGVJZCI6ImE4MThjMGRiNDgyYTM3Nzg4MWZmZDNkZjU0YzdhOTI2IiwicHJvZmlsZU5hbWUiOiJBbGV4XzAxIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjAwMDEsInByb2ZpbGVJZCI6ImE4MThjMGRiNDgyYTM3Nzg4MWZmZDNkZjU0YzdhOTI2IiwicHJvZmlsZU5hbWUiOiJBbGV4XzAxIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19fX0="
             },
             {
               "name": "uploadableTextures",
@@ -1759,8 +1759,8 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk3MzcsInByb2ZpbGVJZCI6ImE4MThjMGRiNDgyYTM3Nzg4MWZmZDNkZjU0YzdhOTI2IiwicHJvZmlsZU5hbWUiOiJBbGV4XzAxIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
-              "signature": "qkUcYjRIrAxR+aKHcbMnf80yQhdPWPtoCbOa7lHnEyVl2rlJpKk8P/Egmm34EeIRX/QZI6cEH9td2Dww9uRGkXYZqjSVpiyXb2kq3S9zYGczrAw/uwj4zWXWVLd5iznEAw24BluTYpCpwFkn6dSuDi+A23/zv0fv9BYGi2Inf3+izzbF6BYOpR7IVs49RfA2KnWfgdScNK7XqVX8FgPyzwDaDhUlbWPrOQhd2Z2fg/xBo8WUfgO9jKbF/lXKt0bk9LvLZstMLyzYRiWBZpWr4/HpBU+P0wdvcKVJ9AnDGEQRU4z7QL+fcY8g+GQL3CzjtUUSZzJlKu92P7eUXJlf1z7aPWiURqHQgyBHpirtmNLrbO3zyMK1LfOaoOlvAkY5rRXnlU3SDzForsLmK8bvnvuXl3i12PdKIPQn07a+lpIWmXanhd4LkqLbse708ltZPIKzV0iuCIkaIF9vnRk98tLaiX4VbazLNAT5t/SL6BqkHnuLig0CSHFdXL3F9A01Mk3Xss83v+lBrX9kqUdgMG4qTApckGhGqnhanyBBvvxKwcH8+RAaN5O3UHXhEOkify3BT1MPmBWZjk/nXkB0rfdX30AWry2sOtkraaBAG3jc8IpzzQYt2d1I2FHT2+LCBd+zT6lR1GCbHeuBg2pjVoRy0KbNW6M4QuqkGGk0m1k="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjAxMDQsInByb2ZpbGVJZCI6ImE4MThjMGRiNDgyYTM3Nzg4MWZmZDNkZjU0YzdhOTI2IiwicHJvZmlsZU5hbWUiOiJBbGV4XzAxIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "IABi9Q8PdbFXo4/bgYU4uT3JSXPSQycIrDx6IL1VMvLYW8Hxm6m0LzulFm8fBOW0Gg734cgethovY7O4tq0Vlj9SuD5o+CUePF/VnQfRHpQZ3ZdhuNGVl72udKJbYEc+uop5ftHTkq1T/A1p7VCxTef1TVpDPc+B5VBANIB9/so8JzpMUMuXbNBeQb6CdOZ2TNFibCI6ZTgC6O2s4PkjuCiS2llsLsr+zma5CZ+cUBAzxhWWHtm3/hiLf4z5iuPqonnkRSj8TtY1BrJIRLLE6JD9Rvfv4WrNOFxDX54/0f0RqCsVtW9l99IsKBcoW/9OPJMXENm+/SGg7Q8sZiObH0RjicxCmEc3LSN7aFZBkTUYjp33c2gy96tLXrNroTZQVxPw5QJ/ur+F0O1VC9Fa/bOLfw9lZHGA7fe+rpyVs/SEnsTWG/wbLe/mESvZ2dymyXSt064OVbTN3R1WYnCaJX8SSC5YgxrMHMR+52V0qn7xOJN2xSK8YWeKlxOoW0+WfsAEZb7W92VDrNFNFfS0HRJU24b3xlv8Bii87mUp1I6JDDpylI6KRNaF7mX6lJebfylK+4gtX1z2X6DYblcDRiBvszv4GO9O9N5hAiBoGZJd+pyllXpTtClaY2Ba0opviqfxpnqRRNHK3kqhAdWznJn1NvkYfA3UNceXn8FWzRw="
             },
             {
               "name": "uploadableTextures",
@@ -1786,7 +1786,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk4MDQsInByb2ZpbGVJZCI6IjExM2I2ZmU5Y2NmYjM0MTQ5MTZkYjBmODUwYzhiMTA0IiwicHJvZmlsZU5hbWUiOiJDYXBlT25seSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjAxNzksInByb2ZpbGVJZCI6IjExM2I2ZmU5Y2NmYjM0MTQ5MTZkYjBmODUwYzhiMTA0IiwicHJvZmlsZU5hbWUiOiJDYXBlT25seSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
             },
             {
               "name": "uploadableTextures",
@@ -1811,8 +1811,8 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk4NjksInByb2ZpbGVJZCI6ImQ0ODAxYjZjYTNjNjMzM2ZhOTA5MjY0YTYwNTZjZTJmIiwicHJvZmlsZU5hbWUiOiJOb1RleHR1cmVzIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
-              "signature": "rteBzb7YY8igOpHck5A5gbV6SOjOnOk/CwwpQKm0REgYGG+mIQl+x9dXiWLfVHrW4BTW1VXOicPRF4HzLvGEdYWbmMXqm0gdsOjFjT4MO0R0ozzSV58FZPOt4vPnpk95mSuRXOQQk0jRdmh/nPgNQYGiDsuWNg8UvFeAU1dGlZomAtU8AASbFeX6Lk+Tgkiy5jPxBqLSZ2GeAGGA4CUuh3hqBpPsUk4+zv2OSVQ7f5jITShZsRoTZJVfOfK4QJp13KqeULnwJPe+H794mDT4pxEd+rFJikMg/M0yBm4/gPTfoUMvj6kArScdbqvXHIYq+3fNNW3Pe3KvUPGRAFgWD06noLEbf+yreqIH3Z0NLxYab3xG6vu8XiQD8TeeqECTv1MhlPW/ybWteAYSOOvklmfkiDsNdPGRmYRptYecR3FgJWFBZjQ5D/NKABWwkCj7CGLv6qbDyCj+PiL5GaNAUcNWef7jvCYEVr2bFpHOOX1hxIEV1OSnfL6hpPj4OfrO7NYGOhO2+N5DA87nXTq9M0wDhwesQ72VEzGi/k4HxdapZ2DTaDJKgptYDcLKduybESUbol769vwv7uZM8XDFkBvNgdUOJiZa2p0y7s4YN08bxKur2dWxqq+TaNBmMDsljvKU3rqHAz5K12LapbB18blu/EcJXiGPAB7UjS95bVk="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjAyNTUsInByb2ZpbGVJZCI6ImQ0ODAxYjZjYTNjNjMzM2ZhOTA5MjY0YTYwNTZjZTJmIiwicHJvZmlsZU5hbWUiOiJOb1RleHR1cmVzIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+              "signature": "sBE2jfJbaqRspoIMl/XwlDAyZ1VgoIeuVh5Anx7vVHIO10bYNMgTF61J3u4VNdCBFl96FNHBIsI9MVH1owc2Ios6oW7xcOfX3rqK2VuBSrQ3Z3sPq8409FCd7HB/dOGsofyMt5wpJLgGVQtWm0TnabvL35UwgMP2T1vqn7qkUlg3YXOPmsnwYo2kfF4PUL9/1PKd5xxj00w80z4tDqdob2wwaPbJXs9sOv6z40bID7hGGQtyD9uoGTrU+9bjvh6zKfVb4607q69ZB+Xq0eJ2d56Ie5tFWjjwKKuzQ8Pfkl1TcqZv9HT/0b+nUMhEnKhyrFcXLFrwpQU+yo6CLA36IeGrUptvApUPTTTTteq3oNAj/UxEoApyUsQcrsJmbk98QAZPdtzHEv0U4WzTP+rZaMoHKWyi5rg6Do881HKCPylRIsUkZUCnjK1y77JmOTo82VIb6J8QeCQNd6HHFXdp63AXeNFpAjybYAJtNpQo1xUTGoYC9Y7gsIMGU3nzZET8UTBNVmXwC0UK/ujnSes0BU2B5ln8RYa2eDepieg58Y98A1eGN8U+0st7q2KoRxoWQJ6PUzGVraon4YalDxvNX2p0ktJQPflEhfKg5ZbRfhzUdOptCYvVAf/ndpOYy1/Jp6Hc4H3NKZA86i1mEFw380jA7DnXSFrUUT+Ny46rPgQ="
             },
             {
               "name": "uploadableTextures",
@@ -1838,7 +1838,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk5MzYsInByb2ZpbGVJZCI6IjQ4ZjgzMzA3NTY3YTMzZDc4NjA0M2IyMmVlNGMxYjg0IiwicHJvZmlsZU5hbWUiOiJHaG9zdCIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvZmYyNWYzYWE5ZDMzODNmYjhkZDY2OTdmZjk1YTZlNjRiYzkyNGQ0ZDc5NjY4NzI1NjMxNDgzMGY3OWUwNWExNSJ9fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjAzMzEsInByb2ZpbGVJZCI6IjQ4ZjgzMzA3NTY3YTMzZDc4NjA0M2IyMmVlNGMxYjg0IiwicHJvZmlsZU5hbWUiOiJHaG9zdCIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvZmYyNWYzYWE5ZDMzODNmYjhkZDY2OTdmZjk1YTZlNjRiYzkyNGQ0ZDc5NjY4NzI1NjMxNDgzMGY3OWUwNWExNSJ9fX0="
             },
             {
               "name": "uploadableTextures",
@@ -1863,7 +1863,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk5NTcsInByb2ZpbGVJZCI6IjM2YjU3ZmE5NmQzNjNhMDM4OWMwNjU3MTdjNDFjZDg3IiwicHJvZmlsZU5hbWUiOiJEYW5nbGluZyIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6e319"
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjAzNjAsInByb2ZpbGVJZCI6IjM2YjU3ZmE5NmQzNjNhMDM4OWMwNjU3MTdjNDFjZDg3IiwicHJvZmlsZU5hbWUiOiJEYW5nbGluZyIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6e319"
             },
             {
               "name": "uploadableTextures",
@@ -1888,7 +1888,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk5NzgsInByb2ZpbGVJZCI6ImM0YTVlZjc1MjgxYTNhN2Y5ZWRjOTFkMDIwM2E3ZGE4IiwicHJvZmlsZU5hbWUiOiJcdTg5ZDJcdTgyNzIiLCJpc1B1YmxpYyI6dHJ1ZSwidGV4dHVyZXMiOnsiU0tJTiI6eyJ1cmwiOiJodHRwOi8vMTI3LjAuMC4xOjM4MDgwL3RleHR1cmVzLzk5ZjFiZjg0YzhiOGFkNzJhOGZjMzI2YmI0MmQwMmQ4NmM5N2IyZTRkN2VmZDJkNWVmYWQzYTU3ZTAyODMzY2YifX19"
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjAzOTEsInByb2ZpbGVJZCI6ImM0YTVlZjc1MjgxYTNhN2Y5ZWRjOTFkMDIwM2E3ZGE4IiwicHJvZmlsZU5hbWUiOiJcdTg5ZDJcdTgyNzIiLCJpc1B1YmxpYyI6dHJ1ZSwidGV4dHVyZXMiOnsiU0tJTiI6eyJ1cmwiOiJodHRwOi8vMTI3LjAuMC4xOjM4MDgwL3RleHR1cmVzLzk5ZjFiZjg0YzhiOGFkNzJhOGZjMzI2YmI0MmQwMmQ4NmM5N2IyZTRkN2VmZDJkNWVmYWQzYTU3ZTAyODMzY2YifX19"
             },
             {
               "name": "uploadableTextures",
@@ -1913,7 +1913,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MDk5OTgsInByb2ZpbGVJZCI6IjM3NWFlYjc1MTdlNzM4MDBiYzFlMGU0N2E3MDQ2MjRiIiwicHJvZmlsZU5hbWUiOiJCYW5uZWQiLCJpc1B1YmxpYyI6dHJ1ZSwidGV4dHVyZXMiOnsiU0tJTiI6eyJ1cmwiOiJodHRwOi8vMTI3LjAuMC4xOjM4MDgwL3RleHR1cmVzLzk5ZjFiZjg0YzhiOGFkNzJhOGZjMzI2YmI0MmQwMmQ4NmM5N2IyZTRkN2VmZDJkNWVmYWQzYTU3ZTAyODMzY2YifSwiQ0FQRSI6eyJ1cmwiOiJodHRwOi8vMTI3LjAuMC4xOjM4MDgwL3RleHR1cmVzL2M1OTEzZDI4Yjk3YzhiYjI1OTY1Njc4ODYyZTU2ZTUyYjkwMTI1YjU1YWNiZjQ3N2M5OTY1MzU3MzBkNTllMTIifX19"
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjA0MTMsInByb2ZpbGVJZCI6IjM3NWFlYjc1MTdlNzM4MDBiYzFlMGU0N2E3MDQ2MjRiIiwicHJvZmlsZU5hbWUiOiJCYW5uZWQiLCJpc1B1YmxpYyI6dHJ1ZSwidGV4dHVyZXMiOnsiU0tJTiI6eyJ1cmwiOiJodHRwOi8vMTI3LjAuMC4xOjM4MDgwL3RleHR1cmVzLzk5ZjFiZjg0YzhiOGFkNzJhOGZjMzI2YmI0MmQwMmQ4NmM5N2IyZTRkN2VmZDJkNWVmYWQzYTU3ZTAyODMzY2YifSwiQ0FQRSI6eyJ1cmwiOiJodHRwOi8vMTI3LjAuMC4xOjM4MDgwL3RleHR1cmVzL2M1OTEzZDI4Yjk3YzhiYjI1OTY1Njc4ODYyZTU2ZTUyYjkwMTI1YjU1YWNiZjQ3N2M5OTY1MzU3MzBkNTllMTIifX19"
             },
             {
               "name": "uploadableTextures",
@@ -1938,7 +1938,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MTAwMjAsInByb2ZpbGVJZCI6IjBmOGQyYzRiNmExZTRmM2Q4YzdiOWE2ZTVkNGMzYjJhIiwicHJvZmlsZU5hbWUiOiJSZW5hbWVkIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85OWYxYmY4NGM4YjhhZDcyYThmYzMyNmJiNDJkMDJkODZjOTdiMmU0ZDdlZmQyZDVlZmFkM2E1N2UwMjgzM2NmIn19fQ=="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjA0NTMsInByb2ZpbGVJZCI6IjBmOGQyYzRiNmExZTRmM2Q4YzdiOWE2ZTVkNGMzYjJhIiwicHJvZmlsZU5hbWUiOiJSZW5hbWVkIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85OWYxYmY4NGM4YjhhZDcyYThmYzMyNmJiNDJkMDJkODZjOTdiMmU0ZDdlZmQyZDVlZmFkM2E1N2UwMjgzM2NmIn19fQ=="
             },
             {
               "name": "uploadableTextures",
@@ -1963,7 +1963,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MTAwNDEsInByb2ZpbGVJZCI6IjdjMWU5YTNiNWQyZjRlNmE4YjBjMWQyZTNmNGE1YjZjIiwicHJvZmlsZU5hbWUiOiJSYW5kb21VdWlkIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjA0NzUsInByb2ZpbGVJZCI6IjdjMWU5YTNiNWQyZjRlNmE4YjBjMWQyZTNmNGE1YjZjIiwicHJvZmlsZU5hbWUiOiJSYW5kb21VdWlkIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
             },
             {
               "name": "uploadableTextures",
@@ -1988,7 +1988,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MTAwNjAsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjA0OTUsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
             },
             {
               "name": "uploadableTextures",
@@ -2013,7 +2013,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MTAwNzksInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjA1MTUsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
             },
             {
               "name": "uploadableTextures",
@@ -2090,7 +2090,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MTAxODMsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjA2MjYsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvOTlmMWJmODRjOGI4YWQ3MmE4ZmMzMjZiYjQyZDAyZDg2Yzk3YjJlNGQ3ZWZkMmQ1ZWZhZDNhNTdlMDI4MzNjZiJ9LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fX0="
             },
             {
               "name": "uploadableTextures",
@@ -2115,7 +2115,7 @@
           "properties": [
             {
               "name": "textures",
-              "value": "eyJ0aW1lc3RhbXAiOjE3OTIyMzk0MTAyMDIsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHBzOi8vMTI3LjAuMC4xOjM4MDgwL3RleHR1cmVzLzk5ZjFiZjg0YzhiOGFkNzJhOGZjMzI2YmI0MmQwMmQ4NmM5N2IyZTRkN2VmZDJkNWVmYWQzYTU3ZTAyODMzY2YifSwiQ0FQRSI6eyJ1cmwiOiJodHRwczovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy9jNTkxM2QyOGI5N2M4YmIyNTk2NTY3ODg2MmU1NmU1MmI5MDEyNWI1NWFjYmY0NzdjOTk2NTM1NzMwZDU5ZTEyIn19fQ=="
+              "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjA2NDUsInByb2ZpbGVJZCI6IjU2MjdkZDk4ZTZiZTNjMjFiOGE4ZTkyMzQ0MTgzNjQxIiwicHJvZmlsZU5hbWUiOiJTdGV2ZSIsImlzUHVibGljIjp0cnVlLCJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHBzOi8vMTI3LjAuMC4xOjM4MDgwL3RleHR1cmVzLzk5ZjFiZjg0YzhiOGFkNzJhOGZjMzI2YmI0MmQwMmQ4NmM5N2IyZTRkN2VmZDJkNWVmYWQzYTU3ZTAyODMzY2YifSwiQ0FQRSI6eyJ1cmwiOiJodHRwczovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy9jNTkxM2QyOGI5N2M4YmIyNTk2NTY3ODg2MmU1NmU1MmI5MDEyNWI1NWFjYmY0NzdjOTk2NTM1NzMwZDU5ZTEyIn19fQ=="
             },
             {
               "name": "uploadableTextures",
@@ -2544,6 +2544,281 @@
         "size": 1733
       }
     },
+    "ygg/authenticate-not-json": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "Unsupported Media Type",
+          "errorMessage": "\"Content-Type\" must be \"application/json\"."
+        }
+      }
+    },
+    "ygg/authenticate-form": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "Unsupported Media Type",
+          "errorMessage": "\"Content-Type\" must be \"application/json\"."
+        }
+      }
+    },
+    "ygg/authenticate-no-content-type": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "Unsupported Media Type",
+          "errorMessage": "\"Content-Type\" must be \"application/json\"."
+        }
+      }
+    },
+    "ygg/refresh-not-json": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "Unsupported Media Type",
+          "errorMessage": "\"Content-Type\" must be \"application/json\"."
+        }
+      }
+    },
+    "ygg/validate-not-json": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "Unsupported Media Type",
+          "errorMessage": "\"Content-Type\" must be \"application/json\"."
+        }
+      }
+    },
+    "ygg/invalidate-not-json": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "Unsupported Media Type",
+          "errorMessage": "\"Content-Type\" must be \"application/json\"."
+        }
+      }
+    },
+    "ygg/signout-not-json": {
+      "status": 200,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "Unsupported Media Type",
+          "errorMessage": "\"Content-Type\" must be \"application/json\"."
+        }
+      }
+    },
+    "ygg/refresh-unknown": {
+      "status": 403,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "ForbiddenOperationException",
+          "errorMessage": "Invalid AccessToken. Please re-login."
+        }
+      }
+    },
+    "ygg/validate-unknown": {
+      "status": 403,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "ForbiddenOperationException",
+          "errorMessage": "Invalid AccessToken. Please re-login."
+        }
+      }
+    },
+    "ygg/invalidate-unknown": {
+      "status": 204,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "ygg/join-unknown-token": {
+      "status": 403,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "ForbiddenOperationException",
+          "errorMessage": "No valid credential information."
+        }
+      }
+    },
+    "ygg/join-unknown-profile": {
+      "status": 403,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "ForbiddenOperationException",
+          "errorMessage": "Invalid Profile UUID [00000000000000000000000000000000]. It doesn't belong to any players."
+        }
+      }
+    },
+    "ygg/join-empty": {
+      "status": 403,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "ForbiddenOperationException",
+          "errorMessage": "Invalid Profile UUID []. It doesn't belong to any players."
+        }
+      }
+    },
+    "ygg/has-joined-unknown": {
+      "status": 204,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "ygg/has-joined-empty": {
+      "status": 204,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "ygg/upload-no-token": {
+      "status": 401,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "UnauthorizedException",
+          "errorMessage": "Bearer token expired or is not correct."
+        }
+      }
+    },
+    "ygg/upload-unknown-token": {
+      "status": 401,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "UnauthorizedException",
+          "errorMessage": "Bearer token expired or is not correct."
+        }
+      }
+    },
+    "ygg/upload-basic-auth": {
+      "status": 401,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "UnauthorizedException",
+          "errorMessage": "Bearer token expired or is not correct."
+        }
+      }
+    },
+    "ygg/delete-no-token": {
+      "status": 401,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "UnauthorizedException",
+          "errorMessage": "Bearer token expired or is not correct."
+        }
+      }
+    },
+    "ygg/delete-unknown-token": {
+      "status": 401,
+      "headers": {
+        "cache-control": "no-cache, private",
+        "content-type": "application/json"
+      },
+      "body": {
+        "kind": "json",
+        "value": {
+          "error": "UnauthorizedException",
+          "errorMessage": "Bearer token expired or is not correct."
+        }
+      }
+    },
     "methods/csl-post": {
       "status": 405,
       "headers": {
@@ -2675,6 +2950,83 @@
       "status": 405,
       "headers": {
         "allow": "GET, HEAD",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/authenticate-get": {
+      "status": 405,
+      "headers": {
+        "allow": "POST",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/validate-options": {
+      "status": 200,
+      "headers": {
+        "allow": "POST",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "empty"
+      }
+    },
+    "methods/join-get": {
+      "status": 405,
+      "headers": {
+        "allow": "POST",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/has-joined-post": {
+      "status": 405,
+      "headers": {
+        "allow": "GET, HEAD",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/user-profile-post": {
+      "status": 405,
+      "headers": {
+        "allow": "PUT, DELETE",
+        "cache-control": "no-cache, private",
+        "content-type": "text/html; charset=UTF-8",
+        "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+      },
+      "body": {
+        "kind": "html",
+        "size": 825
+      }
+    },
+    "methods/user-profile-get": {
+      "status": 405,
+      "headers": {
+        "allow": "PUT, DELETE",
         "cache-control": "no-cache, private",
         "content-type": "text/html; charset=UTF-8",
         "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
@@ -2829,5 +3181,3061 @@
         "kind": "empty"
       }
     }
+  },
+  "scenarios": {
+    "auth/authenticate-email": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiI5NGNkZDVjMjFlMDc0ZGY2OGJiN2Q4OGViNjg1ZWY0OSIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzYyLjU0MzEzMywiaWF0IjoxNzkyMzMxMTYyLjU0MzEzM30.egNQDoeNZU1fKY9jZv9M1BOmQFbcQY-pjZHjyarVN9w",
+            "clientToken": "launcher-client-1",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ],
+            "user": {
+              "id": "e35880a4e315561888e869fa38036ef3",
+              "properties": []
+            }
+          }
+        }
+      }
+    ],
+    "auth/authenticate-single-profile": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiIxZjNkMjMxMTZjMjE0ZTkzYjRlZThkMTdlZDZhOTA5MSIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNjIuOTM1MzM2LCJpYXQiOjE3OTIzMzExNjIuOTM1MzM2fQ.dA46XPeKd9Pl2gCEj_rYAWrz3NM0XbFTBs_hqWZoKO8",
+            "clientToken": "25a8463308e24f79b0666b19b355a74c",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      }
+    ],
+    "auth/authenticate-player-name": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiJkNTI5OGVjMTNlODE0MDA0YjUwZmQ5OTUwNWU1YWVmYSIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzYzLjM0MzE5NSwiaWF0IjoxNzkyMzMxMTYzLjM0MzE5NX0.jHgsdRluJMojXhg942r0IidMnmudgcuvzj4pjETtg7s",
+            "clientToken": "0fa4248c60294c9bb2002c20fd336700",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ],
+            "user": {
+              "id": "e35880a4e315561888e869fa38036ef3",
+              "properties": []
+            }
+          }
+        }
+      }
+    ],
+    "auth/authenticate-email-case": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiI4ZWJkNTM3NDgxZGY0NDYwYmYyMTIxN2Q4ZTI5ZmIyMiIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzYzLjc1NTU0OSwiaWF0IjoxNzkyMzMxMTYzLjc1NTU0OX0.dJQ7jpqS04yYZTZnsn70Z_2ZhhY6rtykX4rxvJtkoBg",
+            "clientToken": "876820f388e844af93b8238ea4b9c2cc",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ],
+            "user": {
+              "id": "e35880a4e315561888e869fa38036ef3",
+              "properties": []
+            }
+          }
+        }
+      }
+    ],
+    "auth/authenticate-trimmed": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiIwNWU4ZTBkMzNjNDY0MTUwOGVlYTI5NzY5ODMyZWM0NiIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNjQuMTQzODExLCJpYXQiOjE3OTIzMzExNjQuMTQzODExfQ.-5F1k4EyBdG4QdXgH7uqL6FJOP7rJCAbgc9bQDW2zoU",
+            "clientToken": "2c421c2955c147c583cbae1d42ff180b",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      }
+    ],
+    "auth/authenticate-request-user": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiIyMTczNzA3ZGYyNmQ0YjA3OTEwMjVmNDQ3NTllOGI5NSIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY0LjU0MDIxOSwiaWF0IjoxNzkyMzMxMTY0LjU0MDIxOX0.9pgzFYiVvd9kInFOWPvxVJDGhwtgQUrAynJ15_PXIMk",
+            "clientToken": "ca31a6d2f3c84bde93056d900c5ad85a",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ],
+            "user": {
+              "id": "e35880a4e315561888e869fa38036ef3",
+              "properties": []
+            }
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiI2OTIxMWNhMzUwMTc0NTc4OTJhMjRkM2VjYzZiZGUzMCIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNjQuNjI0OTU2LCJpYXQiOjE3OTIzMzExNjQuNjI0OTU2fQ.KXDFVW-3q011a-EKGl-TlirYhWUxL-B34kobTe3YtPU",
+            "clientToken": "4a375a00d3c345ac81e589902017e7a6",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiJhY2YzZDM0NTUzODU0OTdhOGFkOWZkNzg2YjFiNTEzYiIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY0LjcxMTY5NCwiaWF0IjoxNzkyMzMxMTY0LjcxMTY5NH0.s6aVI7T6SxxAuO_rSCDdtPbMRC5QCnZUpI5lmgsBahg",
+            "clientToken": "00a2439c576c478290ca5c4a153d4062",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ],
+            "user": {
+              "id": "e35880a4e315561888e869fa38036ef3",
+              "properties": []
+            }
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiI3MDRjMDYyZmFhZWQ0ZGU4YjJiZTc4MDVhMGJiN2UzOSIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNjQuNzk1MTkzLCJpYXQiOjE3OTIzMzExNjQuNzk1MTkzfQ.HMHUb9S68j_XPFOWoGmhjyRIfFCPvBsQrMUtOejHX-c",
+            "clientToken": "f69099c1eff24d2fad131f3be75747cc",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      }
+    ],
+    "auth/authenticate-content-type": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiI5NjFjMDBlODIzOTI0YjAxOWJlMDRmMzJkYjA3ZDlmZCIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNjUuMjAxODAxLCJpYXQiOjE3OTIzMzExNjUuMjAxODAxfQ.40ulsg8616PJHnahs9kfdz142sm40KB-2TIGZUJv07c",
+            "clientToken": "ae2e3c9af6e0462c8bc8b755d0024442",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiIxMzgwNjQwZWE0MWE0OTk5YTg3ODc4OWY4ZjkxM2U3ZCIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY1LjI4NzQwOCwiaWF0IjoxNzkyMzMxMTY1LjI4NzQwOH0.rH8x2NDr0bHgD_6VI7AufpQSYG9MWG-_v7BCf8KIaqs",
+            "clientToken": "e9e00edf551145bc9c222f6c861acee0",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "auth/authenticate-rejected": [
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid credential information."
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "User nobody@nextskin.test is not found."
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "User Nobody is not found."
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid credential information."
+          }
+        }
+      }
+    ],
+    "auth/authenticate-missing": [
+      {
+        "status": 400,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "IllegalArgumentException",
+            "errorMessage": "Email address and password are required."
+          }
+        }
+      },
+      {
+        "status": 400,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "IllegalArgumentException",
+            "errorMessage": "Email address and password are required."
+          }
+        }
+      },
+      {
+        "status": 400,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "IllegalArgumentException",
+            "errorMessage": "Email address and password are required."
+          }
+        }
+      }
+    ],
+    "auth/authenticate-banned": [
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "You're banned."
+          }
+        }
+      }
+    ],
+    "auth/authenticate-throttled": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiJjMWQ2MTJlMTRlOWY0MjEzOTdlOGU3M2Y2OTBlYWJkYiIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY2Ljk3NzM1LCJpYXQiOjE3OTIzMzExNjYuOTc3MzV9.7YQSfA1VbrdXAAffeitvirndUluzbKlugzN3u21ayqs",
+            "clientToken": "8ab4a349b2db41999b2e00d5133cd234",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Too frequent requests. Please try after 1 seconds."
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid credential information."
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Too frequent requests. Please try after 1 seconds."
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiI2NWY1MDNhMTQyOGM0YmE5YmNmNmUxMjI5YWEwMmRhNSIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY3LjE4MTk5NywiaWF0IjoxNzkyMzMxMTY3LjE4MTk5N30.sqXyP0oAQI-c2KdpXw4ImGNq9vwMwniN8qrowPpffSY",
+            "clientToken": "10f320cc459f45cfbd3564a70a175a9d",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "auth/tokens-limit": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiJlYWI1ZGQ2Mzg2OWU0M2E4YWI4MmMzMTFhNGFlODkxMCIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY3LjYxMzE0MywiaWF0IjoxNzkyMzMxMTY3LjYxMzE0M30.hG81cKGcoAgXTUClNypV07Tp-Yel-cNDbm8Wusr2uv4",
+            "clientToken": "ad5be60e5e3e42cdb63238ddb10d51d5",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiI5MDc0OGIxYmZkOGM0NDIxYmYzY2E0NWZkZjE2Y2IxYyIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY3LjY5OTc1NiwiaWF0IjoxNzkyMzMxMTY3LjY5OTc1Nn0.KCH-ewIZyeVbd7KanVYsaOUZCk8xKNHKs4oPOnnRuWo",
+            "clientToken": "f3f3ccba916341caa26db9fc721161de",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiI3MjIyYTBiOTI1ZjA0ZmY3YjA4YzgyNDZlYWNkYWRhMSIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY3Ljc4ODE1MiwiaWF0IjoxNzkyMzMxMTY3Ljc4ODE1Mn0.u7ST7SwQir_KBc27hLEHPWZV5G0HwnDhH_946fuGnP8",
+            "clientToken": "eff27349105b497da33bdd8897bfa231",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiJmNjMxZWMyOTM2NGQ0NDJlOWYwODkyZDY0ZjUxOTA2NSIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY3Ljg3NDc1OCwiaWF0IjoxNzkyMzMxMTY3Ljg3NDc1OH0.NV5Fngr5g537i4V-ZjrL3328DXnKoJdOrwqob8PAlSQ",
+            "clientToken": "fc6057917d82401ebd0f0f425785f7a5",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid AccessToken. Please re-login."
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "auth/refresh": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiJlODgzNGEyNjc2ODY0MGVjYmYwMDQ1YjA1ODE1OGUwZiIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNjguNDE4Mjk3LCJpYXQiOjE3OTIzMzExNjguNDE4Mjk3fQ.ufWDhQiukcuUvKq31SPCsh0-Mv9t5MY0J9A4j_E1yac",
+            "clientToken": "client-dave",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiJiNDYyYjI3YTRmNTc0NTA3OWYxMjNkOTczNjQ2MjM2NSIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNjguNDM5NzEyLCJpYXQiOjE3OTIzMzExNjguNDM5NzEyfQ.MeBK7dRlp4KqHk9WorxvfE-ogGyeVd5yb7Xh5FpCeeE",
+            "clientToken": "client-dave",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "user": {
+              "id": "92d7545d423b5c71a486a87fb85fb8fa",
+              "properties": []
+            },
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid AccessToken. Please re-login."
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid AccessToken. Please re-login."
+          }
+        }
+      }
+    ],
+    "auth/refresh-without-client-token": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiI1N2VkNjYwZGIzMGE0YWJjOTNmODQ4ODgyNTUxZjhlNCIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY4Ljg5NjY0MiwiaWF0IjoxNzkyMzMxMTY4Ljg5NjY0Mn0.YYXQqhfNLIZ45-w0OiTSzSF7tMXQV5-_vcOS-1KJfD0",
+            "clientToken": "client-steve",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiJlNjUxYmY5NTIxOTY0N2VjYWQ4MTM5NjAxYjdlNmQyNiIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY4LjkxOTg1LCJpYXQiOjE3OTIzMzExNjguOTE5ODV9.r3e37moKNgbHoNOxwIQ6q-oZ1gOM2frO0_79_QQD-ac",
+            "clientToken": "client-steve",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "auth/refresh-wrong-client-token": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiI1NTkyYmFhYjUzZGU0ODM1YmQ0NDAzNDQyOTZmMTg1ZiIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY5LjMyMTQ2NSwiaWF0IjoxNzkyMzMxMTY5LjMyMTQ2NX0.YDsaBoKb5VWxAjn-P9TDRsXKSco5UvR-Tq0Xbaqo8dY",
+            "clientToken": "client-steve",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "ClientToken isn't matched with AccessToken. Please re-login."
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "auth/refresh-select-profile": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiI5ZTJmNzYyM2M5MGM0NGFhYWRhNGNmNWY0OWMwNmVjYSIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzY5Ljc1MTk3LCJpYXQiOjE3OTIzMzExNjkuNzUxOTd9.ZS2GSccxX1at-MCOLPXo3rtBKQGO6wjPWKf93jqT_a0",
+            "clientToken": "d583b2e5f4174f03944beb3e7fba810d",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiJjZTNjMWY5ZWUzNmY0NmFhOTNjOWFmYzA3NzFjOWNkMiIsInNwciI6ImE4MThjMGRiNDgyYTM3Nzg4MWZmZDNkZjU0YzdhOTI2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNjkuNzc1ODE0LCJpYXQiOjE3OTIzMzExNjkuNzc1ODE0fQ.MGsZFLyuTsMn0swmN8W7JjnjTWr1_tpYb1S9txyVRik",
+            "clientToken": "d583b2e5f4174f03944beb3e7fba810d",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ],
+            "selectedProfile": {
+              "id": "a818c0db482a377881ffd3df54c7a926",
+              "name": "Alex_01"
+            }
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "id": "a818c0db482a377881ffd3df54c7a926",
+            "name": "Alex_01",
+            "properties": [
+              {
+                "name": "textures",
+                "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNjk4MTksInByb2ZpbGVJZCI6ImE4MThjMGRiNDgyYTM3Nzg4MWZmZDNkZjU0YzdhOTI2IiwicHJvZmlsZU5hbWUiOiJBbGV4XzAxIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+                "signature": "aVqNhWjQAOolv+CbUD0bTT1ujCdw7YWE+634WHzrUuJkoyYQOzLEYAPkooczUeBqvn/N8wv8qMw4ka4luNH1SIBZ33gbVx3EYDreoptAsC43ecANfXCCm9L2YjsTU0NyAAtTmR5F9V6srGGCoGrdNzb/BwEPFD9C7o4gzvg9W8L3ZDd9HPuwU4aVLFgxoUQmR4tBuDqWP5iYT/RT6W87ongqAYo7y4lnxbxV0+eNsaPwYeRohyyNpByL/VQdzCG8m2BF4EeuiY66f6u+NioOigXXEfrQcchpPGSydec2VaDyTAzPjMnVxmcP1PVQ9m4w3luzYlQ6aAudMSWgBmKeHv/dwOPP6e1pxQj57OZkS3pgQv4NB5hnTZfbuhhDm1fpN6teq0w8c+1N3nKwQSUCDo8r4kLDBWg+nezy1rDxYXpZN/p4v088g0xCXIF+o3jr2MgmQbiFoGnOABqu4kwLhzfukuSfbj9xrLm0T63EXF72Hy6dbpFCTGvaGfYYRhVhhBk84JRQWYZvz92sCuHTDX5zw26RpaRflACSYe8fTYVxNmHdNPfyeyar/8lxye+xXRL8MOSF3e4DoFVr39Ml1R2/kThU/kRMWS1pbtoYLXoXuwSHSQ/JKBmMYTM0tIFcP6OgK9QW1zGYglsVpM8rIB4JmLVCm/On9xA6T7PXhiQ="
+              },
+              {
+                "name": "uploadableTextures",
+                "value": "skin,cape",
+                "signature": "sUCpZQprappvqKqk8kSs/wPCtYmMoNTEUxqiyIwagpM5gOvhs0IFZsjEckBTDVB6qc8sDuL6SS3IzslWh5Gvo+QQQIcuSaJ80ETmP0cutz2DfXiLBtvEr4wBKiZSKOpLJCo0tRmikDUFuwVd4h6arlsjTZG6F6pYyUYuwQYhCMjIDHCLtlu38EwV74jvJIDSm91GHbRyg4Fmzh1KBTb2eYr+vazTqPuWR0W1s2JQO2pxaMN5pnS2QSqwGMf6IaWT507HR+PqLmPFIuGfY559XlaPVeaQoFPdfUTmZM/pJ47LcZWlvrwbpxrebRW5ZX1sBOSvZlgMlHWpyxakW9lOVgOkfeHecj2aJweg/9pQg0N7jBz6PKiw+tiUHZe/bobM0YhDjL4Tsv4Uv6LS4SEziIKUwbpWh21hwwAKmtSAH2BqBUg+LWtjd9KKhGgTTWPNxI3zKdx+mtUniiAlc4m28jAjx5tg9DqGSmm/oLpt+I2tEmXf8Onl87Ge7xxu6/L5BvjQllrLClWqW4K6RfT68JtDwLFndDDgO0A6elJQg6DYJt9A0S1q5tLILRTKy9olm4L2M4NFSgmKG6OjJHkxoSBtKFj7bkghxQ0gRGdm4k5VTuuDWiKz9BHvm0PzXap91d35EdopU3icXW+s2o39zT0HFWdVQX9iOhVjA31GiZQ="
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "auth/refresh-select-by-id": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiIwOGRiODY3NTE4YWU0NzQwYTdjOTBlMWRkMzA4M2I1NCIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzcwLjI3NzYxMSwiaWF0IjoxNzkyMzMxMTcwLjI3NzYxMX0.mmiEP0qqtXMko_v5E4kCIakEU9-P_U6J9zr8ciOX-o4",
+            "clientToken": "69de800de1ed4b1d989a2e33d356ab18",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiJlYjkzNzg1MGI4ZTY0NzJmYTlmOWQ5ZDY1ODQzNjA4MSIsInNwciI6ImU5MTM3YTRjNWJkMzM0M2FhYTA1ZTllODg3OTBjZDM2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzAuMzAyMTYxLCJpYXQiOjE3OTIzMzExNzAuMzAyMTYxfQ.g6iPtSlwz7kuDEcvBfJ577eSRdmG2aV9T_FrIiJEVHs",
+            "clientToken": "69de800de1ed4b1d989a2e33d356ab18",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ],
+            "selectedProfile": {
+              "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+              "name": "OldSkin"
+            }
+          }
+        }
+      }
+    ],
+    "auth/refresh-select-rejected": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiIwZTBkMTNjN2NjMjc0MTlmYWUzN2NmM2Y3MmJlNDVjMiIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzcwLjY4Nzg2MSwiaWF0IjoxNzkyMzMxMTcwLjY4Nzg2MX0.q-ZrjhbfSbOiVwlsN23CrlvMD5b9-fJxFzwd8iIV_aM",
+            "clientToken": "9c528224a4294070b2b10f1870797f76",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 400,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "IllegalArgumentException",
+            "errorMessage": "Player is not found."
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "The player requested doesn't belong to that user."
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "auth/refresh-select-bound": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiIxNTY1YjA3NjAyZjk0MTg3ODE0NzNkNDBhYjRkODA5YSIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzEuMTU3MjQxLCJpYXQiOjE3OTIzMzExNzEuMTU3MjQxfQ.kwtZ1ybIb82RmvsHZyACuanb14KpU0wMEecoIyAag9c",
+            "clientToken": "55c3b59c9550440091439ca3675fc622",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 400,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "IllegalArgumentException",
+            "errorMessage": "The player requested doesn't match with that token."
+          }
+        }
+      }
+    ],
+    "auth/validate": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiJkOTFmYmY2ZDM0ZjE0NzNjODM2MzQ1OTJlNzc4NzA3OCIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzcxLjU5ODUxMSwiaWF0IjoxNzkyMzMxMTcxLjU5ODUxMX0.hN3cHgp_fAMMWbwNYP_asdoPWySU9hL05sngViHXVbI",
+            "clientToken": "client-steve",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "ClientToken isn't matched with AccessToken. Please re-login."
+          }
+        }
+      }
+    ],
+    "auth/invalidate": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiI2YTBkNGZkZDQ2OTI0MjZhOTBlYTgyNGQyYmJlNDdhNCIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzcyLjA3MjM0MSwiaWF0IjoxNzkyMzMxMTcyLjA3MjM0MX0.jRvUBXu195syU3UecFl1bvuW6_-EN7eiM1qLKQ7tGvo",
+            "clientToken": "client-steve",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid AccessToken. Please re-login."
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "auth/signout": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiI5ZDJhNmQxZDU5MTc0YmE1ODYwODIzYzAyODM5YWJiNiIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzcyLjUyNjk2NSwiaWF0IjoxNzkyMzMxMTcyLjUyNjk2NX0.gxZ7CxYPDbe-dS-QLRgkDFOu62B0uuZ1ulW38MLpesw",
+            "clientToken": "04b5b3d7608847bfa4c2b1377c9ee450",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiJlYjE1YTZmOWUzNzk0NTMyODA4NWQ0YTljZDlkZDg1OCIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzcyLjYxNTc0MiwiaWF0IjoxNzkyMzMxMTcyLjYxNTc0Mn0.UT4Sc8cgrlp2UzrK2uERQP0aH8I1lOPW6WRPvT2bw5k",
+            "clientToken": "d4b0a91e0e834e7cb2fb3e59f4293356",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid AccessToken. Please re-login."
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid AccessToken. Please re-login."
+          }
+        }
+      }
+    ],
+    "auth/signout-rejected": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiIxOWI5MjJjOGRkZDk0OTA0YjFhMmYzODcxYzUyZjc2YyIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzczLjExNzc2OSwiaWF0IjoxNzkyMzMxMTczLjExNzc2OX0.78Z2V9CxEMr4R8Ad9Q24rELVMDcQkw_-3fr7M3BQxA0",
+            "clientToken": "420dd2a949f7469d94d6c3e2af57b288",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid credential information."
+          }
+        }
+      },
+      {
+        "status": 400,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "IllegalArgumentException",
+            "errorMessage": "Email address and password are required."
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "auth/signout-banned": [
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "auth/signout-throttled": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiJkYTllZTJjMTFkNGQ0ZjBjODhmNWU4YTNiMjQzMDM0YSIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzc0LjAwNTkxOSwiaWF0IjoxNzkyMzMxMTc0LjAwNTkxOX0.KpFYrBTJtdbVjV99oAONf7h19ZzXDeRX7n38z8Xpj3I",
+            "clientToken": "a540d481635446cc8b26cfe964d876a3",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Too frequent requests. Please try after 1 seconds."
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "auth/signout-player-name": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiI2NmFlMmE1Zjg0YmI0MmVlOWU0ODlhYTExNTcyZDQ4NiIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzc0LjQzODY4NiwiaWF0IjoxNzkyMzMxMTc0LjQzODY4Nn0.qhfzY75kxEV8SAbvKvpOHJDbdurKl17LHBtdVMZEWcg",
+            "clientToken": "12a5af01b8c742468f62d1df34c2ae86",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "session/join": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiJlMWNjMDFhNzg4MTk0NzJmYmU3ZjJhNWJjOTc3ZDQ5ZCIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzQuOTcyNDQ4LCJpYXQiOjE3OTIzMzExNzQuOTcyNDQ4fQ.Z0HFA4F5pJW0MKXqwCiC65aquQIM8Usb0Pscs0p8rJc",
+            "clientToken": "ec929dcd93b44479b09ca07ca992b1a3",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "id": "80333097598c3d5f9b994ef1a3920f06",
+            "name": "Dave",
+            "properties": [
+              {
+                "name": "textures",
+                "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNzUwMjEsInByb2ZpbGVJZCI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwicHJvZmlsZU5hbWUiOiJEYXZlIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+                "signature": "s32RMWhVraAOo3kweWDOA0IcEJ7YwEMWRZL0DxYLPtpHxvd0dGbJ+LA+P4sUNoKEYv5/YQmK+nrcKy0r7QDi7cC0EbiKbJMMgw6ESmAZaKczZU5heyz+/cnRnKDbhAzQrIsyjS4hWzBxqDrinpeQuhtSSejFlkg6lF/7sNvlFauX/LCQy8z/4EA3Uuj4lnIAulVhlzkiQxlttRCmNLrIleDVoWXJx3TZ/227Dm//wBcfDIrf9B6D4zaFMsOl13vXaQqkXefMo04aqcxSr4OaYBSTmqpJ/VDzxjV4ZiQ9aiotJCUEgblvhVJ2kfp58alrxHEc9T1p1BTJsnLbY7NgrgAM99xyMAt0QWaWbHqC9BI45Tx6UCfq1T2Q0cA06LhsaB7SFaZFFxZbIfl/obPWRfTxb6nbkddDj1uYYw+2I8kei5SzEqvs/uNFgLIjUwgO3PIxu5UpeeStvmz1gAiV8UdZ5Ix5qeUs4XscDdz7WRIq1fPFLXnQaO10tXrV0W94loHhu+9QQUQaNY/SGORYB6Y+n6A9khK31z8Wbea5phJDyCu0zHmp9vGGNoGRfFI8SZyx/M8sPdYjHn6HDAA5PAgzKrl28OUHRrZArfhSmRaQ8ivUWnyoOEry6U09Ri9xS9SgU3R10iSMypvrEiA4f5QMz8kOhn75dAsASGzGDeA="
+              },
+              {
+                "name": "uploadableTextures",
+                "value": "skin,cape",
+                "signature": "sUCpZQprappvqKqk8kSs/wPCtYmMoNTEUxqiyIwagpM5gOvhs0IFZsjEckBTDVB6qc8sDuL6SS3IzslWh5Gvo+QQQIcuSaJ80ETmP0cutz2DfXiLBtvEr4wBKiZSKOpLJCo0tRmikDUFuwVd4h6arlsjTZG6F6pYyUYuwQYhCMjIDHCLtlu38EwV74jvJIDSm91GHbRyg4Fmzh1KBTb2eYr+vazTqPuWR0W1s2JQO2pxaMN5pnS2QSqwGMf6IaWT507HR+PqLmPFIuGfY559XlaPVeaQoFPdfUTmZM/pJ47LcZWlvrwbpxrebRW5ZX1sBOSvZlgMlHWpyxakW9lOVgOkfeHecj2aJweg/9pQg0N7jBz6PKiw+tiUHZe/bobM0YhDjL4Tsv4Uv6LS4SEziIKUwbpWh21hwwAKmtSAH2BqBUg+LWtjd9KKhGgTTWPNxI3zKdx+mtUniiAlc4m28jAjx5tg9DqGSmm/oLpt+I2tEmXf8Onl87Ge7xxu6/L5BvjQllrLClWqW4K6RfT68JtDwLFndDDgO0A6elJQg6DYJt9A0S1q5tLILRTKy9olm4L2M4NFSgmKG6OjJHkxoSBtKFj7bkghxQ0gRGdm4k5VTuuDWiKz9BHvm0PzXap91d35EdopU3icXW+s2o39zT0HFWdVQX9iOhVjA31GiZQ="
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "id": "80333097598c3d5f9b994ef1a3920f06",
+            "name": "Dave",
+            "properties": [
+              {
+                "name": "textures",
+                "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNzUwOTcsInByb2ZpbGVJZCI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwicHJvZmlsZU5hbWUiOiJEYXZlIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+                "signature": "gXlCe5bFch+kqlS8X15B1DXgX/uyqxG7yzGuP60sHW4ZBC+kJ83Dp+2wHncbJ8irrpchBcptZ4XKBudj3+cKPiw/t2OFrHgrrDE2uo9mNNEsNANisPJi8M8Gv6XLVQhAw/KiET90ey6Dyh25VOlpKeHKfn+EdMIVna/BjCOu2T2LZemehxXyxYL3gclTvkmSAVOQlrNg8oyxwl/PsGXq0Jjc0VEX4p+LQGAy/WSXzFV0L6GDwh+TZe2bFEAQgZxVPEXBJ5kduUR8w/WcIN4MDnuxT0NMnlTCA6mJKxuakk7RhLBGLxEj67tcrOzh9g+GBuPpO1fdlB4rID+C0L9N3VlwRCy0RHZPVBGDnecW18fwokCmxi2ETX9EIA7Y74NGQa+tTj6BW3jffnnnmyU2z35DjtVD7jWjojKUuW7BQwdMBHgGcAFTmaTBvrvI9b46ZYfvYirheOxtO80VctNMC7mzaj2IAsAeT1fkX6XYnj0GN3PpgWEzoyZGBwiv8bR3FuY+VKmtbLZhQbGT8zZKCJLl1bfNn/vb0k/Qr3CeU6i0BBIMfrfpSBLVVPXvQwWm2FqVbdH+UKVBsjgHqWvw4C/EFE+bWacnEa3Bt9GTl8u7i6VPko0ckrWpRlZNCSIREUBOaJ9UkYbazcHjAoRdqYJ8PzOxMZmTpDoxpTkIcHY="
+              },
+              {
+                "name": "uploadableTextures",
+                "value": "skin,cape",
+                "signature": "sUCpZQprappvqKqk8kSs/wPCtYmMoNTEUxqiyIwagpM5gOvhs0IFZsjEckBTDVB6qc8sDuL6SS3IzslWh5Gvo+QQQIcuSaJ80ETmP0cutz2DfXiLBtvEr4wBKiZSKOpLJCo0tRmikDUFuwVd4h6arlsjTZG6F6pYyUYuwQYhCMjIDHCLtlu38EwV74jvJIDSm91GHbRyg4Fmzh1KBTb2eYr+vazTqPuWR0W1s2JQO2pxaMN5pnS2QSqwGMf6IaWT507HR+PqLmPFIuGfY559XlaPVeaQoFPdfUTmZM/pJ47LcZWlvrwbpxrebRW5ZX1sBOSvZlgMlHWpyxakW9lOVgOkfeHecj2aJweg/9pQg0N7jBz6PKiw+tiUHZe/bobM0YhDjL4Tsv4Uv6LS4SEziIKUwbpWh21hwwAKmtSAH2BqBUg+LWtjd9KKhGgTTWPNxI3zKdx+mtUniiAlc4m28jAjx5tg9DqGSmm/oLpt+I2tEmXf8Onl87Ge7xxu6/L5BvjQllrLClWqW4K6RfT68JtDwLFndDDgO0A6elJQg6DYJt9A0S1q5tLILRTKy9olm4L2M4NFSgmKG6OjJHkxoSBtKFj7bkghxQ0gRGdm4k5VTuuDWiKz9BHvm0PzXap91d35EdopU3icXW+s2o39zT0HFWdVQX9iOhVjA31GiZQ="
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "id": "80333097598c3d5f9b994ef1a3920f06",
+            "name": "Dave",
+            "properties": [
+              {
+                "name": "textures",
+                "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNzUxNjEsInByb2ZpbGVJZCI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwicHJvZmlsZU5hbWUiOiJEYXZlIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+                "signature": "dbK8mhrjE09WyZX1CrQMXtafqSXxWX0m5MGtyeMRPRH5je6oeXC3/rqUY6aQCx5hXVu78hdDrM6Bc9UnJR5tOMgMffy+cK4krMbIsBd4WIEKhirU79LxUWE9FowN+mqKQ8bZO4hG0l+XhM0afZPP9mSQbO0gcikkNztGF9pIxPdeWQXXwvNtb3GaOW82MEuHFqGyXZ/W+HHEr3PYVi5VgSw/9d8KkgUvUWpZuJqSh+X4WSdHTW/lcPuxvpEywbGV4zA4lGGB2PvK11xKE2N7/nPlWzDFa/wSfv1jDYPXXEVYzX16Ao+4JvaJ682LJzbRUIIw/FL9VfN5lDSjzsRXv9T+bZjvsxgNEF48WkwxnvR3wv/TA4O1skXNHUA4mF2MOax65Qg4zT1DcntKuvv/f++YvqEKcwLwkfqeEBYX8MzxzdgHrrt/+32QRW4vhOPZmJOa03+nESF6DVOlrkl3ZUKrXhiw0p6/fRBKyeN+foots7a3JsGifQ5BKaX7tT0FuQeVn9V6q6EKFwbHaKZKj6WA/Htgdf4sLVDHgasWYt+O1jzTUHxR4VtPJaxX0bT7pFv0bEmp3wTxJmjU4vpzaD2jvHnXuKwlrHVsku6qLvBAIzqxQg1lZBW5TbEzfuBk2O/BKWPkhK8ek82OotCvPyaUM884UcJeehG+efGPW9g="
+              },
+              {
+                "name": "uploadableTextures",
+                "value": "skin,cape",
+                "signature": "sUCpZQprappvqKqk8kSs/wPCtYmMoNTEUxqiyIwagpM5gOvhs0IFZsjEckBTDVB6qc8sDuL6SS3IzslWh5Gvo+QQQIcuSaJ80ETmP0cutz2DfXiLBtvEr4wBKiZSKOpLJCo0tRmikDUFuwVd4h6arlsjTZG6F6pYyUYuwQYhCMjIDHCLtlu38EwV74jvJIDSm91GHbRyg4Fmzh1KBTb2eYr+vazTqPuWR0W1s2JQO2pxaMN5pnS2QSqwGMf6IaWT507HR+PqLmPFIuGfY559XlaPVeaQoFPdfUTmZM/pJ47LcZWlvrwbpxrebRW5ZX1sBOSvZlgMlHWpyxakW9lOVgOkfeHecj2aJweg/9pQg0N7jBz6PKiw+tiUHZe/bobM0YhDjL4Tsv4Uv6LS4SEziIKUwbpWh21hwwAKmtSAH2BqBUg+LWtjd9KKhGgTTWPNxI3zKdx+mtUniiAlc4m28jAjx5tg9DqGSmm/oLpt+I2tEmXf8Onl87Ge7xxu6/L5BvjQllrLClWqW4K6RfT68JtDwLFndDDgO0A6elJQg6DYJt9A0S1q5tLILRTKy9olm4L2M4NFSgmKG6OjJHkxoSBtKFj7bkghxQ0gRGdm4k5VTuuDWiKz9BHvm0PzXap91d35EdopU3icXW+s2o39zT0HFWdVQX9iOhVjA31GiZQ="
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "session/join-rejected": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlMzU4ODBhNGUzMTU1NjE4ODhlODY5ZmEzODAzNmVmMyIsInlnZ3QiOiIwZjNjNGJhZDE4MjE0Nzk5YWNiZDA5MDUxZmE3OTE2ZSIsImlzcyI6IllnZ2RyYXNpbC1BdXRoIiwiZXhwIjoxNzkyNTkwMzc1LjY2MDEzMiwiaWF0IjoxNzkyMzMxMTc1LjY2MDEzMn0.lrQDcIDFsa8iF1XRM31ySPVh0ffj0BgWCHPMlxPEblE",
+            "clientToken": "8893675461f14088977ec9aaa5b47b9f",
+            "availableProfiles": [
+              {
+                "id": "5627dd98e6be3c21b8a8e92344183641",
+                "name": "Steve"
+              },
+              {
+                "id": "a818c0db482a377881ffd3df54c7a926",
+                "name": "Alex_01"
+              },
+              {
+                "id": "e9137a4c5bd3343aaa05e9e88790cd36",
+                "name": "OldSkin"
+              },
+              {
+                "id": "113b6fe9ccfb3414916db0f850c8b104",
+                "name": "CapeOnly"
+              },
+              {
+                "id": "d4801b6ca3c6333fa909264a6056ce2f",
+                "name": "NoTextures"
+              },
+              {
+                "id": "48f83307567a33d786043b22ee4c1b84",
+                "name": "Ghost"
+              },
+              {
+                "id": "36b57fa96d363a0389c065717c41cd87",
+                "name": "Dangling"
+              },
+              {
+                "id": "c4a5ef75281a3a7f9edc91d0203a7da8",
+                "name": "角色"
+              },
+              {
+                "id": "e577a570dbc0392ab6d9a8e7cc5d073a",
+                "name": "Dot.Name"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "The player requested doesn't match with that token."
+          }
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiJiYTAxYjFhOTYyNTk0ZjQzODIwOTFmYjA4NDExN2I2YyIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzUuNzY0MjE2LCJpYXQiOjE3OTIzMzExNzUuNzY0MjE2fQ.vpKUAmdOY9G9y5OvlD6MsW67Q0n-u95ZBqxwUpVfUkg",
+            "clientToken": "ebdc5da71c9b4f5b8c714d29994388d1",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "The player requested doesn't match with that token."
+          }
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "The player requested doesn't match with that token."
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "session/join-after-invalidate": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiIxNTlmYTZlOTQ2YmI0MGQwYWM1YWQ1NGE4ODEzNzQyOCIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzYuMjI3OTM0LCJpYXQiOjE3OTIzMzExNzYuMjI3OTM0fQ.hlyRzc9q94YkJXlg5qZfnzAlmQnC7L7OByCpjs8z6vQ",
+            "clientToken": "501c0e416a234ffeabc81d57db9bc80a",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 403,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "ForbiddenOperationException",
+            "errorMessage": "No valid credential information."
+          }
+        }
+      }
+    ],
+    "session/join-forwarded-ip": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiIyMmQ5Y2VhYjRkYmY0MGY5ODdmMTZlNmYyYTg2YzcwZiIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzYuNjY2MjYxLCJpYXQiOjE3OTIzMzExNzYuNjY2MjYxfQ.71HIaFA-L78X5yWifDAQcIjXx5slSMAZwAe9yorbEkE",
+            "clientToken": "0872507883354e72871416400634abcf",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "id": "80333097598c3d5f9b994ef1a3920f06",
+            "name": "Dave",
+            "properties": [
+              {
+                "name": "textures",
+                "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNzY3MDgsInByb2ZpbGVJZCI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwicHJvZmlsZU5hbWUiOiJEYXZlIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovLzEyNy4wLjAuMTozODA4MC90ZXh0dXJlcy85MzJhMDEzMmJmZTEwOGU5ZDdhYzc3MzRhY2E3NTUxOTJhM2UzNWI2ZWQyMzZiNWQwMDkwYzQwMDA1MjBlY2Q1IiwibWV0YWRhdGEiOnsibW9kZWwiOiJzbGltIn19LCJDQVBFIjp7InVybCI6Imh0dHA6Ly8xMjcuMC4wLjE6MzgwODAvdGV4dHVyZXMvYzU5MTNkMjhiOTdjOGJiMjU5NjU2Nzg4NjJlNTZlNTJiOTAxMjViNTVhY2JmNDc3Yzk5NjUzNTczMGQ1OWUxMiJ9fSwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWV9",
+                "signature": "QF6lHpUU8N87dpVQumqu4QUWqZVLy6Nd3KtpJXKemBGL/fP1XWVKNJmmczpJzAOdeYcpMrj9KPiFbTKS2cHFOK66Ogeg8SjL3422d/DPBw+BzfqdD1xJNKhauoWTXh0YjebNc1GITBGhn65ay9ciT8QaBiAXQqgDtzZTd9oSX32Jmasn4oXp+8M1pKcPRC5v4g8wmot5Ubo97Xnkh/jjwUOHE/CdVB0KaCD0RbnH31ri2QJx75hBAcmfoHQrjx1nDAMvDEcQLWzaddncfvwSvfChV6kM4EZQMByyFI7vE2iz3TaKSMiIAxSNNa2AEtoH3BhUboRQ6SJshjElW1ZmJhJb3EcOeziX7mYuGAk3TigseZVPQlLJuDwTOF2hpEyU01FdONN5QSZlP6rixobAV9Ntw5JF5tFkywDiVDJS+MLBmozdHuGHxO1maNV3TY+PkwkoVtbDjzreJk+E0dFQ/ROW0YhY60hT+d8gtY04egMc9cDUAv+XTUrVFe3NlVtAsmIbbl/s3yyzpklCNec1xg34jn1SRG86hM0fzSRJPYOS5T1CxuCukmkm9ked/H8Eer/bYZOi5J49X/nQlCMQEYq0fm6hElyQo9x20QuW1OsA/LVXejMogTxltqOABSWQmxGfDN8V5yZOHVJRYJaou+FDEwSIf1Kg/RrMNO5T7ho="
+              },
+              {
+                "name": "uploadableTextures",
+                "value": "skin,cape",
+                "signature": "sUCpZQprappvqKqk8kSs/wPCtYmMoNTEUxqiyIwagpM5gOvhs0IFZsjEckBTDVB6qc8sDuL6SS3IzslWh5Gvo+QQQIcuSaJ80ETmP0cutz2DfXiLBtvEr4wBKiZSKOpLJCo0tRmikDUFuwVd4h6arlsjTZG6F6pYyUYuwQYhCMjIDHCLtlu38EwV74jvJIDSm91GHbRyg4Fmzh1KBTb2eYr+vazTqPuWR0W1s2JQO2pxaMN5pnS2QSqwGMf6IaWT507HR+PqLmPFIuGfY559XlaPVeaQoFPdfUTmZM/pJ47LcZWlvrwbpxrebRW5ZX1sBOSvZlgMlHWpyxakW9lOVgOkfeHecj2aJweg/9pQg0N7jBz6PKiw+tiUHZe/bobM0YhDjL4Tsv4Uv6LS4SEziIKUwbpWh21hwwAKmtSAH2BqBUg+LWtjd9KKhGgTTWPNxI3zKdx+mtUniiAlc4m28jAjx5tg9DqGSmm/oLpt+I2tEmXf8Onl87Ge7xxu6/L5BvjQllrLClWqW4K6RfT68JtDwLFndDDgO0A6elJQg6DYJt9A0S1q5tLILRTKy9olm4L2M4NFSgmKG6OjJHkxoSBtKFj7bkghxQ0gRGdm4k5VTuuDWiKz9BHvm0PzXap91d35EdopU3icXW+s2o39zT0HFWdVQX9iOhVjA31GiZQ="
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "profile/upload-skin": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiJlNWYzNGMxYWJiNzg0OTYwYWIzNGJiMmQ0YWU0ZDk3YyIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzcuMTU4MTQ2LCJpYXQiOjE3OTIzMzExNzcuMTU4MTQ2fQ.WySjxVwQrb_ILnRjTYWJsUxRHLYG89yskjiLHaEXjR4",
+            "clientToken": "b272f6a65d9346089798abd4dcabd6a5",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "profile/upload-slim": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiJkZmUyZDIyZGVmN2I0NTJmYTJkNzg4ZDkxZWQ0OGRjNiIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzcuNjYzNzA1LCJpYXQiOjE3OTIzMzExNzcuNjYzNzA1fQ.dyyroow6ljJmbRizjE8d-_yKV1zvPN0zG9eU_o1LAM0",
+            "clientToken": "d6c83c08183543cda0b2a0a6caac87c1",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "profile/upload-cape": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiI5NGRiOWU0ODA3N2E0N2Y5YmJjYjNkZGFhNGNjZWY0MiIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzguMDg5MzU4LCJpYXQiOjE3OTIzMzExNzguMDg5MzU4fQ.ppOzXB-ZkNKL8GhntrKGcDHDI71Z4ZxsPoYP1cQA6h0",
+            "clientToken": "1be8b6b4357c4d75a3058ff8f13efa88",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "profile/upload-invalid": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiIyZTlhNTU5NmI5ZTQ0OWE3YjBmOGRjNzcwYmFmZWM4ZiIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzguNTI2MjU1LCJpYXQiOjE3OTIzMzExNzguNTI2MjU1fQ.S7Nbh2Ryb0nbR1DrLqJUeQzxDMPT9j2uOe0viYk6ZEE",
+            "clientToken": "9e3834891afe4b6aa6bbc22f6a006a75",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 400,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "IllegalArgumentException",
+            "errorMessage": "Invalid Skin file (width 64, height 32)"
+          }
+        }
+      },
+      {
+        "status": 400,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "IllegalArgumentException",
+            "errorMessage": "Invalid Cape file (width 64, height 64)"
+          }
+        }
+      }
+    ],
+    "profile/upload-unknown-profile": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiI4MjE1NDUyYjkzY2M0ZTM2ODM1NjRlZDA2ODc2ZTg3YiIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzkuMDExMjgzLCJpYXQiOjE3OTIzMzExNzkuMDExMjgzfQ.MUKYX79VXCjxGtIyIecmhIxAOuvZEx1eDvzSZTlg_0A",
+            "clientToken": "80a76438100e404cae1b833a1cce513b",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 404,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "NotFoundException",
+            "errorMessage": "Player is not found."
+          }
+        }
+      },
+      {
+        "status": 404,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "error": "NotFoundException",
+            "errorMessage": "Player is not found."
+          }
+        }
+      }
+    ],
+    "profile/upload-others": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiI5MzNiOWMzM2FjY2M0ZTZjOGRlZWJhZTI4YTMxZmIxNiIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzkuNDQ1OTU5LCJpYXQiOjE3OTIzMzExNzkuNDQ1OTU5fQ.u8VvnJkNQoZDRrBOeIvLAPMQo7iF1FAm3R1Rgt2X5Pk",
+            "clientToken": "b7e116972dc4432987d250f0c258286d",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ],
+    "profile/delete": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiJkMzg3OTliYzQ5OTQ0OGZlOTVmMmQ0YmU5NzZjZDUzOSIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzNzkuODYxNTY0LCJpYXQiOjE3OTIzMzExNzkuODYxNTY0fQ.bEBthj6Cm89NleCG0cdPJfMhnPAD2DTP9In3Dy0QT0Y",
+            "clientToken": "7558345faabd4fee87b2269221999eed",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      },
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "id": "80333097598c3d5f9b994ef1a3920f06",
+            "name": "Dave",
+            "properties": [
+              {
+                "name": "textures",
+                "value": "eyJ0aW1lc3RhbXAiOjE3OTIzMzExNzk5NDIsInByb2ZpbGVJZCI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwicHJvZmlsZU5hbWUiOiJEYXZlIiwiaXNQdWJsaWMiOnRydWUsInRleHR1cmVzIjp7fX0="
+              },
+              {
+                "name": "uploadableTextures",
+                "value": "skin,cape"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "profile/delete-others": [
+      {
+        "status": 200,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "content-type": "application/json",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "json",
+          "value": {
+            "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5MmQ3NTQ1ZDQyM2I1YzcxYTQ4NmE4N2ZiODVmYjhmYSIsInlnZ3QiOiJlNjkzMjQwMjdhYjM0OTQyYmI4MzQ4ZDBjYWQwZWZiYSIsInNwciI6IjgwMzMzMDk3NTk4YzNkNWY5Yjk5NGVmMWEzOTIwZjA2IiwiaXNzIjoiWWdnZHJhc2lsLUF1dGgiLCJleHAiOjE3OTI1OTAzODAuMzQ0MTcxLCJpYXQiOjE3OTIzMzExODAuMzQ0MTcxfQ.0JqZrV99IZp7GYeJrqveiKN5PCx3AgQpjZj3mX573s8",
+            "clientToken": "2324efdb59124ee493cf8906adf903d3",
+            "availableProfiles": [
+              {
+                "id": "80333097598c3d5f9b994ef1a3920f06",
+                "name": "Dave"
+              }
+            ],
+            "selectedProfile": {
+              "id": "80333097598c3d5f9b994ef1a3920f06",
+              "name": "Dave"
+            }
+          }
+        }
+      },
+      {
+        "status": 204,
+        "headers": {
+          "cache-control": "no-cache, private",
+          "x-authlib-injector-api-location": "http://127.0.0.1:38080/api/yggdrasil"
+        },
+        "body": {
+          "kind": "empty"
+        }
+      }
+    ]
   }
 }

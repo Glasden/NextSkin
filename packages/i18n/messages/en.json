@@ -253,7 +253,29 @@
       "history": "Recent point changes",
       "noHistory": "No point changes yet.",
       "balance": "Balance {balance}",
-      "announcement": "Announcement"
+      "announcement": "Announcement",
+      "launcher": {
+        "title": "External login",
+        "description": "Add this site to your game launcher to join external-login servers with the players and skins you have here.",
+        "copy": "Copy address",
+        "copied": "API address copied",
+        "copyFailed": "Couldn’t copy. Select the address and copy it yourself.",
+        "dragHint": "In launchers that support drag and drop, you can drag the “Copy address” button into the launcher window to add this site.",
+        "steps": {
+          "add": {
+            "title": "Add the server",
+            "body": "In your launcher’s account settings, choose external login (authlib-injector) and enter the address above."
+          },
+          "login": {
+            "title": "Sign in",
+            "body": "Use your email on this site or the name of any of your players as the username, and your password on this site."
+          },
+          "twoFactor": {
+            "title": "Two-step verification",
+            "body": "If two-step verification is on, type the 6-digit code from your authenticator right after your password. For password hunter2 and code 123456, enter hunter2123456."
+          }
+        }
+      }
     },
     "players": {
       "title": "Players",
@@ -390,7 +412,8 @@
         "on": "On",
         "off": "Off",
         "none": "None",
-        "passkeyCount": "{count, plural, other {#}}"
+        "passkeyCount": "{count, plural, other {#}}",
+        "launcherCount": "{count, plural, other {#}}"
       },
       "password": {
         "title": "Password",
@@ -407,7 +430,7 @@
         "title": "Two-step verification",
         "offDescription": "When it’s on, signing in with your password also asks for the 6-digit code from an authenticator app. Someone who knows your password still can’t sign in without your phone.",
         "onDescription": "Signing in with your password also asks for the 6-digit code from your authenticator app, or a backup code.",
-        "launcherNote": "Two-step verification protects signing in on the website only. Signing in to a game launcher with your email and password doesn’t ask for a code.",
+        "launcherNote": "With two-step verification on, signing in to a game launcher takes the 6-digit code from your authenticator typed right after your password. For password hunter2 and code 123456, enter hunter2123456. Backup codes don’t work in launchers.",
         "lostAccess": "If you lose both your phone and your backup codes, ask the site administrator to turn off two-step verification.",
         "enable": "Turn on two-step verification",
         "step": "Step {step} of 3.",
@@ -475,6 +498,24 @@
         "deleteConfirm": "Delete passkey",
         "deleted": "Passkey {name} deleted",
         "failed": "That didn’t work. Please try again later."
+      },
+      "launchers": {
+        "title": "Launcher logins",
+        "description": "When you sign in to a game launcher with this account, the launcher keeps a credential for joining servers and uploading skins, and renews it on its next start once it expires. If you lost a phone or signed in on someone else’s computer, sign it out here. Changing your password signs out every launcher.",
+        "empty": "No launcher logins yet. See your <link>dashboard</link> for how to set up a launcher.",
+        "player": "Player {name}",
+        "noPlayer": "No player selected",
+        "issuedAt": "Signed in {time}",
+        "valid": "Active",
+        "refreshable": "Renews on next start",
+        "revoke": "Sign out",
+        "revoked": "Launcher signed out",
+        "revokeAll": "Sign out all",
+        "revokeAllTitle": "Sign out all {count, plural, one {# launcher} other {# launchers}}?",
+        "revokeAllDescription": "Every launcher will need your password again. Games already on a server and your website sign-in are not affected.",
+        "revokeAllConfirm": "Sign out all",
+        "revokedAll": "All launchers signed out",
+        "failed": "That didn’t work. Try again later."
       }
     },
     "closet": {
@@ -1232,6 +1273,22 @@
           "apiLocationIndication": {
             "label": "Send API location indication",
             "help": "Adds the X-Authlib-Injector-API-Location header to responses, so entering the site’s home page in a launcher also finds the external login API."
+          },
+          "tokenValidSeconds": {
+            "label": "Token validity",
+            "help": "Seconds. Tokens can join servers, validate and change textures during this period."
+          },
+          "tokenRefreshableSeconds": {
+            "label": "Token refresh period",
+            "help": "Seconds. Sign in again after this period. Uses the validity period if it is longer."
+          },
+          "tokensPerUser": {
+            "label": "Tokens per user",
+            "help": "Tokens. Issuing a token removes the oldest launcher logins above this limit."
+          },
+          "loginIntervalMs": {
+            "label": "Login request interval",
+            "help": "Milliseconds. Sign-in and sign-out share an interval per username. 0 means no limit."
           }
         },
         "network": {
@@ -1253,6 +1310,29 @@
           }
         }
       }
+    }
+  },
+  "yggdrasil": {
+    "errors": {
+      "credentials_required": "Enter both a username and a password.",
+      "invalid_credentials": "Incorrect username, password or code. If two-step verification is on, type the 6-digit code from your authenticator right after your password.",
+      "too_frequent": "Too many requests. Try again in {seconds, plural, one {# second} other {# seconds}}.",
+      "too_many_failures": "Too many failed sign-ins. Try again in 15 minutes.",
+      "user_banned": "You’re banned from this site. Contact the site administrator for details.",
+      "email_not_verified": "Your email isn’t verified yet. Verify it on the website, then sign in again.",
+      "token_invalid": "Your sign-in has expired. Sign in again.",
+      "client_token_mismatch": "The client token doesn’t match this sign-in. Sign in again.",
+      "client_token_invalid": "The clientToken must be at most 255 characters and must not contain null characters.",
+      "player_not_found": "Player not found.",
+      "profile_already_bound": "This sign-in already has a player selected. Sign in again to choose another one.",
+      "profile_not_owned": "This player doesn’t belong to your account.",
+      "profile_mismatch": "The selected player doesn’t match the one chosen at sign-in. Select the player again in your launcher.",
+      "token_unauthorized": "Your sign-in has expired. Sign in again in your launcher.",
+      "texture_type_invalid": "The texture type must be skin or cape, not {type}.",
+      "texture_model_mismatch": "This image is already on the site with a different model. Upload it with the same model.",
+      "content_type": "The Content-Type of the request must be application/json.",
+      "signing_key_unavailable": "This site has no signing key yet, so external login is unavailable. Contact the site administrator.",
+      "query_limit": "You can look up at most {count, plural, one {# player} other {# players}} at a time."
     }
   }
 }

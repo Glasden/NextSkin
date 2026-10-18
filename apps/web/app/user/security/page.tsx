@@ -2,6 +2,7 @@ import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '@nextskin/domain'
 import { Badge } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
+import { Gamepad } from 'pixelarticons/react/Gamepad.js'
 import { Key } from 'pixelarticons/react/Key.js'
 import { Lock } from 'pixelarticons/react/Lock.js'
 import { Smartphone } from 'pixelarticons/react/Smartphone.js'
@@ -9,6 +10,7 @@ import type { ReactNode } from 'react'
 import { getServer } from '../../../lib/server'
 import { getRequestRoot, requireUser } from '../../../lib/session'
 import { ChangePasswordForm } from './change-password-form'
+import { LauncherLoginsPanel } from './launcher-logins-panel'
 import { PasskeysPanel } from './passkeys-panel'
 import { TwoFactorPanel } from './two-factor-panel'
 
@@ -17,23 +19,32 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('title') }
 }
 
-/** 登录与安全：密码、两步验证、通行密钥（ADR-0023）。改动都直接调用 Better Auth 的接口 */
+/**
+ * 登录与安全：密码、两步验证、通行密钥（ADR-0023），以及启动器登录（ADR-0030）。
+ * 前三项的改动直接调用 Better Auth 的接口，启动器登录走自己的 REST 接口
+ */
 export default async function SecurityPage() {
   const user = await requireUser('/user/security')
   const [{ core }, root] = await Promise.all([getServer(), getRequestRoot()])
-  const [security, settings, t, format] = await Promise.all([
+  const [security, launcherTokens, settings, t, format] = await Promise.all([
     core.auth.security(user.uid, root),
+    core.yggdrasil.listTokens(user.uid),
     core.settings.read(['site.name']),
     getTranslations('user.security'),
     getFormatter(),
   ])
+  const dateTime = (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short' })
   const passkeys = security.passkeys.map((passkey) => ({
     id: passkey.id,
     name: passkey.name,
     backedUp: passkey.backedUp,
-    addedAt: passkey.createdAt
-      ? format.dateTime(new Date(passkey.createdAt), { dateStyle: 'medium', timeStyle: 'short' })
-      : null,
+    addedAt: passkey.createdAt ? dateTime(passkey.createdAt) : null,
+  }))
+  const launcherLogins = launcherTokens.map((token) => ({
+    id: token.id,
+    player: token.player?.name ?? null,
+    issuedAt: dateTime(token.createdAt),
+    status: token.status,
   }))
 
   return (
@@ -47,7 +58,7 @@ export default async function SecurityPage() {
         <h2 id="overview-heading" className="font-pixel text-pixel-1 text-text">
           {t('overview.title')}
         </h2>
-        <ul className="grid gap-3 sm:grid-cols-3">
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <OverviewItem icon={<Lock aria-hidden />} label={t('password.title')}>
             <Badge tone="success">{t('overview.passwordSet')}</Badge>
           </OverviewItem>
@@ -61,6 +72,13 @@ export default async function SecurityPage() {
           <OverviewItem icon={<Key aria-hidden />} label={t('passkeys.title')}>
             {passkeys.length ? (
               <Badge tone="success">{t('overview.passkeyCount', { count: passkeys.length })}</Badge>
+            ) : (
+              <Badge>{t('overview.none')}</Badge>
+            )}
+          </OverviewItem>
+          <OverviewItem icon={<Gamepad aria-hidden />} label={t('launchers.title')}>
+            {launcherLogins.length ? (
+              <Badge>{t('overview.launcherCount', { count: launcherLogins.length })}</Badge>
             ) : (
               <Badge>{t('overview.none')}</Badge>
             )}
@@ -92,6 +110,19 @@ export default async function SecurityPage() {
         description={t('passkeys.description')}
       >
         <PasskeysPanel passkeys={passkeys} />
+      </Section>
+
+      <Section
+        id="launchers"
+        title={t('launchers.title')}
+        badge={
+          launcherLogins.length ? (
+            <Badge>{t('overview.launcherCount', { count: launcherLogins.length })}</Badge>
+          ) : undefined
+        }
+        description={t('launchers.description')}
+      >
+        <LauncherLoginsPanel logins={launcherLogins} />
       </Section>
     </div>
   )

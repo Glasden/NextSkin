@@ -1,22 +1,26 @@
 // 协议契约用例：只写请求和比对方式。响应从 BS v6 录制（scripts/record.ts），存在 recordings/bs-v6.json。
 // 新增或修改用例后要重新录制。比对规则见 README.md 和 compare.ts。
-import { HOST, offlineUuid, orphanUuid, playerByName, textures } from './world.ts'
+import { readFileSync } from 'node:fs'
+import { HOST, offlineUuid, orphanUuid, PASSWORD, playerByName, textures } from './world.ts'
 
 export interface ContractRequest {
   method: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS'
   /** 原样发送，不再编码：需要百分号编码的字符要在这里写好 */
   path: string
   headers?: Record<string, string>
-  body?: string
+  /** 字符串按 UTF-8 发送；上传材质的 multipart 请求体是字节 */
+  body?: string | Uint8Array
 }
 
 /**
  * JSON 响应体的比对方式，默认 `exact`（深比较）：
  * - `yggdrasil-meta`：`implementationName`、`implementationVersion` 只要求是非空字符串，公钥只要求是 4096 位以上的 RSA 公钥；
  * - `yggdrasil-profile`：`textures` 属性解码后比较，其中 `timestamp` 只要求是录制或回放期间的时间；签名用各自的公钥验证；
- * - `yggdrasil-error`：`errorMessage` 只要求是非空字符串（提示文案由各自的语言包决定）。
+ * - `yggdrasil-error`：`errorMessage` 只要求是非空字符串（提示文案由各自的语言包决定）；
+ * - `yggdrasil-token`：只用于场景，见 `ScenarioStep`。`accessToken` 只要求是非空字符串，并且与这个场景里之前出现过的都不同；
+ *   请求里给了 `clientToken` 时逐字比较；没给时第一次出现只要求非空，之后录制结果里同一个值在回放里也要相同；其余字段深比较。
  */
-export type BodyMatch = 'exact' | 'yggdrasil-meta' | 'yggdrasil-profile' | 'yggdrasil-error'
+export type BodyMatch = 'exact' | 'yggdrasil-meta' | 'yggdrasil-profile' | 'yggdrasil-error' | 'yggdrasil-token'
 
 export interface ContractCase {
   id: string
@@ -50,6 +54,26 @@ function method(name: ContractRequest['method'], path: string): ContractRequest 
 
 function postJson(path: string, body: string, headers?: Record<string, string>): ContractRequest {
   return { method: 'POST', path, headers: { 'content-type': 'application/json', ...headers }, body }
+}
+
+const MULTIPART_BOUNDARY = '----NextSkinContractBoundary7MA4YWxkTrZu0gW'
+
+/** 启动器上传材质的请求体：先是 model 字段，再是文件（HMCL 的顺序） */
+function multipart(fixture: string, filename: string, model?: string): Uint8Array {
+  const parts: Buffer[] = []
+  if (model !== undefined)
+    parts.push(
+      Buffer.from(`--${MULTIPART_BOUNDARY}\r\nContent-Disposition: form-data; name="model"\r\n\r\n${model}\r\n`),
+    )
+  parts.push(
+    Buffer.from(
+      `--${MULTIPART_BOUNDARY}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
+        'Content-Type: image/png\r\n\r\n',
+    ),
+    readFileSync(new URL(`../fixtures/textures/${fixture}`, import.meta.url)),
+    Buffer.from(`\r\n--${MULTIPART_BOUNDARY}--\r\n`),
+  )
+  return new Uint8Array(Buffer.concat(parts))
 }
 
 const hash = (tid: number) => textures.find((texture) => texture.tid === tid)!.file.hash
@@ -554,6 +578,185 @@ const yggdrasil: ContractCase[] = [
   },
 ]
 
+const AUTHSERVER = '/api/yggdrasil/authserver'
+const SESSIONSERVER = '/api/yggdrasil/sessionserver/session/minecraft'
+const USER_PROFILE = '/api/yggdrasil/api/user/profile'
+/** 不存在的令牌 */
+const UNKNOWN_TOKEN = 'f'.repeat(32)
+
+function authserver(endpoint: string, body: Record<string, unknown>, headers?: Record<string, string>) {
+  return postJson(`${AUTHSERVER}/${endpoint}`, JSON.stringify(body), headers)
+}
+
+// 不依赖令牌的 authserver、进服、上传请求。authenticate 和 signout 按 username 节流，只放在场景里（见下）。
+const yggdrasilStateless: ContractCase[] = [
+  {
+    id: 'ygg/authenticate-not-json',
+    title: 'authserver 只收 JSON：其他 Content-Type 返回 200 和错误',
+    request: authserver(
+      'authenticate',
+      { username: 'steve@nextskin.test', password: PASSWORD },
+      {
+        'content-type': 'text/plain',
+      },
+    ),
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/authenticate-form',
+    title: '表单格式的 authenticate',
+    request: {
+      method: 'POST',
+      path: `${AUTHSERVER}/authenticate`,
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: `username=steve%40nextskin.test&password=${PASSWORD}`,
+    },
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/authenticate-no-content-type',
+    title: '没有 Content-Type',
+    request: { method: 'POST', path: `${AUTHSERVER}/authenticate`, body: '{}' },
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/refresh-not-json',
+    title: 'refresh 不是 JSON',
+    request: authserver('refresh', { accessToken: UNKNOWN_TOKEN }, { 'content-type': 'text/plain' }),
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/validate-not-json',
+    title: 'validate 不是 JSON',
+    request: authserver('validate', { accessToken: UNKNOWN_TOKEN }, { 'content-type': 'text/plain' }),
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/invalidate-not-json',
+    title: 'invalidate 不是 JSON',
+    request: authserver('invalidate', { accessToken: UNKNOWN_TOKEN }, { 'content-type': 'text/plain' }),
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/signout-not-json',
+    title: 'signout 不是 JSON（在节流之前就返回）',
+    request: authserver(
+      'signout',
+      { username: 'steve@nextskin.test', password: PASSWORD },
+      {
+        'content-type': 'text/plain',
+      },
+    ),
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/refresh-unknown',
+    title: 'refresh 不存在的令牌',
+    request: authserver('refresh', { accessToken: UNKNOWN_TOKEN, clientToken: 'client' }),
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/validate-unknown',
+    title: 'validate 不存在的令牌',
+    request: authserver('validate', { accessToken: UNKNOWN_TOKEN }),
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/invalidate-unknown',
+    title: 'invalidate 不存在的令牌也返回 204',
+    request: authserver('invalidate', { accessToken: UNKNOWN_TOKEN, clientToken: 'client' }),
+  },
+  {
+    id: 'ygg/join-unknown-token',
+    title: 'join 不存在的令牌',
+    request: postJson(
+      `${SESSIONSERVER}/join`,
+      JSON.stringify({ accessToken: UNKNOWN_TOKEN, selectedProfile: uuidOf('Steve'), serverId: 'contract-server' }),
+    ),
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/join-unknown-profile',
+    title: 'join 不存在的角色',
+    request: postJson(
+      `${SESSIONSERVER}/join`,
+      JSON.stringify({ accessToken: UNKNOWN_TOKEN, selectedProfile: '0'.repeat(32), serverId: 'contract-server' }),
+    ),
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/join-empty',
+    title: 'join 的请求体是空对象',
+    request: postJson(`${SESSIONSERVER}/join`, '{}'),
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/has-joined-unknown',
+    title: 'hasJoined：没有这个 serverId 的进服记录',
+    request: get(`${SESSIONSERVER}/hasJoined?username=Steve&serverId=no-such-server`),
+  },
+  {
+    id: 'ygg/has-joined-empty',
+    title: 'hasJoined 没有参数',
+    request: get(`${SESSIONSERVER}/hasJoined`),
+  },
+  {
+    id: 'ygg/upload-no-token',
+    title: '上传材质没有 Authorization',
+    request: {
+      method: 'PUT',
+      path: `${USER_PROFILE}/${uuidOf('Steve')}/skin`,
+      headers: { 'content-type': `multipart/form-data; boundary=${MULTIPART_BOUNDARY}` },
+      body: multipart('steve-64x64.png', 'steve.png'),
+    },
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/upload-unknown-token',
+    title: '上传材质，令牌不存在',
+    request: {
+      method: 'PUT',
+      path: `${USER_PROFILE}/${uuidOf('Steve')}/skin`,
+      headers: {
+        authorization: `Bearer ${UNKNOWN_TOKEN}`,
+        'content-type': `multipart/form-data; boundary=${MULTIPART_BOUNDARY}`,
+      },
+      body: multipart('steve-64x64.png', 'steve.png'),
+    },
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/upload-basic-auth',
+    title: '上传材质用 Basic 认证',
+    request: {
+      method: 'PUT',
+      path: `${USER_PROFILE}/${uuidOf('Steve')}/skin`,
+      headers: {
+        authorization: `Basic ${Buffer.from(`steve@nextskin.test:${PASSWORD}`).toString('base64')}`,
+        'content-type': `multipart/form-data; boundary=${MULTIPART_BOUNDARY}`,
+      },
+      body: multipart('steve-64x64.png', 'steve.png'),
+    },
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/delete-no-token',
+    title: '删除材质没有 Authorization',
+    request: method('DELETE', `${USER_PROFILE}/${uuidOf('Steve')}/skin`),
+    body: 'yggdrasil-error',
+  },
+  {
+    id: 'ygg/delete-unknown-token',
+    title: '删除材质，令牌不存在',
+    request: {
+      method: 'DELETE',
+      path: `${USER_PROFILE}/${uuidOf('Steve')}/cape`,
+      headers: { authorization: `Bearer ${UNKNOWN_TOKEN}` },
+    },
+    body: 'yggdrasil-error',
+  },
+]
+
 // 方法不对时 Laravel 返回 405 和 Allow；OPTIONS 由路由器直接回答
 const methods: ContractCase[] = [
   { id: 'methods/csl-post', title: 'POST CSL', request: method('POST', '/csl/Steve.json') },
@@ -567,6 +770,20 @@ const methods: ContractCase[] = [
   { id: 'methods/bulk-options', title: 'OPTIONS 批量查询', request: method('OPTIONS', BULK) },
   { id: 'methods/profile-post', title: 'POST 按 UUID 查询', request: method('POST', `${PROFILE}/${uuidOf('Steve')}`) },
   { id: 'methods/single-delete', title: 'DELETE 按名字查询', request: method('DELETE', `${SINGLE}/Steve`) },
+  { id: 'methods/authenticate-get', title: 'GET authenticate', request: get(`${AUTHSERVER}/authenticate`) },
+  { id: 'methods/validate-options', title: 'OPTIONS validate', request: method('OPTIONS', `${AUTHSERVER}/validate`) },
+  { id: 'methods/join-get', title: 'GET join', request: get(`${SESSIONSERVER}/join`) },
+  { id: 'methods/has-joined-post', title: 'POST hasJoined', request: method('POST', `${SESSIONSERVER}/hasJoined`) },
+  {
+    id: 'methods/user-profile-post',
+    title: 'POST 上传材质的路径',
+    request: method('POST', `${USER_PROFILE}/${uuidOf('Steve')}/skin`),
+  },
+  {
+    id: 'methods/user-profile-get',
+    title: 'GET 上传材质的路径',
+    request: get(`${USER_PROFILE}/${uuidOf('Steve')}/skin`),
+  },
   {
     id: 'methods/meta-options',
     title: 'OPTIONS 元数据（Route::any 接受任何方法）',
@@ -612,6 +829,7 @@ export const cases: ContractCase[] = [
   ...texture,
   ...textureEtag,
   ...yggdrasil,
+  ...yggdrasilStateless,
   ...methods,
   ...head,
 ]
@@ -640,11 +858,574 @@ export function resolveRequest(contractCase: ContractCase, etag?: string): Requi
   }
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// 场景：authserver 和进服是有状态的，一个场景按顺序发几个请求，后面的请求用前面响应里的令牌（ADR-0030）。
+// 每个场景开始前，录制时恢复固定数据、清空 BS 的缓存（令牌、节流、进服记录都在里面）；回放时用新的核心实例。
+// authenticate 和 signout 按 username 节流（同一个 username 1 秒内只能请求一次），同一个场景里换着用邮箱和角色名。
+
+/** 前面的步骤取到的值，键是 `capture` 里起的名字 */
+export type Captured = Record<string, string>
+
+export interface ScenarioStep {
+  title: string
+  request: ContractRequest | ((captured: Captured) => ContractRequest)
+  body?: BodyMatch
+  /** 从这一步的 JSON 响应里取值：{ 名字: 响应里的键 } */
+  capture?: Record<string, 'accessToken' | 'clientToken'>
+  /** 同 ContractCase 的 deviation：照样录制 BS 的响应，回放时改为与 `compareWith` 这个一问一答用例的录制结果比较 */
+  deviation?: { reason: string; compareWith: string }
+}
+
+export interface ContractScenario {
+  id: string
+  title: string
+  steps: ScenarioStep[]
+}
+
+const STEVE = 'steve@nextskin.test'
+const DAVE = 'dave@nextskin.test'
+const BANNED = 'banned@nextskin.test'
+
+/** 登录并把令牌记作 `as` */
+function login(username: string, as = 'token', extra: Record<string, unknown> = {}): ScenarioStep {
+  return {
+    title: `用 ${username} 登录`,
+    request: authserver('authenticate', { username, password: PASSWORD, ...extra }),
+    body: 'yggdrasil-token',
+    capture: { [as]: 'accessToken' },
+  }
+}
+
+function rejected(title: string, request: ScenarioStep['request']): ScenarioStep {
+  return { title, request, body: 'yggdrasil-error' }
+}
+
+function validate(as = 'token', extra: Record<string, unknown> = {}): ScenarioStep {
+  return {
+    title: `validate ${as}`,
+    request: (captured) => authserver('validate', { accessToken: captured[as], ...extra }),
+    body: 'yggdrasil-error',
+  }
+}
+
+function join(profile: string, as = 'token', serverId = 'server-1', headers?: Record<string, string>) {
+  return (captured: Captured) =>
+    postJson(
+      `${SESSIONSERVER}/join`,
+      JSON.stringify({ accessToken: captured[as], selectedProfile: profile, serverId }),
+      headers,
+    )
+}
+
+function hasJoined(query: string): ScenarioStep {
+  return { title: `hasJoined?${query}`, request: get(`${SESSIONSERVER}/hasJoined?${query}`), body: 'yggdrasil-profile' }
+}
+
+function upload(profile: string, type: string, fixture: string, filename: string, model?: string, as = 'token') {
+  return (captured: Captured): ContractRequest => ({
+    method: 'PUT',
+    path: `${USER_PROFILE}/${profile}/${type}`,
+    headers: {
+      authorization: `Bearer ${captured[as]}`,
+      'content-type': `multipart/form-data; boundary=${MULTIPART_BOUNDARY}`,
+    },
+    body: multipart(fixture, filename, model),
+  })
+}
+
+function reset(profile: string, type: string, as = 'token') {
+  return (captured: Captured): ContractRequest => ({
+    method: 'DELETE',
+    path: `${USER_PROFILE}/${profile}/${type}`,
+    headers: { authorization: `Bearer ${captured[as]}` },
+  })
+}
+
+const SECURITY_DEVIATION = 'yggdrasil-api 的安全缺陷（ADR-0030）'
+
+const authenticateScenarios: ContractScenario[] = [
+  {
+    id: 'auth/authenticate-email',
+    title: '用邮箱登录：多个角色时不自动绑定，clientToken 原样返回，requestUser 返回用户 ID',
+    steps: [
+      login(STEVE, 'token', {
+        clientToken: 'launcher-client-1',
+        requestUser: true,
+        agent: { name: 'Minecraft', version: 1 },
+      }),
+    ],
+  },
+  {
+    id: 'auth/authenticate-single-profile',
+    title: '只有一个角色时自动绑定；没给 clientToken 时由服务端生成',
+    steps: [login(DAVE)],
+  },
+  {
+    id: 'auth/authenticate-player-name',
+    title: '用角色名登录，大小写不同也能找到',
+    steps: [login('alex_01', 'token', { requestUser: true })],
+  },
+  {
+    id: 'auth/authenticate-email-case',
+    title: '邮箱大小写不同也能找到，用户 ID 按库里的邮箱算',
+    steps: [login('Steve@NextSkin.Test', 'token', { requestUser: true })],
+  },
+  {
+    id: 'auth/authenticate-trimmed',
+    title: '用户名和密码首尾的空白被 trim（BS 的 TrimStrings）',
+    steps: [
+      {
+        title: '用户名和密码首尾带空格',
+        request: authserver('authenticate', { username: ` ${DAVE} `, password: ` ${PASSWORD}\t` }),
+        body: 'yggdrasil-token',
+      },
+    ],
+  },
+  {
+    id: 'auth/authenticate-request-user',
+    title: 'requestUser 按 PHP 的真假判断',
+    steps: [
+      login(STEVE, 'a', { requestUser: 'false' }),
+      login('Dave', 'b', { requestUser: '0' }),
+      login('Alex_01', 'c', { requestUser: 1 }),
+      login(DAVE, 'd', { requestUser: false }),
+    ],
+  },
+  {
+    id: 'auth/authenticate-content-type',
+    title: 'Content-Type 带参数或是 text/json 时也算 JSON',
+    steps: [
+      {
+        title: 'application/json; charset=UTF-8',
+        request: authserver(
+          'authenticate',
+          { username: DAVE, password: PASSWORD },
+          {
+            'content-type': 'application/json; charset=UTF-8',
+          },
+        ),
+        body: 'yggdrasil-token',
+      },
+      {
+        title: 'text/json',
+        request: authserver('authenticate', { username: STEVE, password: PASSWORD }, { 'content-type': 'text/json' }),
+        body: 'yggdrasil-token',
+      },
+    ],
+  },
+  {
+    id: 'auth/authenticate-rejected',
+    title: '密码错误、用户不存在、角色不存在都是 403',
+    steps: [
+      rejected('密码错误', authserver('authenticate', { username: STEVE, password: 'wrong-password' })),
+      rejected('邮箱不存在', authserver('authenticate', { username: 'nobody@nextskin.test', password: PASSWORD })),
+      rejected('角色不存在', authserver('authenticate', { username: 'Nobody', password: PASSWORD })),
+      rejected('用角色名登录，密码错误', authserver('authenticate', { username: 'Dave', password: 'wrong' })),
+    ],
+  },
+  {
+    id: 'auth/authenticate-missing',
+    title: '用户名或密码为空返回 400',
+    steps: [
+      rejected('没有密码', authserver('authenticate', { username: STEVE })),
+      rejected('没有用户名', authserver('authenticate', { password: PASSWORD })),
+      rejected('密码是空串（ConvertEmptyStringsToNull）', authserver('authenticate', { username: DAVE, password: '' })),
+    ],
+  },
+  {
+    id: 'auth/authenticate-banned',
+    title: '被封禁的用户密码正确也不能登录',
+    steps: [rejected('被封禁的用户', authserver('authenticate', { username: BANNED, password: PASSWORD }))],
+  },
+  {
+    id: 'auth/authenticate-throttled',
+    title: '同一个 username 1 秒内只能请求一次，不论成败；换个 username 不受影响',
+    steps: [
+      login(STEVE, 'a'),
+      rejected('同一个邮箱马上再登录', authserver('authenticate', { username: STEVE, password: PASSWORD })),
+      rejected('另一个用户密码错误', authserver('authenticate', { username: DAVE, password: 'wrong' })),
+      rejected('马上用正确的密码重试', authserver('authenticate', { username: DAVE, password: PASSWORD })),
+      login('Steve', 'b'),
+      validate('a'),
+      validate('b'),
+    ],
+  },
+  {
+    id: 'auth/tokens-limit',
+    title: '每个用户的令牌数有上限（ygg_tokens_limit = 3），挤掉最早的',
+    steps: [
+      login('Steve', 'a'),
+      login('Alex_01', 'b'),
+      login('OldSkin', 'c'),
+      login(STEVE, 'd'),
+      validate('a'),
+      validate('b'),
+      validate('d'),
+    ],
+  },
+]
+
+const refreshScenarios: ContractScenario[] = [
+  {
+    id: 'auth/refresh',
+    title: 'refresh 签发新令牌、沿用 clientToken 和绑定的角色，旧令牌失效',
+    steps: [
+      login(DAVE, 'old', { clientToken: 'client-dave' }),
+      {
+        title: 'refresh',
+        request: (captured) =>
+          authserver('refresh', { accessToken: captured.old, clientToken: 'client-dave', requestUser: true }),
+        body: 'yggdrasil-token',
+        capture: { new: 'accessToken' },
+      },
+      validate('old'),
+      validate('new', { clientToken: 'client-dave' }),
+      rejected('再用旧令牌 refresh', (captured) => authserver('refresh', { accessToken: captured.old })),
+    ],
+  },
+  {
+    id: 'auth/refresh-without-client-token',
+    title: 'refresh 不带 clientToken',
+    steps: [
+      login(STEVE, 'old', { clientToken: 'client-steve' }),
+      {
+        title: 'refresh',
+        request: (captured) => authserver('refresh', { accessToken: captured.old }),
+        body: 'yggdrasil-token',
+        capture: { new: 'accessToken' },
+      },
+      validate('new'),
+    ],
+  },
+  {
+    id: 'auth/refresh-wrong-client-token',
+    title: 'refresh 的 clientToken 不一致：403，旧令牌仍然有效',
+    steps: [
+      login(STEVE, 'token', { clientToken: 'client-steve' }),
+      rejected('clientToken 不一致', (captured) =>
+        authserver('refresh', { accessToken: captured.token, clientToken: 'other-client' }),
+      ),
+      validate('token'),
+    ],
+  },
+  {
+    id: 'auth/refresh-select-profile',
+    title: 'refresh 时选择角色，之后能用它进服',
+    steps: [
+      login(STEVE, 'old'),
+      {
+        title: '选择 Alex_01',
+        request: (captured) =>
+          authserver('refresh', {
+            accessToken: captured.old,
+            selectedProfile: { id: uuidOf('Alex_01'), name: 'Alex_01' },
+          }),
+        body: 'yggdrasil-token',
+        capture: { new: 'accessToken' },
+      },
+      { title: '用 Alex_01 进服', request: join(uuidOf('Alex_01'), 'new') },
+      hasJoined('username=Alex_01&serverId=server-1'),
+    ],
+  },
+  {
+    id: 'auth/refresh-select-by-id',
+    title: '选择角色按 id 找，名字只要求有角色叫这个名字',
+    steps: [
+      login(STEVE, 'old'),
+      {
+        title: 'id 是 OldSkin，名字是 Steve',
+        request: (captured) =>
+          authserver('refresh', {
+            accessToken: captured.old,
+            selectedProfile: { id: uuidOf('OldSkin'), name: 'Steve' },
+          }),
+        body: 'yggdrasil-token',
+      },
+    ],
+  },
+  {
+    id: 'auth/refresh-select-rejected',
+    title: '选择角色：名字不存在 400，不是自己的角色 403，旧令牌仍然有效',
+    steps: [
+      login(STEVE, 'token'),
+      rejected('没有叫这个名字的角色', (captured) =>
+        authserver('refresh', { accessToken: captured.token, selectedProfile: { id: '0'.repeat(32), name: 'Nobody' } }),
+      ),
+      rejected('别人的角色', (captured) =>
+        authserver('refresh', {
+          accessToken: captured.token,
+          selectedProfile: { id: uuidOf('HDSkin'), name: 'HDSkin' },
+        }),
+      ),
+      validate('token'),
+    ],
+  },
+  {
+    id: 'auth/refresh-select-bound',
+    title: '令牌已经绑定了角色时再选择，即使是同一个也返回 400',
+    steps: [
+      login(DAVE, 'token'),
+      rejected('选择已经绑定的角色', (captured) =>
+        authserver('refresh', { accessToken: captured.token, selectedProfile: { id: uuidOf('Dave'), name: 'Dave' } }),
+      ),
+    ],
+  },
+]
+
+const tokenScenarios: ContractScenario[] = [
+  {
+    id: 'auth/validate',
+    title: 'validate：给了 clientToken 就必须一致',
+    steps: [
+      login(STEVE, 'token', { clientToken: 'client-steve' }),
+      validate('token'),
+      validate('token', { clientToken: 'client-steve' }),
+      validate('token', { clientToken: 'other-client' }),
+    ],
+  },
+  {
+    id: 'auth/invalidate',
+    title: 'invalidate 不检查 clientToken，令牌不存在也返回 204',
+    steps: [
+      login(STEVE, 'token', { clientToken: 'client-steve' }),
+      {
+        title: 'clientToken 不一致也吊销',
+        request: (captured) => authserver('invalidate', { accessToken: captured.token, clientToken: 'other-client' }),
+      },
+      validate('token'),
+      { title: '再吊销一次', request: (captured) => authserver('invalidate', { accessToken: captured.token }) },
+    ],
+  },
+  {
+    id: 'auth/signout',
+    title: 'signout 吊销这个用户的全部令牌',
+    steps: [
+      login('Alex_01', 'a'),
+      login('Steve', 'b'),
+      { title: '用邮箱 signout', request: authserver('signout', { username: STEVE, password: PASSWORD }) },
+      validate('a'),
+      validate('b'),
+    ],
+  },
+  {
+    id: 'auth/signout-rejected',
+    title: 'signout 密码错误 403，不吊销；用户名为空 400',
+    steps: [
+      login('Alex_01', 'token'),
+      rejected('密码错误', authserver('signout', { username: STEVE, password: 'wrong-password' })),
+      rejected('没有用户名', authserver('signout', { password: PASSWORD })),
+      validate('token'),
+    ],
+  },
+  {
+    id: 'auth/signout-banned',
+    title: 'signout 不检查封禁',
+    steps: [
+      { title: '被封禁的用户 signout', request: authserver('signout', { username: BANNED, password: PASSWORD }) },
+    ],
+  },
+  {
+    id: 'auth/signout-throttled',
+    title: 'signout 与 authenticate 共用节流',
+    steps: [
+      login(STEVE, 'token'),
+      rejected('马上用同一个邮箱 signout', authserver('signout', { username: STEVE, password: PASSWORD })),
+      validate('token'),
+    ],
+  },
+  {
+    id: 'auth/signout-player-name',
+    title: '用角色名 signout',
+    steps: [
+      login(STEVE, 'token'),
+      { title: '用角色名 signout', request: authserver('signout', { username: 'Alex_01', password: PASSWORD }) },
+      {
+        ...validate('token'),
+        deviation: {
+          reason: `${SECURITY_DEVIATION}：BS 按小写的用户名找令牌列表，用角色名 signout 什么也没吊销；NextSkin 吊销`,
+          compareWith: 'ygg/validate-unknown',
+        },
+      },
+    ],
+  },
+]
+
+const sessionScenarios: ContractScenario[] = [
+  {
+    id: 'session/join',
+    title: 'join 之后 hasJoined 返回带签名的资料，120 秒内可以查多次',
+    steps: [
+      login(DAVE, 'token'),
+      { title: 'join', request: join(uuidOf('Dave')) },
+      hasJoined('username=Dave&serverId=server-1'),
+      hasJoined('username=Dave&serverId=server-1'),
+      hasJoined('username=Dave%20&serverId=server-1'),
+      hasJoined('username=dave&serverId=server-1'),
+      hasJoined('username=Dave&serverId=server-2'),
+      hasJoined('username=Dave&serverId=server-1&ip=192.0.2.1'),
+    ],
+  },
+  {
+    id: 'session/join-rejected',
+    title: 'join：令牌没有绑定角色、绑定的不是这个角色、UUID 大小写不同，都是 403',
+    steps: [
+      login(STEVE, 'unbound'),
+      rejected('令牌没有绑定角色', join(uuidOf('Steve'), 'unbound')),
+      login(DAVE, 'bound'),
+      rejected('别的角色', join(uuidOf('Steve'), 'bound')),
+      rejected('UUID 是大写', join(uuidOf('Dave').toUpperCase(), 'bound')),
+      hasJoined('username=Dave&serverId=server-1'),
+    ],
+  },
+  {
+    id: 'session/join-after-invalidate',
+    title: '令牌吊销以后不能进服',
+    steps: [
+      login(DAVE, 'token'),
+      { title: 'invalidate', request: (captured) => authserver('invalidate', { accessToken: captured.token }) },
+      rejected('join', join(uuidOf('Dave'))),
+    ],
+  },
+  {
+    id: 'session/join-forwarded-ip',
+    title: 'join 请求自带的 X-Forwarded-For',
+    steps: [
+      login(DAVE, 'token'),
+      { title: 'join', request: join(uuidOf('Dave'), 'token', 'server-1', { 'x-forwarded-for': '198.51.100.7' }) },
+      {
+        ...hasJoined('username=Dave&serverId=server-1&ip=198.51.100.7'),
+        deviation: {
+          reason: `${SECURITY_DEVIATION}：BS 采信任意来源的转发头；NextSkin 只按受信代理解析客户端 IP`,
+          compareWith: 'ygg/has-joined-unknown',
+        },
+      },
+    ],
+  },
+]
+
+const DAVE_UUID = uuidOf('Dave')
+const profileScenarios: ContractScenario[] = [
+  {
+    id: 'profile/upload-skin',
+    title: '上传皮肤',
+    steps: [
+      login(DAVE, 'token'),
+      { title: '上传一张新皮肤', request: upload(DAVE_UUID, 'skin', 'legacy-64x32.png', 'my-skin.png') },
+      { title: '上传站内已有的公开皮肤', request: upload(DAVE_UUID, 'skin', 'steve-64x64.png', 'steve.png') },
+    ],
+  },
+  {
+    id: 'profile/upload-slim',
+    title: '上传 Alex 模型的皮肤',
+    steps: [
+      login(DAVE, 'token'),
+      { title: 'model=slim', request: upload(DAVE_UUID, 'skin', 'alex-64x64.png', 'alex.png', 'slim') },
+    ],
+  },
+  {
+    id: 'profile/upload-cape',
+    title: '上传披风',
+    steps: [login(DAVE, 'token'), { title: '披风', request: upload(DAVE_UUID, 'cape', 'cape-64x32.png', 'cape.png') }],
+  },
+  {
+    id: 'profile/upload-invalid',
+    title: '尺寸不对返回 400',
+    steps: [
+      login(DAVE, 'token'),
+      rejected('Alex 模型的 64×32 皮肤', upload(DAVE_UUID, 'skin', 'legacy-64x32.png', 'legacy.png', 'slim')),
+      rejected('1:1 的披风', upload(DAVE_UUID, 'cape', 'steve-64x64.png', 'steve.png')),
+    ],
+  },
+  {
+    id: 'profile/upload-unknown-profile',
+    title: '角色不存在返回 404',
+    steps: [
+      login(DAVE, 'token'),
+      rejected('上传', upload('0'.repeat(32), 'skin', 'steve-64x64.png', 'steve.png')),
+      rejected('删除', reset('0'.repeat(32), 'skin')),
+    ],
+  },
+  {
+    id: 'profile/upload-others',
+    title: '上传别人角色的材质',
+    steps: [
+      login(DAVE, 'token'),
+      {
+        title: '给 Steve 上传皮肤',
+        request: upload(uuidOf('Steve'), 'skin', 'steve-64x64.png', 'steve.png'),
+        body: 'yggdrasil-error',
+        deviation: {
+          reason: `${SECURITY_DEVIATION}：BS 不检查角色归属，任何人都能改别人角色的材质；NextSkin 返回 403`,
+          compareWith: 'ygg/validate-unknown',
+        },
+      },
+    ],
+  },
+  {
+    id: 'profile/delete',
+    title: '删除皮肤和披风',
+    steps: [
+      login(DAVE, 'token'),
+      { title: '删除皮肤', request: reset(DAVE_UUID, 'skin') },
+      { title: '删除披风', request: reset(DAVE_UUID, 'cape') },
+      {
+        title: '按 UUID 查角色：没有材质了',
+        request: get(`${PROFILE}/${DAVE_UUID}`),
+        body: 'yggdrasil-profile',
+      },
+    ],
+  },
+  {
+    id: 'profile/delete-others',
+    title: '删除别人角色的材质',
+    steps: [
+      login(DAVE, 'token'),
+      {
+        title: '删除 Steve 的披风',
+        request: reset(uuidOf('Steve'), 'cape'),
+        body: 'yggdrasil-error',
+        deviation: {
+          reason: `${SECURITY_DEVIATION}：BS 不检查角色归属；NextSkin 返回 403`,
+          compareWith: 'ygg/validate-unknown',
+        },
+      },
+    ],
+  },
+]
+
+export const scenarios: ContractScenario[] = [
+  ...authenticateScenarios,
+  ...refreshScenarios,
+  ...tokenScenarios,
+  ...sessionScenarios,
+  ...profileScenarios,
+]
+
+/** 合并默认请求头，按前面取到的值填好请求 */
+export function resolveStep(step: ScenarioStep, captured: Captured): Required<ContractRequest> {
+  const request = typeof step.request === 'function' ? step.request(captured) : step.request
+  return {
+    method: request.method,
+    path: request.path,
+    headers: { ...DEFAULT_HEADERS, ...request.headers },
+    body: request.body ?? '',
+  }
+}
+
 for (const [index, contractCase] of cases.entries()) {
   if (cases.findIndex((other) => other.id === contractCase.id) !== index)
     throw new Error(`用例 id 重复：${contractCase.id}`)
   const target = contractCase.deviation?.compareWith
   if (target !== undefined && !cases.some((other) => other.id === target && !other.deviation)) {
     throw new Error(`用例 ${contractCase.id} 的 compareWith 必须指向一个没有差异的用例：${target}`)
+  }
+}
+for (const [index, scenario] of scenarios.entries()) {
+  if (scenarios.findIndex((other) => other.id === scenario.id) !== index || cases.some((c) => c.id === scenario.id))
+    throw new Error(`场景 id 重复：${scenario.id}`)
+  for (const step of scenario.steps) {
+    const target = step.deviation?.compareWith
+    if (target !== undefined && !cases.some((other) => other.id === target && !other.deviation))
+      throw new Error(`场景 ${scenario.id} 的 compareWith 必须指向一个没有差异的一问一答用例：${target}`)
   }
 }

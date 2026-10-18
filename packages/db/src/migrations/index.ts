@@ -38,6 +38,8 @@ import * as createAuditLogs from './0031_create_audit_logs.ts'
 import * as resolveOrphanedReports from './0032_resolve_orphaned_reports.ts'
 import * as createJobSchedules from './0033_create_job_schedules.ts'
 
+import * as createYggdrasilTokens from './0034_create_yggdrasil_tokens.ts'
+
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
   '0002_create_texture_files': createTextureFiles,
@@ -72,4 +74,5 @@ export const coreMigrations: Record<string, Migration> = {
   '0031_create_audit_logs': createAuditLogs,
   '0032_resolve_orphaned_reports': resolveOrphanedReports,
   '0033_create_job_schedules': createJobSchedules,
+  '0034_create_yggdrasil_tokens': createYggdrasilTokens,
 }

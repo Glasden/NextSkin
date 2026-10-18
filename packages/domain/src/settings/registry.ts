@@ -149,6 +149,25 @@ export const coreSettingsRegistry = {
     secret: false,
   },
   'yggdrasil.apiLocationIndication': { schema: z.boolean(), default: true, section: 'yggdrasil', secret: false },
+  'yggdrasil.tokenValidSeconds': {
+    schema: z.int().min(1).max(31536000),
+    default: 259200,
+    section: 'yggdrasil',
+    secret: false,
+  },
+  'yggdrasil.tokenRefreshableSeconds': {
+    schema: z.int().min(1).max(31536000),
+    default: 604800,
+    section: 'yggdrasil',
+    secret: false,
+  },
+  'yggdrasil.tokensPerUser': { schema: z.int().min(1).max(1000), default: 10, section: 'yggdrasil', secret: false },
+  'yggdrasil.loginIntervalMs': {
+    schema: z.int().min(0).max(600000),
+    default: 1000,
+    section: 'yggdrasil',
+    secret: false,
+  },
   // 默认信任回环地址，让同机的 nginx 等反向代理开箱可用（ADR-0018）。
   'network.trustedProxies': {
     schema: z.array(z.string().refine(isTrustedProxy, 'invalid IP or CIDR')),

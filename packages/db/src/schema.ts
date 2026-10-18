@@ -361,7 +361,19 @@ export interface ScoreTransactionsTable {
   created_at: IsoTimestamp
 }
 
+export interface YggdrasilTokensTable {
+  id: Generated<number>
+  access_token_hash: string
+  client_token: string
+  user_id: number
+  player_id: number | null
+  created_at: IsoTimestamp
+  valid_until: IsoTimestamp
+  expires_at: IsoTimestamp
+}
+
 export interface CoreDatabase {
+  yggdrasil_tokens: YggdrasilTokensTable
   job_schedules: JobSchedulesTable
   jobs: JobsTable
   failed_jobs: FailedJobsTable

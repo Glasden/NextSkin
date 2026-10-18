@@ -48,6 +48,7 @@ beforeEach(async () => {
     'oauth_client_assertions',
     'device_codes',
     'device_code_selections',
+    'yggdrasil_tokens',
   ] as const)
     await db().deleteFrom(table).execute()
 })
@@ -193,4 +194,40 @@ test('过期刷新令牌仍有未清理的访问令牌引用时两行保留，�
   expect(
     (await db().selectFrom('oauth_access_tokens').select('token').orderBy('id').execute()).map((row) => row.token),
   ).toEqual(['access-0', 'access-1', 'access-2'])
+})
+
+test('启动器令牌用 ISO 时间清理，只删过期超过一天的，超过一千条分批完成', async () => {
+  for (const [index, days] of [-2, -1, -0.5, 1].entries())
+    await db()
+      .insertInto('yggdrasil_tokens')
+      .values({
+        access_token_hash: `ygg-${index}`,
+        client_token: 'client',
+        user_id: uid,
+        player_id: pid,
+        created_at: iso(-30),
+        valid_until: iso(days),
+        expires_at: iso(days),
+      })
+      .execute()
+  for (let batch = 0; batch < 11; batch++)
+    await db()
+      .insertInto('yggdrasil_tokens')
+      .values(
+        Array.from({ length: 100 }, (_, index) => ({
+          access_token_hash: `batch-${batch}-${index}`,
+          client_token: 'client',
+          user_id: uid,
+          created_at: iso(-30),
+          valid_until: iso(-2),
+          expires_at: iso(-2),
+        })),
+      )
+      .execute()
+  await run()
+  expect(
+    (await db().selectFrom('yggdrasil_tokens').select('access_token_hash').orderBy('id').execute()).map(
+      (row) => row.access_token_hash,
+    ),
+  ).toEqual(['ygg-1', 'ygg-2', 'ygg-3'])
 })

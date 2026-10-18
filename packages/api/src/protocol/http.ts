@@ -107,19 +107,20 @@ export function requiresSignature(unsigned: string | readonly string[] | undefin
 }
 
 /** Laravel 对已匹配路由的 OPTIONS 和不支持的方法的响应。 */
-export function protocolMethodResponse(method: string, allowed: 'GET' | 'POST'): Response | null {
-  if (method === allowed || (allowed === 'GET' && method === 'HEAD')) return null
+export function protocolMethodResponse(method: string, allowed: 'GET' | 'POST' | 'PUT,DELETE'): Response | null {
+  const methods = allowed === 'GET' ? ['GET', 'HEAD'] : allowed.split(',')
+  if (methods.includes(method)) return null
   if (method === 'OPTIONS') {
     return new Response(null, {
       headers: {
-        Allow: allowed === 'GET' ? 'GET,HEAD' : 'POST',
+        Allow: methods.join(','),
         'Content-Type': 'text/html; charset=UTF-8',
         'Cache-Control': 'no-cache, private',
       },
     })
   }
   const response = errorPage(405)
-  response.headers.set('Allow', allowed === 'GET' ? 'GET, HEAD' : 'POST')
+  response.headers.set('Allow', methods.join(', '))
   response.headers.set('Cache-Control', 'no-cache, private')
   return response
 }
@@ -177,12 +178,32 @@ export function parseHttpDate(value: string, now = Date.now()): number | null {
 
 /** PHP 按查询串出现顺序覆盖参数；unsigned[...] 的值是数组，即使内容是 true 也必须签名。 */
 export function unsignedFromQuery(query: URLSearchParams): string | readonly string[] | undefined {
-  let unsigned: string | readonly string[] | undefined
+  return protocolQuery(query, 'unsigned')
+}
+
+/** PHP 的同名参数取最后一个；数组参数保留类型，不转换成字符串。 */
+export function protocolQuery(query: URLSearchParams, key: string): string | readonly string[] | undefined {
+  let result: string | readonly string[] | undefined
   for (const [name, value] of query) {
-    if (name === 'unsigned') unsigned = value
-    else if (name.startsWith('unsigned[')) unsigned = []
+    if (name === key) result = value
+    else if (name.startsWith(`${key}[`)) result = []
   }
-  return unsigned
+  return result
+}
+
+/** BS TrimStrings + ConvertEmptyStringsToNull，包含 selectedProfile 等嵌套字段。 */
+export function normalizeProtocolInput(value: unknown): unknown {
+  if (typeof value === 'string') return phpTrim(value) || null
+  if (Array.isArray(value)) return value.map(normalizeProtocolInput)
+  if (value !== null && typeof value === 'object')
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, normalizeProtocolInput(item)]))
+  return value
+}
+
+/** requestUser 的 PHP 真值规则（契约 auth/authenticate-request-user）。 */
+export function phpTruthy(value: unknown): boolean {
+  if (typeof value === 'object' && value !== null) return Object.keys(value).length > 0
+  return Boolean(value) && value !== '0'
 }
 
 function phpString(value: unknown): string {

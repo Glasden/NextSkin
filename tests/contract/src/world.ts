@@ -20,7 +20,16 @@ export interface WorldUser {
   email: string
   nickname: string
   role: 'banned' | 'user' | 'admin' | 'superadmin'
+  score: number
 }
+
+/**
+ * 所有用户的密码，authserver 的场景用它登录。uid 1 是 BS 安装时的超级管理员，密码与 bs-v6/compose.yaml 相同。
+ * 哈希是 BS 默认的 bcrypt（PWD_METHOD=BCRYPT），原样写进两边：NextSkin 按导入规则写进 accounts，
+ * 第一次登录时换成当前算法（ADR-0007）
+ */
+export const PASSWORD = 'nextskin-test'
+export const PASSWORD_HASH = '$2y$10$lkVsMF1jleJ9XJczznXCfOnFkh98MgJbIf6.Z7hDX/LfNN.mW5Qka'
 
 export interface WorldTexture {
   tid: number
@@ -73,10 +82,12 @@ const ghost = file('ghost-64x64.png')
 
 export const users: WorldUser[] = [
   // uid 1 是 BS 安装时创建的超级管理员，录制脚本不动它
-  { uid: 1, email: 'admin@nextskin.test', nickname: 'admin', role: 'superadmin' },
-  { uid: 2, email: 'steve@nextskin.test', nickname: 'steve', role: 'user' },
-  { uid: 3, email: 'banned@nextskin.test', nickname: 'banned', role: 'banned' },
-  { uid: 4, email: 'carol@nextskin.test', nickname: 'carol', role: 'admin' },
+  { uid: 1, email: 'admin@nextskin.test', nickname: 'admin', role: 'superadmin', score: 1000 },
+  { uid: 2, email: 'steve@nextskin.test', nickname: 'steve', role: 'user', score: 1000 },
+  { uid: 3, email: 'banned@nextskin.test', nickname: 'banned', role: 'banned', score: 1000 },
+  { uid: 4, email: 'carol@nextskin.test', nickname: 'carol', role: 'admin', score: 1000 },
+  // 只有一个角色：authserver 登录时自动绑定
+  { uid: 5, email: 'dave@nextskin.test', nickname: 'dave', role: 'user', score: 1000 },
 ]
 
 export const textures: WorldTexture[] = [
@@ -292,6 +303,16 @@ export const players: WorldPlayer[] = [
     updatedAt: '2026-02-15T04:34:56.000Z',
     bsUuidRow: { name: 'RandomUuid' },
   },
+  {
+    pid: 14,
+    uid: 5,
+    name: 'Dave',
+    uuid: offlineUuid('Dave'),
+    bsSkin: 2,
+    bsCape: 5,
+    updatedAt: '2026-02-16T04:34:56.000Z',
+    bsUuidRow: 'v3',
+  },
 ]
 
 /**
@@ -307,6 +328,8 @@ export const settings = {
   skinDomains: ['cdn.example.test', '127.0.0.1'],
   /** BS 的 ygg_search_profile_max */
   profileSearchLimit: 3,
+  /** BS 的 ygg_tokens_limit（默认 10） */
+  tokensPerUser: 3,
 }
 
 export function playerByName(name: string): WorldPlayer {

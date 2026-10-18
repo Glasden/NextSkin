@@ -1,6 +1,7 @@
 import { coreSettingsRegistry, type Core, type CoreSettingKey, type PlayerView } from '@nextskin/domain'
 import { describe, expect, it, test, vi } from 'vitest'
 import { createApp } from './app.ts'
+import { createTranslator } from '@nextskin/i18n'
 
 const player: PlayerView = {
   pid: 1,
@@ -87,7 +88,7 @@ describe('createApp', () => {
     const body: unknown = await response.json()
     expect(body).toEqual({
       error: 'ForbiddenOperationException',
-      errorMessage: 'You can query up to 3 players in one request.',
+      errorMessage: createTranslator('zh-CN')('yggdrasil.errors.query_limit', { count: 3 }),
     })
     expect(response.headers.has('x-authlib-injector-api-location')).toBe(false)
     expect(findByName).not.toHaveBeenCalled()

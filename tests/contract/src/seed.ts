@@ -14,7 +14,7 @@ import {
 } from '@nextskin/db'
 import { encodeSettingValue, toNameKey } from '@nextskin/domain'
 import type { Kysely } from 'kysely'
-import { players, settings, textureById, textures, users } from './world.ts'
+import { PASSWORD_HASH, players, settings, textureById, textures, users } from './world.ts'
 
 const fixtures = new URL('../fixtures/textures/', import.meta.url)
 
@@ -52,6 +52,27 @@ export async function seedWorld(db: Kysely<CoreDatabase>, options: SeedOptions):
         created_at: writeAuthDate(db, iso('2026-01-01T00:00:00.000Z')),
         updated_at: writeAuthDate(db, iso('2026-01-01T00:00:00.000Z')),
         role: user.role,
+        score: user.score,
+      })),
+    )
+    .execute()
+  // 导入规则：BS 的 bcrypt 哈希原样写进 credential 那一行，account_id 是 uid 的字符串
+  await db
+    .insertInto('accounts')
+    .values(
+      users.map((user) => ({
+        account_id: String(user.uid),
+        provider_id: 'credential',
+        user_id: user.uid,
+        access_token: null,
+        refresh_token: null,
+        id_token: null,
+        access_token_expires_at: null,
+        refresh_token_expires_at: null,
+        scope: null,
+        password: PASSWORD_HASH,
+        created_at: writeAuthDate(db, iso('2026-01-01T00:00:00.000Z')),
+        updated_at: writeAuthDate(db, iso('2026-01-01T00:00:00.000Z')),
       })),
     )
     .execute()
@@ -132,6 +153,10 @@ export async function seedWorld(db: Kysely<CoreDatabase>, options: SeedOptions):
           value: encodeSettingValue('yggdrasil.profileSearchLimit', settings.profileSearchLimit, secret),
         },
         { key: 'yggdrasil.signingKey', value: encodeSettingValue('yggdrasil.signingKey', options.signingKey, secret) },
+        {
+          key: 'yggdrasil.tokensPerUser',
+          value: encodeSettingValue('yggdrasil.tokensPerUser', settings.tokensPerUser, secret),
+        },
       ].map((row) => ({ namespace: 'core', updated_at: now, ...row })),
     )
     .execute()

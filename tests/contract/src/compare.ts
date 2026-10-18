@@ -27,6 +27,11 @@ export interface CompareContext {
   publicKey: string
   /** textures 属性里的 timestamp 必须落在这个区间内（毫秒） */
   timeWindow: { from: number; to: number }
+  /**
+   * 场景里的一步：`yggdrasil-token` 要用到之前出现过的令牌、这一步的请求体，
+   * 以及录制结果里的 clientToken 对应回放时的哪个值（服务端生成的 clientToken 两边不同）
+   */
+  scenario?: { seenAccessTokens: Set<string>; clientTokens: Map<string, string>; requestBody: unknown }
 }
 
 export function compareResponse(
@@ -91,10 +96,32 @@ function normalizeJson(
   if (match === 'exact') return { expected, actual }
   const e = asObject(structuredClone(expected))
   const a = asObject(structuredClone(actual))
-  if (match === 'yggdrasil-error') {
+  // 录制时 BS 拒绝了这一步（例如节流），就按错误比较
+  const kind = match === 'yggdrasil-token' && !('accessToken' in e) ? 'yggdrasil-error' : match
+  if (kind === 'yggdrasil-token') {
+    requireString(a, 'accessToken')
+    const seen = context.scenario?.seenAccessTokens
+    if (!seen) throw new Error('yggdrasil-token 只能用于场景')
+    if (seen.has(a.accessToken as string)) throw new Error('accessToken 与这个场景里之前出现过的令牌相同')
+    seen.add(a.accessToken as string)
+    e.accessToken = a.accessToken = '<accessToken>'
+    const body = context.scenario?.requestBody
+    const requested = body && typeof body === 'object' ? (body as Record<string, unknown>).clientToken : undefined
+    // 请求里给了 clientToken 就逐字比较（它和录制结果都要等于 trim 之后的值）。没给时由服务端生成或沿用：
+    // 第一次出现的只要求非空，记下两边的对应关系；录制结果里再出现同一个值时，回放必须还是对应的那个
+    requireString(a, 'clientToken')
+    const clientTokens = context.scenario!.clientTokens
+    if (typeof requested !== 'string' && typeof e.clientToken === 'string') {
+      const mapped = clientTokens.get(e.clientToken)
+      if (mapped !== undefined && mapped !== a.clientToken)
+        throw new Error(`clientToken 应当沿用 ${JSON.stringify(mapped)}，实际是 ${JSON.stringify(a.clientToken)}`)
+      clientTokens.set(e.clientToken, a.clientToken as string)
+      e.clientToken = a.clientToken = '<clientToken>'
+    } else if (typeof e.clientToken === 'string') clientTokens.set(e.clientToken, a.clientToken as string)
+  } else if (kind === 'yggdrasil-error') {
     requireString(a, 'errorMessage')
     e.errorMessage = a.errorMessage = '<errorMessage>'
-  } else if (match === 'yggdrasil-meta') {
+  } else if (kind === 'yggdrasil-meta') {
     assertSigningPublicKey(a.signaturePublickey)
     // 公布的公钥必须能验证签名，否则客户端验签失败
     if (a.signaturePublickey !== context.publicKey) throw new Error('signaturePublickey 不是签名用的那把公钥')
@@ -105,7 +132,7 @@ function normalizeJson(
       requireString(actualMeta, key)
       expectedMeta[key] = actualMeta[key] = '<string>'
     }
-  } else if (match === 'yggdrasil-profile') {
+  } else if (kind === 'yggdrasil-profile') {
     e.properties = normalizeProperties(e.properties, undefined)
     a.properties = normalizeProperties(a.properties, context)
   }

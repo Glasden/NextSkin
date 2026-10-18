@@ -15,6 +15,7 @@ import { registerUser } from './user.ts'
 import { createMemoryRateLimiter, type RateLimiter } from './rate-limit.ts'
 import { registerRegistration } from './register.ts'
 import { registerTextures } from './textures.ts'
+import { registerYggdrasilTokens } from './yggdrasil-tokens.ts'
 
 export function createRestApp(
   core: Core,
@@ -121,6 +122,7 @@ export function createRestApp(
   registerPlayers(app, core)
   registerCheckIn(app, core)
   registerUser(app, core, rateLimiter)
+  registerYggdrasilTokens(app, core)
   app.doc('/openapi.json', {
     openapi: '3.0.0',
     info: { title: 'NextSkin REST API', version: '1.0.0' },

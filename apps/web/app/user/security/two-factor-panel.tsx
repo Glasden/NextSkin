@@ -36,7 +36,8 @@ export function TwoFactorPanel({ enabled, backupCodesRemaining, siteName }: TwoF
           <EnableDialog siteName={siteName} />
         )}
       </div>
-      <p className="text-sm text-pretty text-text-muted">{enabled ? t('lostAccess') : t('launcherNote')}</p>
+      <p className="text-sm text-pretty text-text-muted">{t('launcherNote')}</p>
+      {enabled && <p className="text-sm text-pretty text-text-muted">{t('lostAccess')}</p>}
     </div>
   )
 }

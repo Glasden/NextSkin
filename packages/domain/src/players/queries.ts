@@ -4,8 +4,12 @@ import type { Kysely } from 'kysely'
 
 export const toNameKey = (name: string): string => name.toLowerCase()
 
-/** MySQL PAD SPACE 只忽略末尾 U+0020，不忽略开头空格或其他空白。 */
+/**
+ * MySQL PAD SPACE 只忽略末尾 U+0020，不忽略开头空格或其他空白。
+ * 角色名不会含 NUL，PostgreSQL 的文本里也放不进 NUL，带 NUL 的名字直接当作查不到
+ */
 export function normalizeNameLookup(name: string): string | null {
+  if (name.includes('\0')) return null
   return toNameKey(name.replace(/ +$/, '')) || null
 }
 

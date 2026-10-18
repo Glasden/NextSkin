@@ -145,6 +145,7 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0031_create_audit_logs',
     '0032_resolve_orphaned_reports',
     '0033_create_job_schedules',
+    '0034_create_yggdrasil_tokens',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -719,4 +720,61 @@ test('审计日志列、操作者 CHECK，删除账号和对象仍保留原始 i
     id,
     ...value,
   })
+})
+
+test('启动器令牌的列、唯一键、时间列、可空绑定与外键级联', async () => {
+  const columns = (await db.introspection.getTables()).find((table) => table.name === 'yggdrasil_tokens')!.columns
+  expect(columns.map((column) => column.name)).toEqual([
+    'id',
+    'access_token_hash',
+    'client_token',
+    'user_id',
+    'player_id',
+    'created_at',
+    'valid_until',
+    'expires_at',
+  ])
+  expect(columns.filter((column) => column.isNullable && column.name !== 'id').map((column) => column.name)).toEqual([
+    'player_id',
+  ])
+  const token = {
+    access_token_hash: 'hash',
+    client_token: 'client',
+    user_id: userId,
+    created_at: timestamp,
+    valid_until: timestamp,
+    expires_at: timestamp,
+  }
+  const id = await insertReturningId(db, 'yggdrasil_tokens', token)
+  expect(await db.selectFrom('yggdrasil_tokens').selectAll().where('id', '=', id).executeTakeFirstOrThrow()).toEqual({
+    ...token,
+    id,
+    player_id: null,
+  })
+  expectTypeOf<Selectable<CoreDatabase['yggdrasil_tokens']>['valid_until']>().toEqualTypeOf<IsoTimestamp>()
+  await expect(db.insertInto('yggdrasil_tokens').values(token).execute()).rejects.toThrow()
+  await expect(
+    db
+      .insertInto('yggdrasil_tokens')
+      .values({ ...token, access_token_hash: 'orphan-user', user_id: -1 })
+      .execute(),
+  ).rejects.toThrow()
+  await expect(
+    db
+      .insertInto('yggdrasil_tokens')
+      .values({ ...token, access_token_hash: 'orphan-player', player_id: -1 })
+      .execute(),
+  ).rejects.toThrow()
+  for (const column of ['created_at', 'valid_until', 'expires_at'])
+    await expect(
+      sql`update yggdrasil_tokens set ${sql.ref(column)} = ${'invalid'} where id = ${id}`.execute(db),
+    ).rejects.toThrow()
+  await db
+    .insertInto('yggdrasil_tokens')
+    .values({ ...token, access_token_hash: 'bound', player_id: playerId })
+    .execute()
+  await db.deleteFrom('players').where('id', '=', playerId).execute()
+  expect(await db.selectFrom('yggdrasil_tokens').select('id').execute()).toEqual([{ id }])
+  await db.deleteFrom('users').where('id', '=', userId).execute()
+  expect(await db.selectFrom('yggdrasil_tokens').selectAll().execute()).toEqual([])
 })

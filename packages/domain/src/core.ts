@@ -1,3 +1,7 @@
+import { createTokens } from './yggdrasil/tokens.ts'
+import { createSessions } from './yggdrasil/join.ts'
+import { createProfileTextures } from './yggdrasil/profile-textures.ts'
+import { createMemorySessionCache, type YggdrasilSessionCache } from './yggdrasil/sessions.ts'
 import { createScheduler } from './jobs/schedules.ts'
 import { AUTH_CLEANUP_JOB, createAuthCleanup } from './auth/cleanup.ts'
 import { AUDIT_CLEANUP_JOB, createAuditCleanup } from './audit/cleanup.ts'
@@ -35,12 +39,14 @@ import { createSigningKeyQuery } from './yggdrasil/signing-key.ts'
 export interface CoreOptions {
   db: Kysely<CoreDatabase>
   textureStorage: TextureStorage
-  /** 材质用例与任务共享的时钟；同时供任务执行器入队和轮询使用。 */
+  /** 领域用例与任务共享的时钟；同时供任务执行器入队和轮询使用。 */
   now?: () => Date
   textureClaimLeaseMs?: number
   textureDeleteDelayMs?: number
   /** 删除尝试的租期，默认 10 分钟，应远大于回收任务的超时。 */
   textureDeleteAttemptLeaseMs?: number
+  /** 多实例部署时，进服记录需要使用共享存储。 */
+  yggdrasilSessionCache?: YggdrasilSessionCache
   renderCache?: RenderCache
   imagePool?: ImagePool
   /** .env 里的密钥，用来解密机密设置；至少 32 个字符。 */
@@ -124,8 +130,12 @@ export function createCore(options: CoreOptions) {
     settings,
     production: options.production,
     mail,
-    onPasswordChanged: (uid) =>
-      transactionWithRetry(options.db, async (tx) => {
+    onPasswordChanged: async (uid) => {
+      // 吊销启动器令牌单独提交：事件入队失败会回滚它所在的事务，而改密码已经成功了（ADR-0030）
+      await transactionWithRetry(options.db, (tx) =>
+        tx.deleteFrom('yggdrasil_tokens').where('user_id', '=', uid).execute(),
+      )
+      await transactionWithRetry(options.db, async (tx) => {
         const user = await tx.selectFrom('users').select('role').where('id', '=', uid).executeTakeFirst()
         if (user)
           await events.emit(
@@ -133,13 +143,30 @@ export function createCore(options: CoreOptions) {
             'user.profileUpdated',
             { kind: 'user', uid, role: user.role },
             { uid, fields: ['password'] },
-            toIsoTimestamp(new Date()),
+            toIsoTimestamp(now()),
           )
-      }),
+      })
+    },
   })
   const getSigningKey = createSigningKeyQuery(settings)
+  const players = { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events, now) }
+  const closet = createCloset(textureOptions)
+  const upload = createTextureUpload(textureOptions)
+  const tokens = createTokens({ db: options.db, settings, secretKey: options.secretKey, now })
+  const yggdrasil = {
+    getSigningKey,
+    ...tokens.service,
+    ...createSessions({
+      db: options.db,
+      tokens,
+      events,
+      now,
+      cache: options.yggdrasilSessionCache ?? createMemorySessionCache(now),
+    }),
+    ...createProfileTextures({ db: options.db, settings, tokens, upload, closet, players }),
+  }
   return {
-    players: { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events, now) },
+    players,
     admin: createAdmin({
       ...textureOptions,
       secretKey: options.secretKey,
@@ -147,14 +174,14 @@ export function createCore(options: CoreOptions) {
       mail,
       getSigningKey,
     }),
-    closet: createCloset(textureOptions),
+    closet,
     reports: createReports(textureOptions),
     renders,
     shutdown: () => imagePool.close(),
     textures: {
       ...createTextureQueries(options.db, options.textureStorage),
       ...createTextureLibraryQueries(options.db, settings),
-      upload: createTextureUpload(textureOptions),
+      upload,
       ...createTextureManagement(textureOptions),
     },
     settings,
@@ -170,7 +197,7 @@ export function createCore(options: CoreOptions) {
       ...createUserManagement(options, settings, mail, jobs, events, removal, now),
     },
     score: createScoreQueries(options.db),
-    yggdrasil: { getSigningKey },
+    yggdrasil,
   }
 }
 

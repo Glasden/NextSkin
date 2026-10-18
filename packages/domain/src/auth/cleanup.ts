@@ -18,11 +18,15 @@ export function createAuthCleanup(options: { db: Kysely<CoreDatabase>; now: () =
         'sessions',
         'oauth_client_assertions',
         'device_codes',
+        'yggdrasil_tokens',
       ] as const) {
         for (;;) {
           signal.throwIfAborted()
           const size = await transactionWithRetry(db, async (tx) => {
-            let query = tx.selectFrom(table).select('id').where('expires_at', '<', authCutoff)
+            let query = tx
+              .selectFrom(table)
+              .select('id')
+              .where('expires_at', '<', table === 'yggdrasil_tokens' ? cutoff : authCutoff)
             if (table === 'oauth_refresh_tokens') {
               // refresh_id 是级联删除外键；仍被访问令牌引用的刷新令牌必须保留。
               query = query.where((eb) =>

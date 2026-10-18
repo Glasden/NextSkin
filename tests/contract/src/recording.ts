@@ -19,6 +19,8 @@ export interface RecordedResponse {
 export interface Recording {
   source: { bs: string; plugins: Record<string, string>; recordedAt: string }
   cases: Record<string, RecordedResponse>
+  /** 场景每一步的响应，按步骤的顺序 */
+  scenarios: Record<string, RecordedResponse[]>
 }
 
 /** 每次请求都会变、或属于传输层的响应头，录制时就丢掉。 */

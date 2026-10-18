@@ -253,7 +253,29 @@
       "history": "最近的积分变动",
       "noHistory": "还没有积分变动。",
       "balance": "余额 {balance}",
-      "announcement": "公告"
+      "announcement": "公告",
+      "launcher": {
+        "title": "外置登录",
+        "description": "在启动器里添加本站，就能用这里的角色和皮肤进入使用外置登录的服务器。",
+        "copy": "复制地址",
+        "copied": "已复制 API 地址",
+        "copyFailed": "没能复制，请手动选中地址后复制。",
+        "dragHint": "支持拖放的启动器，可以直接把“复制地址”按钮拖进启动器的窗口，自动添加本站。",
+        "steps": {
+          "add": {
+            "title": "添加服务器",
+            "body": "在启动器的账户设置里选择“外置登录”（authlib-injector），填入上面的地址。"
+          },
+          "login": {
+            "title": "登录",
+            "body": "用户名填本站的邮箱，或者你的任意一个角色名；密码填本站的密码。"
+          },
+          "twoFactor": {
+            "title": "两步验证",
+            "body": "开了两步验证的账号，在密码后面直接接上验证器上的 6 位数字。例如密码是 hunter2、验证码是 123456，就填 hunter2123456。"
+          }
+        }
+      }
     },
     "players": {
       "title": "角色",
@@ -390,7 +412,8 @@
         "on": "已开启",
         "off": "未开启",
         "none": "未添加",
-        "passkeyCount": "{count, plural, other {# 个}}"
+        "passkeyCount": "{count, plural, other {# 个}}",
+        "launcherCount": "{count, plural, other {# 个}}"
       },
       "password": {
         "title": "密码",
@@ -407,7 +430,7 @@
         "title": "两步验证",
         "offDescription": "开启后，用密码登录时还要输入验证器应用上的 6 位数字。别人知道了你的密码，没有你的手机也登录不了。",
         "onDescription": "用密码登录时，还要输入验证器应用上的 6 位数字，或者一个备用码。",
-        "launcherNote": "两步验证只保护网页登录。在启动器里用邮箱和密码登录时，不会要求输入验证码。",
+        "launcherNote": "开了两步验证后，在启动器里登录要在密码后面直接接上验证器上的 6 位数字。例如密码是 hunter2、验证码是 123456，就填 hunter2123456。启动器里不能用备用码。",
         "lostAccess": "手机和备用码都丢了的话，请联系站点管理员关闭两步验证。",
         "enable": "开启两步验证",
         "step": "第 {step} 步，共 3 步。",
@@ -474,6 +497,24 @@
         "deleteDescription": "删除后不能再用它登录本站。设备或密码管理器里保存的那一份，要在那边另外删除。",
         "deleteConfirm": "删除通行密钥",
         "deleted": "已删除通行密钥 {name}",
+        "failed": "没有成功，请稍后重试。"
+      },
+      "launchers": {
+        "title": "启动器登录",
+        "description": "在启动器里用本站账号登录后，启动器会保存一个凭据，用来进服和上传皮肤；过了有效期，启动器下次启动时会自己续期。手机丢了、在别人的电脑上登录过，可以在这里退出。修改密码会退出全部启动器。",
+        "empty": "还没有启动器登录。启动器的设置方法见<link>仪表盘</link>。",
+        "player": "角色 {name}",
+        "noPlayer": "还没选角色",
+        "issuedAt": "登录于 {time}",
+        "valid": "有效",
+        "refreshable": "待续期",
+        "revoke": "退出",
+        "revoked": "已退出这个启动器登录",
+        "revokeAll": "全部退出",
+        "revokeAllTitle": "退出全部 {count, plural, other {# 个}}启动器登录？",
+        "revokeAllDescription": "所有启动器都要重新输入密码登录。已经进了服务器的游戏不受影响，网页上的登录也不受影响。",
+        "revokeAllConfirm": "全部退出",
+        "revokedAll": "已退出全部启动器登录",
         "failed": "没有成功，请稍后重试。"
       }
     },
@@ -1232,6 +1273,22 @@
           "apiLocationIndication": {
             "label": "返回 API 地址指示",
             "help": "在响应里带上 X-Authlib-Injector-API-Location 头。这样在启动器里填本站首页的地址，也能找到外置登录的接口。"
+          },
+          "tokenValidSeconds": {
+            "label": "令牌有效期",
+            "help": "秒。有效期内可进服、校验令牌和修改材质。"
+          },
+          "tokenRefreshableSeconds": {
+            "label": "令牌可刷新期",
+            "help": "秒。到期后需要重新登录；短于有效期时按有效期算。"
+          },
+          "tokensPerUser": {
+            "label": "每用户令牌上限",
+            "help": "个。签发新令牌时超过上限，就退出最早的启动器登录。"
+          },
+          "loginIntervalMs": {
+            "label": "登录请求间隔",
+            "help": "毫秒。同一用户名的登录和退出请求共用间隔；0 表示不限。"
           }
         },
         "network": {
@@ -1253,6 +1310,29 @@
           }
         }
       }
+    }
+  },
+  "yggdrasil": {
+    "errors": {
+      "credentials_required": "用户名和密码都要填写。",
+      "invalid_credentials": "用户名、密码或验证码不对。开了两步验证的账号，要在密码后面直接接上验证器上的 6 位数字。",
+      "too_frequent": "请求太频繁了，请 {seconds, plural, other {# 秒}}后再试。",
+      "too_many_failures": "登录失败的次数太多了，请 15 分钟后再试。",
+      "user_banned": "你已被本站封禁，详情请联系站点管理员。",
+      "email_not_verified": "你还没有验证邮箱，请先在网页上完成验证再登录。",
+      "token_invalid": "登录已失效，请重新登录。",
+      "client_token_mismatch": "客户端令牌与这次登录不匹配，请重新登录。",
+      "client_token_invalid": "clientToken 不能超过 255 个字符，也不能包含空字符。",
+      "player_not_found": "找不到这个角色。",
+      "profile_already_bound": "这次登录已经选过角色了。要换角色，请重新登录。",
+      "profile_not_owned": "这个角色不属于你的账号。",
+      "profile_mismatch": "所选的角色与登录时选的不一致，请在启动器里重新选择角色。",
+      "token_unauthorized": "登录已失效，请在启动器里重新登录。",
+      "texture_type_invalid": "材质类型只能是 skin 或 cape，收到的是 {type}。",
+      "texture_model_mismatch": "站内已有这张图，但模型和这次选的不同。请换成相同的模型再上传。",
+      "content_type": "请求的 Content-Type 必须是 application/json。",
+      "signing_key_unavailable": "本站还没有配置签名密钥，外置登录暂时不可用，请联系站点管理员。",
+      "query_limit": "一次最多只能查询 {count, plural, other {# 个}}角色。"
     }
   }
 }

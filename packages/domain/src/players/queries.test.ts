@@ -15,6 +15,8 @@ test.each([
   ['Dot.Name', 'dot.name'],
   ['Alice\t', 'alice\t'],
   ['Alice\u00a0', 'alice\u00a0'],
+  // 角色名不会含 NUL，PostgreSQL 也放不进；直接当作查不到，不发查询
+  ['Al\u0000ice', null],
 ])('名字查找 %j → %j', (name, expected) => {
   expect(normalizeNameLookup(name)).toBe(expected)
 })

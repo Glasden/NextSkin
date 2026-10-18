@@ -47,7 +47,8 @@ export function createEvents(jobs: JobRunner, handlers: Map<string, JobHandler>)
     for (const jobName of targets) await jobs.enqueue(tx, jobName, event)
   }
 
-  return { subscribe, emit }
+  const hasSubscribers = (name: EventName): boolean => !!subscribers.get(name)?.size
+  return { subscribe, emit, hasSubscribers }
 }
 
 export type Events = ReturnType<typeof createEvents>
