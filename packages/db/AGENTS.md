@@ -1,6 +1,6 @@
 # packages/db
 
-Kysely 实例、SQLite 方言、迁移运行器，以及隔离四种数据库差异的辅助函数（ADR-0005、ADR-0008）。只有 `@nextskin/domain` 依赖本包。
+Kysely 实例、SQLite 方言、迁移运行器，以及隔离四种数据库差异的辅助函数（ADR-0005、ADR-0008）。只有 `@nextskin/domain` 和导入器 `@nextskin/importer`（ADR-0031）依赖本包。`readSnapshot` 以只读的一致快照打开外部数据库（导入器读 BS 旧库），日期时间列读成库里存的字符串。
 
 ## 写查询和迁移
 

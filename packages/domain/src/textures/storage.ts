@@ -11,6 +11,11 @@ export interface TextureStorage {
   readonly lateDeleteWindowMs: number
 }
 
+/** 导入器用：存储里已经有、大小相同的文件不再复制（ADR-0031） */
+export interface ImportableTextureStorage extends TextureStorage {
+  stat(hash: string): Promise<{ sizeBytes: number } | null>
+}
+
 export function assertTextureHash(hash: string): void {
   if (!/^[0-9a-f]{64}$/.test(hash)) throw new Error('材质 hash 必须是 64 位小写十六进制')
 }
@@ -20,7 +25,7 @@ function assertClaimId(claimId: string): void {
 }
 
 /** 与 BS 的 storage/textures 布局相同；不重新编码文件。 */
-export function createLocalTextureStorage(directory: string): TextureStorage {
+export function createLocalTextureStorage(directory: string): ImportableTextureStorage {
   function temp(hash: string, claimId: string) {
     assertTextureHash(hash)
     assertClaimId(claimId)
@@ -83,6 +88,17 @@ export function createLocalTextureStorage(directory: string): TextureStorage {
       return result
     },
     lateDeleteWindowMs: 0,
+    async stat(hash) {
+      assertTextureHash(hash)
+      try {
+        const info = await lstat(join(directory, hash))
+        return info.isFile() ? { sizeBytes: info.size } : null
+      } catch (error) {
+        if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null
+        // eslint-disable-next-line preserve-caught-error -- 不保留含本地存储路径的底层异常。
+        throw new Error('读取材质文件信息失败；请检查材质存储目录和进程权限')
+      }
+    },
     async read(hash) {
       assertTextureHash(hash)
       try {

@@ -1,10 +1,13 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { coreMigrations, migrateToLatest, toIsoTimestamp, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
+import { hashPassword, verifyPassword } from 'better-auth/crypto'
+import { bcrypt } from 'hash-wasm'
 import { createLocalJWKSet, decodeProtectedHeader, jwtVerify } from 'jose'
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest'
 import { createCore, encodeSettingValue, type Core, type CoreSettingKey, type CoreSettingValue } from '../index.ts'
 import { isLegacyPasswordHash } from './legacy-passwords.ts'
+import { checkUserPassword } from './password.ts'
 
 // 请求级测试：经过 core.auth.handle，与 Hono 挂载的路径相同。Next 里 request.url 的 host 是它自己的监听地址，
 // 客户端看到的站点地址另外传入，这里故意让两者不同。
@@ -214,6 +217,54 @@ test.each(Object.entries(legacyHashes))('从 BS 导入的 %s 密码可以登录�
   expect(isLegacyPasswordHash(rehashed)).toBe(false)
   expect((await signIn(legacyPassword)).status).toBe(200)
   expect((await signIn('wrong password')).status).toBe(401)
+})
+
+test.each(['bcrypt', 'sha256'])('旧 %s 密码支持 PHP trim 回退，升级只使用核对通过的值', async (algorithm) => {
+  const { uid } = await signUp('trim@example.test', 'Trim')
+  const hash =
+    algorithm === 'bcrypt'
+      ? await bcrypt({ password: 'secret', salt: '0123456789abcdef', costFactor: 4, outputType: 'encoded' })
+      : `$bs$sha256$${createHash('sha256').update('secret').digest('hex')}`
+  await database.db.updateTable('accounts').set({ password: hash }).where('user_id', '=', uid).execute()
+  const signIn = (value: string) =>
+    new Browser().request('/api/auth/sign-in/email', { json: { email: 'trim@example.test', password: value } })
+  const salt = () => Promise.resolve('')
+  expect(await checkUserPassword(database.db, uid, ' secret\t', salt)).toBe(true)
+  expect(await checkUserPassword(database.db, uid, 'wrong', salt)).toBe(false)
+  expect((await signIn('secret\u00a0')).status).toBe(401)
+  expect((await signIn(' secret\t')).status).toBe(200)
+  const account = await database.db
+    .selectFrom('accounts')
+    .select('password')
+    .where('user_id', '=', uid)
+    .where('provider_id', '=', 'credential')
+    .executeTakeFirstOrThrow()
+  expect(isLegacyPasswordHash(account.password!)).toBe(false)
+  expect(await verifyPassword({ hash: account.password!, password: 'secret' })).toBe(true)
+  expect(await verifyPassword({ hash: account.password!, password: ' secret\t' })).toBe(false)
+  expect((await signIn('secret')).status).toBe(200)
+  expect((await signIn(' secret\t')).status).toBe(401)
+  expect(await checkUserPassword(database.db, uid, ' secret\t', salt)).toBe(false)
+})
+
+test.each([
+  ['无首尾空格', 'secret'],
+  ['有首尾空格', ' secret '],
+])('当前算法的密码保留首尾空格（%s）', async (_, value) => {
+  const { uid } = await signUp('current@example.test', 'Current')
+  const hash = await hashPassword(value)
+  await database.db.updateTable('accounts').set({ password: hash }).where('user_id', '=', uid).execute()
+  const signIn = (password: string) =>
+    new Browser().request('/api/auth/sign-in/email', { json: { email: 'current@example.test', password } })
+  expect((await signIn(value)).status).toBe(200)
+  expect((await signIn(value === 'secret' ? ' secret ' : 'secret')).status).toBe(401)
+  const account = await database.db
+    .selectFrom('accounts')
+    .select('password')
+    .where('user_id', '=', uid)
+    .where('provider_id', '=', 'credential')
+    .executeTakeFirstOrThrow()
+  expect(account.password).toBe(hash)
 })
 
 test('只有管理员能管理 OAuth 客户端', async () => {

@@ -2,18 +2,21 @@ import { availableParallelism } from 'node:os'
 import { Worker } from 'node:worker_threads'
 import type { TextureType } from '@nextskin/skin'
 import { DomainError } from '../errors.ts'
-import type { RenderInput, UploadImage } from './image.ts'
+import type { InspectedImage, RenderInput, UploadImage } from './image.ts'
 import type { ImageTask } from './image-worker.ts'
 
 export interface ImagePool {
   /** 转移 bytes 的底层 ArrayBuffer 所有权；调用后不要继续读取。 */
   processUpload(input: { bytes: Uint8Array; type: TextureType }): Promise<UploadImage>
+  /** 导入器用（ADR-0031）：只解码、算像素 hash，不重新编码。同样转移 bytes 的所有权 */
+  inspect(input: { bytes: Uint8Array; type: TextureType }): Promise<InspectedImage>
   render(input: RenderInput): Promise<Uint8Array>
   close(): Promise<void>
 }
+type ImageResult = UploadImage | InspectedImage | Uint8Array
 interface Pending {
   input: ImageTask
-  resolve(value: UploadImage | Uint8Array): void
+  resolve(value: ImageResult): void
   reject(error: Error): void
 }
 interface Slot {
@@ -23,7 +26,7 @@ interface Slot {
 }
 interface Reply {
   ok: boolean
-  result: UploadImage | Uint8Array
+  result: ImageResult
   code?: string
   params?: Readonly<Record<string, string | number>>
 }
@@ -54,7 +57,7 @@ export function createImagePool(options: { size?: number; queueLimit?: number; t
     terminating.add(promise)
     void promise.finally(() => terminating.delete(promise))
   }
-  function finish(slot: Slot, error?: Error, result?: UploadImage | Uint8Array) {
+  function finish(slot: Slot, error?: Error, result?: ImageResult) {
     clearTimeout(slot.timer)
     const task = slot.task
     slot.task = undefined
@@ -92,7 +95,7 @@ export function createImagePool(options: { size?: number; queueLimit?: number; t
       const worker = slot.worker
       worker.ref()
       slot.timer = setTimeout(() => fail(slot, worker, new DomainError('service_unavailable')), timeoutMs)
-      const bytes = task.input.kind === 'upload' ? task.input.bytes : task.input.input.bytes
+      const bytes = task.input.kind === 'render' ? task.input.input.bytes : task.input.bytes
       worker.postMessage(task.input, [bytes.buffer as ArrayBuffer])
     } catch {
       finish(slot, new Error('无法启动图像任务或转移字节'))
@@ -106,7 +109,7 @@ export function createImagePool(options: { size?: number; queueLimit?: number; t
       if (!slot.task && queue.length) start(slot, queue.shift()!)
     }
   }
-  function submit(input: ImageTask): Promise<UploadImage | Uint8Array> {
+  function submit(input: ImageTask): Promise<ImageResult> {
     if (closed) return Promise.reject(new DomainError('service_unavailable'))
     const idle = slots.find((slot) => !slot.task)
     if (!idle && queue.length >= queueLimit) return Promise.reject(new DomainError('service_unavailable'))
@@ -118,6 +121,7 @@ export function createImagePool(options: { size?: number; queueLimit?: number; t
   }
   return {
     processUpload: (input) => submit({ kind: 'upload', ...input }) as Promise<UploadImage>,
+    inspect: (input) => submit({ kind: 'inspect', ...input }) as Promise<InspectedImage>,
     render: (input) => submit({ kind: 'render', input }) as Promise<Uint8Array>,
     async close() {
       closed = true

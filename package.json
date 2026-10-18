@@ -8,6 +8,7 @@
   },
   "scripts": {
     "set-role": "pnpm --filter @nextskin/web set-role",
+    "import:bs": "pnpm --filter @nextskin/web exec node ../../packages/importer/src/cli.ts",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "check": "turbo run lint typecheck test format:check",

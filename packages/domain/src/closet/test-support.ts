@@ -65,7 +65,7 @@ export function setup() {
         delete: () => Promise.resolve(),
         deleteTemp: () => Promise.resolve(),
       },
-      imagePool: { close: () => Promise.resolve(), processUpload: vi.fn(), render: vi.fn() },
+      imagePool: { close: () => Promise.resolve(), processUpload: vi.fn(), inspect: vi.fn(), render: vi.fn() },
     })
     await setting('score.perPlayer', 0)
     owner = await user('owner')

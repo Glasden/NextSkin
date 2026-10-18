@@ -294,6 +294,48 @@ export async function syncAutoIncrement<DB, TB extends keyof DB & string>(
   else await db.transaction().execute(sync)
 }
 
+/**
+ * MySQL / MariaDB 的自增计数器不随事务回滚：回滚了显式写入大 id 的事务之后，计数器仍停在那里，以后新建的行从那里接着编号。
+ * 可能整体回滚的大事务（导入器）之前记下计数器，回滚之后用 restoreAutoIncrement 恢复。SQLite 的 sqlite_sequence 随事务回滚，
+ * PostgreSQL 显式写入 id 不动序列，这两种返回空（syncAutoIncrement 的 setval 不随事务回滚，要在确定提交时才调用）。
+ * 两个函数都要在事务之外调用：ALTER TABLE 会隐式提交
+ */
+export async function captureAutoIncrement<DB>(
+  db: Kysely<DB>,
+  tables: readonly (keyof DB & string)[],
+): Promise<Map<string, number>> {
+  const counters = new Map<string, number>()
+  if (dialectOf(db) !== 'mysql') return counters
+  for (const table of tables) {
+    // information_schema 里的值在 MySQL 8 上有缓存；SHOW CREATE TABLE 读的是当前值，计数器还是 1 时不显示
+    const result = await sql<Record<string, string>>`show create table ${sql.table(table)}`.execute(db)
+    const statement = result.rows[0]?.['Create Table'] ?? ''
+    counters.set(table, Number(/ AUTO_INCREMENT=(\d+)/.exec(statement)?.[1] ?? 1))
+  }
+  return counters
+}
+
+export async function restoreAutoIncrement<DB>(db: Kysely<DB>, counters: ReadonlyMap<string, number>): Promise<void> {
+  // InnoDB 不会把计数器设到表里已有的最大 id 以下，所以恢复不会让新行撞上已有的行
+  for (const [table, value] of counters)
+    await sql`alter table ${sql.table(table)} auto_increment = ${sql.lit(value)}`.execute(db)
+}
+
+/** 按一列分组计数，返回 值 → 行数。只接收已过滤、尚未添加选择列、分组、条数限制或偏移量的查询 */
+export async function countBy<DB, TB extends keyof DB>(
+  query: SelectQueryBuilder<DB, TB, Record<string, never>>,
+  column: Column<DB, TB>,
+): Promise<Map<string | number, number>> {
+  const rows = await query
+    .select([
+      sql<string | number>`${sql.ref(column)}`.as('group_key'),
+      sql<string | number | bigint>`count(*)`.as('row_count'),
+    ])
+    .groupBy(sql.ref(column))
+    .execute()
+  return new Map(rows.map((row) => [row.group_key, toNumber(row.row_count)]))
+}
+
 function isMysqlDuplicate(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'errno' in error && error.errno === 1062
 }

@@ -7,6 +7,7 @@ Minecraft 协议（CSL / USM / Legacy / Yggdrasil）以真实 BS v6 的行为为
 | `pnpm --filter @nextskin/contract-tests test` | 回放。不需要 Docker：直接调 Hono 的 `app.request()`，数据库用 SQLite。`pnpm check` 和 `pnpm test:contract` 都会跑 |
 | `pnpm --filter @nextskin/contract-tests record` | 重新录制。先按 `bs-v6/README.md` 启动录制环境 |
 | `pnpm e2e` | 也会经过 Next standalone 回放全部用例（`apps/web/e2e/contract.spec.ts`）：rewrite 和 Next 自己的处理都不能改变协议响应 |
+| `pnpm --filter @nextskin/contract-tests import-replay` | 导入检查（ADR-0031）：把录制环境的固定数据用导入器导入一个新的 SQLite 库，再回放全部用例和场景。和录制一样需要 Docker，会重写 BS 里的固定数据。`stored: false` 的材质在真实导入时缺文件、被跳过，引用它的两个用例（`csl/ghost`、`ygg/profile-ghost`）列为已知差异，不比较。改了导入器或者重新录制之后手动运行 |
 | `node tests/contract/scripts/make-textures.ts` | 重新生成材质文件和清单。只在增删材质时运行，之后必须重新录制 |
 
 ## 目录
@@ -19,6 +20,7 @@ Minecraft 协议（CSL / USM / Legacy / Yggdrasil）以真实 BS v6 的行为为
 | `src/compare.ts` | 比对规则 |
 | `src/replay.ts` | 发送用例、与录制结果比较；回放测试、e2e、录制脚本共用 |
 | `src/seed.ts` | 按 `docs/schema.md` 的导入对照把固定数据写进 NextSkin |
+| `scripts/bs-instance.ts` | 往录制环境写固定数据，录制和导入检查共用 |
 | `scripts/seed-sqlite.ts` | 把固定数据写进一个新的数据目录，e2e 用它启动 Next |
 | `fixtures/textures/` | 材质文件（提交进仓库：文件字节随 zlib 版本变化，重新生成会改变 hash） |
 | `bs-v6/` | 录制环境 |

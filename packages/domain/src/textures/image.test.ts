@@ -11,7 +11,7 @@ import {
   signature,
 } from '../../../skin/test/png-corpus.ts'
 import { DomainError } from '../errors.ts'
-import { decodeTexturePng, encodeTexturePng, pixelHash, processUpload, renderTexture } from './image.ts'
+import { decodeTexturePng, encodeTexturePng, inspectTexture, pixelHash, processUpload, renderTexture } from './image.ts'
 
 const fixture = () => readFile(new URL('../../../skin/test/fixtures/haka.png', import.meta.url))
 
@@ -73,6 +73,43 @@ test.each([
   } catch (error) {
     expect(error).toMatchObject({ code: 'texture_size_invalid', params: { width, height } })
   }
+})
+
+test('导入检查与上传的像素 hash、宽高相同，不重新编码；尺寸不合规则的按原图算', async () => {
+  const bytes = await fixture()
+  const uploaded = processUpload(bytes, 'steve')
+  expect(inspectTexture(bytes, 'steve')).toEqual({
+    pixelHash: uploaded.pixelHash,
+    width: uploaded.width,
+    height: uploaded.height,
+    conforming: true,
+  })
+  // 窄披风补宽之后算 hash，与上传一致
+  const cape = samplePng(6, 8, 0, 44, 34)
+  expect(inspectTexture(cape.bytes, 'cape')).toMatchObject({
+    pixelHash: processUpload(cape.bytes, 'cape').pixelHash,
+    width: 128,
+    height: 64,
+    conforming: true,
+  })
+  // 超过上传的 1024 上限、比例不对的旧文件照样能检查
+  for (const [type, width, height] of [
+    ['steve', 2048, 1024],
+    ['alex', 64, 32],
+    ['steve', 100, 37],
+  ] as const) {
+    const sample = samplePng(6, 8, 0, width, height)
+    expect(inspectTexture(sample.bytes, type)).toEqual({
+      pixelHash: pixelHash(sample.expected),
+      width,
+      height,
+      conforming: false,
+    })
+  }
+  expect(() => inspectTexture(samplePng(6, 8, 0, 4097, 1).bytes, 'steve')).toThrow(
+    new DomainError('texture_file_invalid'),
+  )
+  expect(() => inspectTexture(Buffer.from('invalid'), 'steve')).toThrow(new DomainError('texture_file_invalid'))
 })
 
 test('坏 PNG/解压炸弹映射为 texture_file_invalid', () => {

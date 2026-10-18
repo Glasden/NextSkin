@@ -146,6 +146,7 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0032_resolve_orphaned_reports',
     '0033_create_job_schedules',
     '0034_create_yggdrasil_tokens',
+    '0035_create_import_runs',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -777,4 +778,55 @@ test('启动器令牌的列、唯一键、时间列、可空绑定与外键级�
   expect(await db.selectFrom('yggdrasil_tokens').select('id').execute()).toEqual([{ id }])
   await db.deleteFrom('users').where('id', '=', userId).execute()
   expect(await db.selectFrom('yggdrasil_tokens').selectAll().execute()).toEqual([])
+})
+
+test('导入记录的列、状态和入口的 CHECK，报告能存下超过 64 KB 的 JSON', async () => {
+  const columns = (await db.introspection.getTables()).find((table) => table.name === 'import_runs')!.columns
+  expect(columns.map((column) => column.name)).toEqual([
+    'id',
+    'status',
+    'is_dry_run',
+    'entry',
+    'started_by',
+    'source',
+    'report',
+    'started_at',
+    'finished_at',
+  ])
+  expect(columns.filter((column) => column.isNullable && column.name !== 'id').map((column) => column.name)).toEqual([
+    'started_by',
+    'report',
+    'finished_at',
+  ])
+  const run = {
+    status: 'running',
+    is_dry_run: 1,
+    entry: 'cli',
+    started_by: null,
+    source: '{"dialect":"mysql"}',
+    started_at: timestamp,
+  } satisfies Insertable<CoreDatabase['import_runs']>
+  const report = JSON.stringify({ rows: 'x'.repeat(70_000) })
+  const id = await insertReturningId(db, 'import_runs', run)
+  await db
+    .updateTable('import_runs')
+    .set({ status: 'succeeded', report, finished_at: timestamp })
+    .where('id', '=', id)
+    .execute()
+  expect(await db.selectFrom('import_runs').selectAll().where('id', '=', id).executeTakeFirstOrThrow()).toEqual({
+    ...run,
+    id,
+    status: 'succeeded',
+    report,
+    finished_at: timestamp,
+  })
+  for (const values of [{ status: 'done' }, { entry: 'web' }, { is_dry_run: 2 }]) {
+    await expect(
+      db
+        .insertInto('import_runs')
+        .values({ ...run, ...values } as typeof run)
+        .execute(),
+    ).rejects.toThrow()
+  }
+  await db.deleteFrom('import_runs').execute()
 })

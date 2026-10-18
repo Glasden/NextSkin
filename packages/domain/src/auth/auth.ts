@@ -16,7 +16,7 @@ import {
 } from './password-policy.ts'
 import { isLegacyPasswordHash } from './legacy-passwords.ts'
 import { coreModelNaming, withNamingConvention } from './naming.ts'
-import { verifyStoredPassword } from './password.ts'
+import { matchStoredPassword, verifyStoredPassword } from './password.ts'
 import { serialSafety } from './serial-safety.ts'
 
 /** Better Auth 挂在这个路径下（Hono 的 /api/auth/*） */
@@ -144,13 +144,16 @@ export function authOptions(config: AuthConfig) {
       }),
       after: createAuthMiddleware(async (ctx) => {
         if (ctx.path !== '/sign-in/email' || !ctx.context.newSession) return
-        // newSession 只在密码校验通过之后才有，所以这里的明文就是刚通过校验的那个
+        // newSession 只在密码校验通过之后才有。Better Auth 1.7.10 把 ctx.body.password 原样传给 verify，不会先 trim；
+        // 旧哈希可能是按 trim 之后的值通过的，所以重新求出通过的那个值，按它换算法
         const password: unknown = (ctx.body as Record<string, unknown> | undefined)?.password
         const userId = ctx.context.newSession.user.id
         const accounts = await ctx.context.internalAdapter.findAccounts(userId)
         const credential = accounts.find((account) => account.providerId === 'credential')
-        if (typeof password === 'string' && credential?.password && isLegacyPasswordHash(credential.password))
-          await ctx.context.internalAdapter.updatePassword(userId, await hashPassword(password))
+        if (typeof password === 'string' && credential?.password && isLegacyPasswordHash(credential.password)) {
+          const matched = await matchStoredPassword({ hash: credential.password, password }, config.legacyPasswordSalt)
+          if (matched !== null) await ctx.context.internalAdapter.updatePassword(userId, await hashPassword(matched))
+        }
       }),
     },
     // /token：jwt 插件给会话签发 JWT，用不到；/update-user：昵称等字段改动要经过领域用例（不变量 4）

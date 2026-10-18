@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制、注册用例和注册规则、邮件发送、注册接口（`POST /api/register`，第一个 REST 接口，`packages/api/src/rest/`）、登录注册和找回密码的页面已经落地（ADR-0018），Yggdrasil Connect 还没有。国际化已接入（ADR-0019）。后台任务和积分流水已经落地（ADR-0021）：任务表和执行器、事件在业务事务里按订阅者展开成任务、邮件改为持久的任务、`adjustScore`。用户中心已经落地（ADR-0022）：外壳和导航、仪表盘（积分、签到）、角色管理，写接口认会话 Cookie。个人资料和账号安全已经落地（ADR-0023、ADR-0024）：改昵称和语言、改邮箱、删除账号、两步验证、通行密钥；核对密码的 REST 接口按用户限流。材质上传和皮肤库已经落地（ADR-0025）：纯 JS 的 PNG 解码、图像 worker 池、出图端点 `/render/…`、上传和上传者的管理、皮肤库和详情页（3D 预览）、用延迟任务推进的文件回收。衣柜、换材质和举报已经落地（ADR-0026）：衣柜页和 `GET /api/closet`、给角色换材质、头像、提交举报和“我的举报”。后台已经落地（ADR-0027）：固定角色映射到具名权限（`can()`）、审计日志、处理举报、管理员删除材质、封禁和任免管理员；用户管理的其余操作还没有。设置页已经落地（ADR-0028）：表单由设置注册表生成，只有超级管理员能改；公告和内容政策（Markdown，不渲染原始 HTML）、生成签名密钥、测试邮件。定时任务已经落地（ADR-0029）：`job_schedules` 和调度器（cron 按站点时区解释，用 croner），清理过期的认证数据、按保留期清理审计日志、回收材质存储里的孤儿文件和临时文件。Yggdrasil 已经落地（ADR-0030）：authserver 的令牌表和五个端点、进服、启动器上传和删除材质，开了两步验证的账号在密码后面接验证码；仪表盘的外置登录配置、安全页的启动器登录列表；契约测试支持有状态的场景。
+monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制、注册用例和注册规则、邮件发送、注册接口（`POST /api/register`，第一个 REST 接口，`packages/api/src/rest/`）、登录注册和找回密码的页面已经落地（ADR-0018），Yggdrasil Connect 还没有。国际化已接入（ADR-0019）。后台任务和积分流水已经落地（ADR-0021）：任务表和执行器、事件在业务事务里按订阅者展开成任务、邮件改为持久的任务、`adjustScore`。用户中心已经落地（ADR-0022）：外壳和导航、仪表盘（积分、签到）、角色管理，写接口认会话 Cookie。个人资料和账号安全已经落地（ADR-0023、ADR-0024）：改昵称和语言、改邮箱、删除账号、两步验证、通行密钥；核对密码的 REST 接口按用户限流。材质上传和皮肤库已经落地（ADR-0025）：纯 JS 的 PNG 解码、图像 worker 池、出图端点 `/render/…`、上传和上传者的管理、皮肤库和详情页（3D 预览）、用延迟任务推进的文件回收。衣柜、换材质和举报已经落地（ADR-0026）：衣柜页和 `GET /api/closet`、给角色换材质、头像、提交举报和“我的举报”。后台已经落地（ADR-0027）：固定角色映射到具名权限（`can()`）、审计日志、处理举报、管理员删除材质、封禁和任免管理员；用户管理的其余操作还没有。设置页已经落地（ADR-0028）：表单由设置注册表生成，只有超级管理员能改；公告和内容政策（Markdown，不渲染原始 HTML）、生成签名密钥、测试邮件。定时任务已经落地（ADR-0029）：`job_schedules` 和调度器（cron 按站点时区解释，用 croner），清理过期的认证数据、按保留期清理审计日志、回收材质存储里的孤儿文件和临时文件。Yggdrasil 已经落地（ADR-0030）：authserver 的令牌表和五个端点、进服、启动器上传和删除材质，开了两步验证的账号在密码后面接验证码；仪表盘的外置登录配置、安全页的启动器登录列表；契约测试支持有状态的场景。BS 导入器的第一步已经落地（ADR-0031）：导入引擎（`packages/importer`）、`import_runs`、对账报告和命令行，网页登录核对旧格式的哈希时接受 trim 之前的密码，录制环境上的导入回放检查；安装向导、后台的"数据迁移"和维护模式还没有。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
@@ -38,6 +38,7 @@ nextskin 启动器（进程监管 + 命令行）
 | `pnpm e2e` | Playwright 端到端测试；也经过 Next standalone 回放全部契约用例 |
 | `pnpm test:visual` | 组件截图回归：给每个 story 拍亮暗两张截图，和基线比较（需要 Docker，浏览器跑在容器里）。外观改动是有意的，就加 `-- --update-snapshots` 更新基线，并检查新截图 |
 | `pnpm format` | Prettier 格式化 |
+| `pnpm import:bs -- <参数>` | 从 BS v6 导入（ADR-0031），参数见 `-- --help`，步骤见 `packages/importer/MIGRATION.md`；读和 `pnpm dev` 相同的环境变量，运行时服务要停着 |
 | `pnpm set-role <邮箱> <角色>` | 设定用户的角色，例如开发库里的第一个超级管理员（ADR-0027）；读和 `pnpm dev` 相同的环境变量 |
 
 单元测试和 story 测试跑在 Chromium 里，第一次运行前要装浏览器：`pnpm --filter @nextskin/web exec playwright install chromium`。
@@ -49,7 +50,7 @@ nextskin 启动器（进程监管 + 命令行）
 1. **Minecraft 协议（CSL / USM / Legacy / Yggdrasil）的路径、状态码、响应结构、响应头与 BS v6 一致。** 玩家的模组和启动器无法跟着升级。守护：`tests/contract`。
 2. **玩家 UUID 创建后永不改变，导入旧数据时原样保留。** 游戏服务器按 UUID 存储玩家的背包和权限，UUID 一变，这些数据全部对不上。守护：导入器测试、对账报告。
 3. **已存在的材质文件永不重新编码。新材质的 hash 是像素 hash：sha256(u32be(宽) ‖ u32be(高) ‖ RGBA8 像素)，不是文件字节的 hash。** hash 既是存储键，也是公开 URL 的一部分；文件字节的 hash 会随 zlib 版本和 CPU 架构变化（ADR-0008）。
-4. **写操作只能经过领域用例。** Route handler 里不写 SQL，也不写业务规则；不用 Server Actions 写数据。见 ADR-0004。守护：包依赖（`apps/web`、`packages/api` 不依赖 `@nextskin/db`）、lint `nextskin/no-use-server`。
+4. **写操作只能经过领域用例。** Route handler 里不写 SQL，也不写业务规则；不用 Server Actions 写数据。见 ADR-0004。唯一的例外是 `packages/importer`：导入的是历史状态，不该触发事件、审计和按现价收费，所以直接写表（ADR-0031）。守护：包依赖（`apps/web`、`packages/api` 不依赖 `@nextskin/db`）、lint `nextskin/no-use-server`。
 5. **积分、点赞数这类计数，在事务内原子更新。** 禁止"先读、再算、再写回"。
 6. **数据库代码必须在四种数据库上都通过。** `returning`、upsert、自增主键、`count` 只能通过 `packages/db` 的辅助函数使用。见 ADR-0005。守护：`pnpm test:db`、lint。
 7. **不使用 `NEXT_PUBLIC_*`，站点配置存在数据库里。** 守护：lint。
@@ -72,7 +73,7 @@ nextskin 启动器（进程监管 + 命令行）
 | `packages/email` | 邮件模板，无依赖的 HTML 模板函数（ADR-0020） |
 | `packages/plugin-sdk`、`plugin-host`、`plugin-testing` | 插件 API、插件运行时、插件测试工具 |
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |
-| `packages/importer` | 从 BS v6 只读导入 |
+| `packages/importer` | 从 BS v6 只读导入（ADR-0031）：导入引擎和命令行，迁移指南在 `MIGRATION.md`，该目录有自己的 AGENTS.md |
 | `plugins/*` | 官方插件，用公开 API 编写 |
 | `tests/contract` | 协议契约用例：从 BS v6 录制，回放比较（见该目录 README） |
 | `docs/adr` | 架构决策记录 |

@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { sql, type Kysely } from 'kysely'
-import { createDatabase } from './database.ts'
+import { createDatabase, type DatabaseConfig } from './database.ts'
 
 export type TestDialect = 'sqlite' | 'mysql' | 'mariadb' | 'postgres'
 
@@ -37,6 +37,8 @@ export function removeTestDirectory(directory: string): Promise<void> {
 
 export interface TestDatabase<DB> {
   db: Kysely<DB>
+  /** 连接这个库的配置，用来另开连接（例如导入器读旧库的快照） */
+  config: DatabaseConfig
   cleanup(): Promise<void>
 }
 
@@ -45,9 +47,11 @@ export async function createTestDatabase<DB>(): Promise<TestDatabase<DB>> {
   const dialect = testDialect()
   if (dialect === 'sqlite') {
     const directory = await mkdtemp(join(tmpdir(), 'nextskin-db-'))
-    const db = createDatabase<DB>({ dialect, file: join(directory, 'test.sqlite') })
+    const config = { dialect, file: join(directory, 'test.sqlite') } as const
+    const db = createDatabase<DB>(config)
     return {
       db,
+      config,
       async cleanup() {
         try {
           await db.destroy()
@@ -75,10 +79,12 @@ export async function createTestDatabase<DB>(): Promise<TestDatabase<DB>> {
     // 数据库名不能绑定为参数，必须作为标识符转义。
     await sql`create database ${sql.id(name)}`.execute(admin)
     created = true
-    db = createDatabase<DB>({ dialect: serverDialect, url: target.toString() })
+    const config = { dialect: serverDialect, url: target.toString() }
+    db = createDatabase<DB>(config)
     const database = db
     return {
       db: database,
+      config,
       async cleanup() {
         try {
           await database.destroy()

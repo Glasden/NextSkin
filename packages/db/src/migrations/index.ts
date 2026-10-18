@@ -40,6 +40,8 @@ import * as createJobSchedules from './0033_create_job_schedules.ts'
 
 import * as createYggdrasilTokens from './0034_create_yggdrasil_tokens.ts'
 
+import * as createImportRuns from './0035_create_import_runs.ts'
+
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
   '0002_create_texture_files': createTextureFiles,
@@ -75,4 +77,5 @@ export const coreMigrations: Record<string, Migration> = {
   '0032_resolve_orphaned_reports': resolveOrphanedReports,
   '0033_create_job_schedules': createJobSchedules,
   '0034_create_yggdrasil_tokens': createYggdrasilTokens,
+  '0035_create_import_runs': createImportRuns,
 }

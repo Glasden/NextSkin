@@ -1,4 +1,5 @@
 export { createDatabase, type DatabaseConfig } from './database.ts'
+export { readSnapshot, type SnapshotSource } from './snapshot.ts'
 export { transactionWithRetry } from './transaction-retry.ts'
 export {
   containsInsensitive,
@@ -27,6 +28,9 @@ export {
   createTable,
   autoIncrementId,
   syncAutoIncrement,
+  captureAutoIncrement,
+  restoreAutoIncrement,
+  countBy,
   type DatabaseDialect,
 } from './helpers.ts'
 export { migrateToLatest, type MigrationOptions } from './migrations.ts'
@@ -59,6 +63,9 @@ export type {
   TwoFactorsTable,
   PasskeysTable,
   DeviceCodeSelectionsTable,
+  ImportRunsTable,
+  ImportRunStatus,
+  ImportRunEntry,
   UserRole,
   TextureType,
   TextureFileStatus,

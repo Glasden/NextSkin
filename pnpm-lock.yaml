@@ -518,6 +518,25 @@ importers:
         specifier: 'catalog:'
         version: 5.0.5(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
+  packages/importer:
+    dependencies:
+      '@nextskin/db':
+        specifier: workspace:*
+        version: link:../db
+      '@nextskin/domain':
+        specifier: workspace:*
+        version: link:../domain
+      kysely:
+        specifier: 'catalog:'
+        version: 0.29.6
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.5(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
   packages/plugin-sdk:
     dependencies:
       kysely:
@@ -648,6 +667,9 @@ importers:
       '@nextskin/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@nextskin/importer':
+        specifier: workspace:*
+        version: link:../../packages/importer
       kysely:
         specifier: 'catalog:'
         version: 0.29.6

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { afterEach, expect, test, vi } from 'vitest'
 import { DomainError } from '../errors.ts'
 import { createImagePool, type ImagePool } from './image-pool.ts'
-import { decodeTexturePng, processUpload, renderTexture } from './image.ts'
+import { decodeTexturePng, inspectTexture, processUpload, renderTexture } from './image.ts'
 
 const pools: ImagePool[] = []
 const pool = (options?: Parameters<typeof createImagePool>[0]) => {
@@ -39,6 +39,18 @@ test('真 worker 处理 fixture、转移输入字节、复用线程、保留领�
     params: { width: 64, height: 32 },
   })
   await expect(p.render({ bytes: new Uint8Array(), kind: 'head', type: 'steve', k: 1 })).rejects.toThrow('图像处理失败')
+})
+
+test('导入检查在 worker 里执行，解码不了的保留领域 code', async () => {
+  const p = pool({ size: 1 }),
+    task = await input(),
+    expected = inspectTexture(task.bytes, task.type)
+  const promise = p.inspect(task)
+  expect(task.bytes.byteLength).toBe(0)
+  expect(await promise).toEqual(expected)
+  await expect(p.inspect({ bytes: new Uint8Array(8), type: 'steve' })).rejects.toMatchObject({
+    code: 'texture_file_invalid',
+  })
 })
 
 test('排队上限只计算等待任务，满队列拒绝；处理完后继续可用', async () => {

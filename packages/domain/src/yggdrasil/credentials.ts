@@ -5,7 +5,7 @@ import { sql, type Kysely, type Selectable } from 'kysely'
 import { z } from 'zod'
 import { deriveSecret } from '../auth/auth.ts'
 import { isLegacyPasswordHash } from '../auth/legacy-passwords.ts'
-import { verifyStoredPassword } from '../auth/password.ts'
+import { matchStoredPassword } from '../auth/password.ts'
 import { normalizeNameLookup } from '../players/queries.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { forbidden, YggdrasilError } from './errors.ts'
@@ -76,8 +76,9 @@ export function createCredentials(options: {
       if (candidate === null) continue
       if (factor && !/\d{6}$/.test(candidate)) continue
       const password = factor ? candidate.slice(0, -6) : candidate
-      if (await verifyStoredPassword({ hash: account.password, password }, legacySalt)) {
-        accepted = { password, code: factor ? candidate.slice(-6) : '' }
+      const matched = await matchStoredPassword({ hash: account.password, password }, legacySalt)
+      if (matched !== null) {
+        accepted = { password: matched, code: factor ? candidate.slice(-6) : '' }
         break
       }
     }

@@ -13,12 +13,14 @@
     "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
     "test": "vitest run",
     "test:contract": "vitest run",
-    "record": "node scripts/record.ts"
+    "record": "node scripts/record.ts",
+    "import-replay": "node scripts/import-replay.ts"
   },
   "dependencies": {
     "@nextskin/api": "workspace:*",
     "@nextskin/db": "workspace:*",
     "@nextskin/domain": "workspace:*",
+    "@nextskin/importer": "workspace:*",
     "kysely": "catalog:"
   },
   "devDependencies": {

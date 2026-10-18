@@ -225,11 +225,11 @@ test('真实网页密钥兼容前后各一个周期；连续失败计数为 null
   expect((await factor()).failed_verification_count).toBe(2)
 })
 
-test('两步验证下旧哈希升级只使用密码，不含验证码', async () => {
+test('两步验证下旧哈希按 PHP trim 回退，升级只使用核对通过的密码，不含验证码', async () => {
   const { secret } = await enable()
   const old = '$2y$10$rGpvsoGqqJj9Ahl6AnxY2uSd8VfK46pZU.MJKrw8/SYZwHn29jTB.'
   await s.db().updateTable('accounts').set({ password: old }).where('user_id', '=', s.uid).execute()
-  const value = 'php-era-password' + totp(secret)
+  const value = ' php-era-password\t' + totp(secret)
   await s.login({ password: value, rawPassword: value })
   const account = await s
     .db()

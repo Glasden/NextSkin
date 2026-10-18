@@ -3,6 +3,7 @@ import { validatePlayerName } from './players/create.ts'
 import { coreSettingsRegistry } from './settings/registry.ts'
 import { validateTextureDescription, validateTextureName } from './textures/validation.ts'
 import { validateNickname } from './users/validation.ts'
+import { phpTrim } from './text.ts'
 
 // PostgreSQL 的 text 存不了 U+0000：用户填的文本在写库之前一律拒绝，四种数据库的结果才一致
 test('用户填的文本里有 U+0000 时拒绝', () => {
@@ -20,4 +21,9 @@ test('用户填的文本里有 U+0000 时拒绝', () => {
     expect.objectContaining({ code: 'player_name_invalid', params: { rule: 'utf8' } }),
   )
   expect(validatePlayerName('Steve§', rules)).toBe('Steve§')
+})
+
+test('phpTrim 只去掉 PHP trim() 默认的空白字符', () => {
+  expect(phpTrim(' \t\n\r\0\x0BSteve \t\n\r\0\x0B')).toBe('Steve')
+  expect(phpTrim('\u00a0Steve\u3000')).toBe('\u00a0Steve\u3000')
 })

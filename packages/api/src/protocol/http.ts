@@ -1,3 +1,4 @@
+import { phpTrim } from '@nextskin/domain'
 import type { Context } from 'hono'
 import type { AppEnv } from '../env.ts'
 
@@ -78,18 +79,6 @@ export function suffixPlayer(file: string, suffix: '.json' | '.png'): string | n
   if (!file.endsWith(suffix)) return null
   const name = file.slice(0, -suffix.length)
   return name && !/[/.]/.test(name) ? name : null
-}
-
-// PHP trim() 默认去掉的字符
-const PHP_WHITESPACE = new Set([' ', '\t', '\n', '\r', '\0', '\x0B'])
-
-/** PHP 的 trim()。BS 的 TrimStrings 中间件用它处理查询参数和 JSON 请求体里的字符串（路由参数不处理）。 */
-export function phpTrim(value: string): string {
-  let start = 0
-  let end = value.length
-  while (start < end && PHP_WHITESPACE.has(value[start]!)) start++
-  while (end > start && PHP_WHITESPACE.has(value[end - 1]!)) end--
-  return value.slice(start, end)
 }
 
 /** Laravel 的 Request::isJson()：只有这种请求，JSON 请求体里的字符串才会被 trim。 */

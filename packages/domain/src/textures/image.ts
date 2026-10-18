@@ -144,6 +144,37 @@ export function processUpload(bytes: Uint8Array, type: TextureType): UploadImage
   }
 }
 
+// 导入的旧文件不受上传的尺寸上限约束（尺寸不合规则的照样导入），但解码的内存仍要有上限：4096×4096 的 RGBA 是 64 MiB
+const importLimits: PngLimits = { maxWidth: 4096, maxHeight: 4096, maxInflatedBytes: 4096 * (4096 * 4 + 1) }
+
+export interface InspectedImage {
+  pixelHash: string
+  width: number
+  height: number
+  /** 能按上传的规则规范化；false 时像素 hash 和宽高按解码出的原图算 */
+  conforming: boolean
+}
+/**
+ * 导入旧文件（ADR-0031）：按上传的规则解码、规范化后算像素 hash 和宽高，上传查重才能命中它。只解码，不重新编码。
+ * 尺寸不合规则的按原图算；解码不了的抛 texture_file_invalid
+ */
+export function inspectTexture(bytes: Uint8Array, type: TextureType): InspectedImage {
+  let image: Rgba
+  try {
+    image = decodeTexturePng(bytes, importLimits)
+  } catch (error) {
+    if (error instanceof PngError) throw new DomainError('texture_file_invalid')
+    throw error
+  }
+  try {
+    const normalized = normalizeTexture(image, type)
+    return { pixelHash: pixelHash(normalized), width: normalized.width, height: normalized.height, conforming: true }
+  } catch (error) {
+    if (!(error instanceof TextureShapeError)) throw error
+    return { pixelHash: pixelHash(image), width: image.width, height: image.height, conforming: false }
+  }
+}
+
 export interface RenderInput {
   kind: 'figure' | 'head'
   bytes: Uint8Array

@@ -372,7 +372,23 @@ export interface YggdrasilTokensTable {
   expires_at: IsoTimestamp
 }
 
+export type ImportRunStatus = 'running' | 'succeeded' | 'blocked' | 'failed' | 'cancelled'
+export type ImportRunEntry = 'setup' | 'admin' | 'cli'
+
+export interface ImportRunsTable {
+  id: Generated<number>
+  status: ImportRunStatus
+  is_dry_run: SwitchValue
+  entry: ImportRunEntry
+  started_by: string | null
+  source: string
+  report: string | null
+  started_at: IsoTimestamp
+  finished_at: IsoTimestamp | null
+}
+
 export interface CoreDatabase {
+  import_runs: ImportRunsTable
   yggdrasil_tokens: YggdrasilTokensTable
   job_schedules: JobSchedulesTable
   jobs: JobsTable

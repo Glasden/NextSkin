@@ -44,6 +44,7 @@ const processImage = vi.fn(({ bytes, type }: { bytes: Uint8Array; type: string }
 )
 const pool = {
   processUpload: processImage,
+  inspect: vi.fn(),
   render: () => Promise.resolve(new Uint8Array()),
   close: () => Promise.resolve(),
 }

@@ -358,7 +358,7 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 - 同一时刻最多一行 `running`：网页发起的由服务进程内的锁保证，命令行要求服务停着。服务启动时把遗留的 `running` 标为 `failed`，退出维护模式。
 - 运行中的进度只在运行导入的进程的内存里，不写进这张表：导入事务提交之前，SQLite 上别的写入都要排队。
 - 站点**未初始化**：没有用户，也没有 `succeeded` 的导入（试跑不算）。安装向导只在这时可用。
-- "上一次导入"指最近一行 `succeeded` 且不是试跑的记录，按它的 `finished_at` 判断导入之后新站有没有产生数据。
+- "上一次导入"指最近一行 `succeeded` 且不是试跑的记录。导入提交前在报告里记下写进去的范围（`watermark`：各表最大的 id、角色和材质最晚的 `updated_at`），之后按它和 `finished_at` 判断新站有没有产生数据，不按导入的行自带的时间：旧站的时间可能在未来。
 
 ## 以下各表只定了要点，随对应切片细化
 
@@ -394,14 +394,16 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 
 每次运行都从旧库重新导入全部数据，在一个目标库事务里先清空、再写入；有停止类问题、出错或被取消就整体回滚（ADR-0031）。
 
-- **清空的范围**：所有业务数据，即用户（连同级联删除的账号、会话、角色、衣柜、令牌等）、材质、材质文件、举报、OAuth 客户端、积分流水、审计日志、任务。保留 `settings` 里导入器不写的键、Better Auth 的 `jwks`、`job_schedules`、`import_runs`、迁移记录。
+- **清空的范围**：所有业务数据，即用户（连同级联删除的账号、会话、角色、衣柜、令牌等）、材质、材质文件、举报、OAuth 客户端、积分流水、审计日志、任务。保留 `settings` 里导入器不写的键、Better Auth 的 `jwks` 和 `oauth_resources`、`job_schedules`、`import_runs`、迁移记录。`texture_files` 最后处理：这次运行用到的行沿用或改写，用不到的删掉。
 - **能不能写**：
-  - 目标库没有业务数据：直接导入；
+  - 目标库没有业务数据（会被清空的表里一行都没有）：直接导入；
   - 有数据，并且来自上一次导入：命令行要加 `--replace`，网页上要勾选确认；
-  - 上一次导入之后新站产生了数据（会话、OAuth 令牌、不是"导入"的积分流水、`created_at` 晚于上一次导入的用户），或者有数据却从没导入过：停止并列出，命令行再加 `--force`、网页上再勾选一次才继续。
+  - 上一次导入之后新站产生了数据，或者有数据却从没导入过：停止并列出，命令行再加 `--force`、网页上再勾选一次才继续。新站的数据指：会话、OAuth 令牌和授权、启动器令牌、不是"导入"的积分流水、审计记录；id 大于上一次导入范围的用户、角色、材质、举报、OAuth 客户端；导入之后改过的角色和材质（`updated_at` 晚于导入范围）、加入的衣柜、处理过的举报；找回密码、两步验证、通行密钥、设备码，以及不是定时触发的后台任务。
 - **指定 UUID**（`--uuid-overrides`，网页上在试跑报告的冲突旁边选择）：JSON 对象，键是 pid 的字符串，值是 UUID，带不带连字符、大小写都可以，导入时统一成 32 位小写十六进制。指定的值同样要通过"两个角色得到同一个 UUID"的检查。
 - **像素 hash**：按上传的规则解码、规范化后计算（`@nextskin/skin`），文件不重新编码。规范化按引用这个文件的 `tid` 最小的材质的类型。能解码、但尺寸不合 NextSkin 规则的文件按解码出的原图计算，照样导入，在报告里列出。重跑时，上一次导入的 `texture_files` 里有同一 hash、同样大小的行，沿用它的像素 hash 和宽高。
 - 材质文件在事务之外按 hash 复制进材质存储，存储里已经有、大小相同的不再复制。回滚后多出来的文件由 `core:texture-sweep` 回收（ADR-0029）。
+- 沿用上一次的像素 hash 之前，按 PNG 头里的宽高和这次的类型算出规范化之后的宽高，与上一次的不同（tid 最小的材质换了类型）就重新解码。
+- 回滚之后（试跑、停止、取消、出错）恢复 MySQL 的自增计数器（它不随事务回滚）；PostgreSQL 的序列只在确定提交时同步。
 
 ### 对照表
 
@@ -413,15 +415,15 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 | email | email | 去首尾空格、转小写 |
 | nickname | nickname | |
 | score | score | 加上材质已不存在的待处理举报退还的花费（见 reports）。积分不为 0 时另写一条原因为"导入"的积分流水，余额等于导入的积分 |
-| permission | role | -1 → `banned`，0 → `user`，1 → `admin`，2 → `superadmin` |
+| permission | role | -1 → `banned`，0 → `user`，1 → `admin`，2 → `superadmin`；其他值按 `user`，计入报告 |
 | avatar | avatar_texture_id | 0、材质不存在或被跳过时为空 |
-| locale | locale | |
+| locale | locale | BS 用下划线（`zh_CN`），换成连字符后对应到受支持的语言（`matchLocale`）；对应不上的置空 |
 | ip | registration_ip | |
 | last_sign_at | last_check_in_at | |
 | — | email_version | 0：BS 的邮箱修改立即生效，没有待确认的链接（ADR-0024） |
 | register_at | created_at、updated_at | |
 | verified | email_verified | |
-| password | accounts 里 `provider_id = 'credential'` 的一行 | `account_id` 写 uid 的字符串（Better Auth 按它找密码）。哈希登录成功后换成当前算法（ADR-0007）。BS 的算法和盐取决于旧站 `.env` 的 `PWD_METHOD` 和 `SALT`，导入命令要拿到这两项：bcrypt、argon2（`BCRYPT`、`ARGON2I`、`PHP_PASSWORD_HASH`）原样保存；十六进制摘要（`MD5`、`SALTED2SHA256` 等六种）存成 `$bs$<算法>$<小写摘要>`（`auth/legacy-passwords.ts` 的 `formatLegacyDigest`）。`SALT` 是全站的 pepper，不进哈希，存进机密设置 `auth.legacyPasswordSalt` |
+| password | accounts 里 `provider_id = 'credential'` 的一行 | `account_id` 写 uid 的字符串（Better Auth 按它找密码）。哈希登录成功后换成当前算法（ADR-0007）。BS 的算法和盐取决于旧站 `.env` 的 `PWD_METHOD` 和 `SALT`，导入命令要拿到这两项：bcrypt、argon2（`BCRYPT`、`ARGON2I`、`PHP_PASSWORD_HASH`）原样保存；十六进制摘要（`MD5`、`SALTED2SHA256` 等六种）存成 `$bs$<算法>$<小写摘要>`（`auth/legacy-passwords.ts` 的 `formatLegacyDigest`）。认不出的哈希（空、长度与算法不符）不建这一行，用户可以找回密码；没有提供 `.env` 却遇到十六进制摘要时停止。`SALT` 是全站的 pepper，不进哈希，存进机密设置 `auth.legacyPasswordSalt` |
 
 不导入：`is_dark_mode`、`verification_token`、`remember_token`。
 
@@ -451,7 +453,7 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 | likes | likes | 不照搬，按导入后的衣柜重新统计。BS 的计数是先读再写回，可能有偏差，差异计入报告 |
 | size | score_paid | `size_bytes` 直接取文件大小，不用这一列。`score_paid` = size（BS 存的是 KB）×（公开取旧站的 `score_per_storage`，私有取 `private_score_per_storage`）；公开材质在旧站开着 `take_back_scores_after_deletion` 时再减去 `score_award_per_texture`，不小于 0。这样迁移那一刻删除材质能退多少，迁移之后仍然是多少（ADR-0025） |
 
-文件缺失或无法解码的材质跳过：引用它的角色材质和头像置空，衣柜记录跳过，举报的 `texture_id` 置空。装过 texture-description 插件的站点，描述导入到 `description`。
+`type` 不是三种之一、`hash` 不是 64 位小写十六进制的材质跳过。文件缺失或无法解码的材质跳过：引用它的角色材质和头像置空，衣柜记录跳过，举报的 `texture_id` 置空。装过 texture-description 插件的站点，描述导入到 `description`。
 
 **user_closet → closet_items**
 
@@ -494,7 +496,7 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 - 授权类型设为授权码和刷新令牌，与 Passport 对第三方应用开放的一致。
 - Passport 的保密客户端在令牌端点既可以用 HTTP Basic 传 secret，也可以放在请求体里；Better Auth 只接受客户端登记的那一种。核心在请求进入 Better Auth 之前，把另一种方式改写成登记的方式（`auth/client-authentication.ts`），对所有保密客户端生效，所以导入时不用猜第三方应用用的是哪一种。
 
-**options → settings**：只导入有对应设置项的键，对照表随设置注册表定。`ygg_uuid_algorithm` 决定以后新角色的 UUID 算法。已经有的项：
+**options → settings**：只导入有对应设置项的键，对照表随设置注册表定。旧库里没有的选项按 BS 6.0.2 的默认值（`config/options.php`）算。值不合法的不导入、用 NextSkin 的默认值，超出设置项范围的取边界值，都在报告里列出。导入器写的键先全部删掉，再写入和默认值不同的（`packages/importer/src/settings.ts` 的 `IMPORTED_SETTING_KEYS`）。已经有的项：
 
 | BS | NextSkin | 规则 |
 |---|---|---|
@@ -505,11 +507,20 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 | ygg_skin_domain | yggdrasil.skinDomains | 按逗号拆开，每项 trim，去掉空项 |
 | ygg_search_profile_max | yggdrasil.profileSearchLimit | 转成整数 |
 | ygg_enable_ali | yggdrasil.apiLocationIndication | `'true'` / `'false'` 转成布尔 |
-| ygg_private_key | yggdrasil.signingKey | 机密项，原样加密保存 |
+| ygg_private_key | yggdrasil.signingKey | 机密项，原样加密保存；不是 4096 位以上的 RSA 私钥时不导入，报告里不写它的值 |
 | ygg_token_expire_1 | yggdrasil.tokenValidSeconds | 转成整数 |
 | ygg_token_expire_2 | yggdrasil.tokenRefreshableSeconds | 转成整数 |
 | ygg_tokens_limit | yggdrasil.tokensPerUser | 转成整数 |
 | ygg_rate_limit | yggdrasil.loginIntervalMs | 转成整数 |
+| register_with_player_name | auth.registration.withPlayerName | 按 BS 的 `Option::get` 转成布尔：`'true'`、`'false'` 照字面，`''`、`'0'` 为假，其余为真 |
+| require_verification | auth.requireEmailVerification | 同上 |
+| regs_per_ip | auth.registration.perIpLimit | 转成整数 |
+| user_initial_score | user.initialScore | 转成整数 |
+| player_name_rule | player.nameRule | 取值相同 |
+| custom_player_name_regexp | player.nameRegex | 规则同 `texture_name_regexp` |
+| player_name_length_min、player_name_length_max | player.nameLength | 各自限制在 1–50 |
+| ygg_uuid_algorithm | player.uuidAlgorithm | `v3` → `offline`，`v4` → `random`。决定以后新角色的 UUID 算法 |
+| —（`.env` 的 SALT） | auth.legacyPasswordSalt | 机密项 |
 | score_per_player | score.perPlayer | 转成整数 |
 | return_score | score.refundOnDelete | `'true'` / `'false'` 转成布尔 |
 | sign_score | checkIn.score | `'最小,最大'` 拆成 `{ min, max }` |
@@ -519,7 +530,7 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 | private_score_per_storage | score.perKbPrivate | 转成整数 |
 | score_per_closet_item | score.perClosetItem | 转成整数 |
 | max_upload_file_size | texture.maxFileSizeKb | 转成整数；超出 1–8192 时取边界值，在报告里注明 |
-| texture_name_regexp | texture.nameRegex | 去掉 PCRE 的分隔符；带了 JS 不支持的修饰符时，停止并报告 |
+| texture_name_regexp | texture.nameRegex | 去掉 PCRE 的分隔符；修饰符 i、m、s 转成 `(?ims:…)`，u 本来就开着；带了其他修饰符、或者 JS 编译不了时，停止并报告 |
 | reporter_score_modification | report.cost、report.reward | 为负时取绝对值，作为 `report.cost`；为正时加进 `report.reward`：BS 提交就发、驳回时收回，这里改成采纳时才发（ADR-0026） |
 | reporter_reward_score | report.reward | 转成整数，与上一行的正值相加 |
 | announcement_{语言}、announcement | site.announcement | 取与 `site.locale` 对应的那份（`zh-CN` 对应 `announcement_zh_CN`），没有就取不带后缀的；其余语言的版本在报告里列出。等于 BS 的默认公告（`Welcome to Blessing Skin {version}!`）时不导入。含原始 HTML 的在报告里注明：导入后这部分不再显示（ADR-0028）。超过 20000 个字符时停止并报告 |
@@ -536,12 +547,12 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
    - 按名字：在旧库里用 `uuid.name = players.name` 关联，与 yggdrasil-api 运行时的查找方式相同，比较规则由旧库决定（MySQL 上忽略大小写）。
 
    两类都要查，不能按表结构二选一：`yggc:fix-uuid-table` 加的 `pid` 列是可空的，之后如果又换回 yggdrasil-api，它插入的新行只有名字、没有 pid。只按 pid 查，这些角色会被当成"从未分配"，重新生成 UUID。
-2. 候选值统一成 32 位小写十六进制（旧版本可能存了带连字符的格式），再去重：
+2. 候选值统一成 32 位小写十六进制（旧版本可能存了带连字符的格式，只接受 8-4-4-4-12 的标准写法），再去重：
    - 只有一个值：就用它；
    - 有多个不同的值（同一个名字有几行、UUID 各不相同，或者按 pid 和按名字查到的不一样）：停止并报告，列出每个候选值的来源和行 id，由服主指定。导入器不替服主猜：BS 查找时用的 `first()` 没有排序，返回哪一行取决于数据库。MySQL InnoDB 上实际是 id 最小的一行，报告里可以注明这一点；PostgreSQL 上则不一定；
    - 没有候选值：这个角色从来没有被 Yggdrasil 查询过，BS 还没给它分配。按旧站的 `ygg_uuid_algorithm` 生成：`v3` 算离线 UUID，与 BS 将来会分配的相同；`v4` 随机生成，反正还没有游戏服务器见过它。
 3. 候选值不是合法的 UUID：停止并报告。
-4. 两个角色得到同一个 UUID：停止并报告。
+4. 两个角色得到同一个 UUID：停止并报告。例外是生成的 UUID（离线算法、随机）：它还没有游戏服务器见过，与映射表里的或指定的值冲突时，生成的那个改用随机 UUID（与 ADR-0015 创建角色时的规则相同），不论两个角色的先后。
 5. 服主处理冲突有两种方式：在旧站修正 `uuid` 表，或者给导入命令传一个文件，逐个指定角色的 UUID。
 6. 没有对应角色的映射行（改名或删除角色后留下的）不导入，只在报告里记数。
 7. 映射行里的名字与角色当前的名字不完全相同（例如只改了大小写，按 MySQL 的比较仍然关联得上）：仍然用表里存的值，在报告里单独列出。yggdrasil-connect 在离线算法下每次读取映射时，发现名字不一致就按当前名字重算 UUID，先写回表里再返回，所以正常情况下表里存的就是最近一次发给游戏服务器的 UUID。BS 继续运行的话，下一次读取会把它换掉，NextSkin 不换（ADR-0015）。例外是写回与 `yggc:fix-uuid-table` 并发等极端交错：写回没有改到任何行，内存里重算出的 UUID 却已经发了出去。所以运行修复命令和最终同步时，旧站要停止服务；已经出过这类问题的站点，用指定文件逐个纠正。

@@ -29,7 +29,7 @@ function core(production = false, mailTransport?: MailTransport) {
       delete: () => Promise.resolve(),
       deleteTemp: () => Promise.resolve(),
     },
-    imagePool: { close: () => Promise.resolve(), processUpload: vi.fn(), render: vi.fn() },
+    imagePool: { close: () => Promise.resolve(), processUpload: vi.fn(), inspect: vi.fn(), render: vi.fn() },
   })
 }
 async function audits() {

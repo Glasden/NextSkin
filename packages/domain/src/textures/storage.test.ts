@@ -39,6 +39,16 @@ test('按 hash 返回原始字节，缺文件返回 null', async () => {
   expect(await storage.read('b'.repeat(64))).toBeNull()
 })
 
+test('stat 返回文件大小，缺文件返回 null，错误不暴露路径', async () => {
+  const hash = 'c'.repeat(64)
+  await writeFile(join(directory, hash), Buffer.alloc(1234))
+  const storage = createLocalTextureStorage(directory)
+  expect(await storage.stat(hash)).toEqual({ sizeBytes: 1234 })
+  expect(await storage.stat('d'.repeat(64))).toBeNull()
+  await expect(storage.stat('../outside')).rejects.toThrow('hash')
+  await expect(createLocalTextureStorage('\0').stat(hash)).rejects.toThrow('读取材质文件信息失败')
+})
+
 test('非法 hash 不访问文件系统', async () => {
   // 目录本身非法；若尝试 readFile，将抛出 ENOTDIR 而非返回 null。
   const storage = createLocalTextureStorage('\0')

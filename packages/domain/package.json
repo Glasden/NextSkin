@@ -5,7 +5,8 @@
   "description": "领域用例与查询服务（ADR-0004）",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./importer": "./src/importer.ts"
   },
   "scripts": {
     "lint": "eslint --max-warnings 0 .",

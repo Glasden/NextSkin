@@ -1,6 +1,15 @@
 import { sql, type Generated, type Kysely, type KyselyPlugin } from 'kysely'
 import { afterAll, beforeAll, expect, test, vi } from 'vitest'
-import { autoIncrementId, createTable, dialectOf, insertReturningId, syncAutoIncrement } from './index.ts'
+import {
+  autoIncrementId,
+  captureAutoIncrement,
+  countBy,
+  createTable,
+  dialectOf,
+  insertReturningId,
+  restoreAutoIncrement,
+  syncAutoIncrement,
+} from './index.ts'
 import { createTestDatabase, type TestDatabase } from './testing.ts'
 
 interface Schema {
@@ -8,6 +17,7 @@ interface Schema {
   empty_import: { key: Generated<number>; name: string }
   used_sequence: { id: Generated<number>; n: number }
   sequence: { id: Generated<number>; n: number }
+  rolled_back: { id: Generated<number>; n: number }
 }
 let database: TestDatabase<Schema>
 let db: Kysely<Schema>
@@ -24,6 +34,7 @@ beforeAll(async () => {
     .execute()
   await createTable(db, 'used_sequence').$call(autoIncrementId(db)).addColumn('n', 'integer').execute()
   await createTable(db, 'sequence').$call(autoIncrementId(db)).addColumn('n', 'integer').execute()
+  await createTable(db, 'rolled_back').$call(autoIncrementId(db)).addColumn('n', 'integer').execute()
 })
 afterAll(async () => {
   await database?.cleanup()
@@ -117,4 +128,33 @@ test('PG 同步序列复用调用方事务并将表锁保持到外层事务结�
     )
     expect(result.rows[0]?.locked).toBe(true)
   })
+})
+
+test('回滚显式写入大 id 的事务之后恢复计数器，下一个自增 id 与之前相同，删掉的 id 仍不复用', async () => {
+  expect(await insertReturningId(db, 'rolled_back', { n: 1 })).toBe(1)
+  expect(await insertReturningId(db, 'rolled_back', { n: 2 })).toBe(2)
+  await db.deleteFrom('rolled_back').where('id', '=', 2).execute()
+  const counters = await captureAutoIncrement(db, ['rolled_back'])
+  class Rollback extends Error {}
+  await expect(
+    db.transaction().execute(async (tx) => {
+      await tx.insertInto('rolled_back').values({ id: 2147483646, n: 3 }).execute()
+      throw new Rollback()
+    }),
+  ).rejects.toBeInstanceOf(Rollback)
+  await restoreAutoIncrement(db, counters)
+  expect(await insertReturningId(db, 'rolled_back', { n: 4 })).toBe(3)
+})
+
+test('countBy 按一列分组计数', async () => {
+  await db
+    .insertInto('sequence')
+    .values([{ n: 7 }, { n: 7 }, { n: 8 }])
+    .execute()
+  expect(await countBy(db.selectFrom('sequence').where('n', 'in', [7, 8, 9]), 'n')).toEqual(
+    new Map([
+      [7, 2],
+      [8, 1],
+    ]),
+  )
 })

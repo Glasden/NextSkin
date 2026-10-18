@@ -7,6 +7,8 @@ import { createLocalTextureStorage } from './textures/storage.ts'
 
 export interface CoreConfig {
   database: DatabaseConfig
+  /** `NEXTSKIN_DATA_DIR`：数据目录，导入器把报告写在这里 */
+  dataDirectory: string
   /** 本地材质存储目录 */
   textureDirectory: string
   renderCacheDirectory: string
@@ -48,6 +50,7 @@ export function coreConfigFromEnv(
   if (!secretKey) throw new Error('没有设置 NEXTSKIN_SECRET；请在 .env 里写入至少 32 个字符的随机字符串')
   return {
     database,
+    dataDirectory,
     textureDirectory: join(dataDirectory, 'textures'),
     renderCacheDirectory: join(dataDirectory, 'render-cache'),
     secretKey,

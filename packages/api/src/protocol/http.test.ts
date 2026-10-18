@@ -9,7 +9,6 @@ import {
   publicCacheResponse,
   uniqueProfileInputs,
   unsignedFromQuery,
-  phpTrim,
   requestRoot,
   requiresSignature,
   siteRoot,
@@ -122,11 +121,6 @@ test.each([
   ['\u00a0true', true],
 ])('unsigned=%j 时签名：%s', (value, signed) => {
   expect(requiresSignature(value)).toBe(signed)
-})
-
-test('phpTrim 只去掉 PHP trim() 默认的空白字符', () => {
-  expect(phpTrim(' \t\n\r\0\x0BSteve \t\n\r\0\x0B')).toBe('Steve')
-  expect(phpTrim('\u00a0Steve\u3000')).toBe('\u00a0Steve\u3000')
 })
 
 test.each([
