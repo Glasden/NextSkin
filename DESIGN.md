@@ -169,7 +169,7 @@
 
 ## 6. 组件清单
 
-落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、IconButton、Form、Field、Input、Textarea、Checkbox、Switch、Select、SegmentedControl、FileDrop、Dialog、Toast、Alert、Badge、Stage、SkinFigure、SkinViewer、FigurePlaceholder、NameTag、PlayerCard、PlayerHead、TextureCard、Nav、Logo、Link、Menu、Tooltip、EmptyState、Pagination、QrCode。
+落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、IconButton、Form、Field、Input、Textarea、Checkbox、Switch、Select、SegmentedControl、Tabs、FileDrop、Dialog、Toast、Alert、Badge、Stage、SkinFigure、SkinViewer、FigurePlaceholder、NameTag、PlayerCard、PlayerHead、TextureCard、TexturePicker、Nav、Logo、Link、Menu、Tooltip、EmptyState、Pagination、QrCode。
 
 | 组件 | 何时用 | 何时不用 |
 |---|---|---|
@@ -185,7 +185,7 @@
 | FileDrop | 选一个本地文件：拖进来，或点按钮打开文件选择框，例如上传材质 | — |
 | SegmentedControl | 三到五个互斥选项的即时切换，例如材质类型、3D 预览的动作 | 选项多或需要说明时，改用 Tabs 或 Select |
 | Chip | 可以多选的筛选条件 | 互斥的选项，改用 SegmentedControl |
-| Tabs | 页面内的分组切换，可以带数量 | 只有两三个即时切换的选项，改用 SegmentedControl |
+| Tabs | 页面内的分组切换，可以带数量，例如衣柜的皮肤和披风。按地址切换的页面用受控的 `value`，只渲染当前这一页 | 只有两三个即时切换的选项，改用 SegmentedControl |
 | Dialog | 需要用户做决定、并且应当打断当前流程。不可逆操作的确认加 `alert`：点外面不关闭，焦点先落在“取消”上 | 展示大量内容或编辑详情，改用 Sheet |
 | Sheet | 侧边查看和编辑详情 | 二选一的确认，改用 Dialog |
 | Popover | 轻量、不打断流程的补充内容 | 包含表单提交 |
@@ -195,6 +195,7 @@
 | Notice | 全站公告，放在页头下方 | 只和当前页面有关的提示，改用 Alert |
 | Table | 后台数据列表 | 前台展示材质，改用 TextureCard 网格 |
 | TextureCard | 皮肤库、衣柜里的材质；选中（已在衣柜）时加粗边框并显示勾选角标 | — |
+| TexturePicker | 从一组材质里选一件，例如给角色换皮肤时从衣柜里挑：×3 的迷你卡片，选中的样子同 TextureCard | 浏览材质、去详情页，改用 TextureCard |
 | Stage | 摆放材质的展台：登录页插图、3D 预览、领奖台；大展台加 `grid` | — |
 | SkinFigure | 2D 正面和背面，带转身和脚下投影；用在材质卡片、领奖台和插图里。祖先元素带 `group/turn` 时，鼠标移上去或键盘聚焦它就转身 | 需要拖动看各个角度时，改用 SkinViewer |
 | SkinViewer | 材质详情、角色预览 | 列表中的缩略图，改用 SkinFigure，3D 太重 |
@@ -207,7 +208,7 @@
 | Logo | 页头、后台侧栏、页脚；链接到首页时用 `render` 换成框架的链接组件 | — |
 | Link | 跳转到其他页面；站内跳转用 `render` 换成框架的链接组件 | 执行操作，改用 Button |
 | Nav | 用户中心、后台的分区导航：宽屏是侧栏，窄屏是页头下的一排；当前项除了底色还有一条强调色的色块 | 页面内的分组切换，改用 Tabs |
-| Menu | 一组跳转和操作，例如页头的用户菜单 | 少于两项时直接放按钮或链接 |
+| Menu | 一组跳转和操作，例如页头的用户菜单；衣柜卡片右上角的“更多”用 `trigger` 换成 IconButton | 少于两项时直接放按钮或链接 |
 | Tooltip | 图标按钮的名称这类补充说明。触屏设备上不显示 | 必须读到的内容 |
 | QrCode | 要用手机扫的内容，例如两步验证给验证器的地址。亮色、暗色主题下都是浅底深色，每个模块 4px | 用户可以直接点的地址，给 Link |
 | Pagination | 前台列表的分页，例如皮肤库、衣柜：页码都是链接，不需要 JS；窄屏只显示“当前页 / 总页数” | 后台表格以后另定 |

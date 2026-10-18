@@ -76,7 +76,12 @@
     "texture_name_invalid": "材质名不符合本站的规则。",
     "texture_name_rule_misconfigured": "本站的材质名规则设置有误，请联系管理员。",
     "texture_description_too_long": "描述最多 {max} 个字符，请删减后重试。",
-    "texture_type_invalid": "这个材质不能改成这种模型：披风不能改，纤细（Alex）模型的皮肤必须是正方形。"
+    "texture_type_invalid": "这个材质不能改成这种模型：披风不能改，纤细（Alex）模型的皮肤必须是正方形。",
+    "closet_item_exists": "这个材质已经在你的衣柜里了。",
+    "closet_item_not_found": "你的衣柜里没有这个材质，先把它加入衣柜。",
+    "texture_type_mismatch": "{slot, select, skin {角色的皮肤只能用皮肤，不能用披风。} cape {角色的披风只能用披风，不能用皮肤。} other {头像只能用皮肤，不能用披风。}}",
+    "report_duplicate": "你已经举报过这个材质了，每个材质只能举报一次。",
+    "report_reason_length": "举报理由要在 {min} 到 {max} 个字符之间。"
   },
   "score": {
     "reasons": {
@@ -88,7 +93,10 @@
       "textureUploaded": "上传材质",
       "textureVisibilityChanged": "更改材质的公开状态",
       "textureDeleted": "删除材质退还",
-      "closetItemRefunded": "衣柜里的材质被移除，退还"
+      "closetItemRefunded": "衣柜里的材质被移除，退还",
+      "closetItemAdded": "加入衣柜",
+      "closetItemRemoved": "移出衣柜退还",
+      "reportCreated": "举报材质"
     }
   },
   "auth": {
@@ -190,7 +198,9 @@
       "dashboard": "仪表盘",
       "players": "角色",
       "profile": "个人资料",
-      "security": "登录与安全"
+      "security": "登录与安全",
+      "closet": "衣柜",
+      "reports": "我的举报"
     },
     "menu": {
       "signOut": "退出登录",
@@ -266,7 +276,30 @@
       "emptyTitle": "你还没有角色",
       "emptyDescription": "添加一个角色，就有了在游戏里用的名字。",
       "verifyFirst": "验证邮箱之后，才能添加、改名和删除角色。",
-      "failed": "没有成功，请稍后重试。"
+      "failed": "没有成功，请稍后重试。",
+      "changeSkin": "换皮肤",
+      "changeCape": "换披风",
+      "textures": {
+        "title": "{slot, select, cape {给 {name} 换披风} other {给 {name} 换皮肤}}",
+        "description": "从衣柜里选一件。想用的材质不在这里，先到皮肤库把它加入衣柜。",
+        "searchLabel": "在衣柜里按名字搜索",
+        "searchPlaceholder": "名字",
+        "search": "搜索",
+        "picker": "{slot, select, cape {选择披风} other {选择皮肤}}",
+        "loading": "正在读取衣柜",
+        "loadFailed": "没能读取衣柜，请稍后重试。",
+        "retry": "重试",
+        "empty": "{slot, select, cape {衣柜里还没有披风。} other {衣柜里还没有皮肤。}}",
+        "browse": "去皮肤库看看",
+        "noResults": "没有找到名字里有“{q}”的材质。",
+        "pageStatus": "{page} / {count}",
+        "previous": "上一页",
+        "next": "下一页",
+        "apply": "换上",
+        "clear": "{slot, select, cape {取消披风} other {换回默认皮肤}}",
+        "applied": "{slot, select, cape {{name} 换上了新的披风} other {{name} 换上了新的皮肤}}",
+        "cleared": "{slot, select, cape {已取消 {name} 的披风} other {{name} 已换回默认皮肤}}"
+      }
     },
     "profile": {
       "title": "个人资料",
@@ -282,7 +315,15 @@
         "verified": "已验证",
         "unverified": "未验证",
         "registeredAt": "注册时间",
-        "score": "积分"
+        "score": "积分",
+        "avatar": "头像",
+        "noAvatar": "还没有设置头像。在衣柜或皮肤库里，可以把一个皮肤设为头像。",
+        "avatarHint": "在衣柜或皮肤库里换一个皮肤做头像。",
+        "avatarAlt": "你的头像",
+        "closet": "去衣柜",
+        "clearAvatar": "清除头像",
+        "avatarCleared": "已清除头像",
+        "avatarFailed": "没能清除头像，请稍后重试。"
       },
       "basics": {
         "title": "基本资料",
@@ -421,6 +462,87 @@
         "deleted": "已删除通行密钥 {name}",
         "failed": "没有成功，请稍后重试。"
       }
+    },
+    "closet": {
+      "title": "衣柜",
+      "description": "收进衣柜的材质可以换到角色上，皮肤还可以设为头像。",
+      "cost": "{cost, plural, =0 {加入衣柜不需要积分。} other {每加入一件要 # 积分。}}",
+      "refundPolicy": "{refund, select, true {移出时退还当初付的积分。} other {移出时不退还积分。}}",
+      "browse": "去皮肤库",
+      "tabsLabel": "衣柜分类",
+      "tabs": {
+        "skin": "皮肤",
+        "cape": "披风"
+      },
+      "searchLabel": "在衣柜里按名字搜索",
+      "searchPlaceholder": "名字",
+      "search": "搜索",
+      "meta": "{type}",
+      "metaRenamed": "{type} · 原名 {name}",
+      "more": "{name} 的更多操作",
+      "viewDetail": "查看材质",
+      "rename": "改名",
+      "renameTitle": "给 {name} 改名",
+      "renameHint": "只改你衣柜里这一件的名字，不影响材质本身。",
+      "name": "名字",
+      "nameHint": "1 到 {max} 个字符。",
+      "nameHintRule": "1 到 {max} 个字符，还要符合本站的规则。",
+      "renamed": "已改名为 {name}",
+      "setSkin": "设为角色的皮肤",
+      "setCape": "设为角色的披风",
+      "setAvatar": "设为头像",
+      "avatarSet": "已把 {name} 设为头像",
+      "remove": "移出衣柜",
+      "removeTitle": "把 {name} 移出衣柜？",
+      "removeHint": "{refund, plural, =0 {移出后不退还积分。} other {移出后退还 # 积分。}}{players, plural, =0 {} other {你有 # 个角色正在用它，会一起清掉。}}",
+      "removeConfirm": "移出衣柜",
+      "removed": "已把 {name} 移出衣柜",
+      "removedRefund": "已把 {name} 移出衣柜，退还 {refund, plural, other {#}} 积分",
+      "failed": "没有成功，请稍后重试。",
+      "emptyTitle": "{type, select, cape {衣柜里还没有披风} other {衣柜里还没有皮肤}}",
+      "emptyDescription": "在皮肤库里看到喜欢的材质，加入衣柜，就能换到角色上。",
+      "emptyAction": "去皮肤库看看",
+      "noResultsTitle": "没有找到名字里有“{q}”的材质",
+      "noResultsDescription": "换个关键词，或者清除搜索再看看。",
+      "clearSearch": "清除搜索",
+      "pagination": "衣柜分页",
+      "previous": "上一页",
+      "next": "下一页",
+      "page": "第 {page} 页",
+      "apply": {
+        "title": "{slot, select, cape {把 {name} 设为哪个角色的披风？} other {把 {name} 设为哪个角色的皮肤？}}",
+        "description": "换上之后，游戏里可能要重新进入服务器才能看到。",
+        "current": "正在使用",
+        "apply": "换上",
+        "applied": "{player} 换上了 {name}",
+        "noPlayers": "你还没有角色。先添加一个角色，才能给它换上材质。",
+        "addPlayer": "去添加角色",
+        "verifyFirst": "验证邮箱之后，才能给角色换材质。"
+      },
+      "outOfRangeTitle": "这一页没有内容",
+      "outOfRangeDescription": "{count, plural, other {衣柜的这一类只有 # 页。}}",
+      "firstPage": "回到第一页"
+    },
+    "reports": {
+      "title": "我的举报",
+      "count": "{count} 个",
+      "description": "你举报过的材质和处理结果。每个材质只能举报一次。",
+      "status": {
+        "pending": "待处理",
+        "resolved": "已采纳",
+        "rejected": "已驳回"
+      },
+      "textureGone": "材质已删除或不再公开",
+      "submittedAt": "提交于 {time}",
+      "resolvedAt": "处理于 {time}",
+      "scorePaid": "花费 {score, plural, other {#}} 积分",
+      "emptyTitle": "你还没有举报过材质",
+      "emptyDescription": "在材质详情页可以举报违规的材质。管理员处理之后，结果会显示在这里。",
+      "emptyAction": "去皮肤库",
+      "pagination": "举报分页",
+      "previous": "上一页",
+      "next": "下一页",
+      "page": "第 {page} 页"
     }
   },
   "site": {
@@ -564,6 +686,40 @@
       "submit": "上传",
       "uploaded": "已上传 {name}",
       "uploadedCharged": "已上传 {name}，扣除 {cost, plural, other {#}} 积分",
+      "failed": "没有成功，请稍后重试。"
+    },
+    "actions": {
+      "signIn": "登录",
+      "signInHint": "登录后可以把它加入衣柜、换到角色上。",
+      "add": "加入衣柜",
+      "addTitle": "把 {name} 加入衣柜",
+      "addCost": "{cost, plural, =0 {加入衣柜不需要积分。} other {加入衣柜要 # 积分，你现在有 {score} 积分。}}",
+      "name": "在衣柜里的名字",
+      "nameHint": "默认取材质名，1 到 {max} 个字符。",
+      "nameHintRule": "默认取材质名，1 到 {max} 个字符，还要符合本站的规则。",
+      "added": "已加入衣柜",
+      "addedCharged": "已加入衣柜，扣除 {cost, plural, other {#}} 积分",
+      "remove": "移出衣柜",
+      "removeTitle": "把 {name} 移出衣柜？",
+      "removeHint": "{refund, plural, =0 {移出后不退还积分。} other {移出后退还 # 积分。}}正在用它的角色会清掉这件材质。",
+      "removed": "已移出衣柜",
+      "removedRefund": "已移出衣柜，退还 {refund, plural, other {#}} 积分",
+      "setSkin": "设为角色的皮肤",
+      "setCape": "设为角色的披风",
+      "setAvatar": "设为头像",
+      "isAvatar": "当前头像",
+      "avatarSet": "已设为头像",
+      "report": "举报",
+      "reported": "已举报",
+      "reportTitle": "举报 {name}",
+      "reportDescription": "说明这个材质有什么问题，管理员会处理。每个材质只能举报一次。",
+      "reportCost": "{cost, plural, =0 {} other {举报要 # 积分，举报被采纳后退还。}}",
+      "reportReward": "{reward, plural, =0 {} other {举报被采纳后，另外奖励 # 积分。}}",
+      "reason": "理由",
+      "reasonHint": "1 到 {max} 个字符。",
+      "reportConfirm": "提交举报",
+      "reportSent": "已提交举报，处理结果在“我的举报”里",
+      "viewReports": "我的举报",
       "failed": "没有成功，请稍后重试。"
     }
   }

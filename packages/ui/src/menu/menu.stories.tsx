@@ -1,8 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { Pencil } from 'pixelarticons/react/Pencil.js'
 import { Logout } from 'pixelarticons/react/Logout.js'
+import { MoreVertical } from 'pixelarticons/react/MoreVertical.js'
+import { Trash } from 'pixelarticons/react/Trash.js'
 import { User } from 'pixelarticons/react/User.js'
 import { Users } from 'pixelarticons/react/Users.js'
 import { expect, fn, screen, userEvent, waitFor } from 'storybook/test'
+import { IconButton } from '../icon-button/icon-button.tsx'
 import { Menu, MenuItem, MenuLinkItem, MenuSeparator } from './menu.tsx'
 
 const onSignOut = fn()
@@ -73,6 +77,40 @@ export const AlignEnd: Story = {
   ],
   play: async ({ canvas }) => {
     await userEvent.click(canvas.getByRole('button', { name: '一个很长很长的昵称会被截断' }))
+    await screen.findByRole('menu')
+  },
+}
+
+const onRemove = fn()
+
+/** 换掉默认的触发按钮：衣柜卡片右上角的“更多”。菜单项是对这一件的操作 */
+export const IconTrigger: Story = {
+  name: 'Icon trigger',
+  args: {
+    label: undefined,
+    trigger: (
+      <IconButton size="sm" label="上学穿的更多操作">
+        <MoreVertical />
+      </IconButton>
+    ),
+    children: (
+      <>
+        <MenuItem icon={<Pencil aria-hidden />}>改名</MenuItem>
+        <MenuSeparator />
+        <MenuItem icon={<Trash aria-hidden />} onClick={onRemove}>
+          移出衣柜
+        </MenuItem>
+      </>
+    ),
+  },
+  play: async ({ canvas }) => {
+    const trigger = canvas.getByRole('button', { name: '上学穿的更多操作' })
+    await userEvent.click(trigger)
+    await screen.findByRole('menu')
+    await userEvent.click(screen.getByRole('menuitem', { name: '移出衣柜' }))
+    await expect(onRemove).toHaveBeenCalledOnce()
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+    await userEvent.click(trigger)
     await screen.findByRole('menu')
   },
 }

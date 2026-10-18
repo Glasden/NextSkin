@@ -1,11 +1,14 @@
 import { matchLocale } from '@nextskin/i18n'
-import { Badge } from '@nextskin/ui'
+import { Badge, Link, PlayerHead } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
+import NextLink from 'next/link'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { getServer } from '../../../lib/server'
 import { requireUser } from '../../../lib/session'
+import { headSrc } from '../../../lib/textures'
+import { ClearAvatarButton } from './clear-avatar-button'
 import { DeleteAccountDialog } from './delete-account-dialog'
 import { EmailForm } from './email-form'
 import { ProfileForm } from './profile-form'
@@ -16,12 +19,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('title') }
 }
 
-/** 个人资料：昵称、界面语言、邮箱、删除账号（ADR-0023）。头像随材质一起做 */
+/** 个人资料：头像、昵称、界面语言、邮箱、删除账号（ADR-0023、ADR-0026） */
 export default async function ProfilePage() {
   const user = await requireUser('/user/profile')
   const { core } = await getServer()
-  const [profile, impact, mailConfigured, locale, t, format] = await Promise.all([
+  const [profile, avatar, impact, mailConfigured, locale, t, format] = await Promise.all([
     core.users.profile(user.uid),
+    core.users.avatar(user.uid),
     core.users.deletionImpact(user.uid),
     core.mail.configured(),
     getLocale(),
@@ -44,9 +48,17 @@ export default async function ProfilePage() {
           {t('summary.title')}
         </h2>
         <div className="flex flex-col gap-6 rounded-md border border-border bg-surface p-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <p className="truncate text-xl font-medium text-text">{profile.nickname}</p>
-            {admin && <Badge>{t(`summary.roles.${profile.role === 'superadmin' ? 'superadmin' : 'admin'}`)}</Badge>}
+          <div className="flex min-w-0 items-center gap-4">
+            <PlayerHead
+              src={avatar ? headSrc(avatar.hash) : undefined}
+              textureScale={avatar?.scale}
+              size={48}
+              alt={t('summary.avatarAlt')}
+            />
+            <div className="flex min-w-0 items-center gap-3">
+              <p className="truncate text-xl font-medium text-text">{profile.nickname}</p>
+              {admin && <Badge>{t(`summary.roles.${profile.role === 'superadmin' ? 'superadmin' : 'admin'}`)}</Badge>}
+            </div>
           </div>
           <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
             <Fact label={t('summary.email')}>
@@ -71,6 +83,17 @@ export default async function ProfilePage() {
             </Fact>
             <Fact label={t('summary.score')}>
               <span className="tabular-nums">{format.number(profile.score)}</span>
+            </Fact>
+            <Fact label={t('summary.avatar')}>
+              <span className="flex flex-col items-start gap-2">
+                <span className="text-sm text-pretty text-text-muted">
+                  {avatar ? t('summary.avatarHint') : t('summary.noAvatar')}
+                </span>
+                <span className="flex flex-wrap items-center gap-4 text-sm">
+                  {avatar && <ClearAvatarButton />}
+                  <Link render={<NextLink href="/user/closet" />}>{t('summary.closet')}</Link>
+                </span>
+              </span>
             </Fact>
           </dl>
         </div>

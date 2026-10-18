@@ -8,6 +8,7 @@ import { adjustScore } from '../score/adjust.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { assertPlayerManagementAllowed, lockUser, type UserActor } from '../users/lock.ts'
 import { createPlayer, retryOnPlayerUuidRace, validatePlayerName } from './create.ts'
+import { lockTexture } from '../textures/manage.ts'
 import { toNameKey } from './queries.ts'
 
 function toPlayer(row: Selectable<PlayersTable>): Player {
@@ -26,6 +27,7 @@ export function createPlayerManagement(
   db: Kysely<CoreDatabase>,
   settings: ReturnType<typeof createSettingQueries>,
   events: Events,
+  clock: () => Date,
 ) {
   async function create(actor: UserActor, input: { name: string }): Promise<Player> {
     const values = await settings.read([
@@ -64,14 +66,18 @@ export function createPlayerManagement(
     )
   }
 
-  async function rename(actor: UserActor, pid: number, input: { name: string }): Promise<Player> {
+  async function update(
+    actor: UserActor,
+    pid: number,
+    input: { name?: string; skin?: number | null; cape?: number | null },
+  ): Promise<Player> {
     const values = await settings.read([
       'player.nameRule',
       'player.nameRegex',
       'player.nameLength',
       'auth.requireEmailVerification',
     ])
-    const name = validatePlayerName(input.name, values)
+    const name = input.name === undefined ? undefined : validatePlayerName(input.name, values)
     try {
       return await transactionWithRetry(db, async (tx) => {
         const user = await lockUser(tx, actor.uid)
@@ -83,33 +89,69 @@ export function createPlayerManagement(
           .where('user_id', '=', actor.uid)
           .executeTakeFirst()
         if (!row) throw new DomainError('player_not_found')
-        if (row.name === name) return toPlayer(row)
-        const nameKey = toNameKey(name)
+        const renamed = name !== undefined && name !== row.name
+        const skin = input.skin === undefined ? row.skin_texture_id : input.skin
+        const cape = input.cape === undefined ? row.cape_texture_id : input.cape
+        const texturesChanged = skin !== row.skin_texture_id || cape !== row.cape_texture_id
+        const tids = [
+          ...new Set([input.skin, input.cape].filter((tid): tid is number => typeof tid === 'number')),
+        ].sort((a, b) => a - b)
+        // 两个槽都给时，按 tid 升序加锁；错误按整个请求排优先级：不可见，不在衣柜，类型不符
+        const textures = []
+        for (const tid of tids) {
+          const texture = await lockTexture(tx, tid)
+          if (!texture || (texture.is_public === 0 && texture.uploader_id !== actor.uid))
+            throw new DomainError('texture_not_found')
+          textures.push(texture)
+        }
+        for (const texture of textures) {
+          const item = await tx
+            .selectFrom('closet_items')
+            .select('texture_id')
+            .where('user_id', '=', actor.uid)
+            .where('texture_id', '=', texture.id)
+            .executeTakeFirst()
+          if (!item) throw new DomainError('closet_item_not_found')
+        }
+        for (const texture of textures) {
+          if (input.skin === texture.id && texture.type === 'cape')
+            throw new DomainError('texture_type_mismatch', { slot: 'skin' })
+          if (input.cape === texture.id && texture.type !== 'cape')
+            throw new DomainError('texture_type_mismatch', { slot: 'cape' })
+        }
+        if (!renamed && !texturesChanged) return toPlayer(row)
+        const nameKey = renamed ? toNameKey(name) : row.name_key
         if (
-          await tx
+          renamed &&
+          (await tx
             .selectFrom('players')
             .select('id')
             .where('name_key', '=', nameKey)
             .where('id', '!=', pid)
-            .executeTakeFirst()
+            .executeTakeFirst())
         )
           throw new DomainError('player_name_taken')
-        const now = toIsoTimestamp(new Date())
+        const now = toIsoTimestamp(clock())
         // 插件运行时落地后，在这里调用 player.rename 拦截器（同一事务）。
-        await tx
-          .updateTable('players')
-          .set({ name, name_key: nameKey, updated_at: now })
-          .where('id', '=', pid)
-          .where('user_id', '=', actor.uid)
-          .execute()
-        const player = toPlayer({ ...row, name, name_key: nameKey, updated_at: now })
-        await events.emit(
-          tx,
-          'player.renamed',
-          { kind: 'user', uid: actor.uid, role: user.role },
-          { player, previousName: row.name },
-          now,
-        )
+        const patch = {
+          name: name ?? row.name,
+          name_key: nameKey,
+          skin_texture_id: skin,
+          cape_texture_id: cape,
+          updated_at: now,
+        }
+        await tx.updateTable('players').set(patch).where('id', '=', pid).where('user_id', '=', actor.uid).execute()
+        const player = toPlayer({ ...row, ...patch })
+        const eventActor = { kind: 'user' as const, uid: actor.uid, role: user.role }
+        if (renamed) await events.emit(tx, 'player.renamed', eventActor, { player, previousName: row.name }, now)
+        if (texturesChanged)
+          await events.emit(
+            tx,
+            'player.texturesChanged',
+            eventActor,
+            { player, previous: { skin: row.skin_texture_id, cape: row.cape_texture_id } },
+            now,
+          )
         return player
       })
     } catch (error) {
@@ -157,5 +199,5 @@ export function createPlayerManagement(
       return { refunded }
     })
   }
-  return { create, rename, delete: deletePlayer }
+  return { create, update, delete: deletePlayer }
 }

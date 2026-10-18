@@ -6,6 +6,8 @@ import { csrf } from 'hono/csrf'
 import { createMiddleware } from 'hono/factory'
 import type { AppEnv } from '../env.ts'
 import { createErrorResponse, logError, restErrorCode } from './errors.ts'
+import { registerCloset } from './closet.ts'
+import { registerReports } from './reports.ts'
 import { registerPlayers } from './players.ts'
 import { registerCheckIn } from './check-in.ts'
 import { registerUser } from './user.ts'
@@ -108,6 +110,8 @@ export function createRestApp(
     options.uploadRateLimiter ?? createMemoryRateLimiter(Date.now, { limit: 10, windowMs: 60_000 }),
   )
   registerRegistration(app, core)
+  registerCloset(app, core)
+  registerReports(app, core)
   registerPlayers(app, core)
   registerCheckIn(app, core)
   registerUser(app, core, rateLimiter)

@@ -9,6 +9,7 @@ import {
 import type { PrivateUser } from '@nextskin/plugin-sdk'
 import type { Kysely } from 'kysely'
 import type { createSettingQueries } from '../settings/queries.ts'
+import { textureScaleOrNull } from '../players/queries.ts'
 import { nextCheckInAt } from './check-in.ts'
 
 export interface UserOverview {
@@ -26,6 +27,19 @@ export interface UserOverview {
 
 export function createUserQueries(db: Kysely<CoreDatabase>, settings: ReturnType<typeof createSettingQueries>) {
   return {
+    async avatar(uid: number): Promise<{ tid: number; hash: string; scale: number } | null> {
+      const row = await db
+        .selectFrom('users')
+        .innerJoin('textures', 'textures.id', 'users.avatar_texture_id')
+        .innerJoin('texture_files', 'texture_files.hash', 'textures.hash')
+        .select(['textures.id', 'textures.hash', 'textures.type', 'texture_files.width', 'texture_files.height'])
+        .where('users.id', '=', uid)
+        .where((eb) => eb.or([eb('textures.is_public', '=', 1), eb('textures.uploader_id', '=', uid)]))
+        .executeTakeFirst()
+      if (!row || row.type === 'cape') return null
+      const scale = textureScaleOrNull(row.type, row.width, row.height)
+      return scale === null ? null : { tid: row.id, hash: row.hash, scale }
+    },
     async profile(uid: number): Promise<PrivateUser | null> {
       const row = await db.selectFrom('users').selectAll().where('id', '=', uid).executeTakeFirst()
       return row

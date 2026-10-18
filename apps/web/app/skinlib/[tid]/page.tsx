@@ -7,10 +7,39 @@ import { cache } from 'react'
 import { getServer } from '../../../lib/server'
 import { getSessionUser } from '../../../lib/session'
 import { headSrc, textureFileUrl } from '../../../lib/textures'
+import type { ApplyPlayer } from '../../user/closet/apply-texture-dialog'
 import { TextureOwnerActions } from './owner-actions'
+import { ReportTexture, TextureViewerActions } from './viewer-actions'
 
 function parseTid(value: string): number | null {
   return /^[1-9]\d{0,9}$/.test(value) && Number(value) <= 2147483647 ? Number(value) : null
+}
+
+/** 当前登录用户：衣柜、角色、头像和积分，供材质的操作用（ADR-0026） */
+async function loadViewer(uid: number) {
+  const { core } = await getServer()
+  const [overview, profile, owned, settings] = await Promise.all([
+    core.users.overview(uid),
+    core.users.profile(uid),
+    core.players.listOwned(uid),
+    core.settings.read([
+      'score.perClosetItem',
+      'score.refundOnDelete',
+      'texture.nameRegex',
+      'report.cost',
+      'report.reward',
+      'auth.requireEmailVerification',
+    ]),
+  ])
+  if (!overview || !profile) return null
+  const players: ApplyPlayer[] = owned.map((player) => ({
+    pid: player.pid,
+    name: player.name,
+    skin: player.skin?.tid ?? null,
+    cape: player.cape?.tid ?? null,
+    head: player.skin ? { hash: player.skin.hash, scale: player.skin.scale } : null,
+  }))
+  return { overview, profile, players, settings }
 }
 
 /** 同一次渲染里，metadata 和页面只查一次 */
@@ -31,7 +60,14 @@ export async function generateMetadata({ params }: { params: Promise<{ tid: stri
 export default async function TexturePage({ params }: { params: Promise<{ tid: string }> }) {
   const texture = await loadTexture((await params).tid)
   if (!texture) notFound()
-  const [{ core }, t, format] = await Promise.all([getServer(), getTranslations('skinlib'), getFormatter()])
+  const [{ core }, user, t, format] = await Promise.all([
+    getServer(),
+    getSessionUser(),
+    getTranslations('skinlib'),
+    getFormatter(),
+  ])
+  const viewer = user && user.role !== 'banned' ? await loadViewer(user.uid) : null
+  const subject = { tid: texture.tid, name: texture.name, type: texture.type }
   const type = t(`types.${texture.type}`)
   const management = texture.management
   const settings = management ? await core.settings.read(['texture.nameRegex']) : null
@@ -90,6 +126,29 @@ export default async function TexturePage({ params }: { params: Promise<{ tid: s
             </div>
           </dl>
 
+          {viewer ? (
+            <TextureViewerActions
+              texture={subject}
+              closetItem={texture.closetItem}
+              isAvatar={viewer.profile.avatarTid === texture.tid}
+              players={viewer.players}
+              locked={viewer.settings['auth.requireEmailVerification'] && !viewer.overview.emailVerified}
+              score={viewer.overview.score}
+              closetCost={viewer.settings['score.perClosetItem']}
+              refund={viewer.settings['score.refundOnDelete']}
+              nameRegex={viewer.settings['texture.nameRegex']}
+            />
+          ) : (
+            !user && (
+              <p className="text-sm text-text-muted">
+                <Link render={<NextLink href={`/sign-in?next=${encodeURIComponent(`/skinlib/${texture.tid}`)}`} />}>
+                  {t('actions.signIn')}
+                </Link>{' '}
+                {t('actions.signInHint')}
+              </p>
+            )
+          )}
+
           <div className="flex items-center gap-3">
             {texture.uploader ? (
               <>
@@ -127,6 +186,14 @@ export default async function TexturePage({ params }: { params: Promise<{ tid: s
             <Link href={textureFileUrl(texture.hash)} download={`${texture.name}.png`}>
               {t('detail.download')}
             </Link>
+            {viewer && (
+              <ReportTexture
+                texture={subject}
+                reported={texture.reported}
+                cost={viewer.settings['report.cost']}
+                reward={viewer.settings['report.reward']}
+              />
+            )}
           </div>
 
           {management && settings && (

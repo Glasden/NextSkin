@@ -8,6 +8,11 @@ import type { AppEnv } from '../env.ts'
 
 type ErrorCode = keyof Messages['errors']
 const statuses = {
+  closet_item_exists: 409,
+  closet_item_not_found: 404,
+  texture_type_mismatch: 400,
+  report_duplicate: 409,
+  report_reason_length: 400,
   texture_not_found: 404,
   texture_not_owned: 403,
   texture_duplicate: 409,
@@ -52,6 +57,7 @@ const statuses = {
 } as const satisfies Partial<Record<ErrorCode, number>>
 type ResponseCode = keyof typeof statuses
 const fieldNames: Partial<Record<ResponseCode, string>> = {
+  report_reason_length: 'reason',
   texture_file_too_large: 'file',
   texture_file_invalid: 'file',
   texture_size_invalid: 'file',

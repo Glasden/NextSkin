@@ -10,6 +10,7 @@ const errors = {
   400: errorContent,
   401: errorContent,
   403: errorContent,
+  404: errorContent,
   409: errorContent,
   413: errorContent,
   415: errorContent,
@@ -35,7 +36,15 @@ const jsonResponse = <T extends z.ZodType>(schema: T, description: string) => ({
 const profile = createRoute({
   method: 'patch',
   path: '/user',
-  request: { body: jsonBody(z.object({ nickname: z.string().optional(), locale: z.string().optional() })) },
+  request: {
+    body: jsonBody(
+      z.object({
+        nickname: z.string().optional(),
+        locale: z.string().optional(),
+        avatar: z.number().int().positive().max(2147483647).nullable().optional(),
+      }),
+    ),
+  },
   responses: { 200: jsonResponse(userSchema, '个人资料已保存'), ...errors },
 })
 const email = createRoute({

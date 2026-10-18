@@ -41,12 +41,26 @@ const created = createRoute({
     ...errors,
   },
 })
-const renamed = createRoute({
+const updated = createRoute({
   method: 'patch',
   path: '/players/{pid}',
-  request: { params, body },
+  request: {
+    params,
+    body: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: z.object({
+            name: z.string().optional(),
+            skin: z.number().int().positive().max(2147483647).nullable().optional(),
+            cape: z.number().int().positive().max(2147483647).nullable().optional(),
+          }),
+        },
+      },
+    },
+  },
   responses: {
-    200: { description: '角色已改名', content: { 'application/json': { schema: playerSchema } } },
+    200: { description: '角色已更新', content: { 'application/json': { schema: playerSchema } } },
     ...errors,
   },
 })
@@ -71,8 +85,8 @@ export function registerPlayers(app: OpenAPIHono<AppEnv>, core: Core) {
   app.openapi(created, async (c) =>
     c.json(await core.players.create({ uid: c.get('user')!.uid }, c.req.valid('json')), 201),
   )
-  app.openapi(renamed, async (c) =>
-    c.json(await core.players.rename({ uid: c.get('user')!.uid }, c.req.valid('param').pid, c.req.valid('json')), 200),
+  app.openapi(updated, async (c) =>
+    c.json(await core.players.update({ uid: c.get('user')!.uid }, c.req.valid('param').pid, c.req.valid('json')), 200),
   )
   app.openapi(deleted, async (c) =>
     c.json(await core.players.delete({ uid: c.get('user')!.uid }, c.req.valid('param').pid), 200),

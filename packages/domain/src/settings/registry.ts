@@ -48,6 +48,8 @@ export const coreSettingsRegistry = {
   'score.perPlayer': { schema: z.int().min(0).max(2147483647), default: 100, secret: false },
   'score.perKbPublic': { schema: z.int().min(0).max(2147483647), default: 1, secret: false },
   'score.perKbPrivate': { schema: z.int().min(0).max(2147483647), default: 10, secret: false },
+  'report.cost': { schema: z.int().min(0).max(2147483647), default: 0, secret: false },
+  'report.reward': { schema: z.int().min(0).max(2147483647), default: 0, secret: false },
   'score.perClosetItem': { schema: z.int().min(0).max(2147483647), default: 0, secret: false },
   'texture.maxFileSizeKb': { schema: z.int().min(1).max(8192), default: 1024, secret: false },
   'texture.nameRegex': { schema: z.string(), default: '', secret: false },

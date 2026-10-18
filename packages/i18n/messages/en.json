@@ -76,7 +76,12 @@
     "texture_name_invalid": "The texture name does not meet this site's rules.",
     "texture_name_rule_misconfigured": "This site's texture name rule is misconfigured. Please contact an administrator.",
     "texture_description_too_long": "Descriptions can be at most {max} characters long. Please shorten it and try again.",
-    "texture_type_invalid": "This texture cannot use that model. Capes cannot be changed, and slim (Alex) skins must be square."
+    "texture_type_invalid": "This texture cannot use that model. Capes cannot be changed, and slim (Alex) skins must be square.",
+    "closet_item_exists": "This texture is already in your closet.",
+    "closet_item_not_found": "This texture isn't in your closet. Add it to your closet first.",
+    "texture_type_mismatch": "{slot, select, skin {A player's skin must be a skin, not a cape.} cape {A player's cape must be a cape, not a skin.} other {Only skins can be used as an avatar, not capes.}}",
+    "report_duplicate": "You have already reported this texture. Each texture can only be reported once.",
+    "report_reason_length": "The reason must be between {min} and {max} characters long."
   },
   "score": {
     "reasons": {
@@ -88,7 +93,10 @@
       "textureUploaded": "Texture uploaded",
       "textureVisibilityChanged": "Texture visibility changed",
       "textureDeleted": "Texture deletion refund",
-      "closetItemRefunded": "Closet item removal refund"
+      "closetItemRefunded": "Closet item removal refund",
+      "closetItemAdded": "Added to closet",
+      "closetItemRemoved": "Closet removal refund",
+      "reportCreated": "Texture reported"
     }
   },
   "auth": {
@@ -190,7 +198,9 @@
       "dashboard": "Dashboard",
       "players": "Players",
       "profile": "Profile",
-      "security": "Sign-in & security"
+      "security": "Sign-in & security",
+      "closet": "Closet",
+      "reports": "My reports"
     },
     "menu": {
       "signOut": "Sign out",
@@ -266,7 +276,30 @@
       "emptyTitle": "You don't have any players",
       "emptyDescription": "Add a player to get a name to use in the game.",
       "verifyFirst": "Verify your email before adding, renaming or deleting players.",
-      "failed": "That didn't work. Try again later."
+      "failed": "That didn't work. Try again later.",
+      "changeSkin": "Change skin",
+      "changeCape": "Change cape",
+      "textures": {
+        "title": "{slot, select, cape {Change {name}’s cape} other {Change {name}’s skin}}",
+        "description": "Pick one from your closet. If the texture you want isn't here, add it to your closet from the skin library first.",
+        "searchLabel": "Search your closet by name",
+        "searchPlaceholder": "Name",
+        "search": "Search",
+        "picker": "{slot, select, cape {Choose a cape} other {Choose a skin}}",
+        "loading": "Loading your closet",
+        "loadFailed": "Couldn't load your closet. Please try again later.",
+        "retry": "Try again",
+        "empty": "{slot, select, cape {There are no capes in your closet yet.} other {There are no skins in your closet yet.}}",
+        "browse": "Browse the skin library",
+        "noResults": "Nothing named “{q}”.",
+        "pageStatus": "{page} / {count}",
+        "previous": "Previous",
+        "next": "Next",
+        "apply": "Use",
+        "clear": "{slot, select, cape {Remove cape} other {Use the default skin}}",
+        "applied": "{slot, select, cape {{name} has a new cape} other {{name} has a new skin}}",
+        "cleared": "{slot, select, cape {Removed {name}’s cape} other {{name} is back to the default skin}}"
+      }
     },
     "profile": {
       "title": "Profile",
@@ -282,7 +315,15 @@
         "verified": "Verified",
         "unverified": "Unverified",
         "registeredAt": "Joined",
-        "score": "Score"
+        "score": "Score",
+        "avatar": "Avatar",
+        "noAvatar": "No avatar yet. You can use any skin in your closet or the skin library as your avatar.",
+        "avatarHint": "Pick another skin in your closet or the skin library to change it.",
+        "avatarAlt": "Your avatar",
+        "closet": "Go to closet",
+        "clearAvatar": "Remove avatar",
+        "avatarCleared": "Avatar removed",
+        "avatarFailed": "Couldn't remove your avatar. Please try again later."
       },
       "basics": {
         "title": "Basics",
@@ -421,6 +462,87 @@
         "deleted": "Passkey {name} deleted",
         "failed": "That didn’t work. Please try again later."
       }
+    },
+    "closet": {
+      "title": "Closet",
+      "description": "Textures in your closet can be put on your players, and skins can also be used as your avatar.",
+      "cost": "{cost, plural, =0 {Adding to your closet is free.} one {Each item costs # point.} other {Each item costs # points.}}",
+      "refundPolicy": "{refund, select, true {Removing an item refunds what you paid.} other {Removing an item does not refund points.}}",
+      "browse": "Browse the skin library",
+      "tabsLabel": "Closet categories",
+      "tabs": {
+        "skin": "Skins",
+        "cape": "Capes"
+      },
+      "searchLabel": "Search your closet by name",
+      "searchPlaceholder": "Name",
+      "search": "Search",
+      "meta": "{type}",
+      "metaRenamed": "{type} · originally {name}",
+      "more": "More actions for {name}",
+      "viewDetail": "View texture",
+      "rename": "Rename",
+      "renameTitle": "Rename {name}",
+      "renameHint": "This only changes the name of this item in your closet, not the texture itself.",
+      "name": "Name",
+      "nameHint": "1 to {max} characters.",
+      "nameHintRule": "1 to {max} characters, following this site’s rules.",
+      "renamed": "Renamed to {name}",
+      "setSkin": "Use as a player's skin",
+      "setCape": "Use as a player's cape",
+      "setAvatar": "Use as avatar",
+      "avatarSet": "{name} is now your avatar",
+      "remove": "Remove from closet",
+      "removeTitle": "Remove {name} from your closet?",
+      "removeHint": "{refund, plural, =0 {No points will be refunded.} one {# point will be refunded.} other {# points will be refunded.}}{players, plural, =0 {} one { # of your players is using it and will stop using it.} other { # of your players are using it and will stop using it.}}",
+      "removeConfirm": "Remove from closet",
+      "removed": "Removed {name} from your closet",
+      "removedRefund": "Removed {name} from your closet and refunded {refund, plural, one {# point} other {# points}}",
+      "failed": "That didn’t work. Please try again later.",
+      "emptyTitle": "{type, select, cape {No capes in your closet yet} other {No skins in your closet yet}}",
+      "emptyDescription": "Find textures you like in the skin library and add them to your closet to use them on your players.",
+      "emptyAction": "Browse the skin library",
+      "noResultsTitle": "Nothing named “{q}”",
+      "noResultsDescription": "Try another keyword, or clear the search.",
+      "clearSearch": "Clear search",
+      "pagination": "Closet pages",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page}",
+      "apply": {
+        "title": "{slot, select, cape {Which player should wear {name} as a cape?} other {Which player should wear {name} as a skin?}}",
+        "description": "You may need to rejoin the server to see the change in game.",
+        "current": "In use",
+        "apply": "Use",
+        "applied": "{player} is now using {name}",
+        "noPlayers": "You don't have any players yet. Add one before putting textures on it.",
+        "addPlayer": "Add a player",
+        "verifyFirst": "Verify your email before changing your players’ textures."
+      },
+      "outOfRangeTitle": "Nothing on this page",
+      "outOfRangeDescription": "{count, plural, one {This part of your closet only has # page.} other {This part of your closet only has # pages.}}",
+      "firstPage": "Back to the first page"
+    },
+    "reports": {
+      "title": "My reports",
+      "count": "{count}",
+      "description": "Textures you have reported and how they were handled. Each texture can only be reported once.",
+      "status": {
+        "pending": "Pending",
+        "resolved": "Accepted",
+        "rejected": "Rejected"
+      },
+      "textureGone": "Texture deleted or no longer public",
+      "submittedAt": "Submitted {time}",
+      "resolvedAt": "Handled {time}",
+      "scorePaid": "{score, plural, one {Cost # point} other {Cost # points}}",
+      "emptyTitle": "You haven't reported any textures",
+      "emptyDescription": "You can report a texture that breaks the rules from its detail page. Once an administrator handles it, the result shows up here.",
+      "emptyAction": "Browse the skin library",
+      "pagination": "Report pages",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page}"
     }
   },
   "site": {
@@ -564,6 +686,40 @@
       "submit": "Upload",
       "uploaded": "Uploaded {name}",
       "uploadedCharged": "Uploaded {name}, {cost, plural, one {# point} other {# points}} charged",
+      "failed": "That didn’t work. Please try again later."
+    },
+    "actions": {
+      "signIn": "Sign in",
+      "signInHint": "Sign in to add it to your closet and use it on your players.",
+      "add": "Add to closet",
+      "addTitle": "Add {name} to your closet",
+      "addCost": "{cost, plural, =0 {Adding to your closet is free.} one {This costs # point. You have {score} points.} other {This costs # points. You have {score} points.}}",
+      "name": "Name in your closet",
+      "nameHint": "Defaults to the texture name. 1 to {max} characters.",
+      "nameHintRule": "Defaults to the texture name. 1 to {max} characters, following this site’s rules.",
+      "added": "Added to your closet",
+      "addedCharged": "Added to your closet for {cost, plural, one {# point} other {# points}}",
+      "remove": "Remove from closet",
+      "removeTitle": "Remove {name} from your closet?",
+      "removeHint": "{refund, plural, =0 {No points will be refunded.} one {# point will be refunded.} other {# points will be refunded.}} Players using it will stop using it.",
+      "removed": "Removed from your closet",
+      "removedRefund": "Removed from your closet and refunded {refund, plural, one {# point} other {# points}}",
+      "setSkin": "Use as a player's skin",
+      "setCape": "Use as a player's cape",
+      "setAvatar": "Use as avatar",
+      "isAvatar": "Your avatar",
+      "avatarSet": "Avatar updated",
+      "report": "Report",
+      "reported": "Reported",
+      "reportTitle": "Report {name}",
+      "reportDescription": "Explain what is wrong with this texture and an administrator will look into it. Each texture can only be reported once.",
+      "reportCost": "{cost, plural, =0 {} one {Reporting costs # point, refunded if the report is accepted.} other {Reporting costs # points, refunded if the report is accepted.}}",
+      "reportReward": "{reward, plural, =0 {} one {Accepted reports earn an extra # point.} other {Accepted reports earn an extra # points.}}",
+      "reason": "Reason",
+      "reasonHint": "1 to {max} characters.",
+      "reportConfirm": "Submit report",
+      "reportSent": "Report submitted. You can follow it under “My reports”.",
+      "viewReports": "My reports",
       "failed": "That didn’t work. Please try again later."
     }
   }

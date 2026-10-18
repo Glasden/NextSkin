@@ -32,6 +32,8 @@ import * as addTexturesScorePaid from './0027_add_textures_score_paid.ts'
 import * as createClosetItems from './0028_create_closet_items.ts'
 import * as createTexturesLibraryIndexes from './0029_create_textures_library_indexes.ts'
 
+import * as createReports from './0030_create_reports.ts'
+
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
   '0002_create_texture_files': createTextureFiles,
@@ -62,4 +64,5 @@ export const coreMigrations: Record<string, Migration> = {
   '0027_add_textures_score_paid': addTexturesScorePaid,
   '0028_create_closet_items': createClosetItems,
   '0029_create_textures_library_indexes': createTexturesLibraryIndexes,
+  '0030_create_reports': createReports,
 }

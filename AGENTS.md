@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制、注册用例和注册规则、邮件发送、注册接口（`POST /api/register`，第一个 REST 接口，`packages/api/src/rest/`）、登录注册和找回密码的页面已经落地（ADR-0018），Yggdrasil Connect 还没有。国际化已接入（ADR-0019）。后台任务和积分流水已经落地（ADR-0021）：任务表和执行器、事件在业务事务里按订阅者展开成任务、邮件改为持久的任务、`adjustScore`。用户中心已经落地（ADR-0022）：外壳和导航、仪表盘（积分、签到）、角色管理，写接口认会话 Cookie。个人资料和账号安全已经落地（ADR-0023、ADR-0024）：改昵称和语言、改邮箱、删除账号、两步验证、通行密钥；核对密码的 REST 接口按用户限流。材质上传和皮肤库已经落地（ADR-0025）：纯 JS 的 PNG 解码、图像 worker 池、出图端点 `/render/…`、上传和上传者的管理、皮肤库和详情页（3D 预览）、用延迟任务推进的文件回收。衣柜、换材质和举报（ADR-0026）以及其余写操作还没有开始。
+monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制、注册用例和注册规则、邮件发送、注册接口（`POST /api/register`，第一个 REST 接口，`packages/api/src/rest/`）、登录注册和找回密码的页面已经落地（ADR-0018），Yggdrasil Connect 还没有。国际化已接入（ADR-0019）。后台任务和积分流水已经落地（ADR-0021）：任务表和执行器、事件在业务事务里按订阅者展开成任务、邮件改为持久的任务、`adjustScore`。用户中心已经落地（ADR-0022）：外壳和导航、仪表盘（积分、签到）、角色管理，写接口认会话 Cookie。个人资料和账号安全已经落地（ADR-0023、ADR-0024）：改昵称和语言、改邮箱、删除账号、两步验证、通行密钥；核对密码的 REST 接口按用户限流。材质上传和皮肤库已经落地（ADR-0025）：纯 JS 的 PNG 解码、图像 worker 池、出图端点 `/render/…`、上传和上传者的管理、皮肤库和详情页（3D 预览）、用延迟任务推进的文件回收。衣柜、换材质和举报已经落地（ADR-0026）：衣柜页和 `GET /api/closet`、给角色换材质、头像、提交举报和“我的举报”；处理举报等管理操作还没有开始。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。

@@ -41,6 +41,7 @@ export type {
   TextureFilesTable,
   TexturesTable,
   ClosetItemsTable,
+  ReportsTable,
   PlayersTable,
   SettingsTable,
   SessionsTable,

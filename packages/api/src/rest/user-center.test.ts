@@ -14,7 +14,7 @@ const player = {
 const signed = { delta: 10, score: 1000, nextAt: '2026-10-18T12:00:00.000Z' }
 const endpoints = [
   ['POST', '/api/players', { name: 'Steve' }, 201, 'create', player],
-  ['PATCH', '/api/players/12', { name: 'Steve' }, 200, 'rename', player],
+  ['PATCH', '/api/players/12', { name: 'Steve' }, 200, 'update', player],
   ['DELETE', '/api/players/12', undefined, 200, 'delete', { refunded: 100 }],
   ['POST', '/api/user/check-in', undefined, 200, 'checkIn', signed],
 ] as const
@@ -27,14 +27,14 @@ function setup() {
     .mockResolvedValue({ uid: 42, nickname: 'Steve', email: 'steve@example.test', role: 'user', locale: null })
   const methods = {
     create: vi.fn().mockResolvedValue(player),
-    rename: vi.fn().mockResolvedValue(player),
+    update: vi.fn().mockResolvedValue(player),
     delete: vi.fn().mockResolvedValue({ refunded: 100 }),
     checkIn: vi.fn().mockResolvedValue(signed),
   }
   const core = {
     settings: { read },
     auth: { getSessionUser },
-    players: { create: methods.create, rename: methods.rename, delete: methods.delete },
+    players: { create: methods.create, update: methods.update, delete: methods.delete },
     users: { checkIn: methods.checkIn },
   } as unknown as Core
   const app = createApp({ core })
@@ -60,7 +60,7 @@ test.each(endpoints)('%s %s 返回约定响应并只传会话 uid', async (metho
   const args =
     fn === 'create'
       ? [{ uid: 42 }, body]
-      : fn === 'rename'
+      : fn === 'update'
         ? [{ uid: 42 }, 12, body]
         : fn === 'delete'
           ? [{ uid: 42 }, 12]
@@ -106,7 +106,7 @@ test.each(['POST', 'PATCH'] as const)('%s 的角色名错误挂在 name 下', as
     ['player_name_taken', {}],
   ] as const) {
     const { request, methods } = setup()
-    methods[method === 'POST' ? 'create' : 'rename'].mockRejectedValue(new DomainError(code, params))
+    methods[method === 'POST' ? 'create' : 'update'].mockRejectedValue(new DomainError(code, params))
     const response = await request(method, method === 'POST' ? '/api/players' : '/api/players/12', { name: 'Steve' })
     expect(response.status).toBe(code === 'player_name_taken' ? 409 : 400)
     expect(await response.json()).toMatchObject({
@@ -115,7 +115,7 @@ test.each(['POST', 'PATCH'] as const)('%s 的角色名错误挂在 name 下', as
   }
   // 规则配置错误是站点的问题，不挂在字段下
   const { request, methods } = setup()
-  methods[method === 'POST' ? 'create' : 'rename'].mockRejectedValue(new DomainError('player_name_rule_misconfigured'))
+  methods[method === 'POST' ? 'create' : 'update'].mockRejectedValue(new DomainError('player_name_rule_misconfigured'))
   const response = await request(method, method === 'POST' ? '/api/players' : '/api/players/12', { name: 'Steve' })
   expect(response.status).toBe(500)
   expect(await response.json()).not.toHaveProperty('error.fields')
@@ -132,7 +132,7 @@ test.each(['0', '-1', '1.2', 'abc', '1e2', '9007199254740992', '12x'])(
         error: { code: 'invalid_request', fields: { pid: { code: 'invalid_value' } } },
       })
     }
-    expect(methods.rename).not.toHaveBeenCalled()
+    expect(methods.update).not.toHaveBeenCalled()
     expect(methods.delete).not.toHaveBeenCalled()
   },
 )

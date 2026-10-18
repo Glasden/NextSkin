@@ -60,6 +60,20 @@ export interface ClosetItemsTable {
   created_at: IsoTimestamp
 }
 
+export interface ReportsTable {
+  id: Generated<number>
+  texture_id: number | null
+  uploader_id: number | null
+  reporter_id: number | null
+  reason: string
+  score_paid: Generated<number>
+  status: 'pending' | 'resolved' | 'rejected'
+  resolution: 'dismissed' | 'textureDeleted' | 'uploaderBanned' | null
+  resolver_id: number | null
+  created_at: IsoTimestamp
+  resolved_at: IsoTimestamp | null
+}
+
 export interface PlayersTable {
   score_paid: Generated<number>
   id: Generated<number>
@@ -333,6 +347,7 @@ export interface CoreDatabase {
   score_transactions: ScoreTransactionsTable
   users: UsersTable
   texture_files: TextureFilesTable
+  reports: ReportsTable
   closet_items: ClosetItemsTable
   textures: TexturesTable
   players: PlayersTable

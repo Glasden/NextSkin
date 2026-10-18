@@ -7,8 +7,10 @@ import { cx } from '../cx.ts'
 import { focusRing } from '../styles.ts'
 
 export interface MenuProps {
-  /** 触发按钮上的文字，例如当前用户的昵称 */
-  label: ReactNode
+  /** 触发按钮上的文字，例如当前用户的昵称。传了 trigger 时不用 */
+  label?: ReactNode
+  /** 换掉默认的触发按钮，例如衣柜卡片右上角“更多”的 IconButton */
+  trigger?: ReactElement
   /** MenuItem、MenuLinkItem、MenuSeparator */
   children: ReactNode
   /** 菜单和触发按钮哪一边对齐。页头右上角的菜单用 end，免得伸出屏幕 */
@@ -23,20 +25,24 @@ const highlighted = 'data-highlighted:bg-[color-mix(in_srgb,var(--color-surface-
  * 下拉菜单：一组跳转和操作，例如页头的用户菜单。方向键在菜单项之间移动，Esc 关闭，焦点回到触发按钮。
  * 菜单项少于两个时直接放按钮或链接
  */
-export function Menu({ label, children, align = 'start' }: MenuProps) {
+export function Menu({ label, trigger, children, align = 'start' }: MenuProps) {
   return (
     <BaseMenu.Root>
-      <BaseMenu.Trigger
-        className={cx(
-          'inline-flex h-10 max-w-full items-center gap-1 rounded-sm pr-1 pl-3 text-sm font-medium text-text select-none',
-          hover,
-          'data-popup-open:bg-[color-mix(in_srgb,var(--color-surface)_88%,var(--color-text))]',
-          focusRing,
-        )}
-      >
-        <span className="truncate">{label}</span>
-        <ChevronDown aria-hidden className="shrink-0" />
-      </BaseMenu.Trigger>
+      {trigger ? (
+        <BaseMenu.Trigger render={trigger} />
+      ) : (
+        <BaseMenu.Trigger
+          className={cx(
+            'inline-flex h-10 max-w-full items-center gap-1 rounded-sm pr-1 pl-3 text-sm font-medium text-text select-none',
+            hover,
+            'data-popup-open:bg-[color-mix(in_srgb,var(--color-surface)_88%,var(--color-text))]',
+            focusRing,
+          )}
+        >
+          <span className="truncate">{label}</span>
+          <ChevronDown aria-hidden className="shrink-0" />
+        </BaseMenu.Trigger>
+      )}
       <BaseMenu.Portal>
         <BaseMenu.Positioner className="z-10 outline-none" sideOffset={8} align={align} collisionPadding={16}>
           <BaseMenu.Popup

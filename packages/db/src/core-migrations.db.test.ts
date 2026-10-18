@@ -92,6 +92,7 @@ beforeAll(async () => {
 })
 afterAll(async () => database?.cleanup())
 beforeEach(async () => {
+  await db.deleteFrom('reports').execute()
   await db.deleteFrom('jobs').execute()
   await db.deleteFrom('failed_jobs').execute()
   await db.deleteFrom('settings').execute()
@@ -139,6 +140,7 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0027_add_textures_score_paid',
     '0028_create_closet_items',
     '0029_create_textures_library_indexes',
+    '0030_create_reports',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -573,4 +575,95 @@ test('材质实付迁移为已有条目补 0，不改文件和条目内容', asy
   } finally {
     await upgrade.cleanup()
   }
+})
+
+test('举报列、默认实付、唯一键、枚举约束和全部外键置空', async () => {
+  const report = {
+    texture_id: skinId,
+    uploader_id: userId,
+    reporter_id: userId,
+    resolver_id: userId,
+    reason: '汉'.repeat(23_333),
+    status: 'pending' as const,
+    created_at: timestamp,
+  }
+  const id = await insertReturningId(db, 'reports', report)
+  expect(await db.selectFrom('reports').selectAll().where('id', '=', id).executeTakeFirstOrThrow()).toEqual({
+    ...report,
+    id,
+    score_paid: 0,
+    resolution: null,
+    resolved_at: null,
+  })
+  await expect(db.insertInto('reports').values(report).execute()).rejects.toThrow()
+  for (const column of ['texture_id', 'uploader_id', 'reporter_id', 'resolver_id'] as const) {
+    await expect(
+      db
+        .updateTable('reports')
+        .set({ [column]: -1 })
+        .where('id', '=', id)
+        .execute(),
+    ).rejects.toThrow()
+  }
+  for (const patch of [
+    { status: 'invalid' },
+    { resolution: 'invalid' },
+    { score_paid: null },
+    { created_at: 'bad' },
+    { resolved_at: 'bad' },
+  ])
+    await expect(
+      sql`update reports set ${sql.join(Object.entries(patch).map(([key, value]) => sql`${sql.ref(key)} = ${value}`))} where id = ${id}`.execute(
+        db,
+      ),
+    ).rejects.toThrow()
+  for (const status of ['pending', 'resolved', 'rejected'] as const) {
+    for (const resolution of [null, 'dismissed', 'textureDeleted', 'uploaderBanned'] as const) {
+      await db.updateTable('reports').set({ status, resolution, resolved_at: timestamp }).where('id', '=', id).execute()
+      expect(
+        await db
+          .selectFrom('reports')
+          .select(['status', 'resolution', 'resolved_at'])
+          .where('id', '=', id)
+          .executeTakeFirstOrThrow(),
+      ).toEqual({ status, resolution, resolved_at: timestamp })
+    }
+  }
+  const tables = await db.introspection.getTables()
+  expect(
+    tables
+      .find((t) => t.name === 'reports')!
+      .columns.map((c) => c.name)
+      .sort(),
+  ).toEqual(
+    [
+      'id',
+      'texture_id',
+      'uploader_id',
+      'reporter_id',
+      'reason',
+      'score_paid',
+      'status',
+      'resolution',
+      'resolver_id',
+      'created_at',
+      'resolved_at',
+    ].sort(),
+  )
+  await db.deleteFrom('textures').where('id', '=', skinId).execute()
+  await db.deleteFrom('users').where('id', '=', userId).execute()
+  expect(await db.selectFrom('reports').selectAll().where('id', '=', id).executeTakeFirstOrThrow()).toMatchObject({
+    texture_id: null,
+    uploader_id: null,
+    reporter_id: null,
+    resolver_id: null,
+  })
+  // NULL 不参与去重，历史举报不会阻止新记录。
+  await db
+    .insertInto('reports')
+    .values([
+      { reason: 'a', status: 'pending', created_at: timestamp },
+      { reason: 'b', status: 'pending', created_at: timestamp },
+    ])
+    .execute()
 })

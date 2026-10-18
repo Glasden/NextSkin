@@ -1,3 +1,5 @@
+import { createCloset } from './closet/service.ts'
+import { createReports } from './reports/service.ts'
 import { toIsoTimestamp, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
 import type { Kysely } from 'kysely'
 import { createAuthService } from './auth/service.ts'
@@ -105,7 +107,9 @@ export function createCore(options: CoreOptions) {
       }),
   })
   return {
-    players: { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events) },
+    players: { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events, now) },
+    closet: createCloset(textureOptions),
+    reports: createReports(textureOptions),
     renders,
     shutdown: () => imagePool.close(),
     textures: {

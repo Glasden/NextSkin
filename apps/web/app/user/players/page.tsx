@@ -9,6 +9,7 @@ import { figureSrc } from '../../../lib/textures'
 import { AddPlayerDialog } from './add-player-dialog'
 import { CopyUuidButton } from './copy-uuid-button'
 import { DeletePlayerDialog, RenamePlayerDialog } from './player-dialogs'
+import { PlayerTextureDialog } from './player-texture-dialog'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('user.players')
@@ -87,14 +88,33 @@ export default async function PlayersPage() {
                 )
               }
               actions={
+                // 换材质一组、改名和删除一组：卡片窄时整组换行，不会只剩一个按钮落在第二行
                 <>
-                  <RenamePlayerDialog pid={player.pid} name={player.name} nameRule={nameRule} disabled={locked} />
-                  <DeletePlayerDialog
-                    pid={player.pid}
-                    name={player.name}
-                    refund={refund ? player.scorePaid : 0}
-                    disabled={locked}
-                  />
+                  <div className="flex gap-2">
+                    <PlayerTextureDialog
+                      pid={player.pid}
+                      name={player.name}
+                      slot="skin"
+                      current={player.skin?.tid ?? null}
+                      disabled={locked}
+                    />
+                    <PlayerTextureDialog
+                      pid={player.pid}
+                      name={player.name}
+                      slot="cape"
+                      current={player.cape?.tid ?? null}
+                      disabled={locked}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <RenamePlayerDialog pid={player.pid} name={player.name} nameRule={nameRule} disabled={locked} />
+                    <DeletePlayerDialog
+                      pid={player.pid}
+                      name={player.name}
+                      refund={refund ? player.scorePaid : 0}
+                      disabled={locked}
+                    />
+                  </div>
                 </>
               }
             >

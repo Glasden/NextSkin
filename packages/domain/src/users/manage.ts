@@ -58,7 +58,10 @@ export function createUserManagement(
       : null
   }
   return {
-    async updateProfile(actor: UserActor, input: { nickname?: string; locale?: string }): Promise<PrivateUser> {
+    async updateProfile(
+      actor: UserActor,
+      input: { nickname?: string; locale?: string; avatar?: number | null },
+    ): Promise<PrivateUser> {
       await assertActiveUser(actor.uid)
       const nickname = input.nickname === undefined ? undefined : validateNickname(input.nickname)
       if (input.locale !== undefined && !isLocale(input.locale)) throw new DomainError('locale_invalid')
@@ -66,14 +69,22 @@ export function createUserManagement(
         const user = await lockUser(tx, actor.uid)
         if (user.role === 'banned') throw new DomainError('user_banned')
         const before = (await profile(tx, actor.uid))!
-        const fields: ('nickname' | 'locale')[] = []
+        if (typeof input.avatar === 'number') {
+          const texture = await lockTexture(tx, input.avatar)
+          if (!texture || (texture.is_public === 0 && texture.uploader_id !== actor.uid))
+            throw new DomainError('texture_not_found')
+          if (texture.type === 'cape') throw new DomainError('texture_type_mismatch', { slot: 'avatar' })
+        }
+        const fields: ('nickname' | 'locale' | 'avatar')[] = []
+        if (input.avatar !== undefined && input.avatar !== before.avatarTid) fields.push('avatar')
         if (nickname !== undefined && nickname !== before.nickname) fields.push('nickname')
         if (input.locale !== undefined && input.locale !== before.locale) fields.push('locale')
         if (!fields.length) return before
-        const now = toIsoTimestamp(new Date())
+        const now = toIsoTimestamp(textureNow())
         await tx
           .updateTable('users')
           .set({
+            ...(fields.includes('avatar') ? { avatar_texture_id: input.avatar } : {}),
             ...(fields.includes('nickname') ? { nickname } : {}),
             ...(fields.includes('locale') ? { locale: input.locale } : {}),
             updated_at: writeAuthDate(tx, now),

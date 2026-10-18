@@ -132,6 +132,7 @@ BS 这里的问题：
 
 新组件写进 `packages/ui`，配 story 和截图基线，并补进 DESIGN.md 的组件清单：
 - Tabs：衣柜的皮肤和披风。
+- TexturePicker：换材质的 Dialog 里从衣柜挑一件。TextureCard 的展台太高，一页 20 个放进 Dialog 太长。
 
 TextureCard、PlayerHead、Pagination、Textarea 由 ADR-0025 新增。
 

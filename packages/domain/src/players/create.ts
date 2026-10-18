@@ -33,7 +33,7 @@ export function validatePlayerName(input: string, settings: PlayerNameSettings):
         throw new DomainError('player_name_rule_misconfigured')
       }
   }
-  if (!pattern.test(name)) throw new DomainError('player_name_invalid', { rule })
+  if (!pattern.test(name) || name.includes('\u0000')) throw new DomainError('player_name_invalid', { rule })
   return name
 }
 

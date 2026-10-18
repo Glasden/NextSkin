@@ -31,6 +31,8 @@ storybook-static/
 .vitest/
 test-results/
 playwright-report/
+# Playwright MCP 的快照和控制台日志，写在仓库根目录
+.playwright-mcp/
 
 # 开发环境的数据目录（SQLite 和材质）
 apps/web/data/

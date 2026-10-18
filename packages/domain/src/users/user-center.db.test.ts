@@ -200,7 +200,7 @@ test.each(['create', 'rename', 'delete'] as const)('%s 拒绝封禁、未验证�
     operation === 'create'
       ? core.players.create(a, { name: 'Other' })
       : operation === 'rename'
-        ? core.players.rename(a, player.pid, { name: 'Other' })
+        ? core.players.update(a, player.pid, { name: 'Other' })
         : core.players.delete(a, player.pid)
   await expect(call({ uid: 2147483647 })).rejects.toMatchObject({ code: 'unauthenticated' })
   await setting('auth.requireEmailVerification', true)
@@ -216,10 +216,10 @@ test('改名保留 UUID，更新时间；同名不写库、不发事件，只改
   const events = subscribe('player.renamed')
   const player = await create()
   await db().updateTable('players').set({ updated_at: old }).where('id', '=', player.pid).execute()
-  expect(await core.players.rename(actor, player.pid, { name: 'Steve' })).toEqual({ ...player, updatedAt: old })
+  expect(await core.players.update(actor, player.pid, { name: 'Steve' })).toEqual({ ...player, updatedAt: old })
   expect((await row(player.pid)).updated_at).toBe(old)
   expect(await countRows(db().selectFrom('jobs'))).toBe(0)
-  const renamed = await core.players.rename(actor, player.pid, { name: 'sTEve' })
+  const renamed = await core.players.update(actor, player.pid, { name: 'sTEve' })
   expect(renamed).toEqual({ ...player, name: 'sTEve', updatedAt: expect.any(String) as unknown })
   expect(renamed.updatedAt).not.toBe(old)
   expect(await row(player.pid)).toMatchObject({
@@ -242,11 +242,11 @@ test('别人的角色不透露存在性，别人的名字不能占用', async ()
   const other = await user('other')
   const mine = await create()
   const theirs = await core.players.create(other, { name: 'Alex' })
-  await expect(core.players.rename(actor, mine.pid, { name: 'Alex' })).rejects.toMatchObject({
+  await expect(core.players.update(actor, mine.pid, { name: 'Alex' })).rejects.toMatchObject({
     code: 'player_name_taken',
   })
   for (const pid of [theirs.pid, 2147483647]) {
-    await expect(core.players.rename(actor, pid, { name: 'Other' })).rejects.toMatchObject({ code: 'player_not_found' })
+    await expect(core.players.update(actor, pid, { name: 'Other' })).rejects.toMatchObject({ code: 'player_not_found' })
     await expect(core.players.delete(actor, pid)).rejects.toMatchObject({ code: 'player_not_found' })
   }
   expect((await row(theirs.pid)).name).toBe('Alex')
@@ -259,8 +259,8 @@ test('不同用户并发改成同一个名字，唯一冲突返回领域错误�
   const second = await core.players.create(other, { name: 'Alex' })
   oneFailure(
     await Promise.allSettled([
-      core.players.rename(actor, first.pid, { name: 'Shared' }),
-      core.players.rename(other, second.pid, { name: 'Shared' }),
+      core.players.update(actor, first.pid, { name: 'Shared' }),
+      core.players.update(other, second.pid, { name: 'Shared' }),
     ]),
     'player_name_taken',
   )

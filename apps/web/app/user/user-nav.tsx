@@ -4,8 +4,10 @@ import { Nav, NavItem } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import NextLink from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Flag } from 'pixelarticons/react/Flag.js'
 import { Layout } from 'pixelarticons/react/Layout.js'
 import { Shield } from 'pixelarticons/react/Shield.js'
+import { Shirt } from 'pixelarticons/react/Shirt.js'
 import { User } from 'pixelarticons/react/User.js'
 import { Users } from 'pixelarticons/react/Users.js'
 
@@ -16,6 +18,8 @@ import { Users } from 'pixelarticons/react/Users.js'
 export const userNavItems = [
   { href: '/user', icon: Layout, label: 'dashboard' },
   { href: '/user/players', icon: Users, label: 'players' },
+  { href: '/user/closet', icon: Shirt, label: 'closet' },
+  { href: '/user/reports', icon: Flag, label: 'reports' },
   { href: '/user/profile', icon: User, label: 'profile' },
   { href: '/user/security', icon: Shield, label: 'security' },
 ] as const

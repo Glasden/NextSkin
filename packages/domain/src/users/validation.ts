@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { DomainError } from '../errors.ts'
+import { rejectNul } from '../text.ts'
 import type { CoreSettingValue } from '../settings/registry.ts'
 
 export function validateEmail(input: string, domains: CoreSettingValue<'auth.registration.emailDomains'>): string {
@@ -12,7 +13,7 @@ export function validateEmail(input: string, domains: CoreSettingValue<'auth.reg
 }
 
 export function validateNickname(input: string): string {
-  const nickname = input.trim()
+  const nickname = rejectNul(input).trim()
   if ([...nickname].length < 1 || [...nickname].length > 255)
     throw new DomainError('nickname_invalid', { min: 1, max: 255 })
   return nickname

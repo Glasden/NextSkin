@@ -36,7 +36,11 @@ export interface OwnedPlayer {
   updatedAt: IsoTimestamp
 }
 
-function textureScaleOrNull(type: TextureType | null, width: number | null, height: number | null): number | null {
+export function textureScaleOrNull(
+  type: TextureType | null,
+  width: number | null,
+  height: number | null,
+): number | null {
   if (type === null || width === null || height === null) return null
   try {
     return textureScale(type, width, height)

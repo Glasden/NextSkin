@@ -43,3 +43,6 @@ export {
 
 export type { Texture, TextureType } from '@nextskin/plugin-sdk'
 export type { TextureSummary, TextureDetail, TextureListInput } from './textures/queries.ts'
+
+export type { ClosetItem } from './closet/service.ts'
+export type { Report, OwnReport } from './reports/service.ts'

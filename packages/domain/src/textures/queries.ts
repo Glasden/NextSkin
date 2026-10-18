@@ -1,7 +1,7 @@
 import { containsInsensitive, countRows, type CoreDatabase } from '@nextskin/db'
 import type { Texture } from '@nextskin/plugin-sdk'
-import { textureScale } from '@nextskin/skin'
 import type { Kysely } from 'kysely'
+import { textureScaleOrNull } from '../players/queries.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { storageFee, textureRows, toTexture, type TextureRow } from './dto.ts'
 import type { TextureStorage } from './storage.ts'
@@ -34,6 +34,8 @@ export interface TextureSummary extends Texture {
   inCloset: boolean
 }
 export interface TextureDetail extends Omit<TextureSummary, 'uploader'> {
+  closetItem: { name: string; scorePaid: number } | null
+  reported: boolean
   uploader: { uid: number; nickname: string; avatar: { hash: string; scale: number } | null } | null
   management?: { visibilityDelta: number; deleteRefund: number; othersInCloset: number }
 }
@@ -74,7 +76,8 @@ export function createTextureLibraryQueries(
     const ids = new Set(closet.map((item) => item.texture_id))
     return found.map((row) => ({
       ...toTexture(row),
-      scale: textureScale(row.type, row.width!, row.height!),
+      // 导入的尺寸不合法时，列表和详情仍保留条目，预览回退到标准倍率。
+      scale: textureScaleOrNull(row.type, row.width, row.height) ?? 1,
       uploaderName: row.uploaderName,
       inCloset: ids.has(row.id),
     }))
@@ -127,7 +130,7 @@ export function createTextureLibraryQueries(
               uploaderRow.hash && uploaderRow.type && uploaderRow.width && uploaderRow.height
                 ? {
                     hash: uploaderRow.hash,
-                    scale: textureScale(uploaderRow.type, uploaderRow.width, uploaderRow.height),
+                    scale: textureScaleOrNull(uploaderRow.type, uploaderRow.width, uploaderRow.height) ?? 1,
                   }
                 : null,
           }
@@ -151,7 +154,32 @@ export function createTextureLibraryQueries(
           ),
         }
       }
-      return { ...summary!, uploader, ...(management ? { management } : {}) }
+      const item =
+        viewer === null
+          ? undefined
+          : await db
+              .selectFrom('closet_items')
+              .select(['name', 'score_paid as scorePaid'])
+              .where('user_id', '=', viewer)
+              .where('texture_id', '=', tid)
+              .executeTakeFirst()
+      const report =
+        viewer === null
+          ? undefined
+          : await db
+              .selectFrom('reports')
+              .select('id')
+              .where('reporter_id', '=', viewer)
+              .where('texture_id', '=', tid)
+              .executeTakeFirst()
+      return {
+        ...summary!,
+        uploader,
+        // node:sqlite 的行是无原型对象，传不进客户端组件
+        closetItem: item ? { name: item.name, scorePaid: item.scorePaid } : null,
+        reported: report !== undefined,
+        ...(management ? { management } : {}),
+      }
     },
   }
 }
