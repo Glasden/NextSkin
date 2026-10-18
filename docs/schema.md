@@ -192,13 +192,15 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | reason | 长文本 | 非空 | BS 的列是 `longtext`，没有长度限制。新举报在领域层限制为 1 到 500 个字符（ADR-0026） |
 | score_paid | integer | 非空，默认 0 | 举报时实际付的花费，采纳时按它退还（ADR-0026） |
 | status | varchar(16) | 非空 | `pending`、`resolved`、`rejected` 之一 |
-| resolution | varchar(32) | 可空 | 处理方式，取值与 SDK 事件 `report.resolved` 的 `action` 相同。导入的旧记录为空 |
+| resolution | varchar(32) | 可空 | 处理方式，取值与 SDK 事件 `report.resolved` 的 `action` 相同。导入的旧记录为空，材质已不存在的待处理举报除外（见导入对照） |
 | resolver_id | integer | 可空；外键 → users，set null | |
 | created_at | 时间 | 非空 | |
 | resolved_at | 时间 | 可空 | |
 
 - `(reporter_id, texture_id)` 唯一：BS 不允许同一个人重复举报同一个材质，无论之前的举报处理与否；举报还会改积分，只靠"先查再插"在并发下会重复结算。用户或材质删除后这两列会被置空，三种数据库都把 NULL 视为互不相同，这些旧记录不会挡住任何新举报，这正是想要的。
 - 另建 `(status, id)` 索引，供后台按状态列出举报。
+- 待处理的举报总是指向存在的材质：材质删除时，在同一个事务里把它的待处理举报一并结案（ADR-0027）。所以 `status` 是 `pending` 的行，`texture_id` 不为空。
+- 状态只从 `pending` 往外推进，用带条件的 UPDATE（`where status = 'pending'`），改不到行就是已经被处理过（ADR-0027）。
 
 ## 积分
 
@@ -266,15 +268,39 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 - 每个设置项的类型和默认值在设置注册表（`packages/domain/src/settings/registry.ts`）里声明，表里只存和默认值不同的项。核心的键名用点分隔，例如 `site.url`、`yggdrasil.signingKey`。
 - 机密项（例如 Yggdrasil 的签名私钥）用 `.env` 里的 `NEXTSKIN_SECRET` 加密后存储（AES-256-GCM，附加数据绑定 namespace 和 key，信封带版本号，见 `settings/codec.ts`），导出诊断包时排除。代价：丢了 `.env` 里的密钥，这些值也就找不回来了，与 Better Auth 存 `jwks` 私钥的方式相同。
 
+## 审计
+
+### audit_logs
+
+管理操作的记录，即操作者凭具名权限动了别人的东西（ADR-0027）。
+
+| 列 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | 自增 | 主键 | |
+| actor_type | varchar(16) | 非空 | `user`、`system`、`plugin` 之一，同 SDK 的 `Actor` |
+| actor_user_id | integer | 可空，不建外键 | 操作者是用户时的 uid |
+| actor_plugin_id | varchar(64) | 可空 | 操作者是插件时的插件 id |
+| action | varchar(64) | 非空 | 例如 `report.resolve`，取值见 ADR-0027 |
+| subject_type | varchar(32) | 非空 | 例如 `user`、`texture`、`report` |
+| subject_id | integer | 非空，不建外键 | |
+| details | text | 非空 | JSON：操作时的快照，例如材质名、角色的新旧值 |
+| ip | varchar(45) | 可空 | 用 `clientIp()` 解析；脚本和系统操作为空 |
+| created_at | 时间 | 非空 | |
+
+- 两个 id 列都不建外键：用户、材质删除之后，记录照样要说明是谁、对什么做的。这是 ADR-0015"核心表之间都声明外键"的例外。删除账号时，审计记录不删。
+- `actor_type` 加 CHECK 约束；`subject_type`、`action` 不加，在领域层校验：以后每个管理切片都会加新值，SQLite 改 CHECK 约束要重建整张表。
+- 和业务写入在同一个事务里写入。`details` 里不能出现不变量 11 列出的内容。
+- 另建 `(subject_type, subject_id, id)`、`(actor_user_id, id)` 索引。按时间列出用主键倒序。
+- 不自动清理，保留期等定时任务落地后再加设置项。
+
 ## 以下各表只定了要点，随对应切片细化
 
 ### 定时任务
 
 - **job_schedules**：随第一个定时任务落地。列：`name`（varchar(128)，主键）、`next_run_at`（时间）。执行器用条件 UPDATE 把 `next_run_at` 从旧值推到下一次，影响 1 行才入队，去重键用 `name`（ADR-0021）。
 
-### 审计与通知
+### 通知
 
-- **audit_logs**：管理操作、权限变更、敏感操作。列：操作者类型和 id、动作、对象类型和 id、详情（JSON）、IP、时间。对象和时间各建索引。日志里不能出现不变量 11 列出的内容。
 - **notifications**：SDK 的 `notifications.send`。标题和正文存 i18n 键加参数，按收件人的语言渲染。列：`user_id`（cascade）、`title_key`、`body_key`、`params`（JSON）、`read_at`、`created_at`。
 
 ### Yggdrasil
@@ -319,7 +345,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | uid | id | |
 | email | email | 去首尾空格、转小写 |
 | nickname | nickname | |
-| score | score | 积分不为 0 时另写一条原因为"导入"的积分流水，余额等于导入的积分 |
+| score | score | 加上材质已不存在的待处理举报退还的花费（见 reports）。积分不为 0 时另写一条原因为"导入"的积分流水，余额等于导入的积分 |
 | permission | role | -1 → `banned`，0 → `user`，1 → `admin`，2 → `superadmin` |
 | avatar | avatar_texture_id | 0、材质不存在或被跳过时为空 |
 | locale | locale | |
@@ -382,6 +408,8 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | — | score_paid | 状态是 `pending`、并且旧站 `reporter_score_modification` 为负时，取它的绝对值；其余为 0（ADR-0026） |
 
 同一个人对同一个材质的重复举报（BS 先查后插，并发时会产生）只保留 id 最小的一条，其余计入报告。
+
+材质已经不存在的待处理举报（包括文件缺失被跳过的材质）记为 `resolved`，`resolution` 是 `textureDeleted`，`resolver_id` 为空，`resolved_at` 取导入时刻。按上表算出的 `score_paid` 直接加回举报人导入的积分，然后记为 0。这样导入后，待处理的举报总是指向存在的材质（ADR-0027）。
 
 **oauth_clients → oauth_clients**
 
@@ -468,7 +496,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | 个人资料和账号安全 | users.email_version（加列） |
 | 材质上传和皮肤库 | textures.score_paid（加列）、closet_items |
 | 衣柜、换材质和举报 | reports |
-| 第一个管理操作 | audit_logs |
+| 后台和审计日志 | audit_logs |
 | 第一个定时任务 | job_schedules |
 | Yggdrasil | authserver 令牌表 |
 | 插件 | plugins、plugin_kv、plugin_migrations |
