@@ -863,7 +863,7 @@ export { z }
 //
 // dist/types/context.d.ts:119:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
 // dist/types/context.d.ts:123:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
-// dist/types/routes.d.ts:29:5 - (ae-forgotten-export) The symbol "RouteArgs" needs to be exported by the entry point index.d.ts
+// dist/types/routes.d.ts:32:5 - (ae-forgotten-export) The symbol "RouteArgs" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

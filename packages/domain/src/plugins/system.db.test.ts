@@ -177,7 +177,7 @@ test('UUID 竞争重跑事务，拦截器调用两次但只提交一次写入', 
   expect(await countRows(env.db.selectFrom('players'))).toBe(2)
 })
 
-test('300 ms 超时回滚并释放写锁，停用后下一次注册立即完成', async () => {
+test('300 ms 超时回滚并释放写锁，停用后下一次注册不再调用插件', async () => {
   let aborted = false
   let interceptedAt = 0
   const definition = recorder()
@@ -206,10 +206,11 @@ test('300 ms 超时回滚并释放写锁，停用后下一次注册立即完成'
   expect(performance.now() - interceptedAt).toBeLessThan(450)
   expect(aborted).toBe(true)
   expect(await records()).toEqual([])
-  const next = performance.now()
+  // 不量时间：注册里有密码哈希，机器忙的时候说不准；插件没被调用就不会再等 300 ms
+  const calledAt = interceptedAt
   await env.core.plugins.admin.disable(actor, 'a')
   await env.core.users.register(env.input())
-  expect(performance.now() - next).toBeLessThan(400)
+  expect(interceptedAt).toBe(calledAt)
 })
 
 test('连续三次异常熔断，第四次不调用；30 秒冷却后恢复', async () => {
