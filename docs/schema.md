@@ -337,6 +337,29 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 
 进服记录（serverId 对应哪个角色和客户端 IP）只保留 120 秒，放在缓存接口里，默认是进程内存，不建表。签名私钥存在 `settings` 的机密项里。
 
+## 导入
+
+### import_runs
+
+从 BS 导入的每次运行，试跑和导入各一行（ADR-0031）。导入清空业务数据时保留这张表。
+
+| 列 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | 自增 | 主键 | |
+| status | varchar(16) | 非空 | `running`、`succeeded`、`blocked`（有停止类问题，没有写入）、`failed`、`cancelled` 之一 |
+| is_dry_run | 开关 | 非空 | 试跑 |
+| entry | varchar(16) | 非空 | 入口：`setup`（安装向导）、`admin`（后台）、`cli`（命令行）之一 |
+| started_by | varchar(255) | 可空 | 发起人的邮箱快照，命令行为空。不建外键：导入会替换用户表 |
+| source | 长文本 | 非空 | JSON：旧库的类型、地址、端口、库名、表前缀，材质目录和时区。不含数据库密码和盐 |
+| report | 长文本 | 可空 | JSON：对账报告，运行结束时写入 |
+| started_at | 时间 | 非空 | |
+| finished_at | 时间 | 可空 | 运行中为空 |
+
+- 同一时刻最多一行 `running`：网页发起的由服务进程内的锁保证，命令行要求服务停着。服务启动时把遗留的 `running` 标为 `failed`，退出维护模式。
+- 运行中的进度只在运行导入的进程的内存里，不写进这张表：导入事务提交之前，SQLite 上别的写入都要排队。
+- 站点**未初始化**：没有用户，也没有 `succeeded` 的导入（试跑不算）。安装向导只在这时可用。
+- "上一次导入"指最近一行 `succeeded` 且不是试跑的记录，按它的 `finished_at` 判断导入之后新站有没有产生数据。
+
 ## 以下各表只定了要点，随对应切片细化
 
 ### 通知
@@ -366,6 +389,19 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
   - 两个角色得到同一个 UUID。
 - 引用了不存在的行的记录（BS 没有外键，删除用户、材质后会留下这类记录）按下面各表的规则跳过或置空，计入对账报告。
 - 材质文件按原字节复制，不重新编码（不变量 3）。
+
+### 运行
+
+每次运行都从旧库重新导入全部数据，在一个目标库事务里先清空、再写入；有停止类问题、出错或被取消就整体回滚（ADR-0031）。
+
+- **清空的范围**：所有业务数据，即用户（连同级联删除的账号、会话、角色、衣柜、令牌等）、材质、材质文件、举报、OAuth 客户端、积分流水、审计日志、任务。保留 `settings` 里导入器不写的键、Better Auth 的 `jwks`、`job_schedules`、`import_runs`、迁移记录。
+- **能不能写**：
+  - 目标库没有业务数据：直接导入；
+  - 有数据，并且来自上一次导入：命令行要加 `--replace`，网页上要勾选确认；
+  - 上一次导入之后新站产生了数据（会话、OAuth 令牌、不是"导入"的积分流水、`created_at` 晚于上一次导入的用户），或者有数据却从没导入过：停止并列出，命令行再加 `--force`、网页上再勾选一次才继续。
+- **指定 UUID**（`--uuid-overrides`，网页上在试跑报告的冲突旁边选择）：JSON 对象，键是 pid 的字符串，值是 UUID，带不带连字符、大小写都可以，导入时统一成 32 位小写十六进制。指定的值同样要通过"两个角色得到同一个 UUID"的检查。
+- **像素 hash**：按上传的规则解码、规范化后计算（`@nextskin/skin`），文件不重新编码。规范化按引用这个文件的 `tid` 最小的材质的类型。能解码、但尺寸不合 NextSkin 规则的文件按解码出的原图计算，照样导入，在报告里列出。重跑时，上一次导入的 `texture_files` 里有同一 hash、同样大小的行，沿用它的像素 hash 和宽高。
+- 材质文件在事务之外按 hash 复制进材质存储，存储里已经有、大小相同的不再复制。回滚后多出来的文件由 `core:texture-sweep` 回收（ADR-0029）。
 
 ### 对照表
 
@@ -462,8 +498,9 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 
 | BS | NextSkin | 规则 |
 |---|---|---|
-| site_url | site.url | |
+| site_url | site.url | 安装向导确认的站点地址、命令行的 `--site-url` 优先 |
 | site_name | site.name | |
+| —（`config/app.php` 的时区） | site.timeZone | 取导入时指定的时区，默认 `Asia/Shanghai` |
 | cache_expire_time | cache.publicMaxAge | 转成整数 |
 | ygg_skin_domain | yggdrasil.skinDomains | 按逗号拆开，每项 trim，去掉空项 |
 | ygg_search_profile_max | yggdrasil.profileSearchLimit | 转成整数 |
@@ -536,6 +573,7 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 | 后台和审计日志 | audit_logs |
 | 定时任务 | job_schedules |
 | Yggdrasil | yggdrasil_tokens |
+| 导入器 | import_runs |
 | 插件 | plugins、plugin_kv、plugin_migrations |
 | 通知 | notifications |
 

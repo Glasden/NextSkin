@@ -15,9 +15,9 @@
 | [0001](0001-rewrite-boundary.md) | 重写边界：Minecraft 协议严格兼容，网页 API 与插件 ABI 重新设计 | 已采纳 |
 | [0002](0002-deployment-baseline.md) | 部署基线：单进程、单数据库起步，Redis/S3/容器为可选档位 | 已采纳（队列的 Redis 驱动一条已被 ADR-0021 取代） |
 | [0003](0003-next-as-ui-shell.md) | Next.js 只做 UI 壳，HTTP 契约层用 Hono | 已采纳 |
-| [0004](0004-single-write-path.md) | 写操作唯一入口：领域用例；Web UI 走公开 API | 已采纳 |
+| [0004](0004-single-write-path.md) | 写操作唯一入口：领域用例；Web UI 走公开 API | 已采纳（导入器直接写表的例外由 ADR-0031 补充） |
 | [0005](0005-kysely-three-dialects.md) | 数据访问用 Kysely，支持 SQLite / MySQL / PostgreSQL | 已采纳 |
-| [0006](0006-new-schema-and-importer.md) | 新 schema + 只读导入器，不沿用旧表结构 | 已采纳 |
+| [0006](0006-new-schema-and-importer.md) | 新 schema + 只读导入器，不沿用旧表结构 | 已采纳（对账报告的抽样比对一条已被 ADR-0031 取代） |
 | [0007](0007-auth.md) | 认证：Better Auth + 自写 Yggdrasil 令牌体系 | 已采纳（S1 通过） |
 | [0008](0008-zero-native-deps.md) | 零原生依赖：node:sqlite + 纯 TS/WASM 图像管线 | 已采纳（S2、S4 通过） |
 | [0009](0009-plugin-runtime.md) | 插件运行模型：官方插件在核心进程内，安装插件在 plugin host，整代切换 | 已采纳 |
@@ -38,11 +38,11 @@
 | [0024](0024-email-change-version.md) | 改邮箱的确认链接按 `users.email_version` 作废：邮箱每改一次版本加一，用过的链接在邮箱改回原地址后也不会重新生效（取代 ADR-0023 里确认链接的作废条件） | 已采纳 |
 | [0025](0025-texture-upload-and-skin-library.md) | 材质上传和皮肤库：存储费和衣柜费记下实付、按实付退还，改公开或私有按现价多退少补；别人的私有材质一律当作不存在；不做上传奖励；文件回收用延迟任务推进；出图地址定为 `/render/v{版本}/…` | 已采纳 |
 | [0026](0026-closet-and-reports.md) | 衣柜、换材质和举报：加入衣柜、换材质、设头像、举报都先锁材质行再判断可见性；换材质要求类型和槽位一致；不做被收藏奖励；举报的奖励在采纳时才发 | 已采纳 |
-| [0027](0027-admin-and-audit-log.md) | 后台和审计日志：固定角色映射到具名权限，不做 RBAC；审计日志和业务写入在同一事务，不建外键；举报的状态用带条件的 UPDATE 推进；材质删除时一并结案它的待处理举报 | 已采纳 |
+| [0027](0027-admin-and-audit-log.md) | 后台和审计日志：固定角色映射到具名权限，不做 RBAC；审计日志和业务写入在同一事务，不建外键；举报的状态用带条件的 UPDATE 推进；材质删除时一并结案它的待处理举报 | 已采纳（具名权限和第一个超级管理员两处由 ADR-0031 补充） |
 | [0028](0028-admin-settings.md) | 后台设置页：表单由设置注册表生成，只有超级管理员能改设置；公告和内容政策按 Markdown 渲染，不渲染原始 HTML；签名密钥可以在后台生成 | 已采纳 |
 | [0029](0029-scheduled-jobs.md) | 定时任务：`job_schedules` 记下算出下次执行时间用的 cron 和时区，表达式或时区变了由调度器自己重算；第一批条目清理过期的认证数据、按保留期清理审计日志、回收存储里的孤儿文件（取代 ADR-0021 里 `job_schedules` 只有两列的部分） | 已采纳 |
 | [0030](0030-yggdrasil-authserver.md) | Yggdrasil：authserver 令牌存进自己的表，不与 OAuth 令牌合并；修掉 yggdrasil-api 的越权和吊销缺陷；开了两步验证的账号在密码后面接验证码（补充 ADR-0016 的"不复现"一表） | 已采纳 |
-| [0031](0031-blessing-skin-importer.md) | BS 导入器：安装向导、后台和命令行共用一个导入引擎，每次运行整库替换，在一个目标库事务里写完；不经过领域用例；报告逐个比对全部角色 | 提议 |
+| [0031](0031-blessing-skin-importer.md) | BS 导入器：安装向导、后台和命令行共用一个导入引擎，每次运行整库替换，在一个目标库事务里写完；不经过领域用例；报告逐个比对全部角色 | 已采纳 |
 
 ## 待做的 spike
 
