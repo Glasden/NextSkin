@@ -20,14 +20,15 @@
     "@nextskin/db": "workspace:*",
     "@nextskin/email": "workspace:*",
     "@nextskin/i18n": "workspace:*",
+    "@nextskin/plugin-host": "workspace:*",
     "@nextskin/plugin-sdk": "workspace:*",
+    "@nextskin/skin": "workspace:*",
     "better-auth": "catalog:",
     "croner": "10.0.1",
     "hash-wasm": "4.12.0",
     "kysely": "catalog:",
     "nodemailer": "10.1.0",
-    "zod": "catalog:",
-    "@nextskin/skin": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@simplewebauthn/server": "13.3.3",

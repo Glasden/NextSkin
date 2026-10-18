@@ -43,6 +43,10 @@ import * as createYggdrasilTokens from './0034_create_yggdrasil_tokens.ts'
 import * as createImportRuns from './0035_create_import_runs.ts'
 import * as createClosetItemsCreatedAtIndex from './0036_create_closet_items_created_at_index.ts'
 
+import * as createPlugins from './0037_create_plugins.ts'
+import * as createPluginKv from './0038_create_plugin_kv.ts'
+import * as createPluginMigrations from './0039_create_plugin_migrations.ts'
+
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
   '0002_create_texture_files': createTextureFiles,
@@ -80,4 +84,7 @@ export const coreMigrations: Record<string, Migration> = {
   '0034_create_yggdrasil_tokens': createYggdrasilTokens,
   '0035_create_import_runs': createImportRuns,
   '0036_create_closet_items_created_at_index': createClosetItemsCreatedAtIndex,
+  '0037_create_plugins': createPlugins,
+  '0038_create_plugin_kv': createPluginKv,
+  '0039_create_plugin_migrations': createPluginMigrations,
 }

@@ -1,0 +1,24 @@
+{
+  "name": "@nextskin/plugin-host",
+  "version": "0.0.0",
+  "private": true,
+  "description": "插件侧运行时：加载插件定义、构造上下文、远程 Kysely 方言（ADR-0009、ADR-0033）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nextskin/plugin-sdk": "workspace:*",
+    "kysely": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

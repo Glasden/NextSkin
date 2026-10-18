@@ -387,7 +387,36 @@ export interface ImportRunsTable {
   finished_at: IsoTimestamp | null
 }
 
+export interface PluginsTable {
+  id: string
+  version: string
+  is_enabled: SwitchValue
+  /** 管理员授予的能力，JSON 字符串数组 */
+  capabilities: string
+  package_hash: string | null
+  last_error: string | null
+  installed_at: IsoTimestamp
+  updated_at: IsoTimestamp
+}
+
+export interface PluginKvTable {
+  plugin_id: string
+  key: string
+  value: string
+  expires_at: IsoTimestamp | null
+  updated_at: IsoTimestamp
+}
+
+export interface PluginMigrationsTable {
+  plugin_id: string
+  name: string
+  executed_at: IsoTimestamp
+}
+
 export interface CoreDatabase {
+  plugins: PluginsTable
+  plugin_kv: PluginKvTable
+  plugin_migrations: PluginMigrationsTable
   import_runs: ImportRunsTable
   yggdrasil_tokens: YggdrasilTokensTable
   job_schedules: JobSchedulesTable

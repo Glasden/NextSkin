@@ -152,6 +152,9 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0034_create_yggdrasil_tokens',
     '0035_create_import_runs',
     '0036_create_closet_items_created_at_index',
+    '0037_create_plugins',
+    '0038_create_plugin_kv',
+    '0039_create_plugin_migrations',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -188,6 +191,47 @@ test('类型化写入完整引用关系，读回各列、默认值和认证字�
   expectTypeOf<Insertable<UsersTable>['two_factor_enabled']>().toEqualTypeOf<boolean | null | undefined>()
   expectTypeOf<Selectable<CoreDatabase['textures']>['is_public']>().toEqualTypeOf<SwitchValue>()
   expectTypeOf<Selectable<CoreDatabase['players']>['updated_at']>().toEqualTypeOf<IsoTimestamp>()
+})
+
+test('删除插件时它的 KV 和迁移记录一起删掉，开关只接受 0 和 1', async () => {
+  const plugin = {
+    id: 'invitation-codes',
+    version: '1.0.0',
+    is_enabled: 1,
+    capabilities: '["storage.tables"]',
+    package_hash: null,
+    last_error: null,
+    installed_at: timestamp,
+    updated_at: timestamp,
+  } satisfies Insertable<CoreDatabase['plugins']>
+  await db.insertInto('plugins').values(plugin).execute()
+  await db
+    .insertInto('plugin_kv')
+    .values([
+      { plugin_id: plugin.id, key: 'a', value: '1', expires_at: null, updated_at: timestamp },
+      { plugin_id: plugin.id, key: 'b', value: '"x"', expires_at: timestamp, updated_at: timestamp },
+    ])
+    .execute()
+  await db
+    .insertInto('plugin_migrations')
+    .values({ plugin_id: plugin.id, name: '0001_init', executed_at: timestamp })
+    .execute()
+  expect(await db.selectFrom('plugins').selectAll().execute()).toEqual([plugin])
+  await expect(
+    db
+      .updateTable('plugins')
+      .set({ is_enabled: 2 as SwitchValue })
+      .execute(),
+  ).rejects.toThrow()
+  await expect(
+    db
+      .insertInto('plugin_kv')
+      .values({ plugin_id: 'missing', key: 'a', value: '1', expires_at: null, updated_at: timestamp })
+      .execute(),
+  ).rejects.toThrow()
+  await db.deleteFrom('plugins').where('id', '=', plugin.id).execute()
+  expect(await db.selectFrom('plugin_kv').selectAll().execute()).toEqual([])
+  expect(await db.selectFrom('plugin_migrations').selectAll().execute()).toEqual([])
 })
 
 test('用户领域字段均可省略，认证可空字段保留 NULL', async () => {
