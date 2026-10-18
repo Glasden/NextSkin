@@ -169,7 +169,7 @@
 
 ## 6. 组件清单
 
-落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、IconButton、Form、Field、Input、Textarea、Checkbox、Switch、Select、SegmentedControl、Tabs、Table、FileDrop、Dialog、Toast、Alert、Badge、Stage、SkinFigure、SkinViewer、FigurePlaceholder、NameTag、PlayerCard、PlayerHead、TextureCard、TexturePicker、Nav、Logo、Link、Menu、Tooltip、EmptyState、Pagination、QrCode、Markdown。
+落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。组件名后面标了“（未落地）”的，是已经规划、还没写的组件，落地时去掉标记（`packages/ui/src/design-doc.test.ts` 守着）。
 
 | 组件 | 何时用 | 何时不用 |
 |---|---|---|
@@ -184,15 +184,15 @@
 | Switch | 立即生效的开关设置 | 需要点“保存”才生效的表单，改用 Checkbox |
 | FileDrop | 选一个本地文件：拖进来，或点按钮打开文件选择框，例如上传材质 | — |
 | SegmentedControl | 三到五个互斥选项的即时切换，例如材质类型、3D 预览的动作 | 选项多或需要说明时，改用 Tabs 或 Select |
-| Chip | 可以多选的筛选条件 | 互斥的选项，改用 SegmentedControl |
+| Chip（未落地） | 可以多选的筛选条件 | 互斥的选项，改用 SegmentedControl |
 | Tabs | 页面内的分组切换，可以带数量，例如衣柜的皮肤和披风。按地址切换的页面用受控的 `value`，只渲染当前这一页 | 只有两三个即时切换的选项，改用 SegmentedControl |
 | Dialog | 需要用户做决定、并且应当打断当前流程。不可逆操作的确认加 `alert`：点外面不关闭，焦点先落在“取消”上 | 展示大量内容或编辑详情，改用 Sheet |
-| Sheet | 侧边查看和编辑详情 | 二选一的确认，改用 Dialog |
-| Popover | 轻量、不打断流程的补充内容 | 包含表单提交 |
+| Sheet（未落地） | 侧边查看和编辑详情 | 二选一的确认，改用 Dialog |
+| Popover（未落地） | 轻量、不打断流程的补充内容 | 包含表单提交 |
 | Toast | 操作结果的简短反馈，例如“设置已保存”。最多同时显示 3 条，5 秒后自动关闭，鼠标停在上面或焦点在里面时暂停；可以带一个操作，例如“撤销”。警告和错误会立即读出 | 需要用户操作或必须读到的内容，改用 Alert |
 | Alert | 页面内持续存在的提示 | 一次性的操作反馈 |
 | Badge | 跟在标题或列表项后面的短状态，例如“已开启”“未验证”。像素字体，文字本身说明状态 | 用户产生的内容（昵称、材质名）；可以点的筛选条件改用 Chip |
-| Notice | 全站公告，放在页头下方 | 只和当前页面有关的提示，改用 Alert |
+| Notice（未落地） | 全站公告，放在页头下方 | 只和当前页面有关的提示，改用 Alert |
 | Markdown | 管理员写的长文，例如公告、上传页的内容政策：原始 HTML 去掉，链接只放行 http、https、mailto 和站内路径（ADR-0028）；`headingLevel` 设成所在区块标题的级别 | 用户产生的内容（材质描述），按纯文本显示 |
 | Table | 后台数据列表：表头用像素字体，数字列靠右；窄屏在表格自己的容器里横向滚动 | 前台展示材质，改用 TextureCard 网格 |
 | TextureCard | 皮肤库、衣柜里的材质；选中（已在衣柜）时加粗边框并显示勾选角标 | — |
@@ -204,8 +204,8 @@
 | NameTag | 站在展台上的角色头顶的名牌，例如仪表盘的“你的角色”、领奖台 | 列表里的角色名，直接写文字 |
 | PlayerCard | 角色管理里的一个角色：展台、名字、UUID 和操作 | 材质改用 TextureCard |
 | PlayerHead | 用户和角色的头像 | — |
-| PlayerChip | 角色名加头像，例如“正在使用的角色” | 用户（账号），改用 PlayerHead 加昵称 |
-| Podium | 首页的“本周收藏最多” | 其他排行，改用列表 |
+| PlayerChip（未落地） | 角色名加头像，例如“正在使用的角色” | 用户（账号），改用 PlayerHead 加昵称 |
+| Podium（未落地） | 首页的“本周收藏最多” | 其他排行，改用列表 |
 | Logo | 页头、后台侧栏、页脚；链接到首页时用 `render` 换成框架的链接组件 | — |
 | Link | 跳转到其他页面；站内跳转用 `render` 换成框架的链接组件 | 执行操作，改用 Button |
 | Nav | 用户中心、后台的分区导航：宽屏是侧栏，窄屏是页头下的一排；当前项除了底色还有一条强调色的色块 | 页面内的分组切换，改用 Tabs |
@@ -213,7 +213,7 @@
 | Tooltip | 图标按钮的名称这类补充说明。触屏设备上不显示 | 必须读到的内容 |
 | QrCode | 要用手机扫的内容，例如两步验证给验证器的地址。亮色、暗色主题下都是浅底深色，每个模块 4px | 用户可以直接点的地址，给 Link |
 | Pagination | 列表的分页，例如皮肤库、衣柜、后台表格（每页 50 行）：页码都是链接，不需要 JS；窄屏只显示“当前页 / 总页数” | — |
-| EmptyState、Skeleton | 见各自 story | |
+| EmptyState、Skeleton（未落地） | 见各自 story | |
 
 ## 7. 状态模式
 
