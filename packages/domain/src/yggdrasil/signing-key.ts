@@ -1,5 +1,22 @@
-import { createPrivateKey, createPublicKey, sign } from 'node:crypto'
+import { createPrivateKey, createPublicKey, generateKeyPair, sign } from 'node:crypto'
 import type { createSettingQueries } from '../settings/queries.ts'
+
+export function generateSigningKey(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    generateKeyPair(
+      'rsa',
+      {
+        modulusLength: 4096,
+        publicKeyEncoding: { type: 'spki', format: 'pem' },
+        privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+      },
+      (error, _publicKey, privateKey) => {
+        if (error) reject(error)
+        else resolve(privateKey)
+      },
+    )
+  })
+}
 
 export interface SigningKey {
   publicKey: string

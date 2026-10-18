@@ -1,8 +1,15 @@
-import type { AuditEntry } from '@nextskin/domain'
+import {
+  coreSettingsRegistry,
+  settingControl,
+  settingJsonSchema,
+  type AuditEntry,
+  type CoreSettingKey,
+} from '@nextskin/domain'
 import { Link, Table } from '@nextskin/ui'
-import { getFormatter, getTranslations } from 'next-intl/server'
+import { getFormatter, getMessages, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { auditHref } from './params'
+import { formatSettingValue, settingsHref, settingText } from './settings/setting-text'
 
 type Column = 'time' | 'actor' | 'action' | 'subject' | 'details' | 'ip'
 
@@ -11,6 +18,7 @@ const actionKeys = {
   'report.resolve': 'reportResolve',
   'texture.delete': 'textureDelete',
   'user.setRole': 'userSetRole',
+  'setting.update': 'settingUpdate',
 } as const
 
 // 处理举报的 details.action 可能是接口的动作，也可能是 SDK 的处理方式，都映射到同一份文案
@@ -34,6 +42,10 @@ function count(value: unknown): number {
   return typeof value === 'number' && Number.isSafeInteger(value) ? value : 0
 }
 
+function settingKey(value: unknown): CoreSettingKey | null {
+  return typeof value === 'string' && Object.hasOwn(coreSettingsRegistry, value) ? (value as CoreSettingKey) : null
+}
+
 function oneOf<T extends string>(values: readonly T[], value: unknown): T | null {
   return typeof value === 'string' && (values as readonly string[]).includes(value) ? (value as T) : null
 }
@@ -51,13 +63,16 @@ export async function AuditTable({
   label: string
   empty: string
 }) {
-  const [t, admin, reports, types, format] = await Promise.all([
+  const [t, admin, reports, types, settings, messages, format] = await Promise.all([
     getTranslations('admin.audit'),
     getTranslations('admin'),
     getTranslations('admin.reports'),
     getTranslations('skinlib.types'),
+    getTranslations('admin.settings'),
+    getMessages(),
     getFormatter(),
   ])
+  const settingFields = messages.admin.settings.fields
   const columns = [
     { key: 'time', header: t('columns.time'), shrink: true },
     { key: 'actor', header: t('columns.actor') },
@@ -84,6 +99,13 @@ export async function AuditTable({
 
   function subject(entry: AuditEntry) {
     const { type, id, exists } = entry.subject
+    // 设置项没有整数 id（记作 0），对象就是 details 里的键，链接到它所在的分区（ADR-0028）
+    if (type === 'setting') {
+      const key = settingKey(entry.details.key)
+      const section = key ? coreSettingsRegistry[key].section : null
+      const name = key ? settingText(settingFields, key).label : (text(entry.details.key) ?? t('subjects.setting'))
+      return section ? <Link render={<NextLink href={settingsHref(section)} />}>{name}</Link> : name
+    }
     const label =
       type === 'user' || type === 'texture' || type === 'report'
         ? t(`subjects.${type}`, { id })
@@ -108,6 +130,35 @@ export async function AuditTable({
     )
   }
 
+  /** 机密项不记值，只写“已更换”；长文只记长度；其余的写“旧值 → 新值” */
+  function settingChange(details: AuditEntry['details']): string {
+    const words = {
+      checked: settings('checked'),
+      unchecked: settings('unchecked'),
+      empty: t('details.settingUpdate.empty'),
+      number: (value: number) => format.number(value),
+    }
+    if (details.secret === true)
+      return details.generated === true ? t('details.settingUpdate.generated') : t('details.settingUpdate.secret')
+    const unreadable = details.unreadable === true
+    if ('toLength' in details)
+      return unreadable
+        ? t('details.settingUpdate.value', {
+            from: t('details.settingUpdate.unreadable'),
+            to: format.number(count(details.toLength)),
+          })
+        : t('details.settingUpdate.length', { from: count(details.fromLength), to: count(details.toLength) })
+    const key = settingKey(details.key)
+    const control = key ? settingControl(settingJsonSchema(key)) : null
+    const field = key ? settingText(settingFields, key) : { label: '' }
+    return t('details.settingUpdate.value', {
+      from: unreadable
+        ? t('details.settingUpdate.unreadable')
+        : formatSettingValue(details.from, control, field, words),
+      to: formatSettingValue(details.to, control, field, words),
+    })
+  }
+
   function details(entry: AuditEntry) {
     const via =
       typeof entry.details.reportId === 'number' ? t('details.viaReport', { id: entry.details.reportId }) : null
@@ -127,6 +178,8 @@ export async function AuditTable({
       })
     } else if (entry.action === 'user.setRole') {
       summary = t('details.userSetRole', { from: role(entry.details.from), to: role(entry.details.to) })
+    } else if (entry.action === 'setting.update') {
+      summary = settingChange(entry.details)
     }
     return (
       <span className="flex flex-col">

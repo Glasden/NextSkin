@@ -1,5 +1,5 @@
 import type { OwnedPlayer, ScoreEntry } from '@nextskin/domain'
-import { cx, FigurePlaceholder, Link, NameTag, Stage } from '@nextskin/ui'
+import { cx, FigurePlaceholder, Link, Markdown, NameTag, Stage } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -24,7 +24,7 @@ export default async function DashboardPage() {
     core.users.overview(user.uid),
     core.players.listOwned(user.uid),
     core.score.recent(user.uid),
-    core.settings.read(['checkIn.score', 'score.perPlayer', 'auth.requireEmailVerification']),
+    core.settings.read(['checkIn.score', 'score.perPlayer', 'auth.requireEmailVerification', 'site.announcement']),
     core.mail.configured(),
     getTranslations('user.dashboard'),
     getFormatter(),
@@ -79,6 +79,17 @@ export default async function DashboardPage() {
           </div>
         </section>
       </div>
+      {/* 管理员在后台写的公告（ADR-0028），空的时候不显示 */}
+      {settings['site.announcement'].trim() && (
+        <section aria-labelledby="announcement-heading" className="flex flex-col gap-3">
+          <h2 id="announcement-heading" className="font-pixel text-pixel-1 text-text">
+            {t('announcement')}
+          </h2>
+          <div className="rounded-md border border-border bg-surface p-6">
+            <Markdown>{settings['site.announcement']}</Markdown>
+          </div>
+        </section>
+      )}
       <section aria-labelledby="history-heading" className="flex flex-col gap-3">
         <h2 id="history-heading" className="font-pixel text-pixel-1 text-text">
           {t('history')}

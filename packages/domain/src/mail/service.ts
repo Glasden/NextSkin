@@ -1,5 +1,11 @@
 import { isIsoTimestamp, toIsoTimestamp, type CoreDatabase } from '@nextskin/db'
-import { renderResetPassword, renderVerifyEmail, renderConfirmEmailChange, renderEmailChanged } from '@nextskin/email'
+import {
+  renderResetPassword,
+  renderVerifyEmail,
+  renderConfirmEmailChange,
+  renderEmailChanged,
+  renderTestEmail,
+} from '@nextskin/email'
 import { matchLocale } from '@nextskin/i18n'
 import type { Kysely } from 'kysely'
 import { z } from 'zod'
@@ -40,8 +46,38 @@ export function createMailService(
     const values = await settings.read(['mail.transport', 'mail.from'])
     return values['mail.transport'] !== 'none' && values['mail.from'].address !== ''
   }
+  /**
+   * 测试邮件的报错要原样给超级管理员看，但 SMTP 服务器可能在报错里回显密码。
+   * 把密码本身和登录时发出的 base64 形式（AUTH LOGIN 只发密码，AUTH PLAIN 发 \0用户名\0密码）都换掉（ADR-0028）
+   */
+  async function redactSmtpPassword(message: string) {
+    const values = await settings.read(['mail.smtp', 'mail.smtp.password'])
+    const password = values['mail.smtp.password']
+    if (!password) return message
+    const base64 = (text: string) => Buffer.from(text, 'utf8').toString('base64')
+    return [password, base64(password), base64(`\0${values['mail.smtp'].username}\0${password}`)].reduce(
+      (text, secret) => text.split(secret).join('******'),
+      message,
+    )
+  }
   return {
     configured,
+    /** 当场发送，调用方必须先完成授权事务。 */
+    async sendTest(user: { email: string; nickname: string; locale: string | null }) {
+      if (!(await configured())) throw new DomainError('mail_not_configured')
+      const values = await settings.read(['site.name', 'site.locale', 'mail.from'])
+      const rendered = renderTestEmail({
+        locale: (user.locale ? matchLocale(user.locale) : null) ?? values['site.locale'],
+        siteName: values['site.name'],
+        nickname: user.nickname,
+      })
+      try {
+        await transport.send({ to: user.email, from: values['mail.from'], ...rendered })
+      } catch (error) {
+        const message = await redactSmtpPassword(error instanceof Error ? error.message : String(error))
+        throw new DomainError('mail_test_failed', { reason: [...message].slice(0, 300).join('') })
+      }
+    },
     /** 只入队，不等发送。Better Auth 的回调也调用它，那时不在任何事务里（ADR-0021） */
     async send(kind: keyof typeof templates, user: { id: string; email: string }, url: string) {
       if (!(await configured())) throw new DomainError('mail_not_configured')

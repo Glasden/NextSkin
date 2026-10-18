@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'vitest'
-import { renderResetPassword, renderVerifyEmail, renderConfirmEmailChange, renderEmailChanged } from './mail.ts'
+import {
+  renderResetPassword,
+  renderVerifyEmail,
+  renderConfirmEmailChange,
+  renderEmailChanged,
+  renderTestEmail,
+} from './mail.ts'
 
 const input = {
   locale: 'zh-CN' as const,
@@ -70,4 +76,17 @@ describe('改邮箱邮件', () => {
       locale === 'zh-CN' ? '你在 像素皮肤站 的账号邮箱已更改' : 'Your account email for 像素皮肤站 has changed',
     )
   })
+})
+
+test('测试邮件用收件人语言渲染并转义管理员内容，不带操作链接', () => {
+  for (const locale of ['zh-CN', 'en'] as const) {
+    const mail = renderTestEmail({ locale, siteName: '<Test Site>', nickname: '<Admin>' })
+    expect(mail.subject).toContain('<Test Site>')
+    expect(mail.text).toContain('<Admin>')
+    expect(mail.html).toContain(`lang="${locale}"`)
+    expect(mail.html).toContain('&lt;Test Site&gt;')
+    expect(mail.html).toContain('&lt;Admin&gt;')
+    expect(mail.html).not.toMatch(/href=|<Admin>|<Test Site>/)
+    expect(mail.text).toContain(locale === 'zh-CN' ? '邮件设置是对的' : 'mail settings of this site are correct')
+  }
 })

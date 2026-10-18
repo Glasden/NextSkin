@@ -31,9 +31,14 @@
     "emailChanged": {
       "subject": "你在 {siteName} 的账号邮箱已更改",
       "body": "你的账号邮箱已经更改。如果不是你本人操作，请联系站点管理员。"
+    },
+    "testEmail": {
+      "subject": "{siteName} 的测试邮件",
+      "body": "这是一封测试邮件。收到它，说明本站的邮件设置是对的。"
     }
   },
   "errors": {
+    "mail_test_failed": "测试邮件没有发出去：{reason}",
     "permission_denied": "你没有这项管理权限。",
     "user_not_manageable": "只能管理角色比你低的用户，也不能改自己的角色。",
     "user_not_found": "找不到这个用户，对方可能已经注销了。",
@@ -247,7 +252,8 @@
       "addPlayer": "添加角色",
       "history": "最近的积分变动",
       "noHistory": "还没有积分变动。",
-      "balance": "余额 {balance}"
+      "balance": "余额 {balance}",
+      "announcement": "公告"
     },
     "players": {
       "title": "角色",
@@ -694,7 +700,8 @@
       "submit": "上传",
       "uploaded": "已上传 {name}",
       "uploadedCharged": "已上传 {name}，扣除 {cost, plural, other {#}} 积分",
-      "failed": "没有成功，请稍后重试。"
+      "failed": "没有成功，请稍后重试。",
+      "contentPolicy": "内容政策"
     },
     "actions": {
       "signIn": "登录",
@@ -747,7 +754,8 @@
       "overview": "概览",
       "reports": "举报",
       "users": "用户",
-      "audit": "审计日志"
+      "audit": "审计日志",
+      "settings": "设置"
     },
     "roles": {
       "banned": "已封禁",
@@ -774,7 +782,14 @@
       "pendingAction": "去处理",
       "recentAudit": "最近的管理操作",
       "allAudit": "查看全部",
-      "noAudit": "还没有管理操作。"
+      "noAudit": "还没有管理操作。",
+      "checks": {
+        "title": "还有配置没完成",
+        "siteUrl": "没有设置站点地址：生产环境下不能登录和注册。",
+        "mail": "没有配置邮件：不能验证邮箱和找回密码。",
+        "signingKey": "没有签名私钥：外置登录不可用。",
+        "fix": "去设置"
+      }
     },
     "reports": {
       "title": "举报",
@@ -893,13 +908,15 @@
       "actions": {
         "reportResolve": "处理举报",
         "textureDelete": "删除材质",
-        "userSetRole": "更改角色"
+        "userSetRole": "更改角色",
+        "settingUpdate": "修改设置"
       },
       "subjects": {
         "user": "用户 #{id}",
         "texture": "材质 #{id}",
         "report": "举报 #{id}",
-        "other": "{type} #{id}"
+        "other": "{type} #{id}",
+        "setting": "设置"
       },
       "actorSystem": "系统",
       "actorPlugin": "插件 {id}",
@@ -908,7 +925,15 @@
         "reportResolve": "{action}{refunded, plural, =0 {} other {，退还 # 积分}}{rewarded, plural, =0 {} other {，奖励 # 积分}}",
         "textureDelete": "{name}（{type}）",
         "userSetRole": "{from} → {to}",
-        "viaReport": "经由举报 #{id}"
+        "viaReport": "经由举报 #{id}",
+        "settingUpdate": {
+          "value": "{from} → {to}",
+          "secret": "已更换",
+          "generated": "已重新生成",
+          "length": "{from, number} 字 → {to, number} 字",
+          "unreadable": "（读不出来）",
+          "empty": "（空）"
+        }
       },
       "filterActor": "只看操作者 #{uid}",
       "filterSubject": "只看 {subject}",
@@ -917,6 +942,311 @@
       "filterBySubject": "只看这个对象的记录",
       "empty": "还没有管理操作。",
       "emptyFiltered": "没有符合条件的记录。"
+    },
+    "settings": {
+      "title": "设置",
+      "description": "保存后立即生效，不用重启。",
+      "tabsLabel": "设置分区",
+      "sections": {
+        "site": "站点",
+        "registration": "注册",
+        "score": "积分",
+        "content": "角色和材质",
+        "mail": "邮件",
+        "yggdrasil": "Yggdrasil",
+        "advanced": "高级"
+      },
+      "save": "保存",
+      "saved": "已保存 {count, plural, other {# 项设置}}",
+      "noChanges": "没有改动，不用保存",
+      "dirty": "{count, plural, other {# 项改动}}还没保存",
+      "invalid": "有的设置没有通过检查，按提示改好后再保存。",
+      "unreadable": "库里存的值读不出来：格式不对，或者 NEXTSKIN_SECRET 和写入时不同。{secret, select, true {} other {现在显示的是默认值，}}请重新设置这一项。",
+      "secret": {
+        "set": "已设置",
+        "unset": "未设置",
+        "placeholder": "留空表示不改",
+        "clear": "清除",
+        "clearTitle": "清除{label}？",
+        "clearHint": "清除后恢复成默认值（空），无法撤销。",
+        "cleared": "已清除{label}"
+      },
+      "generate": {
+        "button": "生成",
+        "title": "生成新的{label}？",
+        "confirm": "生成",
+        "done": "已生成新的{label}"
+      },
+      "markdown": {
+        "preview": "预览",
+        "hidePreview": "收起预览",
+        "previewLabel": "{label}的预览",
+        "empty": "还没有内容。",
+        "hint": "支持 Markdown，不支持 HTML，最多 {max, number} 个字。"
+      },
+      "lines": "一行一项。",
+      "checked": "开启",
+      "unchecked": "关闭",
+      "testMail": {
+        "button": "发送测试邮件",
+        "hint": "用已经保存的设置，给你的邮箱 {email} 发一封测试邮件。改了设置要先保存。",
+        "sent": "测试邮件已发到 {to}，去收件箱看看"
+      },
+      "fields": {
+        "site": {
+          "name": {
+            "label": "站点名称",
+            "help": "显示在页头、浏览器标签页和邮件里，启动器里显示的验证服务器名称也是它。"
+          },
+          "url": {
+            "label": "站点地址",
+            "help": "用户访问本站的完整地址，例如 https://skin.example.com。邮件里的链接和外置登录都用它，生产环境不填就不能登录。改了域名之后，已有的通行密钥都不能再用。"
+          },
+          "locale": {
+            "label": "默认语言",
+            "help": "用户没有选择语言、浏览器也没有本站支持的语言时使用。",
+            "options": {
+              "zh-CN": "简体中文",
+              "en": "English"
+            }
+          },
+          "timeZone": {
+            "label": "时区",
+            "help": "日期和时间按这个时区显示，签到的“每天零点”也按它算。填 IANA 时区名，例如 Asia/Shanghai。"
+          },
+          "announcement": {
+            "label": "公告",
+            "help": "显示在用户中心的仪表盘上，留空就不显示。"
+          }
+        },
+        "auth": {
+          "registration": {
+            "enabled": {
+              "label": "开放注册",
+              "help": "关掉后新用户不能注册，已有的用户照常登录。"
+            },
+            "withPlayerName": {
+              "label": "注册时填写角色名",
+              "help": "注册时直接创建一个角色，角色名同时用作昵称；关掉后改为填写昵称。"
+            },
+            "perIpLimit": {
+              "label": "每个 IP 最多注册",
+              "help": "同一个 IP 最多能注册几个账号，0 表示不限制。"
+            },
+            "emailDomains": {
+              "label": "邮箱域名",
+              "help": "限制用哪些邮箱注册。域名要完整匹配，不包括子域名。",
+              "fields": {
+                "mode": {
+                  "label": "规则",
+                  "options": {
+                    "any": "不限制",
+                    "allow": "只允许下面的域名",
+                    "deny": "不允许下面的域名"
+                  }
+                },
+                "domains": {
+                  "label": "域名",
+                  "help": "一行一个，例如 example.com。"
+                }
+              }
+            }
+          },
+          "requireEmailVerification": {
+            "label": "要求验证邮箱",
+            "help": "打开后，没有验证邮箱的用户不能管理角色和材质、使用衣柜和举报。要先配置好邮件。"
+          }
+        },
+        "user": {
+          "initialScore": {
+            "label": "初始积分",
+            "help": "注册时送给新用户的积分。"
+          }
+        },
+        "score": {
+          "perPlayer": {
+            "label": "添加角色的花费",
+            "help": "每添加一个角色扣的积分。"
+          },
+          "perKbPublic": {
+            "label": "公开材质的存储费",
+            "help": "上传公开材质时，每 KB 扣的积分。"
+          },
+          "perKbPrivate": {
+            "label": "私有材质的存储费",
+            "help": "上传私有材质时，每 KB 扣的积分。公开的材质改成私有时补差价。"
+          },
+          "perClosetItem": {
+            "label": "收藏的花费",
+            "help": "往衣柜里加一个材质扣的积分。"
+          },
+          "refundOnDelete": {
+            "label": "删除时退还积分",
+            "help": "删除角色或材质时，按当初实付的积分退还。"
+          }
+        },
+        "checkIn": {
+          "score": {
+            "label": "签到奖励",
+            "help": "每次签到随机获得这个范围内的积分，两个数相同时就固定发这么多。",
+            "fields": {
+              "min": {
+                "label": "最少"
+              },
+              "max": {
+                "label": "最多"
+              }
+            }
+          },
+          "gapHours": {
+            "label": "签到间隔",
+            "help": "两次签到之间至少隔几个小时。"
+          },
+          "resetAtMidnight": {
+            "label": "每天零点重置签到",
+            "help": "打开后，过了零点（按站点时区）就能再签到，不看签到间隔。"
+          }
+        },
+        "report": {
+          "cost": {
+            "label": "举报的花费",
+            "help": "提交举报时扣的积分。举报被采纳时退还，驳回不退。"
+          },
+          "reward": {
+            "label": "举报的奖励",
+            "help": "举报被采纳时，另外奖励给举报人的积分。"
+          }
+        },
+        "player": {
+          "nameRule": {
+            "label": "角色名规则",
+            "help": "角色名允许用哪些字符。",
+            "options": {
+              "official": "字母、数字和下划线（同正版）",
+              "cjk": "再加上中文",
+              "utf8": "除空白以外的任何字符",
+              "custom": "自定义"
+            }
+          },
+          "nameRegex": {
+            "label": "自定义角色名规则",
+            "help": "角色名规则选“自定义”时使用的正则表达式，JavaScript 语法，带 u 标志。留空表示不限制。"
+          },
+          "nameLength": {
+            "label": "角色名长度",
+            "help": "按字符数算，最长 50。",
+            "fields": {
+              "min": {
+                "label": "最短"
+              },
+              "max": {
+                "label": "最长"
+              }
+            }
+          },
+          "uuidAlgorithm": {
+            "label": "新角色的 UUID",
+            "help": "只影响以后新建的角色，已有角色的 UUID 永远不变。",
+            "options": {
+              "offline": "按角色名计算（与离线模式相同）",
+              "random": "随机生成"
+            }
+          }
+        },
+        "texture": {
+          "maxFileSizeKb": {
+            "label": "材质文件大小上限",
+            "help": "单位是 KB，最大 8192。"
+          },
+          "nameRegex": {
+            "label": "材质名规则",
+            "help": "材质名要匹配的正则表达式，JavaScript 语法，带 u 标志。留空表示不限制。"
+          },
+          "contentPolicy": {
+            "label": "内容政策",
+            "help": "显示在上传页上，说明什么样的材质不能上传。留空就不显示。"
+          }
+        },
+        "mail": {
+          "transport": {
+            "label": "发送方式",
+            "help": "不发送邮件时，验证邮箱和找回密码都不可用。",
+            "options": {
+              "none": "不发送邮件",
+              "smtp": "SMTP"
+            }
+          },
+          "smtp": {
+            "label": "SMTP 服务器",
+            "help": "用户名留空表示服务器不需要登录。",
+            "fields": {
+              "host": {
+                "label": "主机"
+              },
+              "port": {
+                "label": "端口"
+              },
+              "security": {
+                "label": "加密方式",
+                "options": {
+                  "tls": "TLS（通常是 465 端口）",
+                  "starttls": "STARTTLS（通常是 587 端口）",
+                  "none": "不加密"
+                }
+              },
+              "username": {
+                "label": "用户名"
+              }
+            },
+            "password": {
+              "label": "SMTP 密码"
+            }
+          },
+          "from": {
+            "label": "发件人",
+            "help": "地址必须填写，否则不能发邮件。",
+            "fields": {
+              "address": {
+                "label": "地址"
+              },
+              "name": {
+                "label": "名称"
+              }
+            }
+          }
+        },
+        "yggdrasil": {
+          "signingKey": {
+            "label": "签名私钥",
+            "help": "给角色的材质信息签名用的 RSA 私钥，至少 4096 位，没有它外置登录不可用。可以粘贴 PEM，也可以直接生成。",
+            "generateHint": "游戏服务器要重启才会拿到新的公钥，重启之前验不过新的签名，玩家的皮肤可能显示不出来。旧的私钥不保留，生成之后不能撤销。"
+          },
+          "skinDomains": {
+            "label": "材质域名白名单",
+            "help": "除了本站的域名，还允许从哪些域名加载材质。一行一个，以点开头表示包括子域名，例如 .example.com。"
+          },
+          "profileSearchLimit": {
+            "label": "批量查询角色的上限",
+            "help": "游戏服务器一次最多能按名字查询几个角色。"
+          },
+          "apiLocationIndication": {
+            "label": "返回 API 地址指示",
+            "help": "在响应里带上 X-Authlib-Injector-API-Location 头。这样在启动器里填本站首页的地址，也能找到外置登录的接口。"
+          }
+        },
+        "network": {
+          "trustedProxies": {
+            "label": "受信任的反向代理",
+            "help": "只有来自这些地址的请求，才采信 X-Forwarded-For 里的客户端 IP。一行一个 IP 或 CIDR。填错了，注册的 IP 限制和按 IP 的限流都会失效。"
+          }
+        },
+        "cache": {
+          "publicMaxAge": {
+            "label": "公开资源的缓存时间",
+            "help": "材质文件和 CSL 接口的浏览器缓存时间，单位是秒。"
+          }
+        }
+      }
     }
   }
 }

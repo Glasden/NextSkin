@@ -12,6 +12,8 @@ export { toNameKey, normalizeNameLookup, normalizeUuidLookup, type PlayerView } 
 export { createLocalTextureStorage, type TextureStorage } from './textures/storage.ts'
 export { encodeSettingValue } from './settings/codec.ts'
 export {
+  settingSections,
+  type SettingSection,
   coreSettingsRegistry,
   coreSettingsNamespace,
   type CoreSettingKey,
@@ -57,3 +59,6 @@ export type {
   AuditEntry,
   AdminOverview,
 } from './admin/types.ts'
+
+export { settingControl, settingJsonSchema, type SettingControl, type JsonSchema } from './settings/form.ts'
+export type { SettingView } from './admin/settings.ts'

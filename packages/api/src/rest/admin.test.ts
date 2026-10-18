@@ -60,11 +60,19 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(3)
+  expect(routes).toHaveLength(6)
   for (const route of routes) {
-    const path = route.path.slice('/api'.length).replace(/:(?:id|tid|uid)/g, '7')
-    const body =
-      route.method === 'POST' ? { action: 'dismiss' } : route.method === 'PATCH' ? { role: 'banned' } : undefined
+    const path = route.path
+      .slice('/api'.length)
+      .replace(/:(?:id|tid|uid)/g, '7')
+      .replace(':key', 'yggdrasil.signingKey')
+    const body = route.path.endsWith('/settings')
+      ? { values: {} }
+      : route.method === 'POST'
+        ? { action: 'dismiss' }
+        : route.method === 'PATCH'
+          ? { role: 'banned' }
+          : undefined
     for (const loggedIn of [true, false]) {
       authenticated = loggedIn
       const response = await request(route.method, path, body)
@@ -166,7 +174,7 @@ test('真实用例的错误状态与再次处理冲突', async () => {
   expect(await response.json()).toMatchObject({ error: { code: 'report_already_handled' } })
 })
 
-test('参数校验、CSRF、JSON 类型和请求体上限；OpenAPI 声明三个接口', async () => {
+test('参数校验、CSRF、JSON 类型和请求体上限；OpenAPI 声明六个接口', async () => {
   await admin()
   const { request, app } = setup()
   for (const value of ['0', '-1', '1.2', '1e2', '2147483648', '7x']) {
@@ -195,6 +203,83 @@ test('参数校验、CSRF、JSON 类型和请求体上限；OpenAPI 声明三个
   const spec = (await (await app.request('http://example.test/api/openapi.json')).json()) as {
     paths: Record<string, unknown>
   }
-  for (const path of ['/admin/reports/{id}/resolve', '/admin/textures/{tid}', '/admin/users/{uid}'])
+  for (const path of [
+    '/admin/reports/{id}/resolve',
+    '/admin/textures/{tid}',
+    '/admin/users/{uid}',
+    '/admin/settings',
+    '/admin/settings/{key}/generate',
+    '/admin/settings/mail/test',
+  ])
     expect(spec.paths[path]).toBeDefined()
+})
+
+test('管理员没有 settings.manage，三个设置接口都返回 403', async () => {
+  await admin()
+  for (const [method, path, body] of [
+    ['PATCH', '/admin/settings', { values: {} }],
+    ['POST', '/admin/settings/yggdrasil.signingKey/generate', undefined],
+    ['POST', '/admin/settings/mail/test', undefined],
+  ] as const) {
+    const response = await setup().request(method, path, body)
+    expect(response.status).toBe(403)
+    expect(await response.json()).toMatchObject({ error: { code: 'permission_denied' } })
+  }
+})
+
+test('超级管理员保存设置：字段错误以设置键为名，整批拒绝；未知和内部项不带字段', async () => {
+  await env.db().updateTable('users').set({ role: 'superadmin' }).where('id', '=', env.actor.uid).execute()
+  const { request } = setup()
+  const response = await request('PATCH', '/admin/settings', {
+    values: { 'site.name': 'Not saved', 'player.nameRegex': '[', 'site.url': 'bad' },
+  })
+  expect(response.status).toBe(400)
+  expect(await response.json()).toMatchObject({
+    error: {
+      code: 'invalid_request',
+      fields: {
+        'site.url': { code: 'invalid_value', message: expect.any(String) as unknown },
+        'player.nameRegex': { code: 'invalid_value', message: expect.any(String) as unknown },
+      },
+    },
+  })
+  expect((await env.core.settings.read(['site.name']))['site.name']).toBe('NextSkin')
+  for (const key of ['missing', 'auth.legacyPasswordSalt']) {
+    const invalid = await request('PATCH', '/admin/settings', { values: { [key]: '' } })
+    expect(invalid.status).toBe(400)
+    expect(await invalid.json()).toEqual({ error: { code: 'invalid_request', message: expect.any(String) as unknown } })
+  }
+  const saved = await request('PATCH', '/admin/settings', { values: { 'site.name': 'New name' } })
+  expect(saved.status).toBe(200)
+  expect(await saved.json()).toEqual({ updated: ['site.name'] })
+  // 公告和内容政策各 20000 个字，超出其他接口 16 KiB 的请求体上限
+  const longest = { 'site.announcement': '𝓐'.repeat(20000), 'texture.contentPolicy': '𝓐'.repeat(20000) }
+  const markdown = await request('PATCH', '/admin/settings', { values: longest })
+  expect(markdown.status).toBe(200)
+  expect(await markdown.json()).toEqual({ updated: ['site.announcement', 'texture.contentPolicy'] })
+  const tooLarge = await request('PATCH', '/admin/settings', { values: { 'site.name': 'a'.repeat(200 * 1024) } })
+  expect(tooLarge.status).toBe(413)
+})
+
+test('生成接口不回传私钥；测试邮件返回收件人；邮件失败为 502 且 message 带 reason', async () => {
+  const generate = vi.spyOn(env.core.admin, 'generateSetting').mockResolvedValue({ updated: ['yggdrasil.signingKey'] })
+  const { request } = setup()
+  const generated = await request('POST', '/admin/settings/yggdrasil.signingKey/generate')
+  expect(generated.status).toBe(200)
+  expect(await generated.json()).toEqual({ updated: ['yggdrasil.signingKey'] })
+  expect(generate).toHaveBeenCalledWith({ uid: env.actor.uid, ip: '192.0.2.10' }, 'yggdrasil.signingKey')
+  const send = vi.spyOn(env.core.admin, 'sendTestMail').mockResolvedValue({ to: 'actor@example.test' })
+  const sent = await request('POST', '/admin/settings/mail/test')
+  expect(sent.status).toBe(200)
+  expect(await sent.json()).toEqual({ to: 'actor@example.test' })
+  send.mockRejectedValue(new DomainError('mail_test_failed', { reason: '535 SMTP rejected' }))
+  const failed = await request('POST', '/admin/settings/mail/test', undefined, { 'accept-language': 'en' })
+  expect(failed.status).toBe(502)
+  expect(await failed.json()).toMatchObject({
+    error: { code: 'mail_test_failed', message: expect.stringContaining('535 SMTP rejected') as unknown },
+  })
+  send.mockRejectedValue(new DomainError('mail_not_configured'))
+  const missing = await request('POST', '/admin/settings/mail/test')
+  expect(missing.status).toBe(400)
+  expect(await missing.json()).toMatchObject({ error: { code: 'mail_not_configured' } })
 })

@@ -179,3 +179,19 @@ export function renderEmailChanged(input: NoticeMailInput): RenderedMail {
     text: [greeting, body, footer].join('\n\n'),
   }
 }
+
+/** 后台的测试邮件：管理员确认 SMTP 设置能用（ADR-0028） */
+export function renderTestEmail(input: NoticeMailInput): RenderedMail {
+  const t = createTranslator(input.locale)
+  const subject = t('mail.testEmail.subject', { siteName: input.siteName })
+  const body = t('mail.testEmail.body')
+  const greeting = t('mail.greeting', { nickname: input.nickname })
+  const footer = t('mail.footer', { siteName: input.siteName })
+  const content = markup`<p style="${paragraph()}">${greeting}</p>
+<p style="${paragraph({ margin: 0 })}">${body}</p>`
+  return {
+    subject,
+    html: layout({ locale: input.locale, subject, siteName: input.siteName, preview: body, content, footer }),
+    text: [greeting, body, footer].join('\n\n'),
+  }
+}

@@ -31,9 +31,14 @@
     "emailChanged": {
       "subject": "Your account email for {siteName} has changed",
       "body": "Your account email has changed. If you did not make this change, contact the site administrator."
+    },
+    "testEmail": {
+      "subject": "Test email from {siteName}",
+      "body": "This is a test email. If you received it, the mail settings of this site are correct."
     }
   },
   "errors": {
+    "mail_test_failed": "The test email could not be sent: {reason}",
     "permission_denied": "You don't have permission for this admin action.",
     "user_not_manageable": "You can only manage users whose role is below yours, and you can't change your own role.",
     "user_not_found": "This user could not be found. They may have deleted their account.",
@@ -247,7 +252,8 @@
       "addPlayer": "Add player",
       "history": "Recent point changes",
       "noHistory": "No point changes yet.",
-      "balance": "Balance {balance}"
+      "balance": "Balance {balance}",
+      "announcement": "Announcement"
     },
     "players": {
       "title": "Players",
@@ -694,7 +700,8 @@
       "submit": "Upload",
       "uploaded": "Uploaded {name}",
       "uploadedCharged": "Uploaded {name}, {cost, plural, one {# point} other {# points}} charged",
-      "failed": "That didn’t work. Please try again later."
+      "failed": "That didn’t work. Please try again later.",
+      "contentPolicy": "Content policy"
     },
     "actions": {
       "signIn": "Sign in",
@@ -747,7 +754,8 @@
       "overview": "Overview",
       "reports": "Reports",
       "users": "Users",
-      "audit": "Audit log"
+      "audit": "Audit log",
+      "settings": "Settings"
     },
     "roles": {
       "banned": "Banned",
@@ -774,7 +782,14 @@
       "pendingAction": "Handle reports",
       "recentAudit": "Latest admin actions",
       "allAudit": "View all",
-      "noAudit": "No admin actions yet."
+      "noAudit": "No admin actions yet.",
+      "checks": {
+        "title": "Setup is not finished",
+        "siteUrl": "The site URL is not set: nobody can sign in or sign up in production.",
+        "mail": "Email is not set up: addresses cannot be verified and passwords cannot be reset.",
+        "signingKey": "There is no signing key: external login is unavailable.",
+        "fix": "Go to settings"
+      }
     },
     "reports": {
       "title": "Reports",
@@ -893,13 +908,15 @@
       "actions": {
         "reportResolve": "Handled report",
         "textureDelete": "Deleted texture",
-        "userSetRole": "Changed role"
+        "userSetRole": "Changed role",
+        "settingUpdate": "Change setting"
       },
       "subjects": {
         "user": "User #{id}",
         "texture": "Texture #{id}",
         "report": "Report #{id}",
-        "other": "{type} #{id}"
+        "other": "{type} #{id}",
+        "setting": "Settings"
       },
       "actorSystem": "System",
       "actorPlugin": "Plugin {id}",
@@ -908,7 +925,15 @@
         "reportResolve": "{action}{refunded, plural, =0 {} other {, refunded #}}{rewarded, plural, =0 {} other {, rewarded #}}",
         "textureDelete": "{name} ({type})",
         "userSetRole": "{from} → {to}",
-        "viaReport": "via report #{id}"
+        "viaReport": "via report #{id}",
+        "settingUpdate": {
+          "value": "{from} → {to}",
+          "secret": "Replaced",
+          "generated": "Regenerated",
+          "length": "{from, number} → {to, number} characters",
+          "unreadable": "(unreadable)",
+          "empty": "(empty)"
+        }
       },
       "filterActor": "Only actor #{uid}",
       "filterSubject": "Only {subject}",
@@ -917,6 +942,311 @@
       "filterBySubject": "Only records for this object",
       "empty": "No admin actions yet.",
       "emptyFiltered": "No records match."
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Changes take effect as soon as they are saved, no restart needed.",
+      "tabsLabel": "Settings sections",
+      "sections": {
+        "site": "Site",
+        "registration": "Registration",
+        "score": "Score",
+        "content": "Players & textures",
+        "mail": "Email",
+        "yggdrasil": "Yggdrasil",
+        "advanced": "Advanced"
+      },
+      "save": "Save",
+      "saved": "Saved {count, plural, one {# setting} other {# settings}}",
+      "noChanges": "Nothing has changed",
+      "dirty": "{count, plural, one {# unsaved change} other {# unsaved changes}}",
+      "invalid": "Some settings did not pass the checks. Fix them as noted and save again.",
+      "unreadable": "The stored value cannot be read: it is malformed, or NEXTSKIN_SECRET differs from when it was written. {secret, select, true {} other {The default is shown for now. }}Set this setting again.",
+      "secret": {
+        "set": "Set",
+        "unset": "Not set",
+        "placeholder": "Leave empty to keep the current value",
+        "clear": "Clear",
+        "clearTitle": "Clear the {label}?",
+        "clearHint": "It goes back to the default (empty). This cannot be undone.",
+        "cleared": "Cleared the {label}"
+      },
+      "generate": {
+        "button": "Generate",
+        "title": "Generate a new {label}?",
+        "confirm": "Generate",
+        "done": "Generated a new {label}"
+      },
+      "markdown": {
+        "preview": "Preview",
+        "hidePreview": "Hide preview",
+        "previewLabel": "Preview of the {label}",
+        "empty": "Nothing here yet.",
+        "hint": "Markdown is supported, HTML is not. At most {max, number} characters."
+      },
+      "lines": "One per line.",
+      "checked": "On",
+      "unchecked": "Off",
+      "testMail": {
+        "button": "Send a test email",
+        "hint": "Sends a test email to your address {email} using the saved settings. Save your changes first.",
+        "sent": "Test email sent to {to}. Check the inbox."
+      },
+      "fields": {
+        "site": {
+          "name": {
+            "label": "Site name",
+            "help": "Shown in the header, the browser tab and emails. Launchers show it as the name of the authentication server."
+          },
+          "url": {
+            "label": "Site URL",
+            "help": "The full address people use to reach this site, for example https://skin.example.com. Links in emails and external login use it, and in production nobody can sign in until it is set. After a domain change, existing passkeys stop working."
+          },
+          "locale": {
+            "label": "Default language",
+            "help": "Used when someone has not chosen a language and their browser offers none that this site supports.",
+            "options": {
+              "zh-CN": "简体中文",
+              "en": "English"
+            }
+          },
+          "timeZone": {
+            "label": "Time zone",
+            "help": "Dates and times are shown in this time zone, and the daily check-in reset follows it. Use an IANA name such as Asia/Shanghai."
+          },
+          "announcement": {
+            "label": "Announcement",
+            "help": "Shown on the user dashboard. Leave it empty to hide it."
+          }
+        },
+        "auth": {
+          "registration": {
+            "enabled": {
+              "label": "Open registration",
+              "help": "When off, new people cannot sign up. Existing users can still sign in."
+            },
+            "withPlayerName": {
+              "label": "Ask for a player name at sign-up",
+              "help": "Creates a player during sign-up and uses its name as the nickname. When off, people enter a nickname instead."
+            },
+            "perIpLimit": {
+              "label": "Accounts per IP",
+              "help": "How many accounts one IP address can register. 0 means no limit."
+            },
+            "emailDomains": {
+              "label": "Email domains",
+              "help": "Which email addresses can be used to sign up. Domains must match exactly; subdomains are not included.",
+              "fields": {
+                "mode": {
+                  "label": "Rule",
+                  "options": {
+                    "any": "Any domain",
+                    "allow": "Only the domains below",
+                    "deny": "Any except the domains below"
+                  }
+                },
+                "domains": {
+                  "label": "Domains",
+                  "help": "One per line, for example example.com."
+                }
+              }
+            }
+          },
+          "requireEmailVerification": {
+            "label": "Require a verified email",
+            "help": "When on, people who have not verified their email cannot manage players or textures, use their closet, or report textures. Set up email first."
+          }
+        },
+        "user": {
+          "initialScore": {
+            "label": "Starting score",
+            "help": "Score given to new users when they sign up."
+          }
+        },
+        "score": {
+          "perPlayer": {
+            "label": "Cost of a player",
+            "help": "Score charged for each player someone adds."
+          },
+          "perKbPublic": {
+            "label": "Storage cost of public textures",
+            "help": "Score charged per KB when uploading a public texture."
+          },
+          "perKbPrivate": {
+            "label": "Storage cost of private textures",
+            "help": "Score charged per KB when uploading a private texture. Making a public texture private charges the difference."
+          },
+          "perClosetItem": {
+            "label": "Cost of a closet item",
+            "help": "Score charged for each texture added to a closet."
+          },
+          "refundOnDelete": {
+            "label": "Refund on deletion",
+            "help": "Refund what was actually paid when a player or texture is deleted."
+          }
+        },
+        "checkIn": {
+          "score": {
+            "label": "Check-in reward",
+            "help": "Each check-in gives a random score in this range. Use the same number twice for a fixed reward.",
+            "fields": {
+              "min": {
+                "label": "Minimum"
+              },
+              "max": {
+                "label": "Maximum"
+              }
+            }
+          },
+          "gapHours": {
+            "label": "Check-in interval",
+            "help": "Minimum number of hours between two check-ins."
+          },
+          "resetAtMidnight": {
+            "label": "Reset check-in at midnight",
+            "help": "When on, people can check in again after midnight in the site time zone, regardless of the interval."
+          }
+        },
+        "report": {
+          "cost": {
+            "label": "Cost of a report",
+            "help": "Score charged when submitting a report. Refunded if the report is upheld, kept if it is dismissed."
+          },
+          "reward": {
+            "label": "Report reward",
+            "help": "Extra score given to the reporter when a report is upheld."
+          }
+        },
+        "player": {
+          "nameRule": {
+            "label": "Player name rule",
+            "help": "Which characters player names may contain.",
+            "options": {
+              "official": "Letters, digits and underscores (like official accounts)",
+              "cjk": "Also Chinese characters",
+              "utf8": "Any character except whitespace",
+              "custom": "Custom"
+            }
+          },
+          "nameRegex": {
+            "label": "Custom player name rule",
+            "help": "The regular expression used when the rule is “Custom”, in JavaScript syntax with the u flag. Leave it empty for no restriction."
+          },
+          "nameLength": {
+            "label": "Player name length",
+            "help": "Counted in characters, at most 50.",
+            "fields": {
+              "min": {
+                "label": "Shortest"
+              },
+              "max": {
+                "label": "Longest"
+              }
+            }
+          },
+          "uuidAlgorithm": {
+            "label": "UUIDs of new players",
+            "help": "Only affects players created from now on. Existing players keep their UUIDs forever.",
+            "options": {
+              "offline": "Derived from the name (same as offline mode)",
+              "random": "Random"
+            }
+          }
+        },
+        "texture": {
+          "maxFileSizeKb": {
+            "label": "Maximum texture file size",
+            "help": "In KB, at most 8192."
+          },
+          "nameRegex": {
+            "label": "Texture name rule",
+            "help": "A regular expression texture names must match, in JavaScript syntax with the u flag. Leave it empty for no restriction."
+          },
+          "contentPolicy": {
+            "label": "Content policy",
+            "help": "Shown on the upload page to explain which textures are not allowed. Leave it empty to hide it."
+          }
+        },
+        "mail": {
+          "transport": {
+            "label": "Delivery",
+            "help": "Without email, verifying addresses and resetting passwords are unavailable.",
+            "options": {
+              "none": "Do not send email",
+              "smtp": "SMTP"
+            }
+          },
+          "smtp": {
+            "label": "SMTP server",
+            "help": "Leave the username empty if the server does not require login.",
+            "fields": {
+              "host": {
+                "label": "Host"
+              },
+              "port": {
+                "label": "Port"
+              },
+              "security": {
+                "label": "Encryption",
+                "options": {
+                  "tls": "TLS (usually port 465)",
+                  "starttls": "STARTTLS (usually port 587)",
+                  "none": "None"
+                }
+              },
+              "username": {
+                "label": "Username"
+              }
+            },
+            "password": {
+              "label": "SMTP password"
+            }
+          },
+          "from": {
+            "label": "Sender",
+            "help": "The address is required; no email can be sent without it.",
+            "fields": {
+              "address": {
+                "label": "Address"
+              },
+              "name": {
+                "label": "Name"
+              }
+            }
+          }
+        },
+        "yggdrasil": {
+          "signingKey": {
+            "label": "Signing key",
+            "help": "The RSA private key, at least 4096 bits, that signs players’ texture data. External login is unavailable without it. Paste a PEM key or generate one.",
+            "generateHint": "Game servers only pick up the new public key after a restart. Until then they cannot verify the new signatures, and player skins may not show. The old key is not kept, so this cannot be undone."
+          },
+          "skinDomains": {
+            "label": "Allowed texture domains",
+            "help": "Domains besides this site that textures may be loaded from. One per line; a leading dot includes subdomains, for example .example.com."
+          },
+          "profileSearchLimit": {
+            "label": "Bulk player lookup limit",
+            "help": "How many players a game server can look up by name in one request."
+          },
+          "apiLocationIndication": {
+            "label": "Send API location indication",
+            "help": "Adds the X-Authlib-Injector-API-Location header to responses, so entering the site’s home page in a launcher also finds the external login API."
+          }
+        },
+        "network": {
+          "trustedProxies": {
+            "label": "Trusted reverse proxies",
+            "help": "The client IP in X-Forwarded-For is only trusted for requests from these addresses. One IP or CIDR per line. A wrong value breaks the per-IP registration limit and rate limiting."
+          }
+        },
+        "cache": {
+          "publicMaxAge": {
+            "label": "Cache lifetime of public resources",
+            "help": "How long browsers cache texture files and CSL responses, in seconds."
+          }
+        }
+      }
     }
   }
 }

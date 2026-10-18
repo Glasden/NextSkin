@@ -1,11 +1,12 @@
 import type { UserRole } from '@nextskin/plugin-sdk'
 
-export type CorePermission = 'reports.review' | 'textures.manage' | 'users.ban' | 'users.appointAdmin' | 'audit.read'
+export type CorePermission =
+  'reports.review' | 'textures.manage' | 'users.ban' | 'users.appointAdmin' | 'audit.read' | 'settings.manage'
 const permissions: Record<UserRole, readonly CorePermission[]> = {
   banned: [],
   user: [],
   admin: ['reports.review', 'textures.manage', 'users.ban', 'audit.read'],
-  superadmin: ['reports.review', 'textures.manage', 'users.ban', 'users.appointAdmin', 'audit.read'],
+  superadmin: ['reports.review', 'textures.manage', 'users.ban', 'users.appointAdmin', 'audit.read', 'settings.manage'],
 }
 export function can(role: UserRole, permission: CorePermission): boolean {
   return permissions[role].includes(permission)

@@ -1,6 +1,7 @@
 import { Chart } from 'pixelarticons/react/Chart.js'
 import { Flag } from 'pixelarticons/react/Flag.js'
 import { Notebook } from 'pixelarticons/react/Notebook.js'
+import { Sliders } from 'pixelarticons/react/Sliders.js'
 import { Users } from 'pixelarticons/react/Users.js'
 
 // 布局（服务端，按权限过滤）和导航（客户端，渲染图标）共用，不能放在 'use client' 的文件里
@@ -14,6 +15,7 @@ export const adminNavItems = [
   { href: '/admin/reports', icon: Flag, label: 'reports', permission: 'reports.review' },
   { href: '/admin/users', icon: Users, label: 'users', permission: 'users.ban' },
   { href: '/admin/audit', icon: Notebook, label: 'audit', permission: 'audit.read' },
+  { href: '/admin/settings', icon: Sliders, label: 'settings', permission: 'settings.manage' },
 ] as const
 
 export type AdminNavHref = (typeof adminNavItems)[number]['href']

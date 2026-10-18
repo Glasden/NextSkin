@@ -5,7 +5,9 @@ import { createTranslator } from '@nextskin/i18n'
 import { expect, test, type Page } from '@playwright/test'
 
 // 后台的主流程（ADR-0027）：举报 → 管理员删除材质 → 举报人看到已采纳 → 审计日志；封禁上传者 → 他只看到封禁说明，
-// CSL 对他的角色返回 403。跑在 account 项目上：上传是 multipart 表单，接口按站点地址检查 Origin（playwright.config.ts）
+// CSL 对他的角色返回 403。设置页（ADR-0028）：只有超级管理员能进，改了立即生效。
+// 跑在 account 项目上：上传是 multipart 表单，接口按站点地址检查 Origin（playwright.config.ts）。
+// 两个用例放在同一个文件里按顺序跑：第一个按条数检查审计日志，另一个文件并行任命管理员会打乱它
 const t = createTranslator('zh-CN')
 const suffix = String(Date.now()).slice(-6)
 const fixture = (name: string) =>
@@ -128,4 +130,98 @@ test('举报的材质被管理员删除，举报人看到已采纳；封禁上�
   await expect(log.getByRole('cell', { name: t('admin.audit.actions.reportResolve'), exact: true })).toBeVisible()
   await expect(log.getByRole('cell', { name: t('admin.audit.actions.userSetRole'), exact: true })).toHaveCount(2)
   await expect(log.getByText(t('admin.audit.actorSystem'), { exact: true })).toBeVisible()
+})
+
+test('管理员看不到设置；超级管理员改站点名、写公告、生成签名密钥都当场生效', async ({ page, browser }) => {
+  const nav = (target: Page) => target.getByRole('navigation', { name: t('admin.nav.label') })
+
+  // 管理员（不是超级管理员）的导航里没有“设置”，直接访问是 404，接口是 403
+  const moderatorContext = await browser.newContext({ locale: 'zh-CN' })
+  const moderator = await moderatorContext.newPage()
+  setRole(await register(moderator, '203.0.113.120', `Mod${suffix}`), 'admin')
+  await moderator.goto('/admin')
+  await expect(nav(moderator).getByRole('link', { name: t('admin.nav.audit') })).toBeVisible()
+  await expect(nav(moderator).getByRole('link', { name: t('admin.nav.settings') })).toHaveCount(0)
+  expect((await moderator.goto('/admin/settings/site'))?.status()).toBe(404)
+  expect((await moderator.request.patch('/api/admin/settings', { data: { values: {} } })).status()).toBe(403)
+  await moderatorContext.close()
+
+  setRole(await register(page, '203.0.113.121', `Own${suffix}`), 'superadmin')
+  await page.goto('/admin')
+  await nav(page)
+    .getByRole('link', { name: t('admin.nav.settings') })
+    .click()
+  await expect(page).toHaveURL(/\/admin\/settings\/site$/)
+
+  // 站点名：保存后页头跟着变，最后改回去，不影响同一个服务上的其他用例
+  const siteName = page.getByLabel(t('admin.settings.fields.site.name.label'))
+  const original = await siteName.inputValue()
+  const renamed = `像素工坊 ${suffix}`
+  await siteName.fill(renamed)
+  await expect(page.getByText(t('admin.settings.dirty', { count: 1 }))).toBeVisible()
+
+  // 公告：预览和仪表盘用同一个组件，原始 HTML 不渲染
+  const heading = `开服通知 ${suffix}`
+  await page
+    .getByLabel(t('admin.settings.fields.site.announcement.label'))
+    .fill(`## ${heading}\n\n生存服地址是 **play.example.test**。\n\n<b>粗体标签</b>`)
+  await page.getByRole('button', { name: t('admin.settings.markdown.preview') }).click()
+  const preview = page.getByRole('region', {
+    name: t('admin.settings.markdown.previewLabel', { label: t('admin.settings.fields.site.announcement.label') }),
+  })
+  await expect(preview.getByRole('heading', { level: 3 })).toHaveText(heading)
+  await page.getByRole('button', { name: t('admin.settings.save') }).click()
+  await expect(page.getByText(t('admin.settings.saved', { count: 2 }))).toBeVisible()
+  await expect(page.getByRole('banner').getByText(renamed)).toBeVisible()
+
+  // 仪表盘的“公告”区块是 h2，`##` 渲染成 h4
+  await page.goto('/user')
+  const announcement = page.getByRole('region', { name: t('user.dashboard.announcement') })
+  await expect(announcement.getByRole('heading', { level: 4 })).toHaveText(heading)
+  await expect(announcement.locator('strong')).toHaveText('play.example.test')
+  await expect(announcement.locator('b')).toHaveCount(0)
+  await expect(announcement).toContainText('粗体标签')
+
+  // 字段错误：坏的正则整批拒绝，标在对应的设置项上
+  await page.goto('/admin/settings/content')
+  const textureRule = page.getByLabel(t('admin.settings.fields.texture.nameRegex.label'))
+  await textureRule.fill('(')
+  await page.getByRole('button', { name: t('admin.settings.save') }).click()
+  await expect(page.getByText(t('admin.settings.invalid'))).toBeVisible()
+  await expect(textureRule).toHaveAttribute('aria-invalid', 'true')
+
+  // 签名密钥：已经有了，生成新的要先确认；元数据随即换成新的公钥
+  const publicKey = async () =>
+    ((await (await page.request.get('/api/yggdrasil')).json()) as { signaturePublickey: string }).signaturePublickey
+  const before = await publicKey()
+  const keyLabel = t('admin.settings.fields.yggdrasil.signingKey.label')
+  await page.goto('/admin/settings/yggdrasil')
+  await page.getByRole('button', { name: t('admin.settings.generate.button') }).click()
+  await page
+    .getByRole('alertdialog', { name: t('admin.settings.generate.title', { label: keyLabel }) })
+    .getByRole('button', { name: t('admin.settings.generate.confirm') })
+    .click()
+  await expect(page.getByText(t('admin.settings.generate.done', { label: keyLabel }))).toBeVisible({ timeout: 15_000 })
+  const after = await publicKey()
+  expect(after).toContain('BEGIN PUBLIC KEY')
+  expect(after).not.toBe(before)
+
+  // 审计日志记下了这几项，签名私钥只写“已重新生成”
+  await page.goto('/admin/audit')
+  const log = page.getByRole('table', { name: t('admin.audit.tableLabel') })
+  await expect(log.getByRole('row').filter({ hasText: keyLabel }).first()).toContainText(
+    t('admin.audit.details.settingUpdate.generated'),
+  )
+  await expect(
+    log
+      .getByRole('row')
+      .filter({ hasText: t('admin.settings.fields.site.name.label') })
+      .first(),
+  ).toContainText(renamed)
+
+  // 恢复站点名和公告
+  const restored = await page.request.patch('/api/admin/settings', {
+    data: { values: { 'site.name': original, 'site.announcement': '' } },
+  })
+  expect(restored.status()).toBe(200)
 })

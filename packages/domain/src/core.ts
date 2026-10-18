@@ -107,9 +107,16 @@ export function createCore(options: CoreOptions) {
           )
       }),
   })
+  const getSigningKey = createSigningKeyQuery(settings)
   return {
     players: { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events, now) },
-    admin: createAdmin(textureOptions),
+    admin: createAdmin({
+      ...textureOptions,
+      secretKey: options.secretKey,
+      production: options.production,
+      mail,
+      getSigningKey,
+    }),
     closet: createCloset(textureOptions),
     reports: createReports(textureOptions),
     renders,
@@ -132,7 +139,7 @@ export function createCore(options: CoreOptions) {
       ...createUserManagement(options, settings, mail, jobs, events, removal, now),
     },
     score: createScoreQueries(options.db),
-    yggdrasil: { getSigningKey: createSigningKeyQuery(settings) },
+    yggdrasil: { getSigningKey },
   }
 }
 

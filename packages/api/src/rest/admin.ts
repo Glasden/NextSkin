@@ -15,6 +15,7 @@ const errors = {
   413: errorContent,
   415: errorContent,
   500: errorContent,
+  502: errorContent,
 }
 const id = z
   .string()
@@ -101,8 +102,61 @@ const setRole = createRoute({
     ...errors,
   },
 })
+const updatedSchema = z.object({ updated: z.array(z.string()) })
+const updateSettings = createRoute({
+  method: 'patch',
+  path: '/admin/settings',
+  request: {
+    body: {
+      required: true,
+      content: { 'application/json': { schema: z.object({ values: z.record(z.string(), z.unknown()) }) } },
+    },
+  },
+  responses: {
+    200: { description: '设置已更新', content: { 'application/json': { schema: updatedSchema } } },
+    ...errors,
+  },
+})
+const generateSetting = createRoute({
+  method: 'post',
+  path: '/admin/settings/{key}/generate',
+  request: { params: z.object({ key: z.string() }) },
+  responses: {
+    200: { description: '设置已生成', content: { 'application/json': { schema: updatedSchema } } },
+    ...errors,
+  },
+})
+const testMail = createRoute({
+  method: 'post',
+  path: '/admin/settings/mail/test',
+  responses: {
+    200: { description: '测试邮件已发送', content: { 'application/json': { schema: z.object({ to: z.string() }) } } },
+    ...errors,
+  },
+})
 export function registerAdmin(app: OpenAPIHono<AppEnv>, core: Core) {
   app.use('/admin/*', requireSession(core))
+  app.openapi(updateSettings, async (c) =>
+    c.json(
+      await core.admin.updateSettings(
+        { uid: c.get('user')!.uid, ip: await clientIp(c, core) },
+        c.req.valid('json').values,
+      ),
+      200,
+    ),
+  )
+  app.openapi(generateSetting, async (c) =>
+    c.json(
+      await core.admin.generateSetting(
+        { uid: c.get('user')!.uid, ip: await clientIp(c, core) },
+        c.req.valid('param').key,
+      ),
+      200,
+    ),
+  )
+  app.openapi(testMail, async (c) =>
+    c.json(await core.admin.sendTestMail({ uid: c.get('user')!.uid, ip: await clientIp(c, core) }), 200),
+  )
   app.openapi(resolve, async (c) =>
     c.json(
       await core.admin.resolveReport(

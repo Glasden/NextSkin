@@ -1,4 +1,4 @@
-import { Alert } from '@nextskin/ui'
+import { Alert, Markdown } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
@@ -24,6 +24,7 @@ export default async function UploadPage() {
       'score.perKbPrivate',
       'score.perClosetItem',
       'auth.requireEmailVerification',
+      'texture.contentPolicy',
     ]),
     getTranslations('skinlib.upload'),
   ])
@@ -43,6 +44,17 @@ export default async function UploadPage() {
         <p className="text-sm text-pretty text-text-muted">{t('intro')}</p>
       </header>
       {blocked && <Alert tone="warning">{blocked}</Alert>}
+      {/* 管理员在后台写的内容政策（ADR-0028），空的时候不显示 */}
+      {settings['texture.contentPolicy'].trim() && (
+        <section aria-labelledby="content-policy-heading" className="flex flex-col gap-3">
+          <h2 id="content-policy-heading" className="font-pixel text-pixel-1 text-text">
+            {t('contentPolicy')}
+          </h2>
+          <div className="rounded-md border border-border bg-surface p-4 text-sm sm:p-6">
+            <Markdown>{settings['texture.contentPolicy']}</Markdown>
+          </div>
+        </section>
+      )}
       <UploadForm
         disabled={blocked !== null}
         score={overview.score}

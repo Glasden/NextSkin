@@ -169,7 +169,7 @@
 
 ## 6. 组件清单
 
-落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、IconButton、Form、Field、Input、Textarea、Checkbox、Switch、Select、SegmentedControl、Tabs、Table、FileDrop、Dialog、Toast、Alert、Badge、Stage、SkinFigure、SkinViewer、FigurePlaceholder、NameTag、PlayerCard、PlayerHead、TextureCard、TexturePicker、Nav、Logo、Link、Menu、Tooltip、EmptyState、Pagination、QrCode。
+落地后每个组件都必须有 story 和截图基线（§12）。“何时不用”和“何时用”同样重要。已经落地的：Button、IconButton、Form、Field、Input、Textarea、Checkbox、Switch、Select、SegmentedControl、Tabs、Table、FileDrop、Dialog、Toast、Alert、Badge、Stage、SkinFigure、SkinViewer、FigurePlaceholder、NameTag、PlayerCard、PlayerHead、TextureCard、TexturePicker、Nav、Logo、Link、Menu、Tooltip、EmptyState、Pagination、QrCode、Markdown。
 
 | 组件 | 何时用 | 何时不用 |
 |---|---|---|
@@ -193,6 +193,7 @@
 | Alert | 页面内持续存在的提示 | 一次性的操作反馈 |
 | Badge | 跟在标题或列表项后面的短状态，例如“已开启”“未验证”。像素字体，文字本身说明状态 | 用户产生的内容（昵称、材质名）；可以点的筛选条件改用 Chip |
 | Notice | 全站公告，放在页头下方 | 只和当前页面有关的提示，改用 Alert |
+| Markdown | 管理员写的长文，例如公告、上传页的内容政策：原始 HTML 去掉，链接只放行 http、https、mailto 和站内路径（ADR-0028）；`headingLevel` 设成所在区块标题的级别 | 用户产生的内容（材质描述），按纯文本显示 |
 | Table | 后台数据列表：表头用像素字体，数字列靠右；窄屏在表格自己的容器里横向滚动 | 前台展示材质，改用 TextureCard 网格 |
 | TextureCard | 皮肤库、衣柜里的材质；选中（已在衣柜）时加粗边框并显示勾选角标 | — |
 | TexturePicker | 从一组材质里选一件，例如给角色换皮肤时从衣柜里挑：×3 的迷你卡片，选中的样子同 TextureCard | 浏览材质、去详情页，改用 TextureCard |

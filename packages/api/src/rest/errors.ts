@@ -8,6 +8,8 @@ import type { AppEnv } from '../env.ts'
 
 type ErrorCode = keyof Messages['errors']
 const statuses = {
+  mail_not_configured: 400,
+  mail_test_failed: 502,
   permission_denied: 403,
   user_not_manageable: 403,
   user_not_found: 404,

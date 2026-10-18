@@ -29,6 +29,8 @@
     "@nextskin/skin": "workspace:*",
     "pixelarticons": "catalog:",
     "qr": "0.7.2",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
     "skinview3d": "3.4.2"
   },
   "devDependencies": {

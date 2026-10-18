@@ -10,6 +10,9 @@ import { lockTexture } from '../textures/manage.ts'
 import type { TextureRemoval } from '../textures/removal.ts'
 import { lockUser } from '../users/lock.ts'
 import { validateEmail } from '../users/validation.ts'
+import { createAdminSettings } from './settings.ts'
+import type { MailService } from '../mail/service.ts'
+import type { SigningKey } from '../yggdrasil/signing-key.ts'
 import { createAdminQueries, reportView, userView } from './queries.ts'
 import { claimReport, settleReport } from './report-resolution.ts'
 import type { AdminActor, AdminReport, AdminUser, AssignableRole, ReportAction } from './types.ts'
@@ -20,6 +23,10 @@ export function createAdmin(options: {
   events: Events
   removal: TextureRemoval
   now: () => Date
+  secretKey: string
+  production: boolean
+  mail: MailService
+  getSigningKey: () => Promise<SigningKey | null>
 }) {
   const { db, settings, events, removal, now } = options
   async function authorize(tx: Transaction<CoreDatabase>, actor: AdminActor, permission: CorePermission) {
@@ -103,6 +110,7 @@ export function createAdmin(options: {
   }
   return {
     ...createAdminQueries(db, settings, now),
+    ...createAdminSettings({ ...options, authorize }),
     async setRole(actor: AdminActor, uid: number, role: AssignableRole): Promise<AdminUser> {
       return transactionWithRetry(db, async (tx) => {
         const eventActor = await authorize(tx, actor, 'users.ban')

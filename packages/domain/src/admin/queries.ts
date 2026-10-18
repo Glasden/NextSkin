@@ -208,7 +208,7 @@ async function auditViews(db: Kysely<CoreDatabase>, ids: number[]): Promise<Audi
     subject: {
       type: row.subject_type,
       id: row.subject_id,
-      exists: existing.has(`${row.subject_type}:${row.subject_id}`),
+      exists: row.subject_type === 'setting' || existing.has(`${row.subject_type}:${row.subject_id}`),
     },
     details: parseDetails(row.details),
   }))

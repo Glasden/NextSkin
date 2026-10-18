@@ -51,13 +51,17 @@ export function createRestApp(
           }
         : {},
     )
-    return respond(c, code, error instanceof DomainError ? error.params : undefined)
+    return error instanceof DomainError
+      ? respond(c, code, error.params, code === 'invalid_request' ? error.fields : undefined)
+      : respond(c, code)
   })
   app.use(
     '*',
     createMiddleware<AppEnv>(async (c, next) => {
       if (c.req.method !== 'POST' || !/\/textures\/?$/.test(c.req.path)) {
-        const limit = bodyLimit({ maxSize: 16 * 1024 }) as MiddlewareHandler<AppEnv>
+        // 设置里的公告和内容政策各能写 20000 个字，按 UTF-8 最多 4 字节一个字算（ADR-0028）
+        const maxSize = c.req.method === 'PATCH' && /\/admin\/settings\/?$/.test(c.req.path) ? 192 * 1024 : 16 * 1024
+        const limit = bodyLimit({ maxSize }) as MiddlewareHandler<AppEnv>
         return limit(c, next)
       }
       const { 'texture.maxFileSizeKb': max } = await core.settings.read(['texture.maxFileSizeKb'])
