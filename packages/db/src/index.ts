@@ -73,3 +73,11 @@ export type {
   TextureType,
   TextureFileStatus,
 } from './schema.ts'
+export { createPluginSqliteReader, PluginReadError } from './sqlite/plugin-reader.ts'
+export {
+  compilePluginQuery,
+  createPluginQueryExecutor,
+  dropPluginTables,
+  pluginQueryError,
+  PluginQueryExecutionError,
+} from './sqlite/plugin-query.ts'

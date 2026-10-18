@@ -12,6 +12,7 @@ import {
   type QueryResult,
   type SqliteDatabase,
 } from 'kysely'
+import { registerPluginDeadline } from './deadline.ts'
 import { wrapNodeSqlite } from './node-sqlite.ts'
 
 /** 不依赖 DatabaseSync，以便后续通过 worker RPC 执行查询和检查事务状态。 */
@@ -55,6 +56,7 @@ class MainBackend implements Backend {
       db.exec(`pragma busy_timeout = ${busyTimeoutMs}`)
       if (!readOnly) db.exec('pragma journal_mode = wal')
       db.exec('pragma synchronous = normal; pragma foreign_keys = on')
+      registerPluginDeadline(db)
       db.setAuthorizer((action, name, argument) => {
         if (action === constants.SQLITE_TRANSACTION || action === constants.SQLITE_SAVEPOINT) {
           if (this.#allowControl && !readOnly) return constants.SQLITE_OK
