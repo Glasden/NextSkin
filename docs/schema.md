@@ -19,6 +19,8 @@
 
 **加锁顺序**：在 READ COMMITTED 下，"先查、再改"挡不住并发插入。改动某个用户名下数据的用例（收藏、移出衣柜、举报、删除用户等），事务里的第一条写语句先锁住这个用户在 `users` 里的行，例如扣积分的 UPDATE；没有要改的列时，就执行一条不改值的 UPDATE。这样同一用户的这些操作会排队执行，SQLite 的写事务本来就是串行的。这条规则防的是同一用户数据上的丢失更新，不保证没有死锁：例如两个用户互相收藏了对方的材质，又同时删除账号，各自锁住了对方的材质。所以领域用例的事务都要能整体重试，遇到死锁（MySQL 1213、PG 40P01）或串行化失败（PG 40001）时从头执行整个用例（见 `packages/db/AGENTS.md`）。
 
+**材质行是第二把锁**（ADR-0025、ADR-0026）：依赖材质的存在和可见性的用例，锁住自己的行之后，再锁住材质在 `textures` 里的行。改变存在或可见性的（删除、改公开或私有、改模型）锁住材质之后，才去动别人的衣柜、角色和头像；依赖可见性的（加入衣柜、换材质、设头像、举报）锁住材质之后，才判断它对自己是否可见。两边因此在材质行上排队。要给很多用户退积分时，按 uid 升序锁他们的行。
+
 ## 用户与认证
 
 ### users
@@ -133,7 +135,7 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
   2. 写入对象。本地磁盘先写临时文件（文件名带 `claim_id`）再改名，S3 的 PUT 本身是原子的；
   3. 激活：在事务里执行 `status = 'active', ref_count = 1 where hash = ? and status = 'pending' and claim_id = ?`，同时写入宽高等元数据，插入材质条目。改不到就放弃这次上传，从头重试；已经写入的对象不要删。
 - **删除材质条目**：在同一事务里 `ref_count = ref_count - 1`。
-- **标记回收**：`status = 'deleting' where hash = ? and ref_count = 0 and status = 'active'`。过期的认领（`pending` 超过租期）同样改成 `deleting`。
+- **标记回收**：`status = 'deleting' where hash = ? and ref_count = 0 and status = 'active'`，与引用数减到 0 在同一个事务里。过期的认领（`pending` 超过租期）同样改成 `deleting`。
 - **删除存储对象**：标记之后先等一段时间 D，留给"刚删掉又上传同一张图"的情况把这一行改回 `pending`。然后：
   1. 提交 `claim_id = 新值, delete_attempted_at = 当前时间, delete_confirmed_at = null where hash = ? and status = 'deleting' and status_changed_at < 当前时间 - D`，改到一行才继续；
   2. 删除对象，对象不存在也算成功。如果从第 1 步提交到发出请求已经过了 L 的一半（例如进程被挂起过），放弃这次尝试；
@@ -141,7 +143,9 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 - **删行**：`delete where hash = ? and status = 'deleting' and delete_confirmed_at is not null and delete_attempted_at < 当前时间 - L`。这时最近一次删除尝试已经成功，更早的尝试也都已超过冷却期。
 - **存储里有对象、表里没有行**：清理任务先插入一条 `deleting` 行来认领这个 hash，再按上面的流程删除；插入时发现已经有行，说明不是孤儿，跳过。修改时间的宽限期只用来挑选候选，不起互斥作用。
 - **临时文件**：文件名里的 `claim_id` 已经不是任何 `pending` 行的当前认领、修改时间又早于租期的，直接删除。临时文件从不对外提供，删掉总是安全的；原上传者改名时发现临时文件没了，就让这次上传失败。
-- 认领租期、D、L 的具体值随实现定。
+- 取值（ADR-0025）：认领租期 10 分钟；D 1 小时；L 由存储驱动给出，本地磁盘的删除是同步完成的，L 为 0。
+- 推进这些步骤靠延迟任务，不靠定时扫描（ADR-0025）：标记回收的事务里排一个 D 之后执行的任务，去重键是 hash；认领 `pending` 的事务里排一个租期到期时执行的检查任务。孤儿对象要遍历整个存储才找得到，随第一个定时任务落地。
+- 回收文件时，一并删掉这个 hash 的出图缓存（ADR-0017、ADR-0025）。
 - `/textures/{hash}` 只响应 `active` 的行。
 - 外键 `textures.hash → texture_files` 的 `restrict` 只是兜底：引用计数出错时，至少数据库里的行删不掉。
 
@@ -155,14 +159,15 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | hash | varchar(64) | 非空；外键 → texture_files，restrict | |
 | name | varchar(128) | 非空 | |
 | type | varchar(8) | 非空 | `steve`、`alex`、`cape` 之一，与 BS 和 SDK 相同 |
-| description | text | 可空 | 原 texture-description 插件的功能 |
+| description | text | 可空 | 原 texture-description 插件的功能。新写入的不超过 2000 个字符，按纯文本显示（ADR-0025） |
 | uploader_id | integer | 可空；外键 → users，set null | 上传者删除账号后，公开材质保留、这一列置空；私有材质随账号删除（ADR-0023） |
 | is_public | 开关 | 非空 | |
 | likes | integer | 非空，默认 0 | 收藏数，即有多少个衣柜里有它（包括上传者自己的）。和 `closet_items` 的增删在同一事务里原子增减（不变量 5） |
+| score_paid | integer | 非空，默认 0 | 上传者为当前可见性实际付的存储费，删除时按它退还，不按现价。改公开或私有时按现价重新计价、多退少补，这一列改成新的存储费（ADR-0025） |
 | created_at | 时间 | 非空 | |
 | updated_at | 时间 | 非空 | |
 
-皮肤库列表的筛选和排序索引（公开、类型、最新、最热），在实现皮肤库时按实际的查询建。
+皮肤库的索引按三种查询建：公开材质按类型和时间、公开材质按类型和收藏数、按上传者（ADR-0025）。列的顺序在四种数据库上看过执行计划再定。
 
 ### closet_items
 
@@ -171,6 +176,7 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | user_id | integer | 主键第一列；外键 → users，cascade | |
 | texture_id | integer | 主键第二列；外键 → textures，cascade | |
 | name | text | 非空 | 用户给这件衣服起的名字 |
+| score_paid | integer | 非空，默认 0 | 加入时实际付的衣柜费，移出时按它退还，不按现价（ADR-0025）。上传时自动放进衣柜的那一件也收 |
 | created_at | 时间 | 非空 | |
 
 删除用户时，用例先锁住这个用户的行（见开头的"加锁顺序"），再逐条移除衣柜并减少对应材质的收藏数，最后删用户。外键的 `cascade` 只是兜底，它不会更新收藏数。不先锁用户的行，就挡不住两步之间并发加进来的收藏：它会被级联删除，收藏数却不会扣回。
@@ -183,7 +189,8 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | texture_id | integer | 可空；外键 → textures，set null | 材质删除后保留举报记录 |
 | uploader_id | integer | 可空；外键 → users，set null | 举报时材质的上传者 |
 | reporter_id | integer | 可空；外键 → users，set null | |
-| reason | 长文本 | 非空 | BS 的列是 `longtext`，没有长度限制。新举报的长度在领域层限制 |
+| reason | 长文本 | 非空 | BS 的列是 `longtext`，没有长度限制。新举报在领域层限制为 1 到 500 个字符（ADR-0026） |
+| score_paid | integer | 非空，默认 0 | 举报时实际付的花费，采纳时按它退还（ADR-0026） |
 | status | varchar(16) | 非空 | `pending`、`resolved`、`rejected` 之一 |
 | resolution | varchar(32) | 可空 | 处理方式，取值与 SDK 事件 `report.resolved` 的 `action` 相同。导入的旧记录为空 |
 | resolver_id | integer | 可空；外键 → users，set null | |
@@ -349,7 +356,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | public | is_public | |
 | upload_at | created_at、updated_at | |
 | likes | likes | 不照搬，按导入后的衣柜重新统计。BS 的计数是先读再写回，可能有偏差，差异计入报告 |
-| size | — | 不导入。BS 存的是 KB，`size_bytes` 直接取文件大小 |
+| size | score_paid | `size_bytes` 直接取文件大小，不用这一列。`score_paid` = size（BS 存的是 KB）×（公开取旧站的 `score_per_storage`，私有取 `private_score_per_storage`）；公开材质在旧站开着 `take_back_scores_after_deletion` 时再减去 `score_award_per_texture`，不小于 0。这样迁移那一刻删除材质能退多少，迁移之后仍然是多少（ADR-0025） |
 
 文件缺失或无法解码的材质跳过：引用它的角色材质和头像置空，衣柜记录跳过，举报的 `texture_id` 置空。装过 texture-description 插件的站点，描述导入到 `description`。
 
@@ -359,6 +366,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 |---|---|---|
 | user_uid、texture_tid | user_id、texture_id | 表上没有主键，重复的行只留一条；用户或材质不存在时跳过 |
 | item_name | name | 为空时用材质名 |
+| — | score_paid | 一律取旧站的 `score_per_closet_item`：BS 移出任何一件都按它退还（ADR-0025） |
 | — | created_at | BS 没有记录，取导入时刻 |
 
 **reports → reports**
@@ -371,6 +379,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | reason | reason | |
 | status | status | 0 → `pending`，1 → `resolved`，2 → `rejected` |
 | report_at | created_at | |
+| — | score_paid | 状态是 `pending`、并且旧站 `reporter_score_modification` 为负时，取它的绝对值；其余为 0（ADR-0026） |
 
 同一个人对同一个材质的重复举报（BS 先查后插，并发时会产生）只保留 id 最小的一条，其余计入报告。
 
@@ -406,6 +415,15 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | sign_score | checkIn.score | `'最小,最大'` 拆成 `{ min, max }` |
 | sign_gap_time | checkIn.gapHours | 转成整数 |
 | sign_after_zero | checkIn.resetAtMidnight | `'true'` / `'false'` 转成布尔 |
+| score_per_storage | score.perKbPublic | BS 的默认值是字符串 `'true'`，`option()` 把它读成 true，乘法里当 1 用。所以 `'true'` → 1，`'false'` → 0，其余转成整数 |
+| private_score_per_storage | score.perKbPrivate | 转成整数 |
+| score_per_closet_item | score.perClosetItem | 转成整数 |
+| max_upload_file_size | texture.maxFileSizeKb | 转成整数；超出 1–8192 时取边界值，在报告里注明 |
+| texture_name_regexp | texture.nameRegex | 去掉 PCRE 的分隔符；带了 JS 不支持的修饰符时，停止并报告 |
+| reporter_score_modification | report.cost、report.reward | 为负时取绝对值，作为 `report.cost`；为正时加进 `report.reward`：BS 提交就发、驳回时收回，这里改成采纳时才发（ADR-0026） |
+| reporter_reward_score | report.reward | 转成整数，与上一行的正值相加 |
+
+下面这些设置不导入，不是默认值时在对账报告里列出来：`score_award_per_texture`、`take_back_scores_after_deletion`、`score_award_per_like`（不做奖励，ADR-0025、ADR-0026），`status_code_for_private`、`auto_del_invalid_texture`、`allow_downloading_texture`、`content_policy`（ADR-0025）。
 
 ### UUID
 
@@ -448,7 +466,8 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | 后台任务和积分 | jobs、failed_jobs、score_transactions |
 | 用户中心和角色管理 | players.score_paid（加列） |
 | 个人资料和账号安全 | users.email_version（加列） |
-| 材质上传、衣柜、举报 | closet_items、reports |
+| 材质上传和皮肤库 | textures.score_paid（加列）、closet_items |
+| 衣柜、换材质和举报 | reports |
 | 第一个管理操作 | audit_logs |
 | 第一个定时任务 | job_schedules |
 | Yggdrasil | authserver 令牌表 |
