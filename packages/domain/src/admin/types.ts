@@ -61,3 +61,48 @@ export interface AdminOverview {
   registeredToday: number
   recentAudit: AuditEntry[]
 }
+
+/** 后台改用户的 PATCH：至少一项，每项各按自己的权限检查（ADR-0036"昵称和邮箱验证状态"） */
+export interface AdminUserUpdate {
+  role?: AssignableRole
+  nickname?: string
+  emailVerified?: boolean
+  /** emailVerified 为 true 时必填：页面上显示、管理员核实过的地址，锁住之后和现在的邮箱比较 */
+  expectedEmail?: string
+}
+export type AdminEmailChangeResult =
+  { status: 'pending'; pendingEmail: string } | { status: 'changed'; user: AdminUser }
+/** 作废在途的登录删掉的网页会话数和启动器令牌数 */
+export type { RevokedLogins } from '../auth/revoke.ts'
+export interface AdminSetPasswordInput {
+  password: string
+  /** 收回账号：删掉全部通行密钥、解绑全部第三方账号（包括插件停用了的） */
+  removeOtherMethods?: boolean
+  /** 收回账号：邮箱立即换成这个地址，算已验证，不发确认链接 */
+  newEmail?: string
+}
+/** 删除用户时公开材质的去留：默认留下（ADR-0025），delete 还要有 textures.manage */
+export type PublicTexturesOnDelete = 'keep' | 'delete'
+/** 用户详情页（ADR-0036"页面"）。两步验证的备用码数和第三方绑定由页面另外经 auth.security、externalLogin.accounts 读 */
+export interface AdminUserDetail {
+  user: AdminUser & { locale: string | null; twoFactorEnabled: boolean }
+  /** 最近 10 条积分流水 */
+  recentScore: { id: number; delta: number; balance: number; reason: string; createdAt: IsoTimestamp }[]
+  hasPassword: boolean
+  counts: {
+    /** 未过期的网页会话 */
+    sessions: number
+    /** 未过期的启动器令牌 */
+    launcherTokens: number
+    passkeys: number
+    players: number
+    publicTextures: number
+    privateTextures: number
+    closetItems: number
+    oauthClients: number
+  }
+  /** 名下角色，按 pid 升序，最多 100 个；总数见 counts.players */
+  players: { pid: number; name: string; uuid: string }[]
+  /** 以这个用户为对象的最近 10 条审计 */
+  recentAudit: AuditEntry[]
+}

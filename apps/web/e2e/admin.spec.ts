@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { createHmac } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createTranslator } from '@nextskin/i18n'
@@ -6,6 +7,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 // 后台的主流程（ADR-0027）：举报 → 管理员删除材质 → 举报人看到已采纳 → 审计日志；封禁上传者 → 他只看到封禁说明，
 // CSL 对他的角色返回 403。设置页（ADR-0028）：只有超级管理员能进，改了立即生效。
+// 用户详情页（ADR-0036）：替丢了验证器的用户关掉两步验证、重设密码。
 // 跑在 account 项目上：上传是 multipart 表单，接口按站点地址检查 Origin（playwright.config.ts）。
 // 两个用例放在同一个文件里按顺序跑：第一个按条数检查审计日志，另一个文件并行任命管理员会打乱它
 const t = createTranslator('zh-CN')
@@ -15,14 +17,35 @@ const fixture = (name: string) =>
 
 test.use({ locale: 'zh-CN' })
 
+const password = 'correct horse battery staple'
+
 async function register(page: Page, ip: string, name: string) {
   await page.context().setExtraHTTPHeaders({ 'x-forwarded-for': ip })
   const email = `${name.toLowerCase()}@example.test`
-  const response = await page.request.post('/api/register', {
-    data: { email, password: 'correct horse battery staple', playerName: name },
-  })
+  const response = await page.request.post('/api/register', { data: { email, password, playerName: name } })
   expect(response.status()).toBe(201)
   return email
+}
+
+/** RFC 6238 的六位验证码，同 account.spec.ts */
+function totp(secret: string): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+  const bits = [...secret.toUpperCase().replace(/[\s=]/g, '')]
+    .map((char) => alphabet.indexOf(char).toString(2).padStart(5, '0'))
+    .join('')
+  const key = Buffer.from(bits.match(/.{8}/g)!.map((byte) => parseInt(byte, 2)))
+  const counter = Buffer.alloc(8)
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)))
+  const hmac = createHmac('sha1', key).update(counter).digest()
+  const offset = hmac[hmac.length - 1]! & 0xf
+  return String((hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, '0')
+}
+
+async function signIn(page: Page, email: string, secret: string, next: string) {
+  await page.goto(`/sign-in?next=${encodeURIComponent(next)}`)
+  await page.getByLabel(t('auth.email')).fill(email)
+  await page.getByLabel(t('auth.password')).fill(secret)
+  await page.getByRole('button', { name: t('auth.signIn.submit'), exact: true }).click()
 }
 
 /** 第一个超级管理员由脚本设定（ADR-0027）。直接改 account 服务的数据目录，和运行中的服务共用一个 SQLite 文件 */
@@ -232,4 +255,79 @@ test('管理员看不到设置；超级管理员改站点名、写公告、生�
     data: { values: { 'site.name': original, 'site.announcement': '' } },
   })
   expect(restored.status()).toBe(200)
+})
+
+test('用户丢了验证器：管理员关掉两步验证，用户只用密码登录；管理员重设密码，用户原来的会话被退出', async ({
+  page,
+  browser,
+}) => {
+  // 用户开启两步验证
+  const userContext = await browser.newContext({ locale: 'zh-CN' })
+  const user = await userContext.newPage()
+  const name = `Lost${suffix}`
+  const email = await register(user, '203.0.113.122', name)
+  await user.goto('/user/security')
+  await user.getByRole('button', { name: t('user.security.twoFactor.enable') }).click()
+  const enable = user.getByRole('dialog', { name: t('user.security.twoFactor.enable') })
+  await enable.getByLabel(t('user.security.password.current')).fill(password)
+  await enable.getByRole('button', { name: t('user.security.twoFactor.continue') }).click()
+  const secret = (await enable.locator('code').textContent())!
+  await enable.getByLabel(t('user.security.twoFactor.code')).fill(totp(secret))
+  await enable.getByRole('button', { name: t('user.security.twoFactor.verify') }).click()
+  await enable.getByRole('button', { name: t('user.security.twoFactor.done') }).click()
+  await expect(user.getByText(t('user.security.twoFactor.enabled'))).toBeVisible()
+
+  // 手机丢了：退出之后，密码对了也卡在第二步
+  await user.getByRole('button', { name }).click()
+  await user.getByRole('menuitem', { name: t('user.menu.signOut') }).click()
+  await expect(user).toHaveURL('/sign-in')
+  await signIn(user, email, password, '/user/security')
+  await expect(user).toHaveURL(/\/sign-in\/two-factor/)
+
+  // 管理员从用户列表进详情页，关掉两步验证
+  setRole(await register(page, '203.0.113.123', `Sup${suffix}`), 'superadmin')
+  await page.goto(`/admin/users?q=${encodeURIComponent(email)}`)
+  await page.getByRole('link', { name, exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
+  const security = page.getByRole('region', { name: t('admin.userDetail.security.title') })
+  await security.getByRole('button', { name: t('admin.userDetail.security.disableTwoFactor') }).click()
+  await page
+    .getByRole('alertdialog', { name: t('admin.userDetail.security.disableTwoFactorTitle', { nickname: name }) })
+    .getByRole('button', { name: t('admin.userDetail.security.disableTwoFactor') })
+    .click()
+  await expect(page.getByText(t('admin.userDetail.security.twoFactorDisabled', { nickname: name }))).toBeVisible()
+  await expect(security.getByText(t('admin.userDetail.security.off'), { exact: true })).toBeVisible()
+
+  // 用户只用密码就能登录
+  await signIn(user, email, password, '/user/security')
+  await expect(user).toHaveURL('/user/security')
+  await expect(user.getByRole('button', { name: t('user.security.twoFactor.enable') })).toBeVisible()
+
+  // 管理员重设密码：用户刚登录的那个会话被退出
+  const newPassword = `brand new passphrase ${suffix}`
+  await security.getByRole('button', { name: t('admin.userDetail.security.setPassword') }).click()
+  const reset = page.getByRole('alertdialog', {
+    name: t('admin.userDetail.security.passwordTitle', { nickname: name }),
+  })
+  await reset.getByLabel(t('admin.userDetail.security.password')).fill(newPassword)
+  await reset.getByRole('button', { name: t('admin.userDetail.security.passwordConfirm') }).click()
+  await expect(page.getByText(t('admin.userDetail.security.passwordChanged', { sessions: 1, tokens: 0 }))).toBeVisible()
+  await user.reload()
+  await expect(user).toHaveURL(/\/sign-in/)
+
+  // 旧密码不能再用，新密码可以。前面已经登录过两次，Better Auth 的登录限流是同一 IP 10 秒 3 次，换个 IP
+  await userContext.setExtraHTTPHeaders({ 'x-forwarded-for': '203.0.113.124' })
+  await signIn(user, email, password, '/user')
+  await expect(user.getByText(t('auth.signIn.invalidCredentials'))).toBeVisible()
+  await signIn(user, email, newPassword, '/user')
+  await expect(user).toHaveURL('/user')
+  await userContext.close()
+
+  // 详情页的审计节记下了这两项
+  await page.reload()
+  const audit = page.getByRole('table', { name: t('admin.userDetail.audit.tableLabel') })
+  await expect(
+    audit.getByRole('cell', { name: t('admin.audit.actions.userDisableTwoFactor'), exact: true }),
+  ).toBeVisible()
+  await expect(audit.getByRole('cell', { name: t('admin.audit.actions.userSetPassword'), exact: true })).toBeVisible()
 })

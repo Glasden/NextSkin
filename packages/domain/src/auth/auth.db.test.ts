@@ -175,7 +175,7 @@ test('注册和登录：整数 uid、邮箱转小写、会话 Cookie 是 HttpOnl
   expect(wrong.status).toBe(401)
 })
 
-test('getSessionUser 返回 uid、昵称、角色和语言；没有会话时返回 null', async () => {
+test('getSessionUser 返回 uid、昵称、身份、语言和会话行的 id；没有会话时返回 null', async () => {
   const { browser, uid } = await signUp('alex@example.test', 'Alex')
   expect(await core.auth.getSessionUser(new Headers({ cookie: browser.cookieHeader() }), ROOT)).toEqual({
     uid,
@@ -183,6 +183,7 @@ test('getSessionUser 返回 uid、昵称、角色和语言；没有会话时返�
     email: 'alex@example.test',
     role: 'user',
     locale: null,
+    sessionId: expect.any(Number) as unknown,
   })
   expect(await core.auth.getSessionUser(new Headers(), ROOT)).toBeNull()
 })
@@ -231,8 +232,8 @@ test.each(['bcrypt', 'sha256'])('旧 %s 密码支持 PHP trim 回退，升级只
   const signIn = (value: string) =>
     new Browser().request('/api/auth/sign-in/email', { json: { email: 'trim@example.test', password: value } })
   const salt = { legacySalt: () => Promise.resolve('') }
-  expect(await checkUserPassword(database.db, uid, ' secret\t', salt)).toBe(true)
-  expect(await checkUserPassword(database.db, uid, 'wrong', salt)).toBe(false)
+  expect(await checkUserPassword(database.db, uid, ' secret\t', salt)).toBe(hash)
+  expect(await checkUserPassword(database.db, uid, 'wrong', salt)).toBeNull()
   expect((await signIn('secret\u00a0')).status).toBe(401)
   expect((await signIn(' secret\t')).status).toBe(200)
   const account = await database.db
@@ -246,7 +247,7 @@ test.each(['bcrypt', 'sha256'])('旧 %s 密码支持 PHP trim 回退，升级只
   expect(await verifyPassword({ hash: account.password!, password: ' secret\t' })).toBe(false)
   expect((await signIn('secret')).status).toBe(200)
   expect((await signIn(' secret\t')).status).toBe(401)
-  expect(await checkUserPassword(database.db, uid, ' secret\t', salt)).toBe(false)
+  expect(await checkUserPassword(database.db, uid, ' secret\t', salt)).toBeNull()
 })
 
 test.each([

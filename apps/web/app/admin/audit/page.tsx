@@ -21,7 +21,7 @@ export default async function AdminAuditPage({
   const params = parseAuditParams(await searchParams)
   const user = await requireAdmin(auditHref(params, { page: params.page }), 'audit.read')
   const { core } = await getServer()
-  const [{ items, total }, t, admin] = await Promise.all([
+  const [{ items, total }, settings, t, admin] = await Promise.all([
     core.admin.listAudit(user.uid, {
       subjectType: params.subject?.type,
       subjectId: params.subject?.id,
@@ -29,6 +29,7 @@ export default async function AdminAuditPage({
       page: params.page,
       perPage: ADMIN_PER_PAGE,
     }),
+    core.settings.read(['audit.retentionDays']),
     getTranslations('admin.audit'),
     getTranslations('admin'),
   ])
@@ -49,7 +50,9 @@ export default async function AdminAuditPage({
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
         <h1 className="font-pixel text-pixel-2 text-text">{t('title')}</h1>
-        <p className="text-sm text-pretty text-text-muted">{t('description')}</p>
+        <p className="text-sm text-pretty text-text-muted">
+          {t('description', { days: settings['audit.retentionDays'] })}
+        </p>
       </header>
 
       {filters.length > 0 && (

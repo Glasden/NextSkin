@@ -65,6 +65,11 @@ const stateSchema = z.object({
   intent: z.enum(['signIn', 'link']),
   /** 发起绑定的用户：回调时当前会话必须还是他 */
   uid: z.number().int().nullable(),
+  /**
+   * 发起绑定的那个会话（Better Auth 的会话 id）：回调时必须还是它，写绑定时在锁内确认它还在（ADR-0036）。
+   * 加这个字段之前签发的 state 没有它，那样的绑定按过期处理
+   */
+  sessionId: z.number().int().nullable().optional(),
   next: z.string(),
   codeVerifier: z.string(),
 })
@@ -92,6 +97,45 @@ function normalizeEmail(email: string | null): string | null {
   if (email === null) return null
   const value = email.trim().toLowerCase()
   return value.length <= 255 && z.email().safeParse(value).success ? value : null
+}
+
+/**
+ * 登录页上能用的第三方，按绑定的 provider_id 写。要在事务之外读：读插件设置用的是 db，SQLite 只有一个连接。
+ * 后台的删通行密钥、解绑也用它（ADR-0036）
+ */
+export async function usableBindings(plugins: Pick<PluginSystem, 'loginProviders'>): Promise<Set<string>> {
+  return new Set((await plugins.loginProviders()).map((item) => bindingProviderId(item.pluginId, item.providerId)))
+}
+
+/** `plugin:<插件 id>:<Provider id>` 拆回两段；不是第三方绑定时返回 null */
+export function parseBindingProviderId(value: string): { pluginId: string; providerId: string } | null {
+  if (!value.startsWith('plugin:')) return null
+  const rest = value.slice('plugin:'.length)
+  const index = rest.indexOf(':')
+  return index < 0 ? null : { pluginId: rest.slice(0, index), providerId: rest.slice(index + 1) }
+}
+
+/**
+ * 这个用户现在还有没有能用的登录方式：密码、通行密钥，或者绑在登录页上能用的第三方（usable）上（ADR-0034）。
+ * excluded 挑出不算数的绑定（正要解绑的那个）；withoutPasskeys 不算通行密钥（后台正要把它们全部删掉）。
+ * 调用方在事务里时传 tx，并且已经锁住用户行
+ */
+export async function hasLoginMethod(
+  executor: Kysely<CoreDatabase>,
+  uid: number,
+  usable: ReadonlySet<string>,
+  options: { excluded?: (providerId: string) => boolean; withoutPasskeys?: boolean } = {},
+): Promise<boolean> {
+  const excluded = options.excluded ?? (() => false)
+  const accounts = await executor
+    .selectFrom('accounts')
+    .select(['provider_id', 'password'])
+    .where('user_id', '=', uid)
+    .execute()
+  if (accounts.some((account) => account.provider_id === 'credential' && account.password)) return true
+  if (!options.withoutPasskeys && (await countRows(executor.selectFrom('passkeys').where('user_id', '=', uid))) > 0)
+    return true
+  return accounts.some((account) => !excluded(account.provider_id) && usable.has(account.provider_id))
 }
 
 export function createExternalLogin(options: {
@@ -152,31 +196,6 @@ export function createExternalLogin(options: {
     return record && Number(result.numDeletedRows) > 0 ? record : null
   }
 
-  /** 登录页上能用的第三方，按绑定的 provider_id 写。要在事务之外读：读插件设置用的是 db，SQLite 只有一个连接 */
-  async function usableBindings(): Promise<Set<string>> {
-    return new Set((await plugins.loginProviders()).map((item) => bindingProviderId(item.pluginId, item.providerId)))
-  }
-
-  /**
-   * 这个用户现在还有没有能用的登录方式：密码、通行密钥，或者绑在登录页上能用的第三方（usable）上。
-   * excluded 挑出不算数的绑定：正要解绑的那个
-   */
-  async function hasLoginMethod(
-    executor: Kysely<CoreDatabase>,
-    uid: number,
-    usable: ReadonlySet<string>,
-    excluded: (providerId: string) => boolean = () => false,
-  ): Promise<boolean> {
-    const accounts = await executor
-      .selectFrom('accounts')
-      .select(['provider_id', 'password'])
-      .where('user_id', '=', uid)
-      .execute()
-    if (accounts.some((account) => account.provider_id === 'credential' && account.password)) return true
-    if ((await countRows(executor.selectFrom('passkeys').where('user_id', '=', uid))) > 0) return true
-    return accounts.some((account) => !excluded(account.provider_id) && usable.has(account.provider_id))
-  }
-
   /** 配置了邮件时给账号邮箱发绑定通知，第三方的名称按收件人的语言翻译。发不出去不影响绑定 */
   async function notifyLinked(uid: number, pluginId: string, label: string) {
     try {
@@ -201,19 +220,35 @@ export function createExternalLogin(options: {
 
   /**
    * 把身份绑到 uid 上。先锁用户的行：同一用户的绑定和解绑排队执行。
-   * stranded：首次登录直接绑定没有登录方式的账号时，锁住之后再确认一遍它还是没有（usable 是能用的第三方）。
-   * 两家第三方同时声明同一个邮箱时，只有先到的那个能绑上
+   * - stranded：首次登录直接绑定没有登录方式的账号时，锁住之后再确认一遍它还是没有（usable 是能用的第三方）。
+   *   两家第三方同时声明同一个邮箱时，只有先到的那个能绑上
+   * - sessionId：用户在安全页上发起的绑定，锁住之后确认发起绑定的会话还在（ADR-0036）。回调在开头确认过会话，
+   *   之后要等第三方的网络请求；后台收回账号、退出全部登录在同一把锁下删会话，恰好在这中间提交的话，
+   *   盗号的人就能把第三方账号绑回来
    */
   async function link(
     uid: number,
     providerId: string,
     subject: string,
-    stranded?: { usable: ReadonlySet<string> },
+    check: { stranded: { usable: ReadonlySet<string> } } | { sessionId: number },
   ): Promise<void> {
-    const timestamp = writeAuthDate(db, toIsoTimestamp(now()))
+    const at = toIsoTimestamp(now())
+    const timestamp = writeAuthDate(db, at)
     await transactionWithRetry(db, async (tx) => {
       await lockUser(tx, uid)
-      if (stranded && (await hasLoginMethod(tx, uid, stranded.usable))) throw new DomainError('external_email_taken')
+      if ('stranded' in check && (await hasLoginMethod(tx, uid, check.stranded.usable)))
+        throw new DomainError('external_email_taken')
+      if (
+        'sessionId' in check &&
+        !(await tx
+          .selectFrom('sessions')
+          .select('id')
+          .where('id', '=', check.sessionId)
+          .where('user_id', '=', uid)
+          .where('expires_at', '>', writeAuthDate(tx, at))
+          .executeTakeFirst())
+      )
+        throw new DomainError('external_login_expired')
       const existing = await tx
         .selectFrom('accounts')
         .select('user_id')
@@ -264,10 +299,10 @@ export function createExternalLogin(options: {
       const owner = await db.selectFrom('users').select('id').where('email', '=', email).executeTakeFirst()
       if (owner) {
         // 账号已经没有任何登录方式时，第三方确认过的邮箱和收到找回密码邮件是同一个证据；否则一律不绑定
-        const usable = await usableBindings()
+        const usable = await usableBindings(plugins)
         if (!identity.emailVerified || (await hasLoginMethod(db, owner.id, usable)))
           throw new DomainError('external_email_taken')
-        await link(owner.id, providerId, identity.subject, { usable })
+        await link(owner.id, providerId, identity.subject, { stranded: { usable } })
         await notifyLinked(owner.id, entry.pluginId, entry.label)
         return { kind: 'signedIn', uid: owner.id, next }
       }
@@ -297,20 +332,22 @@ export function createExternalLogin(options: {
 
     /**
      * 发起：生成 state 和 PKCE，向插件要授权地址。state 由调用方写进 Cookie。
-     * 绑定（intent 为 link）时调用方已经确认会话是刚登录的
+     * 绑定（intent 为 link）时调用方已经确认会话是刚登录的；uid、sessionId 是当前会话的用户和会话
      */
     async start(input: {
       pluginId: string
       providerId: string
       intent: ExternalLoginIntent
       uid: number | null
+      sessionId: number | null
       next: string
       siteUrl: string
       locale?: string
     }): Promise<{ url: string; state: string }> {
       // 插件没有启用、设置没有通过校验、Provider 不存在（ADR-0034"发起和回调"）
       if (!(await available(input.pluginId, input.providerId))) throw new DomainError('external_login_not_found')
-      if (input.intent === 'link' && input.uid === null) throw new DomainError('unauthenticated')
+      if (input.intent === 'link' && (input.uid === null || input.sessionId === null))
+        throw new DomainError('unauthenticated')
       const state = random(32)
       const codeVerifier = random(64)
       const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
@@ -321,6 +358,7 @@ export function createExternalLogin(options: {
           providerId: input.providerId,
           intent: input.intent,
           uid: input.intent === 'link' ? input.uid : null,
+          sessionId: input.intent === 'link' ? input.sessionId : null,
           next: input.next,
           codeVerifier,
         } satisfies StateRecord,
@@ -336,7 +374,7 @@ export function createExternalLogin(options: {
     },
 
     /**
-     * 回调。`cookieState` 是发起时写进 Cookie 的 state，`sessionUid` 是当前会话的用户。
+     * 回调。`cookieState` 是发起时写进 Cookie 的 state，`sessionUid`、`sessionId` 是当前会话的用户和会话。
      * 出错时抛 DomainError，params 里的 intent 告诉调用方该跳回登录页还是安全页
      */
     async callback(input: {
@@ -345,6 +383,7 @@ export function createExternalLogin(options: {
       query: Readonly<Record<string, string>>
       cookieState: string | null
       sessionUid: number | null
+      sessionId: number | null
       siteUrl: string
       locale?: string
     }): Promise<ExternalCallbackResult> {
@@ -373,9 +412,16 @@ export function createExternalLogin(options: {
       const providerId = bindingProviderId(record.pluginId, record.providerId)
       try {
         if (record.intent === 'link') {
-          // 发起绑定之后换了账号登录、或者退出了：不能绑到别人身上
-          if (record.uid === null || input.sessionUid !== record.uid) throw new DomainError('external_login_expired')
-          await link(record.uid, providerId, identity.subject)
+          // 发起绑定之后换了账号登录、或者退出了：不能绑到别人身上。同一个人重新登录过也不行：绑定认的是发起时
+          // 检查过"刚登录过"的那个会话，它被后台作废（退出全部登录、收回账号）之后，这个 state 就跟着失效
+          if (
+            record.uid === null ||
+            typeof record.sessionId !== 'number' ||
+            input.sessionUid !== record.uid ||
+            input.sessionId !== record.sessionId
+          )
+            throw new DomainError('external_login_expired')
+          await link(record.uid, providerId, identity.subject, { sessionId: record.sessionId })
           await notifyLinked(record.uid, record.pluginId, entry.label)
           return { kind: 'linked', next: record.next }
         }
@@ -486,7 +532,7 @@ export function createExternalLogin(options: {
      */
     async unlink(uid: number, pluginId: string, providerId: string): Promise<void> {
       const key = bindingProviderId(pluginId, providerId)
-      const usable = await usableBindings()
+      const usable = await usableBindings(plugins)
       await transactionWithRetry(db, async (tx) => {
         await lockUser(tx, uid)
         const row = await tx
@@ -496,7 +542,7 @@ export function createExternalLogin(options: {
           .where('provider_id', '=', key)
           .executeTakeFirst()
         if (!row) throw new DomainError('external_account_not_found')
-        if (!(await hasLoginMethod(tx, uid, usable, (provider) => provider === key)))
+        if (!(await hasLoginMethod(tx, uid, usable, { excluded: (provider) => provider === key })))
           throw new DomainError('last_login_method')
         await tx.deleteFrom('accounts').where('id', '=', row.id).execute()
       })
@@ -519,7 +565,7 @@ export function createExternalLogin(options: {
      */
     async strandedByUninstall(pluginId: string): Promise<number> {
       const prefix = `plugin:${pluginId}:`
-      const usable = [...(await usableBindings())].filter((provider) => !provider.startsWith(prefix))
+      const usable = [...(await usableBindings(plugins))].filter((provider) => !provider.startsWith(prefix))
       return countRows(
         db
           .selectFrom('users')

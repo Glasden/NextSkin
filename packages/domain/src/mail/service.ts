@@ -5,7 +5,9 @@ import {
   renderConfirmEmailChange,
   renderEmailChanged,
   renderExternalAccountLinked,
+  renderAdminAccountChanged,
   renderTestEmail,
+  type AdminAccountChange,
 } from '@nextskin/email'
 import { matchLocale } from '@nextskin/i18n'
 import type { Kysely } from 'kysely'
@@ -26,6 +28,19 @@ const templates = {
   confirmEmailChange: { render: renderConfirmEmailChange, ttl: EMAIL_CHANGE_TTL_SECONDS },
 }
 
+/** 管理员改了账号的哪些项（ADR-0036"通知邮件"）；binding 的 provider 是入队时按收件人的语言翻译好的名称 */
+const adminAccountChange = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('email'), pending: z.boolean() }),
+  z.object({ kind: z.literal('password') }),
+  z.object({ kind: z.literal('twoFactor') }),
+  z.object({ kind: z.literal('passkeys'), count: z.number().int().positive() }),
+  z.object({ kind: z.literal('binding'), provider: z.string() }),
+  z.object({ kind: z.literal('playerRenamed'), from: z.string(), to: z.string() }),
+  z.object({ kind: z.literal('playerDeleted'), name: z.string() }),
+  z.object({ kind: z.literal('playerTransferredOut'), name: z.string() }),
+  z.object({ kind: z.literal('playerTransferredIn'), name: z.string() }),
+]) satisfies z.ZodType<AdminAccountChange>
+
 /** 任务里只存渲染需要的输入；链接带着令牌，进死信时去掉（ADR-0021） */
 const recipient = z.object({ to: z.string(), uid: z.number() })
 const mailPayload = z.discriminatedUnion('template', [
@@ -37,7 +52,15 @@ const mailPayload = z.discriminatedUnion('template', [
   recipient.extend({ template: z.literal('emailChanged') }),
   /** provider 是入队时按收件人的语言翻译好的第三方名称 */
   recipient.extend({ template: z.literal('externalAccountLinked'), provider: z.string() }),
+  /** at 是修改的时刻，渲染时按站点时区写出 */
+  recipient.extend({
+    template: z.literal('adminAccountChanged'),
+    changes: z.array(adminAccountChange).min(1),
+    at: z.string().refine(isIsoTimestamp),
+  }),
 ])
+/** 邮件任务的 payload：领域用例在自己的事务里直接入队时按它写（admin/notify.ts） */
+export type MailJobPayload = z.input<typeof mailPayload>
 
 export function createMailService(
   db: Kysely<CoreDatabase>,
@@ -81,11 +104,25 @@ export function createMailService(
         throw new DomainError('mail_test_failed', { reason: [...message].slice(0, 300).join('') })
       }
     },
-    /** 只入队，不等发送。Better Auth 的回调也调用它，那时不在任何事务里（ADR-0021） */
-    async send(kind: keyof typeof templates, user: { id: string; email: string }, url: string) {
-      if (!(await configured())) throw new DomainError('mail_not_configured')
+    /**
+     * 只入队，不等发送（ADR-0021）。executor 是事务时和调用方的写入一起提交：找回密码的回调锁住用户行之后在事务里入队。
+     * 传事务的调用方要先在事务外确认过 configured()：读设置用的是 db，SQLite 只有一个连接，在事务里读会死锁
+     */
+    async send(
+      kind: keyof typeof templates,
+      user: { id: string; email: string },
+      url: string,
+      executor: Kysely<CoreDatabase> = db,
+    ) {
+      if (!executor.isTransaction && !(await configured())) throw new DomainError('mail_not_configured')
       const expiresAt = toIsoTimestamp(new Date(Date.now() + templates[kind].ttl * 1000))
-      await jobs.enqueue(db, MAIL_JOB, { template: kind, to: user.email, uid: Number(user.id), url, expiresAt })
+      await jobs.enqueue(executor, MAIL_JOB, {
+        template: kind,
+        to: user.email,
+        uid: Number(user.id),
+        url,
+        expiresAt,
+      } satisfies MailJobPayload)
     },
     handler: {
       concurrency: 2,
@@ -94,17 +131,13 @@ export function createMailService(
       async run({ payload }) {
         const mail = mailPayload.parse(payload)
         // 链接已经失效，发出去也没用
-        if (
-          mail.template !== 'emailChanged' &&
-          mail.template !== 'externalAccountLinked' &&
-          mail.expiresAt <= toIsoTimestamp(new Date())
-        )
-          return
+        if ('expiresAt' in mail && mail.expiresAt <= toIsoTimestamp(new Date())) return
         if (!(await configured())) throw new DomainError('mail_not_configured')
         const [user, values] = await Promise.all([
           db.selectFrom('users').select(['nickname', 'locale']).where('id', '=', mail.uid).executeTakeFirst(),
-          settings.read(['site.name', 'site.locale', 'mail.from']),
+          settings.read(['site.name', 'site.locale', 'mail.from', 'site.timeZone']),
         ])
+        // 用户已经删除：删除用户不发通知（ADR-0036）
         if (!user) return
         const input = {
           locale: (user.locale ? matchLocale(user.locale) : null) ?? values['site.locale'],
@@ -116,16 +149,27 @@ export function createMailService(
             ? renderEmailChanged(input)
             : mail.template === 'externalAccountLinked'
               ? renderExternalAccountLinked({ ...input, provider: mail.provider })
-              : templates[mail.template].render({
-                  ...input,
-                  url: mail.url,
-                  expiresInHours: templates[mail.template].ttl / 3600,
-                })
+              : mail.template === 'adminAccountChanged'
+                ? renderAdminAccountChanged({
+                    ...input,
+                    changes: mail.changes,
+                    at: mail.at,
+                    timeZone: values['site.timeZone'],
+                  })
+                : templates[mail.template].render({
+                    ...input,
+                    url: mail.url,
+                    expiresInHours: templates[mail.template].ttl / 3600,
+                  })
         await transport.send({ to: mail.to, from: values['mail.from'], ...rendered })
       },
       deadLetterPayload(payload) {
         const parsed = mailPayload.safeParse(payload)
-        return parsed.success ? { template: parsed.data.template, to: parsed.data.to, uid: parsed.data.uid } : null
+        if (!parsed.success) return null
+        const { template, to, uid } = parsed.data
+        // 改了哪些项留着供排查，里面没有链接和令牌
+        if (parsed.data.template === 'adminAccountChanged') return { template, to, uid, changes: parsed.data.changes }
+        return { template, to, uid }
       },
     } satisfies JobHandler,
   }

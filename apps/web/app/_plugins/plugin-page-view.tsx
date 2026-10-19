@@ -240,7 +240,7 @@ async function TableView({
             {found.nickname}
           </span>
         )
-        return area === 'admin' ? <Link render={<NextLink href={`/admin/users?q=${id}`} />}>{content}</Link> : content
+        return area === 'admin' ? <Link render={<NextLink href={`/admin/users/${id}`} />}>{content}</Link> : content
       }
       case 'player': {
         const found = id === null ? undefined : references.players[id]

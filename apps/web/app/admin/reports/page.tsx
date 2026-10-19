@@ -47,7 +47,7 @@ export default async function AdminReportsPage({
   const person = (who: { uid: number; nickname: string } | null) =>
     who ? (
       manageUsers ? (
-        <Link render={<NextLink href={`/admin/users?q=${who.uid}`} />}>{who.nickname}</Link>
+        <Link render={<NextLink href={`/admin/users/${who.uid}`} />}>{who.nickname}</Link>
       ) : (
         who.nickname
       )

@@ -67,6 +67,7 @@ beforeEach(async () => {
   actor = await env.actor()
   session = {
     uid: actor.uid,
+    sessionId: 1,
     role: 'superadmin',
     nickname: 'Session',
     email: 'session@example.test',

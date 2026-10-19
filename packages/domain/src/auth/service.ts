@@ -27,6 +27,8 @@ export interface AuthServiceOptions {
 
 export interface SessionUser {
   uid: number
+  /** Better Auth 会话的 id：发起第三方绑定时记下，写绑定之前确认这个会话还在（ADR-0036） */
+  sessionId: number
   nickname: string
   email: string
   role: UserRole
@@ -254,7 +256,16 @@ export function createAuthService(options: AuthServiceOptions) {
         .select(['id', 'nickname', 'email', 'role', 'locale'])
         .where('id', '=', uid)
         .executeTakeFirst()
-      return row ? { uid: row.id, nickname: row.nickname, email: row.email, role: row.role, locale: row.locale } : null
+      return row
+        ? {
+            uid: row.id,
+            sessionId: Number(session.session.id),
+            nickname: row.nickname,
+            email: row.email,
+            role: row.role,
+            locale: row.locale,
+          }
+        : null
     },
   }
 }

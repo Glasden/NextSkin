@@ -16,7 +16,7 @@
     "use-intl": "catalog:"
   },
   "devDependencies": {
-    "@formatjs/icu-messageformat-parser": "3.5.18",
+    "@formatjs/icu-messageformat-parser": "catalog:",
     "@types/node": "catalog:",
     "vitest": "catalog:"
   }

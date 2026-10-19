@@ -4,7 +4,9 @@ export type CorePermission =
   | 'reports.review'
   | 'textures.manage'
   | 'users.ban'
+  | 'users.manage'
   | 'users.appointAdmin'
+  | 'players.manage'
   | 'audit.read'
   | 'settings.manage'
   | 'import.manage'
@@ -12,12 +14,14 @@ export type CorePermission =
 const permissions: Record<UserRole, readonly CorePermission[]> = {
   banned: [],
   user: [],
-  admin: ['reports.review', 'textures.manage', 'users.ban', 'audit.read'],
+  admin: ['reports.review', 'textures.manage', 'users.ban', 'users.manage', 'players.manage', 'audit.read'],
   superadmin: [
     'reports.review',
     'textures.manage',
     'users.ban',
+    'users.manage',
     'users.appointAdmin',
+    'players.manage',
     'audit.read',
     'settings.manage',
     'import.manage',
@@ -35,7 +39,7 @@ export function canPlugin(role: UserRole): boolean {
 export function hasAdminAccess(role: UserRole): boolean {
   return permissions[role].length > 0
 }
-/** 操作者的角色严格高于对象。 */
+/** 操作者的身份严格高于对象（ADR-0027、ADR-0036：后台只能管理身份比自己低的用户）。 */
 export function outranks(actor: UserRole, target: UserRole): boolean {
   const ranks: Record<UserRole, number> = { banned: 0, user: 1, admin: 2, superadmin: 3 }
   return ranks[actor] > ranks[target]

@@ -2,22 +2,28 @@ import type { CoreDatabase, IsoTimestamp } from '@nextskin/db'
 import type { Actor } from '@nextskin/plugin-sdk'
 import type { Transaction } from 'kysely'
 
-type AuditAction =
-  | 'site.setup'
-  | 'report.resolve'
-  | 'texture.delete'
-  | 'user.setRole'
-  | 'setting.update'
-  | 'plugin.enable'
-  | 'plugin.disable'
-  | 'plugin.settings'
-  | 'plugin.deadLetter'
-  | 'plugin.install'
-  | 'plugin.upgrade'
-  | 'plugin.uninstall'
-  | 'plugin.restartHost'
-// 插件和设置项一样没有整数 id，subject_id 记 0，插件 id 放在 details 里（ADR-0028 的做法）
-const subjects: Record<AuditAction, string> = {
+/**
+ * 审计动作和它的对象类型（docs/schema.md 的 audit_logs.action 指向这里）。插件和设置项一样没有整数 id，
+ * subject_id 记 0，插件 id 放在 details 里（ADR-0028 的做法）。角色的操作以主人为对象（ADR-0036）。
+ * 后台的审计表对每个动作都要有文案和详情摘要：apps/web 的 audit-table.tsx 按 AuditAction 穷举，类型检查守着
+ */
+export const AUDIT_ACTIONS = {
+  'site.setup': 'user',
+  'report.resolve': 'report',
+  'texture.delete': 'texture',
+  'user.setRole': 'user',
+  'user.setNickname': 'user',
+  'user.setEmail': 'user',
+  'user.setEmailVerified': 'user',
+  'user.setPassword': 'user',
+  'user.disableTwoFactor': 'user',
+  'user.deletePasskeys': 'user',
+  'user.unlinkAccount': 'user',
+  'user.revokeSessions': 'user',
+  'user.adjustScore': 'user',
+  'user.delete': 'user',
+  'player.delete': 'user',
+  'setting.update': 'setting',
   'plugin.enable': 'plugin',
   'plugin.disable': 'plugin',
   'plugin.settings': 'plugin',
@@ -26,12 +32,9 @@ const subjects: Record<AuditAction, string> = {
   'plugin.upgrade': 'plugin',
   'plugin.uninstall': 'plugin',
   'plugin.restartHost': 'plugin',
-  'site.setup': 'user',
-  'setting.update': 'setting',
-  'report.resolve': 'report',
-  'texture.delete': 'texture',
-  'user.setRole': 'user',
-}
+} as const satisfies Record<string, string>
+export type AuditAction = keyof typeof AUDIT_ACTIONS
+
 export async function audit(
   tx: Transaction<CoreDatabase>,
   input: {
@@ -43,7 +46,7 @@ export async function audit(
     now: IsoTimestamp
   },
 ): Promise<void> {
-  if (subjects[input.action] !== input.subject.type) throw new TypeError('审计动作与对象类型不匹配')
+  if (AUDIT_ACTIONS[input.action] !== input.subject.type) throw new TypeError('审计动作与对象类型不匹配')
   await tx
     .insertInto('audit_logs')
     .values({

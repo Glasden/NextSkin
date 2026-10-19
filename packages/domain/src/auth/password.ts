@@ -54,17 +54,23 @@ export async function verifyStoredPassword(
   return (await matchStoredPassword(input, check)) !== null
 }
 
+/**
+ * 返回核对通过的那个哈希，不通过返回 null。核对很慢，调用方在事务外调用，锁住用户之后要确认密码还是这个哈希：
+ * 后台改密码、收回账号可能恰好在这中间提交（ADR-0036"并发"）
+ */
 export async function checkUserPassword(
   db: Kysely<CoreDatabase>,
   uid: number,
   password: string,
   check: StoredPasswordCheck,
-): Promise<boolean> {
+): Promise<string | null> {
   const account = await db
     .selectFrom('accounts')
     .select('password')
     .where('user_id', '=', uid)
     .where('provider_id', '=', 'credential')
     .executeTakeFirst()
-  return !!account?.password && verifyStoredPassword({ hash: account.password, password }, check)
+  return account?.password && (await verifyStoredPassword({ hash: account.password, password }, check))
+    ? account.password
+    : null
 }

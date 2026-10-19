@@ -3,6 +3,7 @@ import { isLocale } from '@nextskin/i18n'
 import type { PrivateUser } from '../dto.ts'
 import type { Kysely } from 'kysely'
 import { checkUserPassword, type PluginPasswordVerifier } from '../auth/password.ts'
+import { deletePasswordResetLinks } from '../auth/revoke.ts'
 import type { CoreOptions } from '../core.ts'
 import { DomainError } from '../errors.ts'
 import type { Events } from '../events/emit.ts'
@@ -11,6 +12,7 @@ import { MAIL_JOB, type MailService } from '../mail/service.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { lockTexture } from '../textures/manage.ts'
 import type { TextureRemoval } from '../textures/removal.ts'
+import { deleteAccountData } from './deletion.ts'
 import { createEmailChangeTokens, EMAIL_CHANGE_TTL_SECONDS } from './email-change-token.ts'
 import { lockUser, type UserActor } from './lock.ts'
 import { createUserQueries } from './queries.ts'
@@ -37,12 +39,27 @@ export function createUserManagement(
     if (!user) throw new DomainError('unauthenticated')
     if (user.role === 'banned') throw new DomainError('user_banned')
   }
-  async function checkPassword(uid: number, password: string) {
-    const valid = await checkUserPassword(db, uid, password, {
+  /** 在事务外核对（scrypt 不能占着写锁），返回核对通过的哈希，锁住用户之后交给 assertPasswordUnchanged */
+  async function checkPassword(uid: number, password: string): Promise<string> {
+    const verified = await checkUserPassword(db, uid, password, {
       legacySalt: async () => (await settings.read(['auth.legacyPasswordSalt']))['auth.legacyPasswordSalt'],
       plugins: passwordPlugins,
     })
-    if (!valid) throw new DomainError('password_incorrect')
+    if (verified === null) throw new DomainError('password_incorrect')
+    return verified
+  }
+  /**
+   * 锁住用户之后确认密码还是核对时那个。后台收回账号恰好在核对之后提交的话，盗号的人拿旧密码发起的改邮箱
+   * 会按加一之后的版本签发确认链接、删除账号会删掉刚收回的账号（ADR-0036"并发"）
+   */
+  async function assertPasswordUnchanged(tx: Kysely<CoreDatabase>, uid: number, verified: string) {
+    const account = await tx
+      .selectFrom('accounts')
+      .select('password')
+      .where('user_id', '=', uid)
+      .where('provider_id', '=', 'credential')
+      .executeTakeFirst()
+    if (account?.password !== verified) throw new DomainError('password_incorrect')
   }
   async function previewEmailChange(token: string): Promise<{ email: string } | null> {
     const payload = tokens.parse(token)
@@ -106,7 +123,7 @@ export function createUserManagement(
       requestRoot: string,
     ): Promise<ChangeEmailResult> {
       await assertActiveUser(actor.uid)
-      await checkPassword(actor.uid, input.password)
+      const verified = await checkPassword(actor.uid, input.password)
       const values = await settings.read(['auth.registration.emailDomains', 'site.url'])
       const email = validateEmail(input.email, values['auth.registration.emailDomains'])
       const configured = await mail.configured()
@@ -116,6 +133,7 @@ export function createUserManagement(
         return await transactionWithRetry(db, async (tx) => {
           const user = await lockUser(tx, actor.uid)
           if (user.role === 'banned') throw new DomainError('user_banned')
+          await assertPasswordUnchanged(tx, actor.uid, verified)
           const before = (await profile(tx, actor.uid))!
           if (before.email === email) throw new DomainError('email_unchanged')
           if (
@@ -156,6 +174,8 @@ export function createUserManagement(
             }))
             .where('id', '=', actor.uid)
             .execute()
+          // 还没用的找回密码链接发到了旧地址，随邮箱改动一起作废（ADR-0036"作废在途的登录"）
+          await deletePasswordResetLinks(tx, actor.uid)
           await events.emit(
             tx,
             'user.profileUpdated',
@@ -209,6 +229,8 @@ export function createUserManagement(
             .where('email_version', '=', payload.emailVersion)
             .executeTakeFirstOrThrow()
           if (changed.numUpdatedRows === 0n) throw new DomainError('email_change_link_invalid')
+          // 同没有配置邮件时的立即生效：发到旧地址的找回密码链接一起作废
+          await deletePasswordResetLinks(tx, payload.uid)
           await events.emit(
             tx,
             'user.profileUpdated',
@@ -227,64 +249,23 @@ export function createUserManagement(
     },
     async deleteAccount(actor: UserActor, input: { password: string }): Promise<void> {
       await assertActiveUser(actor.uid)
-      await checkPassword(actor.uid, input.password)
+      const verified = await checkPassword(actor.uid, input.password)
       const { 'score.refundOnDelete': refund } = await settings.read(['score.refundOnDelete'])
       await transactionWithRetry(db, async (tx) => {
         const user = await lockUser(tx, actor.uid)
         if (user.role === 'admin' || user.role === 'superadmin') throw new DomainError('admin_cannot_delete_self')
         if (user.role === 'banned') throw new DomainError('user_banned')
-        const now = toIsoTimestamp(textureNow())
-        const eventActor = { kind: 'user' as const, uid: actor.uid, role: user.role }
-        const players = await tx
-          .selectFrom('players')
-          .select(['id', 'name', 'uuid'])
-          .where('user_id', '=', actor.uid)
-          .orderBy('id')
-          .execute()
-        for (const player of players) {
-          await tx.deleteFrom('players').where('id', '=', player.id).execute()
-          await events.emit(
-            tx,
-            'player.deleted',
-            eventActor,
-            { pid: player.id, uid: actor.uid, name: player.name, uuid: player.uuid },
-            now,
-          )
-        }
-        const items = await tx
-          .selectFrom('closet_items')
-          .select('texture_id')
-          .where('user_id', '=', actor.uid)
-          .orderBy('texture_id')
-          .execute()
-        for (const item of items) {
-          await lockTexture(tx, item.texture_id)
-          await tx
-            .deleteFrom('closet_items')
-            .where('user_id', '=', actor.uid)
-            .where('texture_id', '=', item.texture_id)
-            .execute()
-          await tx
-            .updateTable('textures')
-            .set((eb) => ({ likes: eb('likes', '-', 1) }))
-            .where('id', '=', item.texture_id)
-            .execute()
-          await events.emit(tx, 'closet.itemRemoved', eventActor, { uid: actor.uid, tid: item.texture_id }, now)
-        }
-        const privateTextures = await tx
-          .selectFrom('textures')
-          .select('id')
-          .where('uploader_id', '=', actor.uid)
-          .where('is_public', '=', 0)
-          .orderBy('id')
-          .execute()
-        for (const { id } of privateTextures) {
-          const texture = await lockTexture(tx, id)
-          if (texture)
-            await textureRemoval.remove(tx, texture, { actor: eventActor, refund, deletedAccountUid: actor.uid, now })
-        }
-        await tx.deleteFrom('users').where('id', '=', actor.uid).execute()
-        await events.emit(tx, 'user.deleted', eventActor, { uid: actor.uid }, now)
+        await assertPasswordUnchanged(tx, actor.uid, verified)
+        await deleteAccountData(
+          tx,
+          { events, removal: textureRemoval },
+          {
+            uid: actor.uid,
+            actor: { kind: 'user', uid: actor.uid, role: user.role },
+            refund,
+            now: toIsoTimestamp(textureNow()),
+          },
+        )
       })
     },
   }

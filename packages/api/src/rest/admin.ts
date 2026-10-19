@@ -2,6 +2,7 @@ import { createRoute, z, type OpenAPIHono } from '@hono/zod-openapi'
 import type { Core } from '@nextskin/domain'
 import { clientIp } from '../client-ip.ts'
 import type { AppEnv } from '../env.ts'
+import { registerAdminUsers } from './admin-users.ts'
 import { errorSchema } from './errors.ts'
 import { requireSession } from './session.ts'
 
@@ -48,16 +49,6 @@ const reportSchema = z.object({
   reporter: person.nullable(),
   resolver: z.object({ uid: z.number().int(), nickname: z.string().nullable() }).nullable(),
 })
-const userSchema = z.object({
-  uid: z.number().int(),
-  nickname: z.string(),
-  email: z.string(),
-  emailVerified: z.boolean(),
-  role,
-  score: z.number().int(),
-  registeredAt: z.iso.datetime(),
-  avatar: z.object({ hash: z.string(), scale: z.number() }).nullable(),
-})
 const resolve = createRoute({
   method: 'post',
   path: '/admin/reports/{id}/resolve',
@@ -84,21 +75,6 @@ const remove = createRoute({
       description: '材质已删除',
       content: { 'application/json': { schema: z.object({ resolvedReports: z.number().int() }) } },
     },
-    ...errors,
-  },
-})
-const setRole = createRoute({
-  method: 'patch',
-  path: '/admin/users/{uid}',
-  request: {
-    params: z.object({ uid: id }),
-    body: {
-      required: true,
-      content: { 'application/json': { schema: z.object({ role: z.enum(['banned', 'user', 'admin']) }) } },
-    },
-  },
-  responses: {
-    200: { description: '用户角色已更新', content: { 'application/json': { schema: userSchema } } },
     ...errors,
   },
 })
@@ -176,14 +152,6 @@ export function registerAdmin(app: OpenAPIHono<AppEnv>, core: Core) {
       200,
     ),
   )
-  app.openapi(setRole, async (c) =>
-    c.json(
-      await core.admin.setRole(
-        { uid: c.get('user')!.uid, ip: await clientIp(c, core) },
-        c.req.valid('param').uid,
-        c.req.valid('json').role,
-      ),
-      200,
-    ),
-  )
+  // 用户的账号操作，包括改身份的 PATCH（ADR-0036）
+  registerAdminUsers(app, core)
 }

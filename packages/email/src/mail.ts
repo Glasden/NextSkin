@@ -197,6 +197,86 @@ export function renderExternalAccountLinked(input: NoticeMailInput & { provider:
   }
 }
 
+/** 管理员对账号做的一项修改，通知邮件里一项一行 */
+export type AdminAccountChange =
+  // 通知发到旧地址，旧邮箱可能已经落到别人手里，所以不写新地址，同 emailChanged
+  | { kind: 'email'; pending: boolean }
+  | { kind: 'password' }
+  | { kind: 'twoFactor' }
+  | { kind: 'passkeys'; count: number }
+  | { kind: 'binding'; provider: string } // 已按收件人的语言翻译好的第三方名称
+  | { kind: 'playerRenamed'; from: string; to: string }
+  | { kind: 'playerDeleted'; name: string }
+  | { kind: 'playerTransferredOut'; name: string }
+  | { kind: 'playerTransferredIn'; name: string }
+
+export interface AdminAccountChangedInput extends NoticeMailInput {
+  changes: readonly AdminAccountChange[]
+  /** 修改的时刻（ISO 时间）和站点时区：邮件里按收件人的语言和站点时区写出时间 */
+  at: string
+  timeZone: string
+}
+
+function adminChangeLine(t: ReturnType<typeof createTranslator>, change: AdminAccountChange): string {
+  switch (change.kind) {
+    case 'email':
+      return change.pending
+        ? t('mail.adminAccountChanged.changes.emailPending')
+        : t('mail.adminAccountChanged.changes.email')
+    case 'password':
+      return t('mail.adminAccountChanged.changes.password')
+    case 'twoFactor':
+      return t('mail.adminAccountChanged.changes.twoFactor')
+    case 'passkeys':
+      return t('mail.adminAccountChanged.changes.passkeys', { count: change.count })
+    case 'binding':
+      return t('mail.adminAccountChanged.changes.binding', { provider: change.provider })
+    case 'playerRenamed':
+      return t('mail.adminAccountChanged.changes.playerRenamed', { from: change.from, to: change.to })
+    case 'playerDeleted':
+      return t('mail.adminAccountChanged.changes.playerDeleted', { name: change.name })
+    case 'playerTransferredOut':
+      return t('mail.adminAccountChanged.changes.playerTransferredOut', { name: change.name })
+    case 'playerTransferredIn':
+      return t('mail.adminAccountChanged.changes.playerTransferredIn', { name: change.name })
+  }
+}
+
+/**
+ * 管理员修改了账号的通知（ADR-0036）：管理员账号被人滥用时，原主人至少能知道改了什么、什么时候改的。不带链接。
+ * 不复用 renderEmailChanged：它写着"如果不是你本人操作"，不适合管理员直接做的修改
+ */
+export function renderAdminAccountChanged(input: AdminAccountChangedInput): RenderedMail {
+  const t = createTranslator(input.locale)
+  const site = { siteName: input.siteName }
+  // 带上 UTC 偏移：收件人不一定和站点在同一个时区
+  const time = new Intl.DateTimeFormat(input.locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: input.timeZone,
+    timeZoneName: 'shortOffset',
+  }).format(new Date(input.at))
+  const subject = t('mail.adminAccountChanged.subject', site)
+  const greeting = t('mail.greeting', { nickname: input.nickname })
+  const body = t('mail.adminAccountChanged.body', { time })
+  const lines = input.changes.map((change) => adminChangeLine(t, change))
+  const contact = t('mail.adminAccountChanged.contact')
+  const footer = t('mail.footer', site)
+  const list = style({ margin: '0 0 16px', padding: '0 0 0 24px' })
+  const content = markup`<p style="${paragraph()}">${greeting}</p>
+<p style="${paragraph({ margin: '0 0 8px' })}">${body}</p>
+<ul style="${list}">${lines.map((line) => markup`<li style="${paragraph({ margin: '0 0 4px' })}">${line}</li>`)}</ul>
+<p style="${paragraph({ margin: 0 })}">${contact}</p>`
+  return {
+    subject,
+    html: layout({ locale: input.locale, subject, siteName: input.siteName, preview: body, content, footer }),
+    text: [greeting, [body, ...lines.map((line) => `- ${line}`)].join('\n'), contact, footer].join('\n\n'),
+  }
+}
+
 /** 后台的测试邮件：管理员确认 SMTP 设置能用（ADR-0028） */
 export function renderTestEmail(input: NoticeMailInput): RenderedMail {
   const t = createTranslator(input.locale)

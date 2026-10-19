@@ -2,22 +2,26 @@ import { toIsoTimestamp, transactionWithRetry, type CoreDatabase, type IsoTimest
 import type { Actor } from '@nextskin/plugin-sdk'
 import type { Kysely, Selectable, Transaction } from 'kysely'
 import { can, outranks, type CorePermission } from '../access/permissions.ts'
-import { audit } from '../audit/write.ts'
 import { DomainError } from '../errors.ts'
 import type { Events } from '../events/emit.ts'
+import type { JobRunner } from '../jobs/runner.ts'
+import type { PluginSystem } from '../plugins/system.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { lockTexture } from '../textures/manage.ts'
 import type { TextureRemoval } from '../textures/removal.ts'
-import { lockUser } from '../users/lock.ts'
 import { validateEmail } from '../users/validation.ts'
 import { createAdminSettings } from './settings.ts'
 import type { MailService } from '../mail/service.ts'
 import type { SigningKey } from '../yggdrasil/signing-key.ts'
+import { authorize, changeRole, lockTarget } from './context.ts'
 import { createAdminQueries, reportView, userView } from './queries.ts'
 import { claimReport, settleReport } from './report-resolution.ts'
+import { createAdminUserDeletion } from './user-deletion.ts'
+import { createAdminUsers } from './users.ts'
+import { auditTextureDeletion } from '../users/deletion.ts'
 import type { AdminActor, AdminReport, AdminUser, AssignableRole, ReportAction } from './types.ts'
 
-export function createAdmin(options: {
+export interface AdminOptions {
   db: Kysely<CoreDatabase>
   settings: ReturnType<typeof createSettingQueries>
   events: Events
@@ -26,52 +30,19 @@ export function createAdmin(options: {
   secretKey: string
   production: boolean
   mail: MailService
+  jobs: Pick<JobRunner, 'enqueue'>
+  /** 第三方登录的 Provider：解绑时判断能不能用、通知邮件里按收件人的语言翻译名称（ADR-0034） */
+  plugins: Pick<PluginSystem, 'loginProviders' | 'translate' | 'get'>
   getSigningKey: () => Promise<SigningKey | null>
-}) {
+}
+
+export function createAdmin(options: AdminOptions) {
   const { db, settings, events, removal, now } = options
-  async function authorize(tx: Transaction<CoreDatabase>, actor: AdminActor, permission: CorePermission) {
-    const user = await lockUser(tx, actor.uid)
-    if (!can(user.role, permission)) throw new DomainError('permission_denied')
-    return { kind: 'user' as const, uid: actor.uid, role: user.role }
-  }
-  async function targetUser(tx: Transaction<CoreDatabase>, uid: number) {
-    await tx
-      .updateTable('users')
-      .set((eb) => ({ role: eb.ref('role') }))
-      .where('id', '=', uid)
-      .execute()
-    return tx.selectFrom('users').select(['id', 'role', 'nickname']).where('id', '=', uid).executeTakeFirst()
-  }
-  async function changeRole(
-    tx: Transaction<CoreDatabase>,
-    target: { id: number; nickname: string; role: UserRole },
-    role: UserRole,
-    actor: Actor,
-    ip: string | null,
-    timestamp: IsoTimestamp,
-    reportId?: number,
-  ) {
-    if (target.role === role) return
-    await tx.updateTable('users').set({ role }).where('id', '=', target.id).execute()
-    await events.emit(tx, 'user.roleChanged', actor, { uid: target.id, from: target.role, to: role }, timestamp)
-    await audit(tx, {
-      actor,
-      action: 'user.setRole',
-      subject: { type: 'user', id: target.id },
-      details: {
-        from: target.role,
-        to: role,
-        nickname: target.nickname,
-        ...(reportId === undefined ? {} : { reportId }),
-      },
-      ip,
-      now: timestamp,
-    })
-  }
+  const users = createAdminUsers(options)
   async function deletionTarget(tx: Transaction<CoreDatabase>, tid: number) {
     const before = await tx.selectFrom('textures').select('uploader_id').where('id', '=', tid).executeTakeFirst()
     // 与上传者自删、删除账号相同：上传者 -> 材质 -> 引用者和举报人。
-    if (before?.uploader_id !== null && before?.uploader_id !== undefined) await targetUser(tx, before.uploader_id)
+    if (before?.uploader_id !== null && before?.uploader_id !== undefined) await lockTarget(tx, before.uploader_id)
     return lockTexture(tx, tid)
   }
   async function deleteManaged(
@@ -83,7 +54,6 @@ export function createAdmin(options: {
     values: { 'score.refundOnDelete': boolean; 'report.reward': number },
     claimed?: Selectable<CoreDatabase['reports']>,
   ) {
-    const reportId = claimed?.id
     const { resolvedReports } = await removal.remove(tx, row, {
       actor,
       refund: values['score.refundOnDelete'],
@@ -91,21 +61,7 @@ export function createAdmin(options: {
       now: timestamp,
       review: { resolverId: actor.uid, ip, reward: values['report.reward'], claimed },
     })
-    await audit(tx, {
-      actor,
-      action: 'texture.delete',
-      subject: { type: 'texture', id: row.id },
-      details: {
-        name: row.name,
-        type: row.type,
-        hash: row.hash,
-        public: row.is_public === 1,
-        uploaderId: row.uploader_id,
-        ...(reportId === undefined ? {} : { reportId }),
-      },
-      ip,
-      now: timestamp,
-    })
+    await auditTextureDeletion(tx, { actor, row, ip, now: timestamp, reportId: claimed?.id })
     return { resolvedReports }
   }
   return {
@@ -116,17 +72,11 @@ export function createAdmin(options: {
     },
     ...createAdminQueries(db, settings, now),
     ...createAdminSettings({ ...options, authorize }),
-    async setRole(actor: AdminActor, uid: number, role: AssignableRole): Promise<AdminUser> {
-      return transactionWithRetry(db, async (tx) => {
-        const eventActor = await authorize(tx, actor, 'users.ban')
-        if (!['banned', 'user', 'admin'].includes(role)) throw new DomainError('invalid_request')
-        const target = await targetUser(tx, uid)
-        if (!target) throw new DomainError('user_not_found')
-        if (!outranks(eventActor.role, target.role)) throw new DomainError('user_not_manageable')
-        if (role === 'admin' && !can(eventActor.role, 'users.appointAdmin')) throw new DomainError('permission_denied')
-        await changeRole(tx, target, role, eventActor, actor.ip, toIsoTimestamp(now()))
-        return userView(tx, uid)
-      })
+    ...users,
+    ...createAdminUserDeletion(options),
+    /** 只改身份：PATCH 只带 role 时的说法，规则见 updateUser */
+    setRole(actor: AdminActor, uid: number, role: AssignableRole): Promise<AdminUser> {
+      return users.updateUser(actor, uid, { role })
     },
     async setRoleAsSystem(email: string, role: UserRole): Promise<AdminUser> {
       if (!['banned', 'user', 'admin', 'superadmin'].includes(role)) throw new DomainError('invalid_request')
@@ -134,9 +84,9 @@ export function createAdmin(options: {
       return transactionWithRetry(db, async (tx) => {
         const found = await tx.selectFrom('users').select('id').where('email', '=', normalized).executeTakeFirst()
         if (!found) throw new DomainError('user_not_found')
-        const target = await targetUser(tx, found.id)
+        const target = await lockTarget(tx, found.id)
         if (!target) throw new DomainError('user_not_found')
-        await changeRole(tx, target, role, { kind: 'system' }, null, toIsoTimestamp(now()))
+        await changeRole(tx, events, target, role, { kind: 'system' }, null, toIsoTimestamp(now()))
         return userView(tx, target.id)
       })
     },
@@ -158,7 +108,7 @@ export function createAdmin(options: {
         if (!before) throw new DomainError('report_not_found')
         if (before.status !== 'pending') throw new DomainError('report_already_handled')
         let uploader
-        if (action === 'banUploader' && before.uploader_id !== null) uploader = await targetUser(tx, before.uploader_id)
+        if (action === 'banUploader' && before.uploader_id !== null) uploader = await lockTarget(tx, before.uploader_id)
         const texture =
           before.texture_id === null
             ? undefined
@@ -180,7 +130,7 @@ export function createAdmin(options: {
           if (!can(eventActor.role, 'users.ban')) throw new DomainError('permission_denied')
           if (!uploader) throw new DomainError('user_not_found')
           if (!outranks(eventActor.role, uploader.role)) throw new DomainError('user_not_manageable')
-          await changeRole(tx, uploader, 'banned', eventActor, actor.ip, timestamp, id)
+          await changeRole(tx, events, uploader, 'banned', eventActor, actor.ip, timestamp, id)
         }
         await settleReport(tx, events, report, {
           actor: eventActor,

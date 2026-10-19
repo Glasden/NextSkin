@@ -403,6 +403,19 @@ describe.each(['official', 'host'] as const)('GitHub 第三方登录（%s）', (
     expect((await bindings(a.uid)).filter((row) => row.provider_id.startsWith('plugin:'))).toHaveLength(1)
   })
 
+  test('绑定认发起它的那个会话：同一个人换一个会话完成回调按过期处理，原会话照常能绑', async () => {
+    await configure()
+    const { uid } = await account()
+    const browser = await login()
+    const { state } = await start(browser, 'link')
+    const second = await login()
+    second.jar.set('nextskin-external-state', state)
+    expectRedirect(await second.callback(state), '/user/security?error=external_login_expired')
+    expect((await bindings(uid)).filter((row) => row.provider_id.startsWith('plugin:'))).toEqual([])
+    expectRedirect(await browser.callback((await start(browser, 'link')).state), '/user/security?linked=1')
+    expect((await bindings(uid)).filter((row) => row.provider_id.startsWith('plugin:'))).toHaveLength(1)
+  })
+
   test('解绑最后一种方式返回 409；有密码时解绑成功并删除绑定', async () => {
     await configure()
     const { uid, browser } = await bound(false)

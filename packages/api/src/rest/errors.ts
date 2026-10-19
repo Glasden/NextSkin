@@ -1,6 +1,13 @@
 import { z } from '@hono/zod-openapi'
 import { DomainError, type Core } from '@nextskin/domain'
-import { createTranslator, LOCALE_COOKIE, resolveLocale, type Messages } from '@nextskin/i18n'
+import {
+  createTranslator,
+  getMessages,
+  LOCALE_COOKIE,
+  resolveLocale,
+  sourceLocale,
+  type Messages,
+} from '@nextskin/i18n'
 import type { Context } from 'hono'
 import { getCookie } from 'hono/cookie'
 import { HTTPException } from 'hono/http-exception'
@@ -109,6 +116,8 @@ const statuses = {
   external_account_not_found: 404,
   password_already_set: 409,
   session_not_fresh: 403,
+  score_out_of_range: 400,
+  email_changed: 409,
 } as const satisfies Partial<Record<ErrorCode, number>>
 type ResponseCode = keyof typeof statuses
 const fieldNames: Partial<Record<ResponseCode, string>> = {
@@ -140,6 +149,17 @@ const fieldNames: Partial<Record<ResponseCode, string>> = {
   player_name_invalid: 'playerName',
   player_name_length: 'playerName',
   player_name_taken: 'playerName',
+  score_out_of_range: 'delta',
+}
+/**
+ * /api/admin/ 下的接口对管理员说话（ADR-0036"接口"）：复用的错误码在 errors 里是对本人说的（"你的账号已被封禁"），
+ * admin.errors 里有同名的键就用它，否则仍用 errors。admin.errors 的参数只能是 errors 里同名键的子集（测试守着）
+ */
+const ADMIN_PATH = /^\/api\/admin\//
+type AdminErrorCode = keyof Messages['admin']['errors'] & ResponseCode
+const adminErrorCodes: ReadonlySet<string> = new Set(Object.keys(getMessages(sourceLocale).admin.errors))
+function isAdminErrorCode(code: string): code is AdminErrorCode {
+  return adminErrorCodes.has(code)
 }
 
 const fieldErrorSchema = z.object({ code: z.string(), message: z.string() })
@@ -174,7 +194,8 @@ export function createErrorResponse(
         siteDefault: settings['site.locale'],
       }),
     )
-    const messageKey: `errors.${ResponseCode}` = `errors.${code}`
+    const messageKey: `errors.${ResponseCode}` | `admin.errors.${AdminErrorCode}` =
+      ADMIN_PATH.test(c.req.path) && isAdminErrorCode(code) ? `admin.errors.${code}` : `errors.${code}`
     const error = {
       code,
       message: translate(messageKey, params),

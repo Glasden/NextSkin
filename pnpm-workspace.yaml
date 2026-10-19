@@ -11,8 +11,10 @@ allowBuilds:
   '@swc/core': false
 
 catalog:
+  '@better-auth/core': 1.7.10
   '@better-auth/oauth-provider': 1.7.10
   '@better-auth/passkey': 1.7.10
+  '@formatjs/icu-messageformat-parser': 3.5.18
   '@next/eslint-plugin-next': 16.4.2
   '@playwright/test': 1.64.1
   '@storybook/addon-docs': 10.6.2

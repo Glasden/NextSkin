@@ -66,7 +66,14 @@ export type {
   AdminUser,
   AuditEntry,
   AdminOverview,
+  AdminUserUpdate,
+  AdminEmailChangeResult,
+  RevokedLogins,
+  AdminSetPasswordInput,
+  PublicTexturesOnDelete,
+  AdminUserDetail,
 } from './admin/types.ts'
+export { AUDIT_ACTIONS, type AuditAction } from './audit/write.ts'
 
 export { settingControl, settingJsonSchema, type SettingControl, type JsonSchema } from './settings/form.ts'
 export type { SettingView } from './admin/settings.ts'

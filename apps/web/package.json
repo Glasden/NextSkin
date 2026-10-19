@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "set-role": "node scripts/set-role.ts",
+    "set-password": "node scripts/set-password.ts",
+    "disable-2fa": "node scripts/disable-2fa.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

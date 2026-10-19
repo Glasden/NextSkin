@@ -39,7 +39,14 @@ beforeEach(async () => {
     plugins: { host: hostEntry, packages: (await pluginPackages()).packages },
   })
   actor = await env.actor()
-  session = { uid: actor.uid, role: 'superadmin', nickname: 'Session', email: 'session@example.test', locale: null }
+  session = {
+    uid: actor.uid,
+    sessionId: 1,
+    role: 'superadmin',
+    nickname: 'Session',
+    email: 'session@example.test',
+    locale: null,
+  }
   vi.spyOn(env.core.auth, 'getSessionUser').mockImplementation(() => Promise.resolve(session))
   app = createApp({ core: env.core })
 })
@@ -170,7 +177,15 @@ test.each(operations)('%s %s：管理员 403，未登录 401，跨站 403', asyn
   await failure(await send(method, path, body()), 403, 'permission_denied')
   session = null
   await failure(await send(method, path, body()), 401, 'unauthenticated')
-  session = { ...session!, uid: actor.uid, role: 'superadmin', nickname: 'S', email: 's@example.test', locale: null }
+  session = {
+    ...session!,
+    uid: actor.uid,
+    sessionId: 1,
+    role: 'superadmin',
+    nickname: 'S',
+    email: 's@example.test',
+    locale: null,
+  }
   await failure(await send(method, path, body(), { origin: 'https://other.test' }), 403, 'invalid_origin')
   expect(await audits()).toEqual([])
 })

@@ -17,6 +17,7 @@ import type { PluginHostEntry } from './plugins/host.ts'
 import type { PluginPackages } from './plugins/packages.ts'
 import type { loadPlugin } from '@nextskin/plugin-host'
 import { createPluginAdmin } from './plugins/admin.ts'
+import { deleteLauncherTokens } from './auth/revoke.ts'
 import { PLUGIN_KV_CLEANUP_JOB } from './plugins/kv.ts'
 import { pluginReferences } from './plugins/references.ts'
 import type { Kysely } from 'kysely'
@@ -191,9 +192,7 @@ export function createCore(options: CoreOptions) {
     passwordPlugins,
     onPasswordChanged: async (uid) => {
       // 吊销启动器令牌单独提交：事件入队失败会回滚它所在的事务，而改密码已经成功了（ADR-0030）
-      await transactionWithRetry(options.db, (tx) =>
-        tx.deleteFrom('yggdrasil_tokens').where('user_id', '=', uid).execute(),
-      )
+      await transactionWithRetry(options.db, (tx) => deleteLauncherTokens(tx, uid))
       await transactionWithRetry(options.db, async (tx) => {
         const user = await tx.selectFrom('users').select('role').where('id', '=', uid).executeTakeFirst()
         if (user)
@@ -243,6 +242,8 @@ export function createCore(options: CoreOptions) {
       secretKey: options.secretKey,
       production: options.production,
       mail,
+      jobs,
+      plugins,
       getSigningKey,
     }),
     closet,

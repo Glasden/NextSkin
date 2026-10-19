@@ -1,8 +1,9 @@
 import { createHash, hkdfSync } from 'node:crypto'
 import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-provider'
+import { defineRequestState, hasRequestState } from '@better-auth/core/context'
 import { passkey } from '@better-auth/passkey'
-import { dialectOf, type CoreDatabase } from '@nextskin/db'
-import { betterAuth, type BetterAuthOptions } from 'better-auth'
+import { dialectOf, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
+import { betterAuth, getCurrentAdapter, type BetterAuthOptions } from 'better-auth'
 import { APIError, createAuthMiddleware, isAPIError } from 'better-auth/api'
 import { hashPassword } from 'better-auth/crypto'
 import { jwt, twoFactor } from 'better-auth/plugins'
@@ -64,6 +65,9 @@ export function redactLogMessage(message: string): string {
   return message.replace(/([?#])[^\s"'<>]+/g, '$1[redacted]')
 }
 
+/** 这次请求里核对通过的密码哈希。改密码时在 Better Auth 写入的事务里拿它和现在的哈希比较，见 databaseHooks */
+const verifiedPasswordHash = defineRequestState<string | null>(() => null)
+
 /** Better Auth 的日志只输出消息本身：附带的参数可能是请求体或带查询参数的错误（不变量 11） */
 const logger: BetterAuthOptions['logger'] = {
   level: 'warn',
@@ -110,17 +114,39 @@ export function authOptions(config: AuthConfig) {
       maxPasswordLength: MAX_PASSWORD_LENGTH,
       revokeSessionsOnPasswordReset: true,
       resetPasswordTokenExpiresIn: RESET_PASSWORD_TTL_SECONDS,
-      sendResetPassword: async ({ user, url }) => {
-        if (!config.mail || !(await config.mail.configured()))
+      sendResetPassword: async ({ user, url, token }) => {
+        const mail = config.mail
+        if (!mail || !(await mail.configured()))
           throw new APIError('SERVICE_UNAVAILABLE', { code: 'mail_not_configured' })
-        await config.mail.send('resetPassword', user, url)
+        // Better Auth 先按邮箱查出用户、再写入记录、最后调这里，都不加锁；改邮箱的事务可能在这中间删掉找回链接，
+        // 新写入的记录删不到，信又发到旧地址。所以锁住用户行（同 lockUser）再重读邮箱：要么排在改邮箱的事务前面
+        // （信发到旧地址，但记录随后被它删掉），要么等它提交之后读到新邮箱，删掉这条记录、不发信。
+        // 只重读不加锁不够：MySQL 和 PostgreSQL 都是 READ COMMITTED，改邮箱的事务提交之前读到的还是旧邮箱（ADR-0036）
+        const uid = Number(user.id)
+        await transactionWithRetry(db, async (tx) => {
+          await tx
+            .updateTable('users')
+            .set((eb) => ({ role: eb.ref('role') }))
+            .where('id', '=', uid)
+            .execute()
+          const current = await tx.selectFrom('users').select('email').where('id', '=', uid).executeTakeFirst()
+          if (current?.email !== user.email) {
+            await tx.deleteFrom('verifications').where('identifier', '=', `reset-password:${token}`).execute()
+            return
+          }
+          await mail.send('resetPassword', user, url, tx)
+        })
       },
       // resetPassword 用 updateMany，account.update.after 只收到数量；此回调在它的事务提交后执行。
       onPasswordReset: ({ user }) => passwordChanged(user.id),
       password: {
         hash: hashPassword,
         // 从 BS 导入的旧哈希和插件格式的哈希在这里校验，登录成功后由下面的 after 钩子换成当前算法
-        verify: (input) => verifyStoredPassword(input, passwords),
+        verify: async (input) => {
+          const valid = await verifyStoredPassword(input, passwords)
+          if (valid && (await hasRequestState())) await verifiedPasswordHash.set(input.hash)
+          return valid
+        },
       },
     },
     emailVerification: {
@@ -134,6 +160,30 @@ export function authOptions(config: AuthConfig) {
     databaseHooks: {
       account: {
         update: {
+          // Better Auth 改密码时在事务外核对当前密码（要算两次 scrypt），之后按行 id 直接写入新哈希，中间不锁任何行。
+          // 后台改密码、收回账号恰好在这中间提交的话，管理员设的密码会被覆盖，连同 revokeOtherSessions 新建的会话，
+          // 盗号的人就回来了，页面上也看不出来。所以在 Better Auth 写入的同一个事务里，密码还是核对时那个哈希才继续：
+          // 这条条件更新锁住密码行，后台的事务还没提交就等它提交，再按提交之后的值判断（ADR-0036"并发"）
+          before: async (data, ctx) => {
+            if (ctx?.path !== '/change-password' || !('password' in data)) return
+            const userId = ctx.context.session?.user.id
+            const verified = await verifiedPasswordHash.get()
+            const unchanged =
+              userId && verified
+                ? await (
+                    await getCurrentAdapter(ctx.context.adapter)
+                  ).update({
+                    model: 'account',
+                    where: [
+                      { field: 'userId', value: userId },
+                      { field: 'providerId', value: 'credential' },
+                      { field: 'password', value: verified },
+                    ],
+                    update: { password: verified },
+                  })
+                : null
+            if (!unchanged) throw new APIError('BAD_REQUEST', { code: 'INVALID_PASSWORD', message: 'Invalid password' })
+          },
           // with-hooks 的 queueAfterTransactionHook 保证在 Better Auth 提交之后执行。
           after: async (account, ctx) => {
             if (ctx?.path !== '/change-password' || account.providerId !== 'credential' || !account.password) return

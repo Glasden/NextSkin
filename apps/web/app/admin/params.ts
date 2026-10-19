@@ -15,7 +15,8 @@ function parsePage(value: string): number {
   return /^[1-9]\d{0,5}$/.test(value) ? Number(value) : 1
 }
 
-function parseId(value: string): number | null {
+/** 正整数 id（uid、tid……），不超过 INT 的上限 */
+export function parseId(value: string): number | null {
   return /^[1-9]\d{0,9}$/.test(value) && Number(value) <= 2147483647 ? Number(value) : null
 }
 

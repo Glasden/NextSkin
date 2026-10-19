@@ -2,6 +2,14 @@ import type { AssignableRole, UserRole } from '@nextskin/domain'
 
 // 服务端组件（用户列表）和客户端组件（管理菜单）共用：不能放在 'use client' 的文件里
 
+/** 身份徽标的色调，用户列表和详情页共用 */
+export const roleTones: Record<UserRole, 'neutral' | 'warning' | 'danger'> = {
+  banned: 'danger',
+  user: 'neutral',
+  admin: 'warning',
+  superadmin: 'warning',
+}
+
 export type RoleChange = 'ban' | 'unban' | 'appoint' | 'revoke'
 
 export const roleChangeTargets: Record<RoleChange, AssignableRole> = {

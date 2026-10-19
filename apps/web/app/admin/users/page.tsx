@@ -1,5 +1,5 @@
-import { can, outranks, type UserRole } from '@nextskin/domain'
-import { Badge, Button, Input, Pagination, PlayerHead, Table } from '@nextskin/ui'
+import { can, outranks } from '@nextskin/domain'
+import { Badge, Button, Input, Link, Pagination, PlayerHead, Table } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -8,7 +8,7 @@ import { requireAdmin } from '../../../lib/session'
 import { headSrc } from '../../../lib/textures'
 import { ADMIN_PER_PAGE, parseUserParams, roleOrNull, usersHref } from '../params'
 import { RoleFilter } from './role-filter'
-import { roleChanges } from './role-changes'
+import { roleChanges, roleTones } from './role-changes'
 import { UserActions } from './user-actions'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -18,16 +18,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 type Column = 'uid' | 'user' | 'email' | 'role' | 'score' | 'registeredAt' | 'actions'
 
-const roleTones: Record<UserRole, 'neutral' | 'warning' | 'danger'> = {
-  banned: 'danger',
-  user: 'neutral',
-  admin: 'warning',
-  superadmin: 'warning',
-}
-
 /**
- * 用户列表（ADR-0027）：按 UID、邮箱、昵称搜索，按角色筛选，按 UID 从新到旧。
- * 操作只给角色比自己低的用户显示；能不能做，最终由用例按数据库里的角色判断
+ * 用户列表（ADR-0027）：按 UID、邮箱、昵称搜索，按身份筛选，按 UID 从新到旧。昵称链接到详情页（ADR-0036），
+ * 行内的身份菜单只给身份比自己低的用户显示；能不能做，最终由用例按数据库里的身份判断
  */
 export default async function AdminUsersPage({
   searchParams,
@@ -107,7 +100,9 @@ export default async function AdminUsersPage({
                     size={24}
                     alt=""
                   />
-                  <span className="min-w-0 truncate">{user.nickname}</span>
+                  <span className="min-w-0 truncate">
+                    <Link render={<NextLink href={`/admin/users/${user.uid}`} />}>{user.nickname}</Link>
+                  </span>
                   {self && <Badge>{admin('you')}</Badge>}
                 </span>
               ),

@@ -2,6 +2,7 @@ import {
   coreSettingsRegistry,
   settingControl,
   settingJsonSchema,
+  type AuditAction,
   type AuditEntry,
   type CoreSettingKey,
 } from '@nextskin/domain'
@@ -15,13 +16,25 @@ import { formatSettingValue, settingsHref, settingText } from './settings/settin
 
 type Column = 'time' | 'actor' | 'action' | 'subject' | 'details' | 'ip'
 
-// 审计记录的动作名带点号（`report.resolve`），next-intl 的键不能带点号，换成驼峰的键
+// 审计记录的动作名带点号（`report.resolve`），next-intl 的键不能带点号，换成驼峰的键。
+// 按 AuditAction 穷举：核心新增审计动作而这里没有文案，类型检查不通过
 const actionKeys = {
+  'site.setup': 'siteSetup',
   'report.resolve': 'reportResolve',
   'texture.delete': 'textureDelete',
   'user.setRole': 'userSetRole',
+  'user.setNickname': 'userSetNickname',
+  'user.setEmail': 'userSetEmail',
+  'user.setEmailVerified': 'userSetEmailVerified',
+  'user.setPassword': 'userSetPassword',
+  'user.disableTwoFactor': 'userDisableTwoFactor',
+  'user.deletePasskeys': 'userDeletePasskeys',
+  'user.unlinkAccount': 'userUnlinkAccount',
+  'user.revokeSessions': 'userRevokeSessions',
+  'user.adjustScore': 'userAdjustScore',
+  'user.delete': 'userDelete',
+  'player.delete': 'playerDelete',
   'setting.update': 'settingUpdate',
-  'site.setup': 'siteSetup',
   'plugin.enable': 'pluginEnable',
   'plugin.disable': 'pluginDisable',
   'plugin.settings': 'pluginSettings',
@@ -30,7 +43,11 @@ const actionKeys = {
   'plugin.upgrade': 'pluginUpgrade',
   'plugin.uninstall': 'pluginUninstall',
   'plugin.restartHost': 'pluginRestartHost',
-} as const
+} as const satisfies Record<AuditAction, string>
+
+function isAuditAction(action: string): action is AuditAction {
+  return Object.hasOwn(actionKeys, action)
+}
 
 // 处理举报的 details.action 可能是接口的动作，也可能是 SDK 的处理方式，都映射到同一份文案
 const resolutionKeys = {
@@ -135,14 +152,9 @@ export async function AuditTable({
       type === 'user' || type === 'texture' || type === 'report'
         ? t(`subjects.${type}`, { id })
         : t('subjects.other', { type, id })
-    const snapshot = text(entry.details.name) ?? text(entry.details.nickname)
-    const href = !exists
-      ? null
-      : type === 'user'
-        ? `/admin/users?q=${id}`
-        : type === 'texture'
-          ? `/skinlib/${id}`
-          : null
+    // 已删除对象的快照：用户是昵称，材质是名字。角色的操作以主人为对象（ADR-0036），details.name 是角色名，不是快照
+    const snapshot = type === 'user' ? text(entry.details.nickname) : text(entry.details.name)
+    const href = !exists ? null : type === 'user' ? `/admin/users/${id}` : type === 'texture' ? `/skinlib/${id}` : null
     return (
       <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
         {href ? (
@@ -207,50 +219,97 @@ export async function AuditTable({
     })
   }
 
+  /** 第三方登录的名字：插件还装着就取它的文案，否则写插件 id 和 Provider id */
+  function providerName(details: AuditEntry['details']): string {
+    const plugin = text(details.plugin) ?? ''
+    const provider = text(details.provider) ?? ''
+    const label = core.plugins.get(plugin)?.manifest.providers.login.find((item) => item.id === provider)?.label
+    return label ? core.plugins.translate(plugin, label, locale) : `${plugin} / ${provider}`
+  }
+
+  const number = (value: unknown) => format.number(count(value))
+  const signed = (value: unknown) => `${count(value) > 0 ? '+' : ''}${number(value)}`
+
+  // 每个动作的详情摘要，按 AuditAction 穷举；没有什么可写的返回 null
+  const summaries: Record<AuditAction, (details: AuditEntry['details']) => string | null> = {
+    'site.setup': () => null,
+    'report.resolve': (details) => {
+      const resolution = oneOf(Object.keys(resolutionKeys) as (keyof typeof resolutionKeys)[], details.action)
+      return t('details.reportResolve', {
+        action: resolution ? reports(`resolutions.${resolutionKeys[resolution]}`) : (text(details.action) ?? ''),
+        refunded: count(details.refunded),
+        rewarded: count(details.rewarded),
+      })
+    },
+    'texture.delete': (details) => {
+      const type = oneOf(textureTypes, details.type)
+      return t('details.textureDelete', {
+        name: text(details.name) ?? '',
+        type: type ? types(type) : (text(details.type) ?? ''),
+      })
+    },
+    'user.setRole': (details) => t('details.userSetRole', { from: role(details.from), to: role(details.to) }),
+    'user.setNickname': (details) =>
+      t('details.change', { from: text(details.from) ?? '', to: text(details.to) ?? '' }),
+    'user.setEmail': (details) =>
+      t('details.userSetEmail', {
+        from: text(details.from) ?? '',
+        to: text(details.to) ?? '',
+        state: details.pending === true ? 'pending' : details.verified === true ? 'verified' : 'unverified',
+      }),
+    'user.setEmailVerified': (details) =>
+      t('details.userSetEmailVerified', { email: text(details.email) ?? '', verified: String(details.to === true) }),
+    'user.setPassword': (details) => t('details.userSetPassword', { created: String(details.created === true) }),
+    'user.disableTwoFactor': () => null,
+    'user.deletePasskeys': (details) => t('details.userDeletePasskeys', { count: count(details.count) }),
+    'user.unlinkAccount': (details) => providerName(details),
+    'user.revokeSessions': (details) =>
+      t('details.userRevokeSessions', { sessions: count(details.sessions), tokens: count(details.tokens) }),
+    'user.adjustScore': (details) =>
+      t('details.userAdjustScore', {
+        delta: signed(details.delta),
+        from: number(details.from),
+        to: number(details.to),
+      }),
+    'user.delete': (details) => {
+      const kept = details.keptPublicTextures
+      return t('details.userDelete', {
+        email: text(details.email) ?? '',
+        role: role(details.role),
+        score: number(details.score),
+        players: count(details.players),
+        closet: count(details.closetItems),
+        kept: count(typeof kept === 'object' && kept !== null ? (kept as { count?: unknown }).count : 0),
+      })
+    },
+    'player.delete': (details) =>
+      t('details.playerDelete', { name: text(details.name) ?? '', uuid: text(details.uuid) ?? '' }),
+    'setting.update': settingChange,
+    'plugin.enable': (details) => t('details.pluginVersion', { version: text(details.version) ?? '' }),
+    'plugin.disable': (details) => t('details.pluginVersion', { version: text(details.version) ?? '' }),
+    'plugin.install': (details) => t('details.pluginVersion', { version: text(details.version) ?? '' }),
+    'plugin.uninstall': (details) => t('details.pluginVersion', { version: text(details.version) ?? '' }),
+    'plugin.upgrade': (details) =>
+      t('details.pluginUpgrade', { from: text(details.from) ?? '', to: text(details.version) ?? '' }),
+    'plugin.settings': pluginSettingChange,
+    'plugin.deadLetter': (details) =>
+      t('details.pluginDeadLetter', {
+        action: details.action === 'retry' ? 'retry' : 'delete',
+        job: count(details.job),
+      }),
+    'plugin.restartHost': () => null,
+  }
+
   function details(entry: AuditEntry) {
     const via =
       typeof entry.details.reportId === 'number' ? t('details.viaReport', { id: entry.details.reportId }) : null
-    let summary: string | null = null
-    if (entry.action === 'report.resolve') {
-      const resolution = oneOf(Object.keys(resolutionKeys) as (keyof typeof resolutionKeys)[], entry.details.action)
-      summary = t('details.reportResolve', {
-        action: resolution ? reports(`resolutions.${resolutionKeys[resolution]}`) : (text(entry.details.action) ?? ''),
-        refunded: count(entry.details.refunded),
-        rewarded: count(entry.details.rewarded),
-      })
-    } else if (entry.action === 'texture.delete') {
-      const type = oneOf(textureTypes, entry.details.type)
-      summary = t('details.textureDelete', {
-        name: text(entry.details.name) ?? '',
-        type: type ? types(type) : (text(entry.details.type) ?? ''),
-      })
-    } else if (entry.action === 'user.setRole') {
-      summary = t('details.userSetRole', { from: role(entry.details.from), to: role(entry.details.to) })
-    } else if (entry.action === 'setting.update') {
-      summary = settingChange(entry.details)
-    } else if (
-      entry.action === 'plugin.enable' ||
-      entry.action === 'plugin.disable' ||
-      entry.action === 'plugin.install' ||
-      entry.action === 'plugin.uninstall'
-    ) {
-      summary = t('details.pluginVersion', { version: text(entry.details.version) ?? '' })
-    } else if (entry.action === 'plugin.upgrade') {
-      summary = t('details.pluginUpgrade', {
-        from: text(entry.details.from) ?? '',
-        to: text(entry.details.version) ?? '',
-      })
-    } else if (entry.action === 'plugin.settings') {
-      summary = pluginSettingChange(entry.details)
-    } else if (entry.action === 'plugin.deadLetter') {
-      summary = t('details.pluginDeadLetter', {
-        action: entry.details.action === 'retry' ? 'retry' : 'delete',
-        job: count(entry.details.job),
-      })
-    }
+    const summary = isAuditAction(entry.action) ? summaries[entry.action](entry.details) : null
+    // 改积分的备注只进审计记录（ADR-0036"改积分"）
+    const note = entry.action === 'user.adjustScore' ? text(entry.details.note) : null
     return (
       <span className="flex flex-col">
         {summary && <span>{summary}</span>}
+        {note && <span className="text-xs break-all text-text-muted">{t('details.note', { note })}</span>}
         {via && <span className="text-xs text-text-muted">{via}</span>}
       </span>
     )
@@ -266,10 +325,7 @@ export async function AuditTable({
         cells: {
           time: format.dateTime(new Date(entry.createdAt), { dateStyle: 'short', timeStyle: 'short' }),
           actor: actor(entry),
-          action:
-            entry.action in actionKeys
-              ? t(`actions.${actionKeys[entry.action as keyof typeof actionKeys]}`)
-              : entry.action,
+          action: isAuditAction(entry.action) ? t(`actions.${actionKeys[entry.action]}`) : entry.action,
           subject: subject(entry),
           details: details(entry),
           ip: entry.ip ? (

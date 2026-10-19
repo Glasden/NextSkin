@@ -15,6 +15,7 @@ beforeEach(async () => {
       authenticated
         ? {
             uid: sessionUid,
+            sessionId: 1,
             nickname: 'Session',
             email: 'session@example.test',
             emailVerified: true,
@@ -60,26 +61,35 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(15)
+  expect(routes).toHaveLength(23)
   for (const route of routes) {
     const path = route.path
       .slice('/api'.length)
       .replace(/^\/admin\/plugins\/:id/, '/admin/plugins/missing')
       .replace(/:(?:id|tid|uid|job)/g, '7')
       .replace(':key', 'yggdrasil.signingKey')
+      .replace(':pluginId', 'missing')
+      .replace(':providerId', 'missing')
     // 上传插件包的接口只收 multipart：先检查内容类型，再检查权限
     const upload = new FormData()
     upload.set('file', new Blob([new Uint8Array([1])]), 'plugin.tgz')
     upload.set('packageHash', '0'.repeat(64))
+    // 请求体要能通过 zod 和用例在查权限之前做的格式检查，才会走到权限检查
     const body = route.path.startsWith('/api/admin/plugin-packages')
       ? upload
       : route.path.endsWith('/settings')
         ? { values: {} }
-        : route.method === 'POST'
-          ? { action: 'dismiss' }
-          : route.method === 'PATCH'
-            ? { role: 'banned' }
-            : undefined
+        : route.path.endsWith('/email')
+          ? { email: 'new@example.test' }
+          : route.path.endsWith('/password')
+            ? { password: 'new-password-123' }
+            : route.path.endsWith('/score')
+              ? { delta: 1 }
+              : route.method === 'POST'
+                ? { action: 'dismiss' }
+                : route.method === 'PATCH'
+                  ? { role: 'banned' }
+                  : undefined
     for (const loggedIn of [true, false]) {
       authenticated = loggedIn
       const response = await request(route.method, path, body)
@@ -133,7 +143,7 @@ test('管理员删除成功并结案举报；不可信 XFF 不写进审计', asy
   ])
 })
 
-test('改角色返回后台用户视图，IP 没有对端地址时为空', async () => {
+test('改身份返回后台用户视图，IP 没有对端地址时为空', async () => {
   await admin()
   const { request } = setup(null)
   const response = await request('PATCH', `/admin/users/${env.owner.uid}`, { role: 'banned' })
@@ -154,9 +164,9 @@ test('改角色返回后台用户视图，IP 没有对端地址时为空', async
 })
 
 test.each([
-  ['permission_denied', 403, 'setRole', 'PATCH', '/admin/users/7', { role: 'admin' }],
-  ['user_not_manageable', 403, 'setRole', 'PATCH', '/admin/users/7', { role: 'banned' }],
-  ['user_not_found', 404, 'setRole', 'PATCH', '/admin/users/7', { role: 'banned' }],
+  ['permission_denied', 403, 'updateUser', 'PATCH', '/admin/users/7', { role: 'admin' }],
+  ['user_not_manageable', 403, 'updateUser', 'PATCH', '/admin/users/7', { role: 'banned' }],
+  ['user_not_found', 404, 'updateUser', 'PATCH', '/admin/users/7', { role: 'banned' }],
   ['report_not_found', 404, 'resolveReport', 'POST', '/admin/reports/7/resolve', { action: 'dismiss' }],
   ['report_already_handled', 409, 'resolveReport', 'POST', '/admin/reports/7/resolve', { action: 'dismiss' }],
   ['texture_not_found', 404, 'deleteTexture', 'DELETE', '/admin/textures/7', undefined],
@@ -181,7 +191,7 @@ test('真实用例的错误状态与再次处理冲突', async () => {
   expect(await response.json()).toMatchObject({ error: { code: 'report_already_handled' } })
 })
 
-test('参数校验、CSRF、JSON 类型和请求体上限；OpenAPI 声明六个接口', async () => {
+test('参数校验、CSRF、JSON 类型和请求体上限；OpenAPI 声明这些接口', async () => {
   await admin()
   const { request, app } = setup()
   for (const value of ['0', '-1', '1.2', '1e2', '2147483648', '7x']) {
@@ -217,8 +227,17 @@ test('参数校验、CSRF、JSON 类型和请求体上限；OpenAPI 声明六个
     '/admin/settings',
     '/admin/settings/{key}/generate',
     '/admin/settings/mail/test',
+    '/admin/users/{uid}/email',
+    '/admin/users/{uid}/password',
+    '/admin/users/{uid}/two-factor',
+    '/admin/users/{uid}/passkeys',
+    '/admin/users/{uid}/bindings/{pluginId}/{providerId}',
+    '/admin/users/{uid}/sessions',
+    '/admin/users/{uid}/score',
   ])
     expect(spec.paths[path]).toBeDefined()
+  // 改用户和删除用户共用一个路径
+  expect(Object.keys(spec.paths['/admin/users/{uid}'] as object).sort()).toEqual(['delete', 'patch'])
 })
 
 test('管理员没有 settings.manage，三个设置接口都返回 403', async () => {

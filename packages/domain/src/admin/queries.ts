@@ -3,6 +3,7 @@ import {
   countRows,
   readAuthBoolean,
   readAuthDate,
+  toIsoTimestamp,
   writeAuthDate,
   type CoreDatabase,
   type UserRole,
@@ -14,7 +15,7 @@ import { textureScaleOrNull } from '../players/queries.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { rejectNul } from '../text.ts'
 import { todayStart } from '../time.ts'
-import type { AdminOverview, AdminReport, AdminUser, AuditEntry } from './types.ts'
+import type { AdminOverview, AdminReport, AdminUser, AdminUserDetail, AuditEntry } from './types.ts'
 
 function pagination(input: { page: number; perPage?: number }) {
   const perPage = Math.max(1, Math.min(100, Math.trunc(input.perPage ?? 50)))
@@ -313,6 +314,82 @@ export function createAdminQueries(
         items: await auditViews(
           db,
           ids.map((r) => r.id),
+        ),
+      }
+    },
+    /** 用户详情页（ADR-0036"页面"）：要有 users.ban，同用户列表；用户不存在返回 null */
+    async userDetail(viewer: number, uid: number): Promise<AdminUserDetail | null> {
+      await authorize(viewer, 'users.ban')
+      const row = await userRows(db)
+        .select(['users.locale', 'users.two_factor_enabled'])
+        .where('users.id', '=', uid)
+        .executeTakeFirst()
+      if (!row) return null
+      const current = toIsoTimestamp(now())
+      const ownTextures = db.selectFrom('textures').where('uploader_id', '=', uid)
+      const recentScore = await db
+        .selectFrom('score_transactions')
+        .select(['id', 'delta', 'balance', 'reason', 'created_at'])
+        .where('user_id', '=', uid)
+        .orderBy('id', 'desc')
+        .limit(10)
+        .execute()
+      const players = await db
+        .selectFrom('players')
+        .select(['id', 'name', 'uuid'])
+        .where('user_id', '=', uid)
+        .orderBy('id')
+        .limit(100)
+        .execute()
+      const recentAudit = await db
+        .selectFrom('audit_logs')
+        .select('id')
+        .where('subject_type', '=', 'user')
+        .where('subject_id', '=', uid)
+        .orderBy('id', 'desc')
+        .limit(10)
+        .execute()
+      return {
+        user: {
+          ...toUser(row),
+          locale: row.locale,
+          twoFactorEnabled: readAuthBoolean(row.two_factor_enabled ?? false),
+        },
+        recentScore: recentScore.map((r) => ({
+          id: r.id,
+          delta: r.delta,
+          balance: r.balance,
+          reason: r.reason,
+          createdAt: r.created_at,
+        })),
+        // 同"最后一种登录方式"的判断：密码行在、密码不为空才算有密码（第三方登录建的账号没有这一行）
+        hasPassword:
+          (await countRows(
+            db
+              .selectFrom('accounts')
+              .where('user_id', '=', uid)
+              .where('provider_id', '=', 'credential')
+              .where('password', 'is not', null)
+              .where('password', '!=', ''),
+          )) > 0,
+        counts: {
+          sessions: await countRows(
+            db.selectFrom('sessions').where('user_id', '=', uid).where('expires_at', '>', writeAuthDate(db, current)),
+          ),
+          launcherTokens: await countRows(
+            db.selectFrom('yggdrasil_tokens').where('user_id', '=', uid).where('expires_at', '>', current),
+          ),
+          passkeys: await countRows(db.selectFrom('passkeys').where('user_id', '=', uid)),
+          players: await countRows(db.selectFrom('players').where('user_id', '=', uid)),
+          publicTextures: await countRows(ownTextures.where('is_public', '=', 1)),
+          privateTextures: await countRows(ownTextures.where('is_public', '=', 0)),
+          closetItems: await countRows(db.selectFrom('closet_items').where('user_id', '=', uid)),
+          oauthClients: await countRows(db.selectFrom('oauth_clients').where('user_id', '=', uid)),
+        },
+        players: players.map((p) => ({ pid: p.id, name: p.name, uuid: p.uuid })),
+        recentAudit: await auditViews(
+          db,
+          recentAudit.map((r) => r.id),
         ),
       }
     },

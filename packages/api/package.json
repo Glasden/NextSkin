@@ -21,6 +21,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@formatjs/icu-messageformat-parser": "catalog:",
     "@types/node": "catalog:",
     "vitest": "catalog:"
   }

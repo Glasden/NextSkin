@@ -1,7 +1,8 @@
-import { createHash } from 'node:crypto'
-import { countRows, readAuthBoolean, toIsoTimestamp, upsert, writeAuthDate } from '@nextskin/db'
+import { createHash, randomBytes } from 'node:crypto'
+import { countRows, insertReturningId, readAuthBoolean, toIsoTimestamp, upsert, writeAuthDate } from '@nextskin/db'
 import { definePlugin, deny } from '@nextskin/plugin-sdk'
 import { beforeEach, expect, test, vi } from 'vitest'
+import { pauseNextCommit } from '../commit-pause.test-helper.ts'
 import { buildPackage, hostEntry, pluginPackages } from '../plugins/host.test-helper.ts'
 import { official, pluginEnvironment } from '../plugins/plugins.test-helper.ts'
 import { encodeSettingValue } from '../settings/codec.ts'
@@ -29,10 +30,13 @@ const login = () =>
     },
   })
 let actor: Awaited<ReturnType<typeof env.actor>>
+/** 每个用户发起绑定用的会话（Better Auth 的 sessions 里的一行）；存 Promise，同一用户并发发起时共用一个 */
+let sessions = new Map<number, Promise<number>>()
 
 beforeEach(async () => {
   identity = { subject: 'subject', email: 'external@example.test', emailVerified: true, displayName: 'External' }
   rejectRegistration = false
+  sessions = new Map()
   exchange.mockClear()
   await env.boot(
     [
@@ -54,17 +58,35 @@ beforeEach(async () => {
   for (const id of ['login', 'other', 'gate']) await env.core.plugins.admin.enable(actor, id)
 })
 
-function start(uid: number | null = null, pluginId = 'login') {
+async function insertSession(uid: number) {
+  const at = new Date()
+  return insertReturningId(env.db, 'sessions', {
+    token: randomBytes(24).toString('base64url'),
+    user_id: uid,
+    expires_at: writeAuthDate(env.db, toIsoTimestamp(new Date(at.getTime() + 3600_000))),
+    created_at: writeAuthDate(env.db, toIsoTimestamp(at)),
+    updated_at: writeAuthDate(env.db, toIsoTimestamp(at)),
+    ip_address: null,
+    user_agent: null,
+  })
+}
+function sessionOf(uid: number) {
+  let id = sessions.get(uid)
+  if (!id) sessions.set(uid, (id = insertSession(uid)))
+  return id
+}
+async function start(uid: number | null = null, pluginId = 'login') {
   return env.core.externalLogin.start({
     pluginId,
     providerId: 'main',
     intent: uid === null ? 'signIn' : 'link',
     uid,
+    sessionId: uid === null ? null : await sessionOf(uid),
     next: '/user/players',
     siteUrl,
   })
 }
-function callback(
+async function callback(
   state: string,
   sessionUid: number | null = null,
   pluginId = 'login',
@@ -76,6 +98,7 @@ function callback(
     query,
     cookieState: state,
     sessionUid,
+    sessionId: sessionUid === null ? null : await sessionOf(sessionUid),
     siteUrl,
   })
 }
@@ -343,6 +366,7 @@ test('state 必须和 Cookie 一致、未过期且只能用一次；取消授权
       query: { state },
       cookieState: 'wrong',
       sessionUid: null,
+      sessionId: null,
       siteUrl,
     }),
   ).rejects.toMatchObject({ code: 'external_login_expired' })
@@ -371,4 +395,73 @@ test.each(['invalid subject', '', 's'.repeat(256)])('核心拒绝插件返回的
   expect(await bindings()).toEqual([])
   expect(env.lines.join('\n')).toContain('login_failed')
   expect(env.lines.join('\n')).not.toContain(identity.email)
+})
+
+test('绑定认发起它的那个会话：换了会话、会话被删、旧 state 没有记下会话，都按过期处理', async () => {
+  const { uid } = await user()
+  const other = await insertSession(uid)
+  const changed = (await start(uid)).state
+  await expect(
+    env.core.externalLogin.callback({
+      pluginId: 'login',
+      providerId: 'main',
+      query: { state: changed },
+      cookieState: changed,
+      sessionUid: uid,
+      sessionId: other,
+      siteUrl,
+    }),
+  ).rejects.toMatchObject({ code: 'external_login_expired' })
+  // 加 sessionId 之前签发的 state
+  const legacy = (await start(uid)).state
+  const key = 'external-login:state:' + createHash('sha256').update(legacy).digest('base64url')
+  const row = await env.db
+    .selectFrom('verifications')
+    .select('value')
+    .where('identifier', '=', key)
+    .executeTakeFirstOrThrow()
+  const value = JSON.parse(row.value) as Record<string, unknown>
+  delete value.sessionId
+  await env.db
+    .updateTable('verifications')
+    .set({ value: JSON.stringify(value) })
+    .where('identifier', '=', key)
+    .execute()
+  await expect(callback(legacy, uid)).rejects.toMatchObject({ code: 'external_login_expired' })
+  // 回调开头核对的会话 id 对得上，但这一行在写绑定之前已经没了
+  const revoked = (await start(uid)).state
+  await env.db.deleteFrom('sessions').where('user_id', '=', uid).execute()
+  await expect(callback(revoked, uid)).rejects.toMatchObject({ code: 'external_login_expired' })
+  expect(await bindings()).toEqual([])
+})
+
+test('回调正在向第三方换令牌时后台退出全部登录：写绑定时在锁内发现会话没了，最终没有新绑定', async () => {
+  const { uid } = await user()
+  const { state } = await start(uid)
+  const arrived = Promise.withResolvers<void>()
+  const exchanged = Promise.withResolvers<typeof identity>()
+  exchange.mockImplementationOnce(() => {
+    arrived.resolve()
+    return exchanged.promise
+  })
+  const pending = callback(state, uid)
+  await arrived.promise
+  // 退出全部登录的事务删完会话、停在提交之前，这时换令牌回来：写绑定的事务排在用户行锁上（SQLite 上排在唯一的连接上），
+  // 锁内才看得到会话没了。在锁外查会话的话，READ COMMITTED 下读到的还是删除之前的那一行
+  const pause = pauseNextCommit(env.db)
+  try {
+    const revoking = env.core.admin.revokeUserSessions(actor, uid)
+    await Promise.race([pause.entered, revoking])
+    exchanged.resolve({ ...identity })
+    await pause.contended
+    // 给写绑定的事务一点时间走到用户行锁上
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    pause.resume()
+    expect((await revoking).revokedSessions).toBeGreaterThan(0)
+  } finally {
+    pause.restore()
+  }
+  await expect(pending).rejects.toMatchObject({ code: 'external_login_expired' })
+  expect(await bindings()).toEqual([])
+  expect(await countRows(env.db.selectFrom('sessions').where('user_id', '=', uid))).toBe(0)
 })

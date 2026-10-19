@@ -13,7 +13,7 @@ import { apiError, sendJson } from '../../../lib/api-client'
 import { roleChangeTargets, type RoleChange } from './role-changes'
 
 /**
- * 用户列表一行的“管理”菜单：封禁、解封、设为或取消管理员。只给角色比自己低的用户显示（页面判断），
+ * 用户的身份菜单：封禁、解封、设为或取消管理员，用户列表的每一行和详情页的页首共用。只给身份比自己低的用户显示（页面判断），
  * 每一项都打开确认框写明后果（DESIGN.md §7）
  */
 export function UserActions({

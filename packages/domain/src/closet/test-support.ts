@@ -12,8 +12,8 @@ import {
 } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import type { EventName } from '@nextskin/plugin-sdk'
-import type { Transaction } from 'kysely'
 import { afterAll, beforeAll, beforeEach, expect, vi } from 'vitest'
+import { pauseNextCommit as pauseCommit } from '../commit-pause.test-helper.ts'
 import { createCore, encodeSettingValue, type Core, type CoreSettingKey, type CoreSettingValue } from '../index.ts'
 import { adjustScore } from '../score/adjust.ts'
 
@@ -157,34 +157,7 @@ export function setup() {
   }
   /** 暂停业务回调结束后的提交；后来的请求必须等待用户或材质行锁。 */
   function pauseNextCommit() {
-    const entered = Promise.withResolvers<void>(),
-      contended = Promise.withResolvers<void>(),
-      release = Promise.withResolvers<void>()
-    const transaction = db().transaction.bind(db())
-    let armed = true
-    const spy = vi.spyOn(db(), 'transaction').mockImplementation(() => {
-      const builder = transaction(),
-        execute = builder.execute.bind(builder)
-      builder.execute = <T>(run: (tx: Transaction<CoreDatabase>) => Promise<T>) => {
-        if (!armed) contended.resolve()
-        return execute(async (tx) => {
-          const result = await run(tx)
-          if (armed) {
-            armed = false
-            entered.resolve()
-            await release.promise
-          }
-          return result
-        })
-      }
-      return builder
-    })
-    return {
-      entered: entered.promise,
-      contended: contended.promise,
-      resume: () => release.resolve(),
-      restore: () => spy.mockRestore(),
-    }
+    return pauseCommit(db())
   }
   return {
     db,

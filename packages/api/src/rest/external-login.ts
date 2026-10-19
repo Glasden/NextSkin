@@ -138,20 +138,22 @@ export function registerExternalLogin(app: OpenAPIHono<AppEnv>, core: Core) {
   app.openapi(start, async (c) => {
     const { pluginId, providerId } = c.req.valid('param')
     const body = c.req.valid('json')
-    let uid: number | null = null
+    let session: { uid: number; sessionId: number } | null = null
     if (body.intent === 'link') {
       const user = await core.auth.getSessionUser(c.req.raw.headers, c.get('requestRoot'))
       if (!user) return errorResponse(c, 'unauthenticated')
       // 偷到会话 Cookie 的人不能给账号加一个自己的第三方账号（ADR-0034"绑定和解绑"）
       if (!(await core.auth.isFreshSession(c.req.raw.headers, c.get('requestRoot'))))
         return errorResponse(c, 'session_not_fresh')
-      uid = user.uid
+      session = { uid: user.uid, sessionId: user.sessionId }
     }
     const result = await core.externalLogin.start({
       pluginId,
       providerId,
       intent: body.intent,
-      uid,
+      // 绑定认的是发起它的那个会话：回调时必须还是它，写绑定时在锁内确认它没被作废（ADR-0036）
+      uid: session?.uid ?? null,
+      sessionId: session?.sessionId ?? null,
       next: body.intent === 'link' ? '/user/security' : safeNextPath(body.next),
       siteUrl: await siteUrl(c, core),
       locale: requestLocale(c) ?? undefined,
@@ -175,6 +177,7 @@ export function registerExternalLogin(app: OpenAPIHono<AppEnv>, core: Core) {
         query: c.req.query(),
         cookieState,
         sessionUid: sessionUser?.uid ?? null,
+        sessionId: sessionUser?.sessionId ?? null,
         siteUrl: await siteUrl(c, core),
         locale: requestLocale(c) ?? undefined,
       })

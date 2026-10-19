@@ -1,7 +1,8 @@
 'use client'
 
-import { Button, Dialog, DialogClose, useToast } from '@nextskin/ui'
+import { Button, Dialog, DialogClose, Link, useToast } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
+import NextLink from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { apiError, sendJson } from '../../../lib/api-client'
@@ -13,9 +14,12 @@ import { apiError, sendJson } from '../../../lib/api-client'
 export function TextureAdminActions({
   texture,
   impact,
+  uploader,
 }: {
   texture: { tid: number; name: string }
   impact: { likes: number; pendingReports: number }
+  /** 链接到上传者在后台的详情页；上传者已注销或查看者没有 users.ban 时不传 */
+  uploader: { uid: number; nickname: string } | null
 }) {
   const t = useTranslations('skinlib.admin')
   const common = useTranslations('common')
@@ -46,6 +50,13 @@ export function TextureAdminActions({
         <h2 className="font-pixel text-pixel-1 text-text-muted">{t('title')}</h2>
         <p className="text-sm text-text-muted">{t('description')}</p>
       </div>
+      {uploader && (
+        <span className="text-sm">
+          <Link render={<NextLink href={`/admin/users/${uploader.uid}`} />}>
+            {t('uploader', { nickname: uploader.nickname })}
+          </Link>
+        </span>
+      )}
       <div>
         <Dialog
           alert

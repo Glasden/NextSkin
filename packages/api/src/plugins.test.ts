@@ -93,7 +93,7 @@ beforeEach(async () => {
 afterEach(() => vi.restoreAllMocks())
 
 function signIn(role: 'user' | 'banned' | 'admin' = 'user', uid = actor.uid) {
-  session = { uid, role, nickname: 'Session', email: 'session@example.test', locale: null }
+  session = { uid, sessionId: 1, role, nickname: 'Session', email: 'session@example.test', locale: null }
 }
 function request(path: string, init: RequestInit = {}, peer = '192.0.2.10') {
   const headers = new Headers(init.headers)

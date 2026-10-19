@@ -219,7 +219,16 @@ export default async function TexturePage({ params }: { params: Promise<{ tid: s
           )}
 
           {adminImpact && (
-            <TextureAdminActions texture={{ tid: texture.tid, name: texture.name }} impact={adminImpact} />
+            <TextureAdminActions
+              texture={{ tid: texture.tid, name: texture.name }}
+              impact={adminImpact}
+              // 上传者在后台的详情页，要有 users.ban（ADR-0036"页面"）
+              uploader={
+                texture.uploader && user && can(user.role, 'users.ban')
+                  ? { uid: texture.uploader.uid, nickname: texture.uploader.nickname }
+                  : null
+              }
+            />
           )}
         </aside>
       </div>

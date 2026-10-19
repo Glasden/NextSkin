@@ -196,6 +196,7 @@ test('注册写入与 Better Auth 相同的凭据行，可登录并读取会话�
     nickname: 'Steve',
     role: 'user',
     locale: 'en',
+    sessionId: expect.any(Number) as unknown,
   })
   expect(messages).toEqual([])
 })
