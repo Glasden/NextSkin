@@ -1,0 +1,19 @@
+{
+  "plugin": {
+    "name": "Microsoft sign-in",
+    "description": "Let users sign in with a personal Microsoft account or link their existing account. Work and school accounts are not supported."
+  },
+  "login": {
+    "microsoft": "Microsoft"
+  },
+  "settings": {
+    "clientId": {
+      "label": "Client ID",
+      "help": "Register an app in the Azure portal under “App registrations” and choose “Personal Microsoft accounts only” as the supported account type, then enter its client ID here. The callback URL is shown on this page; copy it exactly into the app’s settings."
+    },
+    "clientSecret": {
+      "label": "Client secret",
+      "help": "The app’s client secret. It is not shown again after saving."
+    }
+  }
+}

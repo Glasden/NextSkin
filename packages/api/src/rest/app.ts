@@ -18,6 +18,7 @@ import { registerCheckIn } from './check-in.ts'
 import { registerUser } from './user.ts'
 import { createMemoryRateLimiter, type RateLimiter } from './rate-limit.ts'
 import { registerRegistration } from './register.ts'
+import { registerExternalLogin } from './external-login.ts'
 import { registerTextures } from './textures.ts'
 import { registerYggdrasilTokens } from './yggdrasil-tokens.ts'
 
@@ -148,6 +149,7 @@ export function createRestApp(
     options.uploadRateLimiter ?? createMemoryRateLimiter(Date.now, { limit: 10, windowMs: 60_000 }),
   )
   registerRegistration(app, core)
+  registerExternalLogin(app, core)
   registerCloset(app, core)
   registerReports(app, core)
   registerAdmin(app, core)

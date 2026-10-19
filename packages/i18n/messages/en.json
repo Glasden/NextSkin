@@ -32,6 +32,10 @@
       "subject": "Your account email for {siteName} has changed",
       "body": "Your account email has changed. If you did not make this change, contact the site administrator."
     },
+    "externalAccountLinked": {
+      "subject": "Your {siteName} account is now linked to {provider}",
+      "body": "A {provider} account was just linked to your account and can now be used to sign in. If you did not do this, unlink it under “Sign-in & security”, change your password, and contact the site administrator."
+    },
     "testEmail": {
       "subject": "Test email from {siteName}",
       "body": "This is a test email. If you received it, the mail settings of this site are correct."
@@ -125,7 +129,20 @@
     "plugin_busy": "This plugin is being changed by another operation (install, upgrade, enable, uninstall or the cleanup after an uninstall), or someone just changed it. Refresh the page to see its current state, then try again.",
     "plugin_required_by": "{plugin}, which is enabled, depends on this plugin ({range}). Disable {plugin} first, or use a package whose version is in that range.",
     "plugin_official": "Official plugins can't be uninstalled, only disabled.",
-    "dead_letter_not_found": "This failed job could not be found. It may already have been retried or deleted."
+    "dead_letter_not_found": "This failed job could not be found. It may already have been retried or deleted.",
+    "external_login_not_found": "This sign-in method does not exist or has been turned off.",
+    "external_login_unavailable": "This sign-in method is temporarily unavailable. Try again later, or sign in another way.",
+    "external_login_failed": "We couldn't get your account details from the provider. Please try again.",
+    "external_login_cancelled": "Cancelled: authorization was not granted on the provider.",
+    "external_login_expired": "This request has expired. Please start again.",
+    "external_email_taken": "This email is already registered. Sign in the way you usually do, then link this account under Sign-in & security.",
+    "identity_bound_elsewhere": "This account is already linked to another account on this site.",
+    "identity_already_bound": "This account was just used to sign up. Sign in with it instead.",
+    "already_bound": "You've already linked an account from this provider. Unlink it first to use a different one.",
+    "last_login_method": "This is your only way to sign in, so you couldn't sign in after unlinking it. Set a password or add a passkey first.",
+    "external_account_not_found": "This linked account could not be found. It may already have been unlinked.",
+    "password_already_set": "A password is already set. Use Change password to change it.",
+    "session_not_fresh": "For your security, sign in again before doing this."
   },
   "score": {
     "reasons": {
@@ -180,7 +197,8 @@
       "failed": "Couldn't sign up. Try again later.",
       "notInstalled": "This site isn't set up yet",
       "notInstalledHint": "Registration opens once the site is set up.",
-      "openSetup": "I own this site, set it up"
+      "openSetup": "I own this site, set it up",
+      "or": "or"
     },
     "forgotPassword": {
       "title": "Reset your password",
@@ -239,6 +257,23 @@
       "invalidLink": "This link has expired or has already been used. If you still want to change your email, start again from your profile.",
       "profile": "Go to your profile",
       "failed": "Could not change your email. Please try again later."
+    },
+    "external": {
+      "signIn": "Sign in with {provider}",
+      "signUp": "Sign up with {provider}",
+      "failed": "Couldn't redirect you to {provider}. Please try again later."
+    },
+    "complete": {
+      "title": "Finish signing up",
+      "description": "You signed in with the {provider} account “{name}”, which isn’t linked to an account on this site yet. Confirm the details below to create one, and you can sign in with {provider} from now on.",
+      "descriptionNoName": "You signed in with a {provider} account that isn’t linked to an account on this site yet. Confirm the details below to create one, and you can sign in with {provider} from now on.",
+      "emailVerified": "{provider} has verified this email. If you change it, we’ll send a verification email to the new address after you sign up.",
+      "emailVerifiedNoMail": "{provider} has verified this email. If you change it, the new address will be unverified.",
+      "emailMissing": "{provider} didn’t share an email address. Enter one you can receive mail at — you’ll need it to reset your password.",
+      "submit": "Sign up and sign in",
+      "hasAccount": "Already have an account here? <link>Sign in the way you usually do</link>, then link {provider} under Sign-in & security.",
+      "expiredTitle": "This sign-up has expired",
+      "expired": "You need to finish signing up within 30 minutes of coming back from the provider. Sign in with the provider again."
     }
   },
   "user": {
@@ -311,7 +346,8 @@
             "title": "Two-step verification",
             "body": "If two-step verification is on, type the 6-digit code from your authenticator right after your password. For password hunter2 and code 123456, enter hunter2123456."
           }
-        }
+        },
+        "passwordRequired": "Launchers sign in with your email and password. Your account has no password yet — set one under <link>Sign-in & security</link> first."
       }
     },
     "players": {
@@ -421,7 +457,8 @@
         "pendingTitle": "Confirmation email sent",
         "pending": "We sent a confirmation email to {email}. The link is valid for 1 hour. Until you open it, keep using your current email to sign in and to reset your password.",
         "changed": "Your email is now {email}",
-        "failed": "Could not change your email. Please try again later."
+        "failed": "Could not change your email. Please try again later.",
+        "passwordRequired": "Changing your email requires your password. This account has no password yet, so set one first."
       },
       "delete": {
         "title": "Delete account",
@@ -436,8 +473,10 @@
         "impactSecurity": "Your password, two-step verification, passkeys, and sign-ins on every device",
         "password": "Current password",
         "confirm": "Delete my account",
-        "failed": "Could not delete your account. Please try again later."
-      }
+        "failed": "Could not delete your account. Please try again later.",
+        "passwordRequired": "Deleting your account requires your password. This account has no password yet, so set one first."
+      },
+      "setPassword": "Set a password"
     },
     "security": {
       "title": "Sign-in & security",
@@ -450,7 +489,9 @@
         "off": "Off",
         "none": "None",
         "passkeyCount": "{count, plural, other {#}}",
-        "launcherCount": "{count, plural, other {#}}"
+        "launcherCount": "{count, plural, other {#}}",
+        "passwordNotSet": "Not set",
+        "externalCount": "{count, plural, other {# linked}}"
       },
       "password": {
         "title": "Password",
@@ -461,7 +502,14 @@
         "changed": "Password changed. You’ve been signed out on other devices",
         "wrong": "Your current password is incorrect. Check it and try again.",
         "tooManyAttempts": "Too many attempts. Please try again in a few minutes.",
-        "failed": "Could not change your password. Please try again later."
+        "failed": "Could not change your password. Please try again later.",
+        "setDescription": "This account was created with a third-party account and has no password yet. Set one to also sign in with your email and password, including in launchers.",
+        "setSubmit": "Set password",
+        "setDone": "Password set",
+        "setFailed": "Couldn't set the password. Please try again later.",
+        "reauthTitle": "Sign in again",
+        "reauthDescription": "For your security, you need to have signed in within the last 10 minutes to set a password. You’ll come back to this page after signing in.",
+        "reauth": "Sign in again"
       },
       "twoFactor": {
         "title": "Two-step verification",
@@ -495,7 +543,8 @@
         "disableTitle": "Turn off two-step verification?",
         "disableDescription": "Once it’s off, anyone who knows your password can sign in to your account, and your backup codes stop working.",
         "disabled": "Two-step verification is off",
-        "failed": "That didn’t work. Please try again later."
+        "failed": "That didn’t work. Please try again later.",
+        "passwordRequired": "Turning on two-factor authentication requires your password. This account has no password yet, so set one above first."
       },
       "backupCodes": {
         "label": "Backup codes",
@@ -553,6 +602,26 @@
         "revokeAllConfirm": "Sign out all",
         "revokedAll": "All launchers signed out",
         "failed": "That didn’t work. Try again later."
+      },
+      "external": {
+        "title": "Linked accounts",
+        "description": "Once linked, you can sign in to this site with a third-party account. If two-factor authentication is on, you’ll still need a code. Linking and unlinking don’t affect your password or passkeys.",
+        "linked": "Linked",
+        "linkedAt": "Linked on {time}",
+        "notLinked": "Not linked",
+        "disabled": "Turned off",
+        "disabledHint": "Linked on {time}. This site has turned off this sign-in method, so you can’t use it for now.",
+        "link": "Link",
+        "unlink": "Unlink",
+        "unlinkTitle": "Unlink {provider}?",
+        "unlinkDescription": "You won’t be able to sign in with this {provider} account afterwards. You can link it again later.",
+        "unlinkConfirm": "Unlink {provider}",
+        "unlinked": "Unlinked {provider}",
+        "linkedNotice": "Linked. You can now sign in with it.",
+        "reauthTitle": "Sign in again",
+        "reauthDescription": "For your security, you need to have signed in within the last 10 minutes to link an account. You’ll come back to this page after signing in.",
+        "reauth": "Sign in again",
+        "failed": "That didn’t work. Please try again later."
       }
     },
     "closet": {
@@ -1621,7 +1690,9 @@
         "upgradedToast": "Upgraded {name} to {version}",
         "drop": "Drop the plugin package here",
         "dropHint": "The .tgz file made by nextskin-plugin build, up to 10 MiB.",
-        "failed": "Couldn't check this plugin package. Try again later."
+        "failed": "Couldn't check this plugin package. Try again later.",
+        "removedLogins": "The new version removes these sign-in methods: {list}. Existing links are kept, but those users can’t sign in with them for now.",
+        "removedLogin": "{name} ({count, plural, one {# link} other {# links}})"
       },
       "uninstall": {
         "title": "Uninstall",
@@ -1630,7 +1701,15 @@
         "dialogTitle": "Uninstall {name}?",
         "dialogHint": "The plugin's tables, stored data and settings will be deleted and can't be restored. To keep the data, disabling is enough.",
         "confirm": "Uninstall",
-        "done": "Uninstalled {name}"
+        "done": "Uninstalled {name}",
+        "bindings": "{bindings, plural, one {# linked account} other {# linked accounts}} from this plugin will also be deleted, and those users will have to link again. {stranded, plural, =0 {} one {# of them has no other way to sign in and will have to reset their password.} other {# of them have no other way to sign in and will have to reset their password.}}"
+      },
+      "logins": {
+        "title": "Third-party sign-in",
+        "description": "Paste the callback URL below into the app settings on the provider exactly as shown. If you change the site URL, the callback URL changes too and has to be updated on the provider.",
+        "callback": "Callback URL",
+        "bindings": "{count, plural, =0 {No linked accounts} one {# linked account} other {# linked accounts}}",
+        "notHttps": "The site URL is not HTTPS. The provider sends the authorization code to this site through the callback URL, and without encryption it can be intercepted; Google and Microsoft also reject non-HTTPS callback URLs. Change the site URL to HTTPS in Settings first."
       }
     }
   },
@@ -2024,7 +2103,7 @@
         "unknown_permission": "Unknown permission value, imported as a regular user",
         "invalid_register_at": "Invalid registration time, set to the import time",
         "unsupported_locale": "Unsupported language, cleared",
-        "unrecognized_password": "Unrecognized password hash, password not imported (can be reset)",
+        "unrecognized_password": "Unrecognized password hash, password not imported (can be reset; accounts created with a third-party sign-in can use it, see the migration guide)",
         "authme_password": "AuthMe password hash, imported as is; enable the official “AuthMe passwords” plugin so users can sign in with their old password (it is rehashed on sign-in)",
         "plugin_password": "Password hash not recognized by the core, imported as is; users can sign in with their old password once a password plugin that recognizes this format is enabled, or reset it",
         "avatar_missing": "Avatar texture missing, cleared",

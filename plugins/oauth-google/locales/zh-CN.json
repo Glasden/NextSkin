@@ -1,0 +1,19 @@
+{
+  "plugin": {
+    "name": "Google 登录",
+    "description": "让用户用 Google 账号登录本站或绑定已有账号。Google 对登录按钮的样式有品牌要求，本站按钮使用像素图标。"
+  },
+  "login": {
+    "google": "Google"
+  },
+  "settings": {
+    "clientId": {
+      "label": "客户端 ID",
+      "help": "在 Google Cloud 控制台的“凭据”里创建 OAuth 客户端，应用类型选“Web 应用”，把应用的客户端 ID 填在这里。回调地址显示在这个页面上，要原样填进应用的设置。"
+    },
+    "clientSecret": {
+      "label": "客户端密钥",
+      "help": "应用的客户端密钥，保存后不再显示。"
+    }
+  }
+}

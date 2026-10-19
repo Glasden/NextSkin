@@ -59,6 +59,7 @@ export default defineConfig<{ pluginHost: boolean }>({
         'admin.spec.ts',
         'setup.spec.ts',
         'plugins.spec.ts',
+        'external-login.spec.ts',
       ],
     },
     {
@@ -66,11 +67,17 @@ export default defineConfig<{ pluginHost: boolean }>({
       use: { ...devices['Desktop Chrome'], baseURL: accountSite },
       testMatch: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts', 'admin.spec.ts'],
     },
-    { name: 'plugins', use: { ...devices['Desktop Chrome'], baseURL: pluginsSite }, testMatch: ['plugins.spec.ts'] },
+    {
+      name: 'plugins',
+      workers: 1,
+      use: { ...devices['Desktop Chrome'], baseURL: pluginsSite },
+      testMatch: ['plugins.spec.ts', 'external-login.spec.ts'],
+    },
     {
       name: 'plugins-host',
+      workers: 1,
       use: { ...devices['Desktop Chrome'], baseURL: pluginsHostSite, pluginHost: true },
-      testMatch: ['plugins.spec.ts'],
+      testMatch: ['plugins.spec.ts', 'external-login.spec.ts'],
     },
     // 每个用例自己指定站点（两个未初始化的服务），用例之间不共享状态
     { name: 'setup', use: { ...devices['Desktop Chrome'] }, testMatch: ['setup.spec.ts'] },

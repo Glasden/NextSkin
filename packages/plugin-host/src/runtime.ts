@@ -208,6 +208,38 @@ export function loadPlugin(options: {
         if (typeof result !== 'boolean') throw new Error('passwordHasher 的 verify 必须返回布尔值')
         return result
       }
+      case 'login.authorize': {
+        const provider = definition.providers?.login?.find((item) => item.id === call.provider) as
+          { authorizeUrl(args: Record<string, unknown>): Promise<unknown> } | undefined
+        if (!provider) throw new Error(`插件没有 login ${call.provider}`)
+        const url = await provider.authorizeUrl({
+          state: call.state,
+          codeChallenge: call.codeChallenge,
+          redirectUri: call.redirectUri,
+          ctx: buildContext(context, signal, false),
+        })
+        if (typeof url !== 'string') throw new Error('login 的 authorizeUrl 必须返回字符串')
+        return url
+      }
+      case 'login.exchange': {
+        const provider = definition.providers?.login?.find((item) => item.id === call.provider) as
+          { exchange(args: Record<string, unknown>): Promise<unknown> } | undefined
+        if (!provider) throw new Error(`插件没有 login ${call.provider}`)
+        const identity = (await provider.exchange({
+          query: Object.freeze({ ...call.query }),
+          codeVerifier: call.codeVerifier,
+          redirectUri: call.redirectUri,
+          ctx: buildContext(context, signal, false),
+        })) as Record<string, unknown> | null
+        // 只带回约定的字段，插件多给的不跨进程；核心再逐项校验
+        if (typeof identity !== 'object' || identity === null) throw new Error('login 的 exchange 必须返回对象')
+        return {
+          subject: identity.subject,
+          email: identity.email,
+          emailVerified: identity.emailVerified,
+          displayName: identity.displayName,
+        }
+      }
       case 'migrate': {
         const migration = definition.migrations?.[call.name]
         if (!migration) throw new Error(`插件没有迁移 ${call.name}`)

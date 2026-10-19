@@ -23,11 +23,12 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ProfilePage() {
   const user = await requireUser('/user/profile')
   const { core } = await getServer()
-  const [profile, avatar, impact, mailConfigured, locale, t, format] = await Promise.all([
+  const [profile, avatar, impact, mailConfigured, hasPassword, locale, t, format] = await Promise.all([
     core.users.profile(user.uid),
     core.users.avatar(user.uid),
     core.users.deletionImpact(user.uid),
     core.mail.configured(),
+    core.externalLogin.hasPassword(user.uid),
     getLocale(),
     getTranslations('user.profile'),
     getFormatter(),
@@ -118,18 +119,40 @@ export default async function ProfilePage() {
             <ResendVerificationButton email={profile.email} />
           </div>
         )}
-        <EmailForm mailConfigured={mailConfigured} />
+        {hasPassword ? (
+          <EmailForm mailConfigured={mailConfigured} />
+        ) : (
+          <PasswordRequired>{t('email.passwordRequired')}</PasswordRequired>
+        )}
       </Section>
 
       <Section id="delete" title={t('delete.title')} description={t('delete.description')}>
         {admin ? (
           <p className="text-sm text-pretty text-text">{t('delete.adminBlocked')}</p>
-        ) : (
+        ) : hasPassword ? (
           <div>
             <DeleteAccountDialog players={impact.players} oauthClients={impact.oauthClients} score={profile.score} />
           </div>
+        ) : (
+          <PasswordRequired>{t('delete.passwordRequired')}</PasswordRequired>
         )}
       </Section>
+    </div>
+  )
+}
+
+/**
+ * 经第三方登录注册、还没有密码的账号（ADR-0034）：改邮箱、删除账号都要核对密码，先去安全页设置密码，
+ * 不另做一套不用密码的确认流程
+ */
+async function PasswordRequired({ children }: { children: string }) {
+  const t = await getTranslations('user.profile')
+  return (
+    <div className="flex flex-col items-start gap-2 rounded-sm border border-dashed border-border-strong px-4 py-4">
+      <p className="text-sm text-pretty text-text-muted">{children}</p>
+      <span className="text-sm">
+        <Link render={<NextLink href="/user/security#password" />}>{t('setPassword')}</Link>
+      </span>
     </div>
   )
 }

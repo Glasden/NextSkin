@@ -1,0 +1,28 @@
+{
+  "name": "@nextskin/plugin-oauth-microsoft",
+  "version": "1.0.0",
+  "private": true,
+  "description": "用个人 Microsoft 账号登录或绑定已有账号（官方插件，ADR-0034）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./official": "./src/official.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "nextskin": {
+    "id": "oauth-microsoft"
+  },
+  "dependencies": {
+    "@nextskin/plugin-sdk": "workspace:*",
+    "@nextskin/oauth-client": "workspace:*"
+  },
+  "devDependencies": {
+    "@nextskin/plugin-host": "workspace:*",
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

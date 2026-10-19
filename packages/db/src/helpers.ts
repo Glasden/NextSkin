@@ -474,6 +474,28 @@ export function authStringType<DB>(db: Kysely<DB>, length: number, options: { as
     : sql`varchar(${sql.lit(length)})`
 }
 
+/**
+ * 把已有的 text 列改成 `authStringType`，好给它建索引（MySQL 不能直接给 text 建索引）。SQLite 上两者都是 text，什么也不做。
+ * 只支持非空列；已有的值超长或（ascii 时）含非 ASCII 字符，MySQL 和 PG 都会报错，不会静默截断
+ */
+export async function alterToAuthStringColumn<DB>(
+  db: Kysely<DB>,
+  table: string,
+  column: string,
+  length: number,
+  options: { ascii?: boolean } = {},
+): Promise<void> {
+  const dialect = dialectOf(db)
+  if (dialect === 'sqlite') return
+  const type = authStringType(db, length, options)
+  // MySQL 的 MODIFY COLUMN 会重写整列的定义，NOT NULL 要重新写上
+  await (
+    dialect === 'mysql'
+      ? sql`alter table ${sql.id(table)} modify column ${sql.id(column)} ${type} not null`
+      : sql`alter table ${sql.id(table)} alter column ${sql.id(column)} type ${type}`
+  ).execute(db)
+}
+
 export function readAuthDate(value: unknown): IsoTimestamp {
   if (value instanceof Date) return toIsoTimestamp(value)
   if (typeof value === 'string' && isIsoTimestamp(value)) return value

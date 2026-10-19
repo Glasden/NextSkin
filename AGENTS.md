@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-正在做插件系统第一版的第三步（ADR-0033）：passwordHasher 已经落地，第三方登录的 ADR-0034 已采纳、还没有实现。各领域已经落地和还没做的部分逐项列在 `PROGRESS.md`；判断某个功能有没有、做到哪一步，先看它。
+插件系统第一版（ADR-0033）的三步都已落地，最后落地的是第三方登录（ADR-0034）；接下来发布插件 SDK 1.0。各领域已经落地和还没做的部分逐项列在 `PROGRESS.md`；判断某个功能有没有、做到哪一步，先看它。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
@@ -75,6 +75,7 @@ nextskin 启动器（进程监管 + 命令行）
 | `packages/plugin-cli` | `nextskin-plugin build`：把插件打成插件包（manifest、单文件的服务端代码、文案），插件作者和测试共用 |
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |
 | `packages/importer` | 从 BS v6 只读导入（ADR-0031）：导入引擎、命令行和网页导入服务（`apps/web` 创建、注入 Hono），迁移指南在 `MIGRATION.md`，该目录有自己的 AGENTS.md |
+| `packages/oauth-client` | 几个 OAuth 官方插件共用的代码（拼授权地址、换令牌、读 ID 令牌），不发布，打进各插件的单文件；第三方插件不能依赖它（ADR-0034） |
 | `plugins/*` | 官方插件，只用公开 API 编写，随站点发布、在后台启用；也是 ADR-0033 的参考插件 |
 | `tests/contract` | 协议契约用例：从 BS v6 录制，回放比较（见该目录 README） |
 | `docs/adr` | 架构决策记录 |

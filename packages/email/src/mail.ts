@@ -180,6 +180,23 @@ export function renderEmailChanged(input: NoticeMailInput): RenderedMail {
   }
 }
 
+/** 账号绑定了第三方账号的通知（ADR-0034）：账号被盗用时，原主人至少能知道。不带链接 */
+export function renderExternalAccountLinked(input: NoticeMailInput & { provider: string }): RenderedMail {
+  const t = createTranslator(input.locale)
+  const site = { siteName: input.siteName }
+  const subject = t('mail.externalAccountLinked.subject', { ...site, provider: input.provider })
+  const greeting = t('mail.greeting', { nickname: input.nickname })
+  const body = t('mail.externalAccountLinked.body', { provider: input.provider })
+  const footer = t('mail.footer', site)
+  const content = markup`<p style="${paragraph()}">${greeting}</p>
+<p style="${paragraph({ margin: 0 })}">${body}</p>`
+  return {
+    subject,
+    html: layout({ locale: input.locale, subject, siteName: input.siteName, preview: body, content, footer }),
+    text: [greeting, body, footer].join('\n\n'),
+  }
+}
+
 /** 后台的测试邮件：管理员确认 SMTP 设置能用（ADR-0028） */
 export function renderTestEmail(input: NoticeMailInput): RenderedMail {
   const t = createTranslator(input.locale)

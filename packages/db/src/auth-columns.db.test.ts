@@ -1,6 +1,8 @@
 import { type ColumnType, type Kysely } from 'kysely'
 import { afterAll, beforeAll, expect, test } from 'vitest'
+import { sql } from 'kysely'
 import {
+  alterToAuthStringColumn,
   authBooleanType,
   authDateType,
   authJsonType,
@@ -16,6 +18,7 @@ import {
 import { createTestDatabase, type TestDatabase } from './testing.ts'
 
 interface Schema {
+  auth_keys: { id: number; provider: string; subject: string }
   auth_values: {
     date: ColumnType<string | Date, string | Date>
     flag: ColumnType<boolean | 0 | 1, boolean | 0 | 1>
@@ -116,4 +119,33 @@ test('认证转换接受合法值并拒绝错误类型和非法日期', () => {
     expect(readAuthBoolean(input)).toBe(output)
   for (const invalid of [null, undefined, '0', '1', 2, -1, NaN, {}])
     expect(() => readAuthBoolean(invalid)).toThrow(TypeError)
+})
+
+test('text 列改成 authStringType 之后能建唯一索引，原有的值和 NOT NULL 都保留', async () => {
+  await createTable(db, 'auth_keys')
+    .addColumn('id', 'integer', (c) => c.primaryKey())
+    .addColumn('provider', 'text', (c) => c.notNull())
+    .addColumn('subject', 'text', (c) => c.notNull())
+    .execute()
+  await db.insertInto('auth_keys').values({ id: 1, provider: 'credential', subject: '1' }).execute()
+  await alterToAuthStringColumn(db, 'auth_keys', 'provider', 255, { ascii: true })
+  await alterToAuthStringColumn(db, 'auth_keys', 'subject', 255, { ascii: true })
+  await db.schema
+    .createIndex('auth_keys_provider_subject_uidx')
+    .on('auth_keys')
+    .columns(['provider', 'subject'])
+    .unique()
+    .execute()
+  expect(await db.selectFrom('auth_keys').selectAll().execute()).toEqual([
+    { id: 1, provider: 'credential', subject: '1' },
+  ])
+  await db.insertInto('auth_keys').values({ id: 2, provider: 'plugin:oauth-github:github', subject: '1' }).execute()
+  await expect(
+    db.insertInto('auth_keys').values({ id: 3, provider: 'plugin:oauth-github:github', subject: '1' }).execute(),
+  ).rejects.toThrow()
+  // 区分大小写：MySQL 上是 ascii_bin
+  await db.insertInto('auth_keys').values({ id: 4, provider: 'plugin:oauth-github:GitHub', subject: '1' }).execute()
+  await expect(
+    sql`insert into auth_keys (id, provider, subject) values (5, ${'x'}, null)`.execute(db),
+  ).rejects.toThrow()
 })

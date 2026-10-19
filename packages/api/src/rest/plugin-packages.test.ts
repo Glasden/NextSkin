@@ -188,7 +188,11 @@ test('卸载安装的插件和重启 host 都写审计', async () => {
   expect(env.core.plugins.get('probe')).toBeUndefined()
   expect((await audits()).map((row) => ({ ...row, details: JSON.parse(row.details) as unknown }))).toEqual([
     { action: 'plugin.restartHost', ip: '192.0.2.10', details: {} },
-    { action: 'plugin.uninstall', ip: '192.0.2.10', details: { plugin: 'probe', version: '1.0.0', wasEnabled: false } },
+    {
+      action: 'plugin.uninstall',
+      ip: '192.0.2.10',
+      details: { plugin: 'probe', version: '1.0.0', wasEnabled: false, bindings: 0 },
+    },
   ])
 })
 

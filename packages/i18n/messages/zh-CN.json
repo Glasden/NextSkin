@@ -32,6 +32,10 @@
       "subject": "你在 {siteName} 的账号邮箱已更改",
       "body": "你的账号邮箱已经更改。如果不是你本人操作，请联系站点管理员。"
     },
+    "externalAccountLinked": {
+      "subject": "你在 {siteName} 的账号绑定了 {provider}",
+      "body": "你的账号刚刚绑定了一个 {provider} 账号，以后可以用它登录。如果不是你本人操作，请到「登录与安全」解除绑定并修改密码，再联系站点管理员。"
+    },
     "testEmail": {
       "subject": "{siteName} 的测试邮件",
       "body": "这是一封测试邮件。收到它，说明本站的邮件设置是对的。"
@@ -125,7 +129,20 @@
     "plugin_busy": "这个插件正在被另一个操作改动（安装、升级、启用、卸载或卸载后的清理），或者刚被别人改过。刷新页面看看现在的状态再试。",
     "plugin_required_by": "已经启用的 {plugin} 依赖这个插件（{range}）。先停用 {plugin}，或者换一个版本在这个范围里的包。",
     "plugin_official": "官方插件不能卸载，只能停用。",
-    "dead_letter_not_found": "找不到这个失败的任务，可能已经重试过或删掉了。"
+    "dead_letter_not_found": "找不到这个失败的任务，可能已经重试过或删掉了。",
+    "external_login_not_found": "没有这种登录方式，或者它已经停用了。",
+    "external_login_unavailable": "这种登录方式暂时不能用，请稍后重试，或者改用别的方式登录。",
+    "external_login_failed": "没能从第三方取得你的账号信息，请重试。",
+    "external_login_cancelled": "已取消：你没有在第三方同意授权。",
+    "external_login_expired": "这次操作已经过期，请重新开始。",
+    "external_email_taken": "这个邮箱已经注册过。请先用原来的方式登录，再到「登录与安全」里绑定这个第三方账号。",
+    "identity_bound_elsewhere": "这个第三方账号已经绑定了本站的另一个账号。",
+    "identity_already_bound": "这个第三方账号刚刚注册过，请直接用它登录。",
+    "already_bound": "你已经绑定过这家的账号了，要换一个请先解绑。",
+    "last_login_method": "这是你唯一的登录方式，解绑之后就登录不了了。请先设置密码或添加通行密钥。",
+    "external_account_not_found": "找不到这个绑定，可能已经解绑了。",
+    "password_already_set": "已经设置过密码了，要换密码请用「修改密码」。",
+    "session_not_fresh": "为了账号安全，请重新登录之后再操作。"
   },
   "score": {
     "reasons": {
@@ -180,7 +197,8 @@
       "failed": "没能注册，请稍后重试。",
       "notInstalled": "站点还没有安装",
       "notInstalledHint": "安装完成之前不能注册。",
-      "openSetup": "我是服主，去安装"
+      "openSetup": "我是服主，去安装",
+      "or": "或者"
     },
     "forgotPassword": {
       "title": "找回密码",
@@ -239,6 +257,23 @@
       "invalidLink": "这个链接已经失效或用过了。需要的话，请在个人资料里重新修改邮箱。",
       "profile": "前往个人资料",
       "failed": "没能修改邮箱，请稍后重试。"
+    },
+    "external": {
+      "signIn": "用 {provider} 登录",
+      "signUp": "用 {provider} 注册",
+      "failed": "没能跳转到 {provider}，请稍后重试。"
+    },
+    "complete": {
+      "title": "完成注册",
+      "description": "你用 {provider} 账号「{name}」登录，本站还没有和它绑定的账号。确认下面的信息就能建好账号，以后用 {provider} 直接登录。",
+      "descriptionNoName": "你用 {provider} 账号登录，本站还没有和它绑定的账号。确认下面的信息就能建好账号，以后用 {provider} 直接登录。",
+      "emailVerified": "{provider} 确认过这个邮箱。改成别的邮箱的话，注册后我们会往新邮箱发一封验证邮件。",
+      "emailVerifiedNoMail": "{provider} 确认过这个邮箱。改成别的邮箱的话，新邮箱算作未验证。",
+      "emailMissing": "{provider} 没有提供邮箱。请填一个能收信的邮箱，找回密码要用。",
+      "submit": "注册并登录",
+      "hasAccount": "已经有本站的账号了？<link>先用原来的方式登录</link>，再到「登录与安全」绑定 {provider}。",
+      "expiredTitle": "这次注册已经过期",
+      "expired": "从第三方回来后 30 分钟内要完成注册，请重新用第三方账号登录。"
     }
   },
   "user": {
@@ -311,7 +346,8 @@
             "title": "两步验证",
             "body": "开了两步验证的账号，在密码后面直接接上验证器上的 6 位数字。例如密码是 hunter2、验证码是 123456，就填 hunter2123456。"
           }
-        }
+        },
+        "passwordRequired": "启动器里要用邮箱和密码登录。你的账号还没有密码，请先到<link>登录与安全</link>设置密码。"
       }
     },
     "players": {
@@ -421,7 +457,8 @@
         "pendingTitle": "确认邮件已发出",
         "pending": "确认邮件已经发到 {email}，链接 1 小时内有效。点开链接之前，登录和找回密码仍然用现在的邮箱。",
         "changed": "邮箱已改为 {email}",
-        "failed": "没能修改邮箱，请稍后重试。"
+        "failed": "没能修改邮箱，请稍后重试。",
+        "passwordRequired": "修改邮箱要核对密码。这个账号还没有密码，请先设置密码。"
       },
       "delete": {
         "title": "删除账号",
@@ -436,8 +473,10 @@
         "impactSecurity": "密码、两步验证、通行密钥，以及所有设备上的登录",
         "password": "当前密码",
         "confirm": "永久删除账号",
-        "failed": "没能删除账号，请稍后重试。"
-      }
+        "failed": "没能删除账号，请稍后重试。",
+        "passwordRequired": "删除账号要核对密码。这个账号还没有密码，请先设置密码。"
+      },
+      "setPassword": "去设置密码"
     },
     "security": {
       "title": "登录与安全",
@@ -450,7 +489,9 @@
         "off": "未开启",
         "none": "未添加",
         "passkeyCount": "{count, plural, other {# 个}}",
-        "launcherCount": "{count, plural, other {# 个}}"
+        "launcherCount": "{count, plural, other {# 个}}",
+        "passwordNotSet": "未设置",
+        "externalCount": "{count, plural, other {已绑定 # 个}}"
       },
       "password": {
         "title": "密码",
@@ -461,7 +502,14 @@
         "changed": "密码已修改，其他设备上的登录已退出",
         "wrong": "当前密码不对，请检查后重试。",
         "tooManyAttempts": "尝试次数太多了，请过几分钟再试。",
-        "failed": "没能修改密码，请稍后重试。"
+        "failed": "没能修改密码，请稍后重试。",
+        "setDescription": "这个账号是用第三方账号注册的，还没有密码。设置密码后，也能用邮箱和密码登录，还能在启动器里登录。",
+        "setSubmit": "设置密码",
+        "setDone": "密码已设置",
+        "setFailed": "没能设置密码，请稍后重试。",
+        "reauthTitle": "需要重新登录",
+        "reauthDescription": "为了安全，设置密码前要在 10 分钟内登录过。重新登录后会回到这一页。",
+        "reauth": "重新登录"
       },
       "twoFactor": {
         "title": "两步验证",
@@ -495,7 +543,8 @@
         "disableTitle": "关闭两步验证？",
         "disableDescription": "关闭后，只要知道密码就能登录你的账号，备用码也会一起作废。",
         "disabled": "两步验证已关闭",
-        "failed": "没有成功，请稍后重试。"
+        "failed": "没有成功，请稍后重试。",
+        "passwordRequired": "开启两步验证要核对密码。这个账号还没有密码，请先在上面设置密码。"
       },
       "backupCodes": {
         "label": "备用码",
@@ -552,6 +601,26 @@
         "revokeAllDescription": "所有启动器都要重新输入密码登录。已经进了服务器的游戏不受影响，网页上的登录也不受影响。",
         "revokeAllConfirm": "全部退出",
         "revokedAll": "已退出全部启动器登录",
+        "failed": "没有成功，请稍后重试。"
+      },
+      "external": {
+        "title": "第三方账号",
+        "description": "绑定之后，可以用第三方账号直接登录本站，开着两步验证的话照样要输入验证码。绑定和解绑不影响密码和通行密钥。",
+        "linked": "已绑定",
+        "linkedAt": "绑定于 {time}",
+        "notLinked": "未绑定",
+        "disabled": "已停用",
+        "disabledHint": "绑定于 {time}。站点停用了这种登录方式，暂时不能用它登录。",
+        "link": "绑定",
+        "unlink": "解绑",
+        "unlinkTitle": "解绑 {provider}？",
+        "unlinkDescription": "解绑后不能再用这个 {provider} 账号登录本站，以后可以重新绑定。",
+        "unlinkConfirm": "解绑 {provider}",
+        "unlinked": "已解绑 {provider}",
+        "linkedNotice": "绑定好了，以后可以用它直接登录。",
+        "reauthTitle": "需要重新登录",
+        "reauthDescription": "为了安全，绑定第三方账号前要在 10 分钟内登录过。重新登录后会回到这一页。",
+        "reauth": "重新登录",
         "failed": "没有成功，请稍后重试。"
       }
     },
@@ -1621,7 +1690,9 @@
         "upgradedToast": "已把{name}升级到 {version}",
         "drop": "把插件包拖到这里",
         "dropHint": "nextskin-plugin build 生成的 .tgz 文件，最大 10 MiB。",
-        "failed": "没能检查这个插件包，稍后再试。"
+        "failed": "没能检查这个插件包，稍后再试。",
+        "removedLogins": "新版本去掉了这些登录方式：{list}。已有的绑定会保留，但这些用户暂时不能用它们登录。",
+        "removedLogin": "{name}（{count, plural, other {# 个绑定}}）"
       },
       "uninstall": {
         "title": "卸载",
@@ -1630,7 +1701,15 @@
         "dialogTitle": "卸载{name}？",
         "dialogHint": "插件的数据表、存的数据和设置都会删掉，不能恢复。要保留数据，停用就够了。",
         "confirm": "卸载",
-        "done": "已卸载{name}"
+        "done": "已卸载{name}",
+        "bindings": "它名下的 {bindings, plural, other {# 个}}第三方账号绑定会一起删除，这些用户以后要重新绑定。{stranded, plural, =0 {} other {其中 # 个用户除此之外没有别的登录方式，卸载后只能用找回密码登录。}}"
+      },
+      "logins": {
+        "title": "第三方登录",
+        "description": "在第三方的应用设置里，把下面的回调地址原样填进去。改了站点地址的话，回调地址也跟着变，要回第三方那边重新填。",
+        "callback": "回调地址",
+        "bindings": "{count, plural, =0 {还没有绑定} other {已绑定 # 个账号}}",
+        "notHttps": "站点地址不是 HTTPS。第三方把授权码经过回调地址交给本站，不加密就可能被别人截获；Google、Microsoft 也不接受 HTTPS 以外的回调地址。请先在设置里把站点地址改成 HTTPS。"
       }
     }
   },
@@ -2024,7 +2103,7 @@
         "unknown_permission": "权限值不认识，按普通用户导入",
         "invalid_register_at": "注册时间无效，取导入时刻",
         "unsupported_locale": "语言不受支持，置空",
-        "unrecognized_password": "密码哈希认不出，没有导入密码（可以用找回密码重设）",
+        "unrecognized_password": "密码哈希认不出，没有导入密码（可以用找回密码重设；经第三方登录注册的，可以用第三方登录，见迁移指南）",
         "authme_password": "密码是 AuthMe 的格式，原样导入；启用官方插件“AuthMe 密码”后能用旧密码登录，登录后换成新算法",
         "plugin_password": "密码哈希核心认不出，原样导入；装上认得这种格式的密码插件后能用旧密码登录，否则用找回密码重设",
         "avatar_missing": "头像的材质不存在，置空",

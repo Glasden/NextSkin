@@ -8,6 +8,7 @@ import { Key } from 'pixelarticons/react/Key.js'
 import { useState } from 'react'
 import { authErrorCode, getJson, postJson } from '../../../lib/api-client'
 import { useWebAuthnSupported, webAuthnFailure } from '../../../lib/webauthn'
+import { signInAgain } from './reauth'
 
 export interface PasskeyItem {
   id: string
@@ -135,9 +136,7 @@ function AddPasskeyDialog({ disabled }: { disabled: boolean }) {
 
   async function reauthenticate() {
     setPending(true)
-    await postJson('/api/auth/sign-out', {})
-    // 整页跳转，丢掉客户端缓存的已登录页面
-    window.location.assign(`/sign-in?next=${encodeURIComponent('/user/security')}`)
+    await signInAgain()
   }
 
   return (

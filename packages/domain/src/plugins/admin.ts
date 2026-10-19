@@ -4,6 +4,7 @@
  * 只有超级管理员能做（`plugins.manage`）：安装、启用插件等于在服务器上运行它的代码。
  */
 import {
+  countRows,
   isUniqueViolation,
   toIsoTimestamp,
   transactionWithRetry,
@@ -23,6 +24,7 @@ import { highRiskCapabilities, type Capability, type PluginManifest } from '@nex
 import type { Kysely, Transaction } from 'kysely'
 import { can } from '../access/permissions.ts'
 import type { AdminActor } from '../admin/types.ts'
+import { clearExternalLoginState, type ExternalLogin } from '../auth/external-login.ts'
 import { audit } from '../audit/write.ts'
 import { DomainError } from '../errors.ts'
 import { isValidCron } from '../jobs/schedules.ts'
@@ -47,10 +49,22 @@ export interface PluginSummary {
   packageMissing: boolean
 }
 
+/** 插件的一个 login Provider 和它名下的绑定数（ADR-0034） */
+export interface PluginLoginBindings {
+  providerId: string
+  /** 插件的文案键 */
+  label: string
+  bindings: number
+}
+
 export interface PluginDetail extends PluginSummary {
   manifest: PluginManifest
   /** 安装界面要醒目提示的：高风险能力，以及接触明文密码、第三方身份的 Provider */
   highRisk: readonly string[]
+  /** 回调地址由页面按站点地址拼（externalCallbackPath） */
+  logins: readonly PluginLoginBindings[]
+  /** 卸载之后没有任何登录方式的用户数，卸载确认里列出；官方插件不能卸载，总是 0 */
+  strandedOnUninstall: number
 }
 
 /** 上传插件包之后、确认安装之前展示给管理员的内容 */
@@ -69,6 +83,8 @@ export interface PluginPackagePreview {
     addedCapabilities: readonly string[]
     addedNetwork: readonly string[]
     addedHighRisk: readonly string[]
+    /** 新版本去掉的 login Provider：绑定保留，这些用户暂时不能用它登录（ADR-0034） */
+    removedLogins: readonly PluginLoginBindings[]
   } | null
 }
 
@@ -87,7 +103,12 @@ function highRisk(manifest: PluginManifest): string[] {
 
 const clip = (text: string) => [...text].slice(0, MAX_ERROR_LENGTH).join('')
 
-export function createPluginAdmin(options: { db: Kysely<CoreDatabase>; plugins: PluginSystem; now: () => Date }) {
+export function createPluginAdmin(options: {
+  db: Kysely<CoreDatabase>
+  plugins: PluginSystem
+  externalLogin: Pick<ExternalLogin, 'strandedByUninstall'>
+  now: () => Date
+}) {
   const { db, plugins, now } = options
   const timestamp = (): IsoTimestamp => toIsoTimestamp(now())
 
@@ -114,6 +135,19 @@ export function createPluginAdmin(options: { db: Kysely<CoreDatabase>; plugins: 
       .set({ last_error: clip(message), updated_at: timestamp() })
       .where('id', '=', id)
       .execute()
+  }
+
+  async function loginBindings(
+    id: string,
+    providers: PluginManifest['providers']['login'],
+  ): Promise<PluginLoginBindings[]> {
+    return Promise.all(
+      providers.map(async (provider) => ({
+        providerId: provider.id,
+        label: provider.label,
+        bindings: await countRows(db.selectFrom('accounts').where('provider_id', '=', `plugin:${id}:${provider.id}`)),
+      })),
+    )
   }
 
   async function summaries(): Promise<PluginSummary[]> {
@@ -246,6 +280,12 @@ export function createPluginAdmin(options: { db: Kysely<CoreDatabase>; plugins: 
     if (row?.is_enabled === 1) await checkDependencies(db, manifest)
     if (row) await checkDependents(db, manifest.id, manifest.version)
     const old = plugins.get(manifest.id)?.manifest
+    const removedLogins = old
+      ? await loginBindings(
+          manifest.id,
+          old.providers.login.filter((item) => !manifest.providers.login.some((next) => next.id === item.id)),
+        )
+      : []
     const preview: PluginPackagePreview = {
       packageHash: sha256Hex(bytes),
       manifest,
@@ -259,6 +299,7 @@ export function createPluginAdmin(options: { db: Kysely<CoreDatabase>; plugins: 
             addedCapabilities: manifest.capabilities.filter((item) => !old?.capabilities.includes(item)),
             addedNetwork: manifest.network.filter((item) => !old?.network.includes(item)),
             addedHighRisk: highRisk(manifest).filter((item) => !old || !highRisk(old).includes(item)),
+            removedLogins,
           }
         : null,
     }
@@ -400,7 +441,17 @@ export function createPluginAdmin(options: { db: Kysely<CoreDatabase>; plugins: 
       await authorizeRead(actor)
       const known = plugin(id)
       const summary = (await summaries()).find((item) => item.id === id)!
-      return { ...summary, manifest: known.manifest, highRisk: highRisk(known.manifest) }
+      const [logins, stranded] = await Promise.all([
+        loginBindings(id, known.manifest.providers.login),
+        known.official ? 0 : options.externalLogin.strandedByUninstall(id),
+      ])
+      return {
+        ...summary,
+        manifest: known.manifest,
+        highRisk: highRisk(known.manifest),
+        logins,
+        strandedOnUninstall: stranded,
+      }
     },
     async hostStatus(actor: AdminActor): Promise<PluginHostStatus> {
       await authorizeRead(actor)
@@ -548,8 +599,9 @@ export function createPluginAdmin(options: { db: Kysely<CoreDatabase>; plugins: 
     },
 
     /**
-     * 卸载安装插件（docs/schema.md、ADR-0033"卸载"）。一个事务里删掉它还没完成的任务、定时任务条目、死信、设置和
-     * 插件表的这一行（KV、迁移记录随之级联删除），并登记清理任务；表和存储里的插件包由清理任务稍后删：
+     * 卸载安装插件（docs/schema.md、ADR-0033"卸载"）。一个事务里删掉它还没完成的任务、定时任务条目、死信、设置、
+     * 它名下的第三方账号绑定（ADR-0034：之后装上来的同 id 插件可能对接的是另一个第三方）和插件表的这一行
+     * （KV、迁移记录随之级联删除），并登记清理任务；表和存储里的插件包由清理任务稍后删：
      * 各实例停掉它、旧的一代做完在途的调用之后。清理任务在表里，进程中途退出也不会丢。官方插件只能停用
      */
     async uninstall(actor: AdminActor, id: string): Promise<void> {
@@ -571,13 +623,20 @@ export function createPluginAdmin(options: { db: Kysely<CoreDatabase>; plugins: 
           await tx.deleteFrom('job_schedules').where('name', 'like', prefix).execute()
           await tx.deleteFrom('failed_jobs').where('name', 'like', prefix).execute()
           await plugins.settingsStore.clear(tx, id)
+          const bindings = await tx.deleteFrom('accounts').where('provider_id', 'like', prefix).executeTakeFirst()
+          await clearExternalLoginState(tx, id)
           await tx.deleteFrom('plugins').where('id', '=', id).execute()
           await plugins.scheduleCleanup(tx, { id, hash: row.package_hash })
           await audit(tx, {
             actor: eventActor,
             action: 'plugin.uninstall',
             subject: { type: 'plugin', id: 0 },
-            details: { plugin: id, version: row.version, wasEnabled: row.is_enabled === 1 },
+            details: {
+              plugin: id,
+              version: row.version,
+              wasEnabled: row.is_enabled === 1,
+              bindings: Number(bindings.numDeletedRows),
+            },
             ip: actor.ip,
             now: timestamp(),
           })

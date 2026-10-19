@@ -1,9 +1,12 @@
 import { readAuthBoolean, readAuthDate, type IsoTimestamp, type CoreDatabase, type UserRole } from '@nextskin/db'
+import { isAPIError } from 'better-auth/api'
+import { DomainError } from '../errors.ts'
 import type { Kysely } from 'kysely'
 import type { MailService } from '../mail/service.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { AUTH_BASE_PATH, CLIENT_IP_HEADER, createAuth, type Auth } from './auth.ts'
 import { normalizeClientAuthentication } from './client-authentication.ts'
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './password-policy.ts'
 import type { PluginPasswordVerifier } from './password.ts'
 import { withoutSerialUnsafeMetadata } from './serial-safety.ts'
 
@@ -156,6 +159,66 @@ export function createAuthService(options: AuthServiceOptions) {
         })
       }
       return auth.handler(await normalizeClientAuthentication(request, AUTH_BASE_PATH, registeredAuthMethod))
+    },
+
+    /**
+     * 第三方登录之后签发会话（ADR-0034）。开了两步验证时没有会话，只有第二步的挑战 Cookie，页面接着去 /sign-in/two-factor。
+     * headers 要带上请求里的 Cookie："信任这台设备"的 Cookie 在里面
+     */
+    async createExternalSession(input: {
+      uid: number
+      headers: Headers
+      clientIp: string
+      requestRoot: string
+    }): Promise<{ cookies: string[]; twoFactor: boolean }> {
+      const auth = await instance(input.requestRoot)
+      if (!auth) throw new Error('site_url_required')
+      const headers = new Headers(input.headers)
+      headers.set(CLIENT_IP_HEADER, input.clientIp)
+      const result = await auth.api.externalSignIn({ body: { uid: input.uid }, headers, returnHeaders: true })
+      return { cookies: result.headers.getSetCookie(), twoFactor: result.response.twoFactorRedirect }
+    },
+
+    /** 当前会话是不是刚登录的（`session.freshAge`）：绑定第三方账号、设置密码之前检查 */
+    async isFreshSession(headers: Headers, requestRoot: string): Promise<boolean> {
+      headers = new Headers(headers)
+      headers.delete(CLIENT_IP_HEADER)
+      const auth = await instance(requestRoot)
+      if (!auth) return false
+      try {
+        await auth.api.freshSession({ headers })
+        return true
+      } catch (error) {
+        if (isAPIError(error)) return false
+        throw error
+      }
+    },
+
+    /**
+     * 给没有密码的账号设置密码（经第三方登录建的账号，ADR-0034），用 Better Auth 只能在服务端调用的 setPassword。
+     * 调用方已经确认会话是刚登录的。设好之后和改密码一样发事件
+     */
+    async setPassword(input: { uid: number; headers: Headers; password: string; requestRoot: string }): Promise<void> {
+      const headers = new Headers(input.headers)
+      headers.delete(CLIENT_IP_HEADER)
+      const auth = await instance(input.requestRoot)
+      if (!auth) throw new Error('site_url_required')
+      try {
+        await auth.api.setPassword({ body: { newPassword: input.password }, headers })
+      } catch (error) {
+        if (!isAPIError(error)) throw error
+        const code = (error.body as { code?: unknown } | undefined)?.code
+        if (code === 'PASSWORD_TOO_SHORT') throw new DomainError('password_too_short', { min: MIN_PASSWORD_LENGTH })
+        if (code === 'PASSWORD_TOO_LONG') throw new DomainError('password_too_long', { max: MAX_PASSWORD_LENGTH })
+        if (code === 'PASSWORD_ALREADY_SET') throw new DomainError('password_already_set')
+        throw new DomainError('unauthenticated')
+      }
+      try {
+        await options.onPasswordChanged?.(input.uid)
+      } catch {
+        // 密码已经设好；通知失败不能改变结果，也不能记录用户数据
+        console.warn('[auth] password_event_failed')
+      }
     },
 
     async createSession(input: {

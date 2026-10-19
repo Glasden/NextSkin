@@ -1,4 +1,4 @@
-import type { PluginSettingView, PluginSummary } from '@nextskin/domain'
+import { externalCallbackPath, type PluginSettingView, type PluginSummary } from '@nextskin/domain'
 import { Alert, Badge, Link, Table } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
@@ -7,7 +7,7 @@ import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { pluginDescription, pluginName, pluginTranslator } from '../../../../lib/plugins'
 import { getServer } from '../../../../lib/server'
-import { requireAdmin } from '../../../../lib/session'
+import { getRequestRoot, requireAdmin } from '../../../../lib/session'
 import type { SettingItem, SettingText } from '../../settings/setting-text'
 import { SettingsForm } from '../../settings/settings-form'
 import { DeadLetterActions } from '../dead-letter-actions'
@@ -72,6 +72,12 @@ function Section({ title, description, children }: { title: string; description?
   )
 }
 
+/** 回调地址经过的连接是加密的：https，或者本机调试用的 localhost（第三方也都接受它） */
+function secureSite(siteUrl: string): boolean {
+  const url = new URL(siteUrl)
+  return url.protocol === 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+}
+
 /** 本实例取不到包、也从来没取到过的安装插件：只有插件表里的 id 和版本，能做的只有停用和卸载 */
 async function MissingPackage({ plugin }: { plugin: PluginSummary }) {
   const t = await getTranslations('admin.plugins')
@@ -116,11 +122,12 @@ async function MissingPackage({ plugin }: { plugin: PluginSummary }) {
 export default async function AdminPluginPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const user = await requireAdmin(`/admin/plugins/${id}`, 'plugins.manage')
-  const [{ core }, t, format, locale] = await Promise.all([
+  const [{ core }, t, format, locale, root] = await Promise.all([
     getServer(),
     getTranslations('admin.plugins'),
     getFormatter(),
     getLocale(),
+    getRequestRoot(),
   ])
   const actor = { uid: user.uid, ip: null }
   if (!core.plugins.get(id)) {
@@ -129,12 +136,15 @@ export default async function AdminPluginPage({ params }: { params: Promise<{ id
     if (!summary) notFound()
     return <MissingPackage plugin={summary} />
   }
-  const [detail, settings, deadLetters, host] = await Promise.all([
+  const [detail, settings, deadLetters, host, site] = await Promise.all([
     core.plugins.admin.detail(actor, id),
     core.plugins.admin.settings(actor, id),
     core.plugins.admin.deadLetters(actor, id),
     core.plugins.admin.hostStatus(actor),
+    core.settings.read(['site.url']),
   ])
+  // 回调地址按站点地址拼，和发起登录时交给第三方的完全一致（packages/api 的 external-login.ts）
+  const siteUrl = site['site.url'].replace(/\/+$/, '') || root
   const hostDown = !detail.official && isHostDown(host)
   const name = pluginName(core, id, locale)
   const description = pluginDescription(core, id, locale)
@@ -199,6 +209,28 @@ export default async function AdminPluginPage({ params }: { params: Promise<{ id
         )}
       </Section>
 
+      {detail.logins.length > 0 && (
+        <Section title={t('logins.title')} description={t('logins.description')}>
+          <div className="flex max-w-3xl flex-col gap-3">
+            {!secureSite(siteUrl) && <Alert tone="warning">{t('logins.notHttps')}</Alert>}
+            <ul className="flex flex-col divide-y divide-border rounded-md border border-border bg-surface">
+              {detail.logins.map((login) => (
+                <li key={login.providerId} className="flex flex-col gap-2 px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-base text-text">{translate(login.label)}</span>
+                    <Badge>{t('logins.bindings', { count: login.bindings })}</Badge>
+                  </div>
+                  <span className="text-xs text-text-muted">{t('logins.callback')}</span>
+                  <code className="rounded-sm border border-border bg-surface-sunken px-3 py-2 font-mono text-sm break-all text-text select-all">
+                    {siteUrl + externalCallbackPath(id, login.providerId)}
+                  </code>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Section>
+      )}
+
       <Section title={t('deadLetters.title')} description={t('deadLetters.description')}>
         <Table<'job' | 'attempts' | 'failedAt' | 'error' | 'actions'>
           label={t('deadLetters.tableLabel')}
@@ -241,7 +273,12 @@ export default async function AdminPluginPage({ params }: { params: Promise<{ id
       {!detail.official && (
         <Section title={t('uninstall.title')} description={t('uninstall.description')}>
           <div>
-            <PluginUninstall id={id} name={name} />
+            <PluginUninstall
+              id={id}
+              name={name}
+              bindings={detail.logins.reduce((sum, login) => sum + login.bindings, 0)}
+              stranded={detail.strandedOnUninstall}
+            />
           </div>
         </Section>
       )}

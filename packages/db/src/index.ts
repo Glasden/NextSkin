@@ -15,6 +15,7 @@ export {
   authBooleanType,
   authJsonType,
   authStringType,
+  alterToAuthStringColumn,
   readAuthDate,
   writeAuthDate,
   readAuthBoolean,

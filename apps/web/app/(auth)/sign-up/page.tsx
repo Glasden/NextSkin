@@ -4,10 +4,12 @@ import type { Metadata } from 'next'
 import { getLocale, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { redirect } from 'next/navigation'
-import { pluginTranslator } from '../../../lib/plugins'
+import { externalProviders } from '../../../lib/external-login'
+import { registerFormFields } from '../../../lib/plugins'
 import { getServer } from '../../../lib/server'
 import { getSessionUser } from '../../../lib/session'
 import { AuthHeading } from '../auth-heading'
+import { ExternalLoginButtons } from '../external-login-buttons'
 import { SignUpForm } from './sign-up-form'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -18,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SignUpPage() {
   if (await getSessionUser()) redirect('/user')
   const [{ core }, t, locale] = await Promise.all([getServer(), getTranslations('auth.signUp'), getLocale()])
-  const [settings, mailConfigured, initialized] = await Promise.all([
+  const [settings, mailConfigured, initialized, providers] = await Promise.all([
     core.settings.read([
       'auth.registration.enabled',
       'auth.registration.withPlayerName',
@@ -27,6 +29,7 @@ export default async function SignUpPage() {
     ]),
     core.mail.configured(),
     core.setup.isInitialized(),
+    externalProviders(),
   ])
   const heading = (
     <AuthHeading title={t('title')}>
@@ -50,23 +53,7 @@ export default async function SignUpPage() {
         <Alert>{t('closed')}</Alert>
       </>
     )
-  // 插件加在注册表单上的字段（ADR-0033），文案在服务端翻译好
-  const pluginFields = core.plugins.registerFields().map(({ pluginId, field }) => {
-    const translate = pluginTranslator(core, pluginId, locale)
-    return {
-      pluginId,
-      field: {
-        name: field.name,
-        type: field.type,
-        label: translate(field.label),
-        help: field.help ? translate(field.help) : undefined,
-        placeholder: field.placeholder ? translate(field.placeholder) : undefined,
-        required: field.required,
-        maxLength: field.maxLength,
-        options: field.options?.map((option) => ({ value: option.value, label: translate(option.label) })),
-      },
-    }
-  })
+  const pluginFields = registerFormFields(core, locale)
   return (
     <>
       {heading}
@@ -80,6 +67,15 @@ export default async function SignUpPage() {
         }
         verificationNotice={mailConfigured}
       />
+      {/* 第三方登录（ADR-0034）：没有绑定的账号回来以后进"完成注册"页，和这里一样要填注册信息 */}
+      {providers.length > 0 && (
+        <div className="mt-4 flex flex-col gap-4">
+          <p className="flex items-center gap-3 text-sm text-text-muted before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+            {t('or')}
+          </p>
+          <ExternalLoginButtons providers={providers} next="/user" verb="signUp" />
+        </div>
+      )}
     </>
   )
 }

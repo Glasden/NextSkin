@@ -1,0 +1,19 @@
+{
+  "plugin": {
+    "name": "Microsoft 登录",
+    "description": "让用户用个人 Microsoft 账号登录本站或绑定已有账号，不支持工作和学校账号。"
+  },
+  "login": {
+    "microsoft": "Microsoft"
+  },
+  "settings": {
+    "clientId": {
+      "label": "客户端 ID",
+      "help": "在 Azure 门户的“应用注册”里创建应用，受支持的账户类型选“仅个人 Microsoft 帐户”，把应用的客户端 ID 填在这里。回调地址显示在这个页面上，要原样填进应用的设置。"
+    },
+    "clientSecret": {
+      "label": "客户端密钥",
+      "help": "应用的客户端密钥，保存后不再显示。"
+    }
+  }
+}

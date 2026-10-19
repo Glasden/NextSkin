@@ -24,6 +24,12 @@ export {
 export type { SigningKey } from './yggdrasil/signing-key.ts'
 
 export type { SessionUser } from './auth/service.ts'
+export {
+  EXTERNAL_PENDING_TTL_SECONDS,
+  EXTERNAL_STATE_TTL_SECONDS,
+  externalCallbackPath,
+  type ExternalCallbackResult,
+} from './auth/external-login.ts'
 export type { UserActor } from './users/lock.ts'
 export type { CheckInRules, CheckInResult } from './users/check-in.ts'
 export type { UserOverview } from './users/queries.ts'

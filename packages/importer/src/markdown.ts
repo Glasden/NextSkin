@@ -6,7 +6,8 @@ const REASONS: Record<string, string> = {
   unknown_permission: '权限值不认识，按普通用户导入',
   invalid_register_at: '注册时间无效，取导入时刻',
   unsupported_locale: '语言不受支持，置空',
-  unrecognized_password: '密码哈希认不出，没有导入密码（可以用找回密码重设）',
+  unrecognized_password:
+    '密码哈希认不出，没有导入密码（可以用找回密码重设；经第三方登录注册的，可以用第三方登录，见迁移指南）',
   authme_password: '密码是 AuthMe 的格式，原样导入；启用官方插件"AuthMe 密码"后能用旧密码登录，登录后换成新算法',
   plugin_password: '密码哈希核心认不出，原样导入；装上认得这种格式的密码插件后能用旧密码登录，否则用找回密码重设',
   avatar_missing: '头像的材质不存在或被跳过，置空',

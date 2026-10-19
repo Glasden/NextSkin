@@ -26,11 +26,13 @@
 - **插件系统第一版**（ADR-0033），按 ADR 的三步落地：
   1. 插件在核心进程内运行（`packages/domain/src/plugins/`、`packages/plugin-host`）：能力检查、事件、任务和定时任务、KV、设置；插件自有表经网关查询（重建 SQL，SQLite 用专用的只读连接）；`/plugins/{id}/*` 路由网关；声明式的页面、导航和注册表单字段；`user.register` 拦截器；后台的"插件"页（启用、停用、设置、死信）；官方插件"邀请码"和"CDN 刷新"。
   2. 上传的插件在 plugin host 进程里运行：核心进程拉起；stdin/stdout 上带长度前缀的帧；`--permission`，环境变量为空，Node 26 起不能直接连网；整代切换，新一代报告的定义要和 manifest 一致；崩溃后退避重启，连续崩溃就停下、等管理员在后台重启。`nextskin-plugin build` 打插件包（`packages/plugin-cli`）；后台上传安装、升级（列出新增的能力）、卸载，都写审计；多实例按 `plugins.package_hash` 从存储接口取包。
-  3. （进行中）passwordHasher：核心认不出的哈希按插件的 `detect` 认领、调用插件，网页登录和启动器登录通过后换成当前算法；导入器保留插件格式的哈希；官方插件"AuthMe 密码"。第三方登录见下。
+  3. passwordHasher：核心认不出的哈希按插件的 `detect` 认领、调用插件，网页登录和启动器登录通过后换成当前算法；导入器保留插件格式的哈希；官方插件"AuthMe 密码"；第三方登录见下一条。
+- **第三方登录**（ADR-0034）：一家一个官方插件（`oauth-github`、`oauth-microsoft`、`oauth-google`、`oauth-littleskin`，共用 `packages/oauth-client`）；绑定存在 `accounts`，两个唯一索引；登录页和注册页的按钮、首次登录的"完成注册"页（经过注册用例）、邮箱撞上已有账号时只绑定没有任何登录方式的账号；第三方登录后照样过两步验证；安全页的"第三方账号"（绑定要求刚登录过、解绑保留最后一种登录方式）和"设置密码"，要核对密码的操作提示先设置密码；后台插件详情页的回调地址，卸载时删除绑定。
 
 ## 还没做
 
-- **第三方登录**（ADR-0034 已采纳）：插件系统第一版第三步剩下的部分。核心（绑定、解绑、首次登录经过"完成注册"页和注册用例、第三方登录后的两步验证、给没有密码的账号设置密码）和四个官方插件（`oauth-github`、`oauth-microsoft`、`oauth-google`、`oauth-littleskin`）都还没做。三步做完后发布 SDK 1.0。
+- **插件 SDK 1.0**：插件系统第一版的三步都已落地，接下来发布。
+- **第三方登录的字段核对**：四家的 subject、`emailVerified` 还要用真实账号核对一遍（ADR-0034"首批插件"）；后台替用户解绑随"后台的其余管理操作"一起做。
 - **Yggdrasil Connect**（OIDC 和设备授权）：另写 ADR（ADR-0007、ADR-0030）。`@better-auth/oauth-provider` 已经接进 Better Auth 的配置，端点和页面还没有。
 - **后台的其余管理操作**（ADR-0027）：用户的改邮箱、改昵称、改密码、改积分、标记邮箱已验证、关两步验证、删除；后台的角色管理；管理别人的衣柜和材质。
 - **验证码**：做进核心，用设置项选 Turnstile、hCaptcha 或 reCAPTCHA（ADR-0033）。

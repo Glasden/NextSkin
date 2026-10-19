@@ -100,6 +100,9 @@ const preview = createRoute({
                 addedCapabilities: z.array(z.string()),
                 addedNetwork: z.array(z.string()),
                 addedHighRisk: z.array(z.string()),
+                removedLogins: z.array(
+                  z.object({ providerId: z.string(), label: z.string(), bindings: z.number().int() }),
+                ),
               })
               .nullable(),
           }),

@@ -98,6 +98,23 @@ export interface PluginFormField {
   field: Field
 }
 
+/** 登录页上的一个第三方登录按钮 */
+export interface LoginProviderEntry {
+  pluginId: string
+  providerId: string
+  /** 插件的文案键 */
+  label: string
+  icon: string
+}
+
+/** 插件给出的第三方身份，核心校验过格式（ADR-0034） */
+export interface ExternalIdentity {
+  subject: string
+  email: string | null
+  emailVerified: boolean
+  displayName: string | null
+}
+
 export interface PluginRouteRequest {
   pluginId: string
   method: string
@@ -142,6 +159,11 @@ const MIGRATION_TIMEOUT_MS = 60_000
 const SETTINGS_TIMEOUT_MS = 5_000
 /** passwordHasher 每次调用的期限，写在 SDK 的说明里（providers.ts） */
 const PASSWORD_TIMEOUT_MS = 5_000
+/** login 的 authorizeUrl、exchange 的期限，写在 SDK 的说明里（ADR-0034） */
+const LOGIN_AUTHORIZE_TIMEOUT_MS = 5_000
+const LOGIN_EXCHANGE_TIMEOUT_MS = 15_000
+/** ExternalIdentity.subject：进 accounts.account_id（ascii 的 varchar(255)），也避开 MySQL 比较时忽略末尾空格 */
+const SUBJECT_PATTERN = /^[\x21-\x7e]{1,255}$/
 /** 比这更长的值不是哈希，不拿去匹配插件的 detect.pattern */
 const MAX_PLUGIN_HASH_LENGTH = 512
 /** 同一个拦截器连续失败这么多次，就在冷却期内不再调用它，直接按失败策略处理（ADR-0033） */
@@ -255,6 +277,11 @@ export function createPluginSystem(options: {
   packages?: PluginPackages | null
   /** host 崩溃后的重启策略；测试用来缩短等待 */
   hostRestart?: { maxCrashes?: number; baseDelayMs?: number }
+  /**
+   * 测试用：代插件发出站请求的 fetch，换成假的第三方。白名单照样检查，只换掉最后发请求的那一步；
+   * 不读环境变量、不进配置，站点上换不了它（ADR-0034"测试"）
+   */
+  fetch?: typeof fetch
 }) {
   const { db, handlers, events, schedules, gateway, now } = options
   const log = options.log ?? ((line: string) => console.info(line))
@@ -588,6 +615,7 @@ export function createPluginSystem(options: {
           return pluginFetch(args as SerializedRequest, {
             network: invocation.known.manifest.network,
             signal: invocation.controller.signal,
+            fetch: options.fetch,
           })
         case 'users.get':
           require(invocation, 'users.read', 'users.readPrivate')
@@ -685,7 +713,9 @@ export function createPluginSystem(options: {
               ? `job:${call.name}`
               : call.kind === 'passwordHasher'
                 ? `passwordHasher:${call.provider}`
-                : call.kind
+                : call.kind === 'login.authorize' || call.kind === 'login.exchange'
+                  ? `${call.kind}:${call.provider}`
+                  : call.kind
     let outcome = 'ok'
     let timer: ReturnType<typeof setTimeout> | undefined
     // 期限从调用开始算，读设置这些准备工作也算在里面：注册事务里的拦截器不能因为准备工作卡住而一直占着写锁
@@ -1055,6 +1085,55 @@ export function createPluginSystem(options: {
     return [...active.values()].filter((plugin) => test(plugin.known.manifest[key]))
   }
 
+  /** 启用中的插件里声明了这个 login Provider 的那一个 */
+  function loginProvider(pluginId: string, providerId: string) {
+    const plugin = active.get(pluginId)
+    const provider = plugin?.known.manifest.providers.login.find((item) => item.id === providerId)
+    return plugin && provider ? { plugin, provider } : null
+  }
+
+  /** 设置的 JSON Schema 里的必填项 */
+  function requiredSettings(manifest: PluginManifest): string[] {
+    const required = (manifest.settingsSchema as { required?: unknown } | null)?.required
+    return Array.isArray(required) ? required.filter((key): key is string => typeof key === 'string') : []
+  }
+
+  /**
+   * 调用一次 login Provider。插件不可用、超时、抛错、返回值不对都记一次失败；熔断中直接报不可用。
+   * 参数里有授权码，日志只记插件 id、Provider、阶段和原因，不记插件抛出的消息（ADR-0034）
+   */
+  async function invokeLogin(
+    pluginId: string,
+    providerId: string,
+    call: Extract<PluginCall, { kind: 'login.authorize' | 'login.exchange' }>,
+    check: (value: unknown) => unknown,
+  ): Promise<unknown> {
+    const found = loginProvider(pluginId, providerId)
+    if (!found) throw new DomainError('external_login_unavailable')
+    const key = breakerKey(pluginId, `${call.kind}:${providerId}`)
+    if (breakerOpen(key)) throw new DomainError('external_login_unavailable')
+    let result: unknown
+    try {
+      result = await invoke(found.plugin, call, {
+        timeoutMs: call.kind === 'login.authorize' ? LOGIN_AUTHORIZE_TIMEOUT_MS : LOGIN_EXCHANGE_TIMEOUT_MS,
+      })
+    } catch (error) {
+      const reason = error instanceof PluginInvocationError ? error.reason : 'error'
+      recordFailure(key)
+      log(`[plugins] ${pluginId} login_failed ${call.kind} ${providerId} ${reason}`)
+      throw new DomainError(reason === 'unavailable' ? 'external_login_unavailable' : 'external_login_failed')
+    }
+    // 插件侧可能被完全控制：返回值在这里再检查一遍，合法的返回值才清掉失败计数
+    const checked = check(result)
+    if (checked === undefined) {
+      recordFailure(key)
+      log(`[plugins] ${pluginId} login_failed ${call.kind} ${providerId} invalid_result`)
+      throw new DomainError('external_login_failed')
+    }
+    breakers.delete(key)
+    return checked
+  }
+
   /** detect.pattern 编译后的正则，按源码缓存；manifest 校验时已经确认能编译 */
   const patterns = new Map<string, RegExp>()
   function detects(detect: PluginManifest['providers']['passwordHasher'][number]['detect'], hash: string): boolean {
@@ -1323,6 +1402,78 @@ export function createPluginSystem(options: {
         }
       }
       return false
+    },
+
+    /**
+     * 登录页上的第三方登录按钮：插件启用了、能被调用（安装插件要 host 加载了这一代）、设置通过 manifest 里 JSON Schema 的校验。
+     * 缺了客户端 ID 的插件不显示按钮（ADR-0034）。按插件 id、声明顺序排列
+     */
+    async loginProviders(): Promise<LoginProviderEntry[]> {
+      const list = activeWith('providers', (providers) => providers.login.length > 0).sort((a, b) =>
+        a.known.manifest.id.localeCompare(b.known.manifest.id),
+      )
+      const entries: LoginProviderEntry[] = []
+      for (const plugin of list) {
+        const { manifest } = plugin.known
+        if (!runnable(plugin.known)) continue
+        if (!(await pluginSettings.complete(manifest.id, plugin.known.properties, requiredSettings(manifest)))) continue
+        for (const provider of manifest.providers.login)
+          entries.push({ pluginId: manifest.id, providerId: provider.id, label: provider.label, icon: provider.icon })
+      }
+      return entries
+    },
+
+    /** 启用中的插件声明了这个 login Provider（不管设置是否完整）：解绑时判断这个绑定还能不能用来登录 */
+    hasLoginProvider: (pluginId: string, providerId: string) => loginProvider(pluginId, providerId) !== null,
+
+    /** 第三方授权页的地址：只接受 https 的绝对地址 */
+    async loginAuthorize(
+      pluginId: string,
+      providerId: string,
+      args: { state: string; codeChallenge: string; redirectUri: string },
+    ): Promise<string> {
+      const url = await invokeLogin(
+        pluginId,
+        providerId,
+        { kind: 'login.authorize', provider: providerId, ...args },
+        (value) => {
+          if (typeof value !== 'string') return undefined
+          try {
+            return new URL(value).protocol === 'https:' ? value : undefined
+          } catch {
+            return undefined
+          }
+        },
+      )
+      return url as string
+    },
+
+    /** 用回调的参数换出第三方的身份，逐项校验格式；不合格按插件出错处理 */
+    async loginExchange(
+      pluginId: string,
+      providerId: string,
+      args: { query: Readonly<Record<string, string>>; codeVerifier: string; redirectUri: string },
+    ): Promise<ExternalIdentity> {
+      const identity = await invokeLogin(
+        pluginId,
+        providerId,
+        { kind: 'login.exchange', provider: providerId, ...args },
+        (value) => {
+          const v = value as Partial<Record<keyof ExternalIdentity, unknown>> | null
+          if (typeof v !== 'object' || v === null) return undefined
+          if (typeof v.subject !== 'string' || !SUBJECT_PATTERN.test(v.subject)) return undefined
+          if (v.email !== null && typeof v.email !== 'string') return undefined
+          if (typeof v.emailVerified !== 'boolean') return undefined
+          if (v.displayName !== null && typeof v.displayName !== 'string') return undefined
+          return {
+            subject: v.subject,
+            email: v.email,
+            emailVerified: v.emailVerified,
+            displayName: v.displayName,
+          } satisfies ExternalIdentity
+        },
+      )
+      return identity as ExternalIdentity
     },
 
     /** `/plugins/{id}/*`：登录态和 Origin 已由 HTTP 层检查；这里检查权限、调用插件 */

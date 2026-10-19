@@ -1,7 +1,7 @@
 import { capabilities, interceptorPolicies, type PluginManifest } from '@nextskin/plugin-sdk'
 import { z } from 'zod'
 import { eventNames } from '../events.ts'
-import { KEY, MAX_BODY_BYTES, OBJECT_NAME, PLUGIN_ID, ROUTE_KEY, validateUi } from '../manifest.ts'
+import { KEY, MAX_BODY_BYTES, MAX_LOGIN_ID_LENGTH, OBJECT_NAME, PLUGIN_ID, ROUTE_KEY, validateUi } from '../manifest.ts'
 import { PluginPackageError } from './error.ts'
 import { isValidRange, isValidVersion } from './semver.ts'
 
@@ -139,7 +139,7 @@ const schema = z.strictObject({
       )
       .refine((items) => unique(items.map((item) => item.id)), 'id 不能重复'),
     login: z
-      .array(z.strictObject({ id: key, label: z.string(), icon: z.string() }))
+      .array(z.strictObject({ id: key.max(MAX_LOGIN_ID_LENGTH), label: z.string(), icon: z.string() }))
       .refine((items) => unique(items.map((item) => item.id)), 'id 不能重复'),
   }),
   routes: z

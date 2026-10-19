@@ -4,6 +4,7 @@ export {
   renderVerifyEmail,
   renderConfirmEmailChange,
   renderEmailChanged,
+  renderExternalAccountLinked,
   type LinkMailInput,
   type NoticeMailInput,
   type RenderedMail,

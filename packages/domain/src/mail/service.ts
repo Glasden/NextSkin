@@ -4,6 +4,7 @@ import {
   renderVerifyEmail,
   renderConfirmEmailChange,
   renderEmailChanged,
+  renderExternalAccountLinked,
   renderTestEmail,
 } from '@nextskin/email'
 import { matchLocale } from '@nextskin/i18n'
@@ -34,6 +35,8 @@ const mailPayload = z.discriminatedUnion('template', [
     expiresAt: z.string().refine(isIsoTimestamp),
   }),
   recipient.extend({ template: z.literal('emailChanged') }),
+  /** provider 是入队时按收件人的语言翻译好的第三方名称 */
+  recipient.extend({ template: z.literal('externalAccountLinked'), provider: z.string() }),
 ])
 
 export function createMailService(
@@ -91,7 +94,12 @@ export function createMailService(
       async run({ payload }) {
         const mail = mailPayload.parse(payload)
         // 链接已经失效，发出去也没用
-        if (mail.template !== 'emailChanged' && mail.expiresAt <= toIsoTimestamp(new Date())) return
+        if (
+          mail.template !== 'emailChanged' &&
+          mail.template !== 'externalAccountLinked' &&
+          mail.expiresAt <= toIsoTimestamp(new Date())
+        )
+          return
         if (!(await configured())) throw new DomainError('mail_not_configured')
         const [user, values] = await Promise.all([
           db.selectFrom('users').select(['nickname', 'locale']).where('id', '=', mail.uid).executeTakeFirst(),
@@ -106,11 +114,13 @@ export function createMailService(
         const rendered =
           mail.template === 'emailChanged'
             ? renderEmailChanged(input)
-            : templates[mail.template].render({
-                ...input,
-                url: mail.url,
-                expiresInHours: templates[mail.template].ttl / 3600,
-              })
+            : mail.template === 'externalAccountLinked'
+              ? renderExternalAccountLinked({ ...input, provider: mail.provider })
+              : templates[mail.template].render({
+                  ...input,
+                  url: mail.url,
+                  expiresInHours: templates[mail.template].ttl / 3600,
+                })
         await transport.send({ to: mail.to, from: values['mail.from'], ...rendered })
       },
       deadLetterPayload(payload) {

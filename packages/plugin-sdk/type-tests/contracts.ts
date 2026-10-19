@@ -5,7 +5,7 @@
  * 注意：同一个 definePlugin 调用的对象字面量里只放一个结构性错误。
  * TypeScript 对一个参数只报告第一处不可赋值，多放的 @ts-expect-error 会被误判为"未使用"。
  */
-import { definePlugin, deny, secret, table, z } from '@nextskin/plugin-sdk'
+import { definePlugin, deny, secret, table, z, type ExternalIdentity } from '@nextskin/plugin-sdk'
 
 // 没申请 storage.tables 就没有 ctx.db；没申请 users.readPrivate 就看不到邮箱。
 definePlugin({
@@ -265,5 +265,25 @@ definePlugin({
       const uid: number = event.data.texture.uploader
       void uid
     },
+  },
+})
+
+// login Provider 只交出第三方的身份：没有头像地址（站内头像来自材质），emailVerified 要写明（ADR-0034）。
+declare const identity: ExternalIdentity
+// @ts-expect-error 没有 avatarUrl
+void identity.avatarUrl
+definePlugin({
+  capabilities: [],
+  providers: {
+    login: [
+      {
+        id: 'example',
+        label: 'login.example',
+        icon: 'login',
+        authorizeUrl: async ({ state }) => `https://example.test/authorize?state=${state}`,
+        // @ts-expect-error 拿不准邮箱是否验证过也要写 false，不能省略
+        exchange: async () => ({ subject: '1', email: 'steve@example.test', displayName: null }),
+      },
+    ],
   },
 })

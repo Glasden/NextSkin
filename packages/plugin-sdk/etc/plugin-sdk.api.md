@@ -209,13 +209,8 @@ export type EventName = keyof CoreEvents;
 
 // @public (undocumented)
 export interface ExternalIdentity {
-    // (undocumented)
-    readonly avatarUrl: string | null;
-    // (undocumented)
     readonly displayName: string | null;
-    // (undocumented)
     readonly email: string | null;
-    // (undocumented)
     readonly emailVerified: boolean;
     readonly subject: string;
 }
@@ -348,14 +343,12 @@ export interface Logger {
 
 // @public
 export interface LoginProvider<Ctx> {
-    // (undocumented)
     authorizeUrl(args: {
         state: string;
         codeChallenge: string;
         redirectUri: string;
         ctx: Ctx;
     }): Promise<string>;
-    // (undocumented)
     exchange(args: {
         query: Readonly<Record<string, string>>;
         codeVerifier: string;
@@ -364,9 +357,7 @@ export interface LoginProvider<Ctx> {
     }): Promise<ExternalIdentity>;
     // (undocumented)
     readonly icon: IconName;
-    // (undocumented)
     readonly id: string;
-    // (undocumented)
     readonly label: MessageKey;
 }
 

@@ -131,6 +131,22 @@ export function PluginUpload({ networkRestricted }: { networkRestricted: boolean
             </p>
           )}
           {added && <Alert tone="warning">{t('upload.addedHint', { from: previous.version })}</Alert>}
+          {/* 新版本去掉的登录方式：绑定保留，这些用户暂时不能用它登录（ADR-0034） */}
+          {previous && previous.removedLogins.length > 0 && (
+            <Alert tone="warning">
+              {t('upload.removedLogins', {
+                list: previous.removedLogins
+                  .map((login) => {
+                    const label = translate(login.label)
+                    return t('upload.removedLogin', {
+                      name: label === login.label ? login.providerId : label,
+                      count: login.bindings,
+                    })
+                  })
+                  .join('、'),
+              })}
+            </Alert>
+          )}
           {!networkRestricted && <Alert tone="warning">{t('host.networkUnrestricted')}</Alert>}
           <ManifestList
             manifest={manifest}

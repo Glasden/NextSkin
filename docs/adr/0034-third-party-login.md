@@ -175,6 +175,33 @@ Better Auth 1.7.10：
 - **插件**：四个插件都用录下来的第三方响应做单元测试，覆盖字段映射和 `emailVerified` 的判断。
 - **SDK**：type-tests 跟上 `ExternalIdentity` 的改动。
 
+### 落地时补充
+
+**发起和回调**
+- 端点放在 REST 里（`packages/api/src/rest/external-login.ts`），不在 Better Auth 的插件里：发起 `POST /api/external-login/{插件 id}/{Provider id}`，回调 `GET /api/external-login/{插件 id}/{Provider id}/callback`，完成注册 `POST /api/external-login/complete`。发起要经过 REST 按站点地址做的 Origin 校验、请求体限制和翻译好的错误；完成注册要和 `POST /api/register` 一样取客户端 IP、语言和插件字段；回调要调用领域用例写绑定、建号。Better Auth 只做它才能做的两件事：签发会话、检查会话是否新鲜，两个端点都只能在服务端调用（`auth/external-session.ts`）。
+- state 不用 Better Auth 的 `generateState`：它只能在 Better Auth 端点的上下文里调用。领域层生成 state，记录存进 `verifications`（10 分钟），键是随机值的 sha256；随机值写进 HttpOnly、SameSite=Lax 的 Cookie，Path 只到 `/api/external-login/`。回调时两者对上才继续，用一次就删，删到那一行的请求才继续。暂存的身份同样存在 `verifications`（30 分钟），Cookie 放在根路径：“完成注册”页在服务端组件里直接读它，不需要 `GET …/pending` 接口。
+- 回调总是 303 跳转。出错时发起绑定的回到 `/user/security?error=<code>`，其余回到 `/sign-in?error=<code>`，页面只认一组已知的错误码。state 对不上时不知道是在登录还是在绑定，已登录的按绑定处理：登录页不对已登录的用户开放。
+- 错误码：Provider 不可用时发起返回 404 `external_login_not_found`；熔断中、host 不可用是 503 `external_login_unavailable`；插件超时、抛错、返回值不合格是 `external_login_failed`；state 对不上、过期、用过是 `external_login_expired`。回调的查询串超过 8 KB 不交给插件。
+- `next` 的检查（`safeNextPath`）挪进 `packages/api`，登录页和发起接口共用。
+
+**登录和首次登录**
+- 两步验证插件的钩子在写会话 Cookie 之前调用，开了两步验证时响应里不会出现有效的会话令牌；钩子留下了会话（认出了信任过的设备）才写会话 Cookie。
+- 第三方给的邮箱先去掉首尾空白、转小写，格式不对或超过 255 个字符就当作没给。
+- “完成注册”页：昵称预填第三方的名字（截到 255 个字符）；角色名只有第三方的名字能通过浏览器那一道校验才预填，自定义规则只有服务端认得，不预填。提交时插件已经停用的，返回 `external_login_unavailable`，不建号。
+- 暂存的身份在注册事务的开头认领（删掉那一行）：同一个身份并发提交时，后到的在这里就停下，返回 `external_login_expired`，走不到邮箱和绑定的唯一约束；注册失败时随事务回滚，暂存的身份还在。唯一索引仍然兜底。
+- 第 1 步直接绑定没有登录方式的账号时，锁住用户的行之后再判断一遍它还是没有：两家第三方同时声明同一个邮箱，只有先到的能绑上。
+
+**绑定和解绑**
+- “能用的登录方式”里的第三方按登录页的条件算：插件启用、设置通过校验、host 加载了这一代，不只看插件启用。解绑要在事务之外先读出这份名单：读插件设置用的是 `db`，SQLite 只有一个连接，在事务里读会一直等下去。
+- Better Auth 自带的 `/sign-in/social`、`/callback/:id` 带着参数，`disabledPaths` 只按完整路径匹配，挡不住；由我们的 Better Auth 插件的 before 钩子返回 404。
+
+**后台**
+- 插件详情页的“第三方登录”一节列出每个 Provider 的回调地址和绑定数；站点地址不是 HTTPS（本机的 localhost 除外）时提示授权码可能被截获，Google、Microsoft 也不接受。卸载的审计记下删掉的绑定数。
+- 卸载时同一个事务里还删掉这个插件名下没用完的 state 和暂存身份，理由和删除绑定相同。
+
+**测试**
+- 请求级测试换掉出站请求，用的是 `createCore` 的 `plugins.fetch`：只有测试能传进去，不读环境变量、不进配置，站点上换不了它。
+
 ## 后果
 
 - 新迁移：`accounts` 的两列改成 `authStringType`，建两个唯一索引。Better Auth 的 schema 比对测试照常要通过。`docs/schema.md` 的 `accounts` 补上绑定的格式，`users.image` 改成"不再写入"。

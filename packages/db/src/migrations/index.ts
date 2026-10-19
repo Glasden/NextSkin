@@ -46,6 +46,8 @@ import * as createClosetItemsCreatedAtIndex from './0036_create_closet_items_cre
 import * as createPlugins from './0037_create_plugins.ts'
 import * as createPluginKv from './0038_create_plugin_kv.ts'
 import * as createPluginMigrations from './0039_create_plugin_migrations.ts'
+import * as alterAccountsKeyColumns from './0040_alter_accounts_key_columns.ts'
+import * as createAccountsBindingIndexes from './0041_create_accounts_binding_indexes.ts'
 
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
@@ -87,4 +89,6 @@ export const coreMigrations: Record<string, Migration> = {
   '0037_create_plugins': createPlugins,
   '0038_create_plugin_kv': createPluginKv,
   '0039_create_plugin_migrations': createPluginMigrations,
+  '0040_alter_accounts_key_columns': alterAccountsKeyColumns,
+  '0041_create_accounts_binding_indexes': createAccountsBindingIndexes,
 }

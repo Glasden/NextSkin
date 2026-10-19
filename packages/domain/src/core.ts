@@ -21,6 +21,7 @@ import { PLUGIN_KV_CLEANUP_JOB } from './plugins/kv.ts'
 import { pluginReferences } from './plugins/references.ts'
 import type { Kysely } from 'kysely'
 import { createAuthService } from './auth/service.ts'
+import { createExternalLogin } from './auth/external-login.ts'
 import { createEvents } from './events/emit.ts'
 import { createJobRunner, type JobHandler, type JobRunnerOptions } from './jobs/runner.ts'
 import { createMailService, MAIL_JOB } from './mail/service.ts'
@@ -83,6 +84,8 @@ export interface CoreOptions {
     packages?: PluginPackages | null
     /** host 崩溃后的重启策略；测试用来缩短等待 */
     hostRestart?: { maxCrashes?: number; baseDelayMs?: number }
+    /** 测试用：代插件发出站请求的 fetch（plugins/system.ts） */
+    fetch?: typeof fetch
   }
 }
 
@@ -157,6 +160,7 @@ export function createCore(options: CoreOptions) {
     host: options.plugins?.host ?? null,
     packages: options.plugins?.packages ?? null,
     hostRestart: options.plugins?.hostRestart,
+    fetch: options.plugins?.fetch,
   })
   handlers.set(PLUGIN_KV_CLEANUP_JOB, { run: () => plugins.kv.cleanup() })
   handlers.set(PLUGIN_CLEANUP_JOB, { run: ({ payload }) => plugins.cleanupUninstalled(payload) })
@@ -203,6 +207,9 @@ export function createCore(options: CoreOptions) {
       })
     },
   })
+  const register = createRegister(options.db, settings, auth, mail, events, plugins)
+  // 第三方登录（ADR-0034）：首次登录经过注册用例，user.register 拦截器和注册表单的插件字段照样生效
+  const externalLogin = createExternalLogin({ db: options.db, settings, plugins, mail, jobs, register, now })
   const getSigningKey = createSigningKeyQuery(settings)
   const players = { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events, now) }
   const closet = createCloset(textureOptions)
@@ -242,7 +249,7 @@ export function createCore(options: CoreOptions) {
     reports: createReports(textureOptions),
     renders,
     plugins: Object.assign(plugins, {
-      admin: createPluginAdmin({ db: options.db, plugins, now }),
+      admin: createPluginAdmin({ db: options.db, plugins, externalLogin, now }),
       references: (input: Parameters<typeof pluginReferences>[1]) => pluginReferences(options.db, input),
     }),
     async shutdown() {
@@ -258,12 +265,13 @@ export function createCore(options: CoreOptions) {
     },
     settings,
     auth,
+    externalLogin,
     mail,
     jobs,
     schedules,
     events: { subscribe: events.subscribe },
     users: {
-      register: createRegister(options.db, settings, auth, mail, events, plugins),
+      register,
       checkIn: createCheckIn(options.db, settings),
       ...createUserQueries(options.db, settings),
       ...createUserManagement(options, settings, mail, jobs, events, removal, now, passwordPlugins),

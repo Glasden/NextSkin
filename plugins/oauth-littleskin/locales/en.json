@@ -1,0 +1,19 @@
+{
+  "plugin": {
+    "name": "LittleSkin sign-in",
+    "description": "Let users sign in to this site with LittleSkin or link their existing account."
+  },
+  "login": {
+    "littleskin": "LittleSkin"
+  },
+  "settings": {
+    "clientId": {
+      "label": "Client ID",
+      "help": "Create an OAuth app on LittleSkin at https://littleskin.cn/user/oauth/manage, then enter its client ID here. The callback URL is shown on this page; copy it exactly into the app’s settings."
+    },
+    "clientSecret": {
+      "label": "Client secret",
+      "help": "The app’s client secret. It is not shown again after saving."
+    }
+  }
+}

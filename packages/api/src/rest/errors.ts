@@ -96,6 +96,19 @@ const statuses = {
   plugin_required_by: 409,
   plugin_official: 400,
   dead_letter_not_found: 404,
+  external_login_not_found: 404,
+  external_login_unavailable: 503,
+  external_login_failed: 502,
+  external_login_cancelled: 400,
+  external_login_expired: 400,
+  external_email_taken: 409,
+  identity_bound_elsewhere: 409,
+  identity_already_bound: 409,
+  already_bound: 409,
+  last_login_method: 409,
+  external_account_not_found: 404,
+  password_already_set: 409,
+  session_not_fresh: 403,
 } as const satisfies Partial<Record<ErrorCode, number>>
 type ResponseCode = keyof typeof statuses
 const fieldNames: Partial<Record<ResponseCode, string>> = {

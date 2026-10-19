@@ -1,17 +1,21 @@
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '@nextskin/domain'
-import { Badge } from '@nextskin/ui'
+import { Alert, Badge } from '@nextskin/ui'
 import type { Metadata } from 'next'
-import { getFormatter, getTranslations } from 'next-intl/server'
+import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import { Gamepad } from 'pixelarticons/react/Gamepad.js'
 import { Key } from 'pixelarticons/react/Key.js'
 import { Lock } from 'pixelarticons/react/Lock.js'
 import { Smartphone } from 'pixelarticons/react/Smartphone.js'
 import type { ReactNode } from 'react'
+import { externalErrorMessage } from '../../../lib/external-login'
+import { pluginIcon } from '../../../lib/plugins'
 import { getServer } from '../../../lib/server'
 import { getRequestRoot, requireUser } from '../../../lib/session'
 import { ChangePasswordForm } from './change-password-form'
+import { ExternalAccountsPanel } from './external-accounts-panel'
 import { LauncherLoginsPanel } from './launcher-logins-panel'
 import { PasskeysPanel } from './passkeys-panel'
+import { SetPasswordForm } from './set-password-form'
 import { TwoFactorPanel } from './two-factor-panel'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -20,19 +24,25 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * 登录与安全：密码、两步验证、通行密钥（ADR-0023），以及启动器登录（ADR-0030）。
- * 前三项的改动直接调用 Better Auth 的接口，启动器登录走自己的 REST 接口
+ * 登录与安全：密码、两步验证、通行密钥（ADR-0023），第三方账号（ADR-0034），以及启动器登录（ADR-0030）。
+ * 密码、两步验证、通行密钥的改动直接调用 Better Auth 的接口，其余的走自己的 REST 接口。
+ * 绑定第三方账号的回调带着 `?linked=1` 或 `?error=` 回到这里
  */
-export default async function SecurityPage() {
+export default async function SecurityPage({ searchParams }: PageProps<'/user/security'>) {
   const user = await requireUser('/user/security')
-  const [{ core }, root] = await Promise.all([getServer(), getRequestRoot()])
-  const [security, launcherTokens, settings, t, format] = await Promise.all([
-    core.auth.security(user.uid, root),
-    core.yggdrasil.listTokens(user.uid),
-    core.settings.read(['site.name']),
-    getTranslations('user.security'),
-    getFormatter(),
-  ])
+  const [{ core }, root, query] = await Promise.all([getServer(), getRequestRoot(), searchParams])
+  const [security, launcherTokens, settings, hasPassword, externalAccounts, externalError, locale, t, format] =
+    await Promise.all([
+      core.auth.security(user.uid, root),
+      core.yggdrasil.listTokens(user.uid),
+      core.settings.read(['site.name']),
+      core.externalLogin.hasPassword(user.uid),
+      core.externalLogin.accounts(user.uid),
+      externalErrorMessage(query.error),
+      getLocale(),
+      getTranslations('user.security'),
+      getFormatter(),
+    ])
   const dateTime = (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short' })
   const passkeys = security.passkeys.map((passkey) => ({
     id: passkey.id,
@@ -40,6 +50,15 @@ export default async function SecurityPage() {
     backedUp: passkey.backedUp,
     addedAt: passkey.createdAt ? dateTime(passkey.createdAt) : null,
   }))
+  const external = externalAccounts.map((account) => ({
+    pluginId: account.pluginId,
+    providerId: account.providerId,
+    name: core.plugins.translate(account.pluginId, account.label, locale),
+    icon: pluginIcon(account.icon, { 'aria-hidden': true }),
+    available: account.available,
+    linkedAt: account.linkedAt ? dateTime(account.linkedAt) : null,
+  }))
+  const linkedCount = external.filter((account) => account.linkedAt !== null).length
   const launcherLogins = launcherTokens.map((token) => ({
     id: token.id,
     player: token.player?.name ?? null,
@@ -60,7 +79,11 @@ export default async function SecurityPage() {
         </h2>
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <OverviewItem icon={<Lock aria-hidden />} label={t('password.title')}>
-            <Badge tone="success">{t('overview.passwordSet')}</Badge>
+            {hasPassword ? (
+              <Badge tone="success">{t('overview.passwordSet')}</Badge>
+            ) : (
+              <Badge tone="warning">{t('overview.passwordNotSet')}</Badge>
+            )}
           </OverviewItem>
           <OverviewItem icon={<Smartphone aria-hidden />} label={t('twoFactor.title')}>
             {security.twoFactorEnabled ? (
@@ -86,8 +109,17 @@ export default async function SecurityPage() {
         </ul>
       </section>
 
-      <Section id="password" title={t('password.title')} description={t('password.description')}>
-        <ChangePasswordForm min={MIN_PASSWORD_LENGTH} max={MAX_PASSWORD_LENGTH} />
+      <Section
+        id="password"
+        title={t('password.title')}
+        badge={hasPassword ? undefined : <Badge tone="warning">{t('overview.passwordNotSet')}</Badge>}
+        description={hasPassword ? t('password.description') : t('password.setDescription')}
+      >
+        {hasPassword ? (
+          <ChangePasswordForm min={MIN_PASSWORD_LENGTH} max={MAX_PASSWORD_LENGTH} />
+        ) : (
+          <SetPasswordForm min={MIN_PASSWORD_LENGTH} max={MAX_PASSWORD_LENGTH} />
+        )}
       </Section>
 
       <Section
@@ -100,6 +132,7 @@ export default async function SecurityPage() {
           enabled={security.twoFactorEnabled}
           backupCodesRemaining={security.backupCodesRemaining}
           siteName={settings['site.name']}
+          passwordSet={hasPassword}
         />
       </Section>
 
@@ -111,6 +144,20 @@ export default async function SecurityPage() {
       >
         <PasskeysPanel passkeys={passkeys} />
       </Section>
+
+      {/* 没有能用的第三方、也没有绑定时整块不显示 */}
+      {external.length > 0 && (
+        <Section
+          id="external"
+          title={t('external.title')}
+          badge={linkedCount ? <Badge>{t('overview.externalCount', { count: linkedCount })}</Badge> : undefined}
+          description={t('external.description')}
+        >
+          {query.linked === '1' && <Alert tone="success">{t('external.linkedNotice')}</Alert>}
+          {externalError && <Alert tone="danger">{externalError}</Alert>}
+          <ExternalAccountsPanel accounts={external} />
+        </Section>
+      )}
 
       <Section
         id="launchers"

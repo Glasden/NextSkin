@@ -14,6 +14,7 @@ import {
   MIN_PASSWORD_LENGTH,
   RESET_PASSWORD_TTL_SECONDS,
 } from './password-policy.ts'
+import { externalSession } from './external-session.ts'
 import { coreModelNaming, withNamingConvention } from './naming.ts'
 import {
   isCurrentPasswordHash,
@@ -174,7 +175,20 @@ export function authOptions(config: AuthConfig) {
     },
     // /token：jwt 插件给会话签发 JWT，用不到；/update-user：昵称等字段改动要经过领域用例（不变量 4）
     // /change-email、/delete-user：由领域用例代替，确认链接和删除事件必须在业务事务里（ADR-0023）
-    disabledPaths: ['/token', '/update-user', '/change-email', '/delete-user'],
+    // 账号端点：第三方账号的绑定、解绑由领域用例处理（ADR-0034）。不关的话 /unlink-account 能删掉自己的密码，
+    // 绕过"解绑之后要还有能用的登录方式"；核心不存第三方的令牌，取令牌的几个端点也用不到
+    disabledPaths: [
+      '/token',
+      '/update-user',
+      '/change-email',
+      '/delete-user',
+      '/link-social',
+      '/unlink-account',
+      '/list-accounts',
+      '/account-info',
+      '/get-access-token',
+      '/refresh-token',
+    ],
     advanced: {
       ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
       database: { generateId: 'serial' },
@@ -213,6 +227,7 @@ export function authOptions(config: AuthConfig) {
       withNamingConvention(twoFactor({ issuer: config.siteName })),
       withNamingConvention(passkey({ rpID: site.hostname, rpName: config.siteName, origin: site.origin })),
       serialSafety(),
+      externalSession(),
     ],
   } satisfies BetterAuthOptions
 }

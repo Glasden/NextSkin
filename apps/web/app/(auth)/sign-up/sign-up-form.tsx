@@ -9,6 +9,18 @@ import { playerNameInputProps, type PlayerNameRules } from '../../../lib/player-
 import { initialFieldValue, PluginField, type PluginFieldValue } from '../../_plugins/plugin-field'
 import type { PluginFieldText } from '../../_plugins/types'
 
+/** "完成注册"页（ADR-0034）：第三方给的身份暂存在服务端，表单不填密码 */
+export interface ExternalSignUp {
+  /** 第三方的名称，例如 GitHub */
+  provider: string
+  email: string | null
+  /** 第三方确认过这个邮箱：不改的话注册后就是已验证的 */
+  emailVerified: boolean
+  nickname: string | null
+  playerName: string | null
+  next: string
+}
+
 export interface SignUpFormProps {
   password: { min: number; max: number }
   /** 注册时填写角色名（auth.registration.withPlayerName）；关闭时填昵称 */
@@ -17,9 +29,10 @@ export interface SignUpFormProps {
   verificationNotice: boolean
   /** 插件加的字段（ADR-0033）：值按插件 id 分组提交，出错的字段名是 `<插件 id>.<字段名>` */
   pluginFields: readonly { pluginId: string; field: PluginFieldText }[]
+  external?: ExternalSignUp
 }
 
-export function SignUpForm({ password, playerName, verificationNotice, pluginFields }: SignUpFormProps) {
+export function SignUpForm({ password, playerName, verificationNotice, pluginFields, external }: SignUpFormProps) {
   const t = useTranslations('auth')
   const router = useRouter()
   const [pending, setPending] = useState(false)
@@ -31,6 +44,16 @@ export function SignUpForm({ password, playerName, verificationNotice, pluginFie
     ),
   )
 
+  function emailHint() {
+    if (!external) return verificationNotice ? t('signUp.verificationNotice') : undefined
+    if (external.email === null) return t('complete.emailMissing', { provider: external.provider })
+    if (external.emailVerified)
+      return t(verificationNotice ? 'complete.emailVerified' : 'complete.emailVerifiedNoMail', {
+        provider: external.provider,
+      })
+    return verificationNotice ? t('signUp.verificationNotice') : undefined
+  }
+
   async function submit(values: Record<string, string | undefined>) {
     setPending(true)
     setError(null)
@@ -38,9 +61,9 @@ export function SignUpForm({ password, playerName, verificationNotice, pluginFie
     const plugins: Record<string, Record<string, PluginFieldValue>> = {}
     for (const { pluginId, field } of pluginFields)
       (plugins[pluginId] ??= {})[field.name] = extra[`${pluginId}.${field.name}`] ?? ''
-    const { status, data } = await postJson('/api/register', {
+    const { status, data } = await postJson(external ? '/api/external-login/complete' : '/api/register', {
       email: values.email,
-      password: values.password,
+      ...(external ? {} : { password: values.password }),
       nickname: values.nickname,
       playerName: values.playerName,
       ...(pluginFields.length ? { plugins } : {}),
@@ -48,7 +71,7 @@ export function SignUpForm({ password, playerName, verificationNotice, pluginFie
     if (status === 201) {
       // 会话没建成（极少见）时去登录页，账号已经注册好了
       const signedIn = (data as { signedIn?: unknown } | null)?.signedIn === true
-      router.replace(signedIn ? '/user' : '/sign-in')
+      router.replace(signedIn ? (external?.next ?? '/user') : '/sign-in')
       router.refresh()
       return
     }
@@ -61,23 +84,31 @@ export function SignUpForm({ password, playerName, verificationNotice, pluginFie
   return (
     <Form errors={errors} onFormSubmit={(values) => void submit(values)}>
       {error && <Alert tone="danger">{error}</Alert>}
-      <Field
-        label={t('email')}
-        name="email"
-        description={verificationNotice ? t('signUp.verificationNotice') : undefined}
-      >
-        <Input type="email" autoComplete="email" required />
+      <Field label={t('email')} name="email" description={emailHint()}>
+        <Input type="email" autoComplete="email" required defaultValue={external?.email ?? undefined} />
       </Field>
-      <Field label={t('password')} name="password" description={t('signUp.passwordHint', password)}>
-        <Input type="password" autoComplete="new-password" required minLength={password.min} maxLength={password.max} />
-      </Field>
+      {!external && (
+        <Field label={t('password')} name="password" description={t('signUp.passwordHint', password)}>
+          <Input
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={password.min}
+            maxLength={password.max}
+          />
+        </Field>
+      )}
       {playerName ? (
         <Field label={t('signUp.playerName')} name="playerName" description={t('signUp.playerNameHint', playerName)}>
-          <Input {...playerNameInputProps(playerName)} autoComplete="username" />
+          <Input
+            {...playerNameInputProps(playerName)}
+            autoComplete="username"
+            defaultValue={external?.playerName ?? undefined}
+          />
         </Field>
       ) : (
         <Field label={t('signUp.nickname')} name="nickname" description={t('signUp.nicknameHint')}>
-          <Input autoComplete="nickname" required maxLength={255} />
+          <Input autoComplete="nickname" required maxLength={255} defaultValue={external?.nickname ?? undefined} />
         </Field>
       )}
       {pluginFields.map(({ pluginId, field }) => {
@@ -95,7 +126,7 @@ export function SignUpForm({ password, playerName, verificationNotice, pluginFie
       })}
       <div className="mt-2">
         <Button type="submit" variant="primary" size="lg" fullWidth loading={pending}>
-          {t('signUp.submit')}
+          {external ? t('complete.submit') : t('signUp.submit')}
         </Button>
       </div>
     </Form>

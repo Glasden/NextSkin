@@ -39,6 +39,8 @@ export interface PluginPackageJson {
 export const PLUGIN_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 /** 表名、索引名：拼进物理名 `p_<id>__<名字>`，不允许连续下划线（S5） */
 export const OBJECT_NAME = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/
+/** login Provider 的 id 进绑定的键，限长（ADR-0034） */
+export const MAX_LOGIN_ID_LENGTH = 64
 export const KEY = /^[A-Za-z][A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*$/
 export const ROUTE_KEY =
   /^(GET|POST|PUT|PATCH|DELETE) (\/(?:[A-Za-z0-9._~-]+|:[A-Za-z][A-Za-z0-9]*)(?:\/(?:[A-Za-z0-9._~-]+|:[A-Za-z][A-Za-z0-9]*))*|\/)$/
@@ -200,6 +202,8 @@ export function describePlugin(definition: AnyPluginDefinition): PluginContribut
   })
   const login = list(providers.login, 'login').map((p) => {
     if (!isFunction(p.authorizeUrl) || !isFunction(p.exchange)) fail(`login ${p.id} 要有 authorizeUrl 和 exchange`)
+    // 绑定按 `plugin:<插件 id>:<Provider id>` 记录（ADR-0034）
+    if (p.id.length > MAX_LOGIN_ID_LENGTH) fail(`login 的 id 不能超过 ${MAX_LOGIN_ID_LENGTH} 个字符`)
     if (typeof p.icon !== 'string') fail(`login ${p.id} 的 icon 必须是图标名`)
     return { id: p.id, label: p.label, icon: p.icon }
   })

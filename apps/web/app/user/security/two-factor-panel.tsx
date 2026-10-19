@@ -14,11 +14,19 @@ export interface TwoFactorPanelProps {
   backupCodesRemaining: number | null
   /** 下载的备用码文件里写上站点名，免得以后认不出是哪个网站的 */
   siteName: string
+  /** 经第三方登录注册的账号可能没有密码：开关两步验证都要核对密码，先设置密码（ADR-0034） */
+  passwordSet: boolean
 }
 
 /** 两步验证只做验证器应用（TOTP）加备用码（ADR-0023），开关都要输入当前密码 */
-export function TwoFactorPanel({ enabled, backupCodesRemaining, siteName }: TwoFactorPanelProps) {
+export function TwoFactorPanel({ enabled, backupCodesRemaining, siteName, passwordSet }: TwoFactorPanelProps) {
   const t = useTranslations('user.security.twoFactor')
+  if (!passwordSet)
+    return (
+      <p className="rounded-sm border border-dashed border-border-strong px-4 py-6 text-sm text-pretty text-text-muted">
+        {t('passwordRequired')}
+      </p>
+    )
   return (
     <div className="flex flex-col gap-4">
       {enabled && backupCodesRemaining !== null && (

@@ -1,0 +1,19 @@
+{
+  "plugin": {
+    "name": "Google sign-in",
+    "description": "Let users sign in to this site with Google or link their existing account. Google has branding requirements for sign-in buttons; this site uses a pixel icon."
+  },
+  "login": {
+    "google": "Google"
+  },
+  "settings": {
+    "clientId": {
+      "label": "Client ID",
+      "help": "Create an OAuth client under “Credentials” in the Google Cloud console and choose “Web application” as the application type, then enter its client ID here. The callback URL is shown on this page; copy it exactly into the app’s settings."
+    },
+    "clientSecret": {
+      "label": "Client secret",
+      "help": "The app’s client secret. It is not shown again after saving."
+    }
+  }
+}

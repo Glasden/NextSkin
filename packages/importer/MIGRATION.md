@@ -88,6 +88,15 @@ pnpm import:bs -- --bs-env /srv/blessing-skin/.env --replace
 
 AuthMe 游戏插件不能再直接读写站点的数据库：NextSkin 的表结构和 BS 不同。
 
+### 用过第三方登录的旧站
+
+BS 的 oauth 插件（oauth-github、oauth-google、oauth-microsoft-live、oauth-littleskin）没有绑定表，只按邮箱找用户；经第三方登录注册的账号密码是空的，导入器不导入空密码，报告里算作“密码哈希认不出”。NextSkin 每家第三方一个官方插件（ADR-0034），切换之后：
+
+1. 在第三方的控制台（GitHub 的 OAuth Apps、Azure 门户的“应用注册”、Google Cloud 控制台的“凭据”、LittleSkin 的 OAuth 应用管理）把回调地址改成新站的。新站的回调地址显示在后台插件详情页的“第三方登录”一节，和 BS 的不同。
+2. 在后台的插件页启用对应的插件，填客户端 ID 和客户端密钥。旧站 `.env` 里的 `GITHUB_KEY` 这些不导入：改回调地址时顺便核对一遍凭据再填。
+3. 没有密码的用户第一次用 GitHub、Google、LittleSkin 登录时，第三方确认过这个邮箱，就直接绑定到导入的账号上。原来用 Microsoft 登录的不行：Microsoft 不保证个人账号的邮箱验证过，这些用户用找回密码登录，再到“登录与安全”绑定 Microsoft。
+4. 有密码的用户第三方登录时不会自动绑定，提示先用密码登录，再到“登录与安全”里绑定。
+
 ## 迁移之后有什么不同
 
 - **启动器要重新登录**：BS 的 Yggdrasil 令牌存在缓存里，没法导入。旧的 OAuth 令牌也全部作废，第三方应用的 `client_id` 和密钥不变，用户重新授权一次即可。

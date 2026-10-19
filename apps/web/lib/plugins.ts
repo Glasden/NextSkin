@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import * as icons from 'pixelarticons/react'
 import { Blocks } from 'pixelarticons/react/Blocks.js'
 import { createElement, type ReactElement } from 'react'
+import type { PluginFieldText } from '../app/_plugins/types'
 import { peerAddress } from './peer-address'
 import { getServer } from './server'
 import { getRequestRoot } from './session'
@@ -11,11 +12,11 @@ import { getRequestRoot } from './session'
 // 插件声明的界面（ADR-0033"UI"）由核心渲染：这里是服务端组件共用的几个函数
 
 /** 插件写的图标名是 pixelarticons 的文件名（kebab-case），例如 `mail`、`cloud-server`；认不出来的换成积木 */
-export function pluginIcon(name: string): ReactElement {
+export function pluginIcon(name: string, props?: { 'aria-hidden'?: boolean }): ReactElement {
   const component = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)
     ? (icons as Record<string, unknown>)[name.replace(/(?:^|-)([a-z0-9])/g, (_, c: string) => c.toUpperCase())]
     : undefined
-  return createElement(typeof component === 'function' ? (component as typeof Blocks) : Blocks)
+  return createElement(typeof component === 'function' ? (component as typeof Blocks) : Blocks, props)
 }
 
 /** 插件的文案：缺了就显示键名，作者一眼就能看出来 */
@@ -33,6 +34,26 @@ export function pluginName(core: Core, pluginId: string, locale: string): string
 export function pluginDescription(core: Core, pluginId: string, locale: string): string | null {
   const text = core.plugins.translate(pluginId, 'plugin.description', locale)
   return text === 'plugin.description' ? null : text
+}
+
+/** 插件加在注册表单上的字段（ADR-0033），文案在服务端翻译好。注册页和第三方登录的"完成注册"页共用 */
+export function registerFormFields(core: Core, locale: string): { pluginId: string; field: PluginFieldText }[] {
+  return core.plugins.registerFields().map(({ pluginId, field }) => {
+    const translate = pluginTranslator(core, pluginId, locale)
+    return {
+      pluginId,
+      field: {
+        name: field.name,
+        type: field.type,
+        label: translate(field.label),
+        help: field.help ? translate(field.help) : undefined,
+        placeholder: field.placeholder ? translate(field.placeholder) : undefined,
+        required: field.required,
+        maxLength: field.maxLength,
+        options: field.options?.map((option) => ({ value: option.value, label: translate(option.label) })),
+      },
+    }
+  })
 }
 
 export interface PluginNavItem {

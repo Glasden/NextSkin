@@ -102,6 +102,17 @@ export function createPluginSettings(db: Kysely<CoreDatabase>, secretKey: string
 
   return {
     read,
+    /**
+     * 存着的设置能不能通过 manifest 里 JSON Schema 的校验：必填项都填了，填了的项格式都对。在本进程内完成，
+     * 不调用插件。登录页只显示设置完整的第三方登录插件（ADR-0034），插件自己的 zod schema（例如 refine）不在这里检查
+     */
+    async complete(pluginId: string, properties: readonly Property[], required: readonly string[]): Promise<boolean> {
+      const values = await read(pluginId, properties)
+      if (required.some((key) => !(key in values))) return false
+      return properties.every(
+        (property) => !(property.key in values) || property.validator.safeParse(values[property.key]).success,
+      )
+    },
     async view(pluginId: string, properties: readonly Property[]): Promise<PluginSettingView[]> {
       const stored = await rows(db, pluginId)
       return properties.map((property) => {

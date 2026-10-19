@@ -155,6 +155,8 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0037_create_plugins',
     '0038_create_plugin_kv',
     '0039_create_plugin_migrations',
+    '0040_alter_accounts_key_columns',
+    '0041_create_accounts_binding_indexes',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })

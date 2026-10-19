@@ -1,0 +1,19 @@
+{
+  "plugin": {
+    "name": "GitHub sign-in",
+    "description": "Let users sign in to this site with GitHub or link their existing account."
+  },
+  "login": {
+    "github": "GitHub"
+  },
+  "settings": {
+    "clientId": {
+      "label": "Client ID",
+      "help": "Create an OAuth App in GitHub under Settings → Developer settings → OAuth Apps, then enter its client ID here. The callback URL is shown on this page; copy it exactly into the app’s settings."
+    },
+    "clientSecret": {
+      "label": "Client secret",
+      "help": "The app’s client secret. It is not shown again after saving."
+    }
+  }
+}

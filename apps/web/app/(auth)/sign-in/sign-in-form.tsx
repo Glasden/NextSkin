@@ -7,10 +7,14 @@ import { useRouter } from 'next/navigation'
 import { Key } from 'pixelarticons/react/Key.js'
 import { useCallback, useState } from 'react'
 import { authErrorCode, postJson } from '../../../lib/api-client'
+import { ExternalLoginButtons, type ExternalProvider } from '../external-login-buttons'
 import { usePasskeySignIn } from './passkey-sign-in'
 
-/** next：登录后去的站内路径，页面已经检查过（lib/session.ts 的 safeNextPath） */
-export function SignInForm({ next }: { next: string }) {
+/**
+ * next：登录后去的站内路径，页面已经检查过（lib/session.ts 的 safeNextPath）。
+ * providers：能用的第三方登录（ADR-0034），排在通行密钥后面
+ */
+export function SignInForm({ next, providers }: { next: string; providers: readonly ExternalProvider[] }) {
   const t = useTranslations('auth')
   const router = useRouter()
   const [pending, setPending] = useState(false)
@@ -72,20 +76,27 @@ export function SignInForm({ next }: { next: string }) {
           </Button>
         </div>
       </Form>
-      {passkey.supported && (
+      {(passkey.supported || providers.length > 0) && (
         <div className="flex flex-col gap-4">
           <p className="flex items-center gap-3 text-sm text-text-muted before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
             {t('signIn.or')}
           </p>
-          {passkey.failure && (
-            <Alert tone="danger">
-              {passkey.failure === 'expired' ? t('signIn.passkeyExpired') : t('signIn.passkeyFailed')}
-            </Alert>
-          )}
-          <Button size="lg" fullWidth loading={passkey.pending} onClick={() => void passkey.start()}>
-            <Key aria-hidden />
-            {t('signIn.passkey')}
-          </Button>
+          <div className="flex flex-col gap-3">
+            {passkey.supported && (
+              <>
+                {passkey.failure && (
+                  <Alert tone="danger">
+                    {passkey.failure === 'expired' ? t('signIn.passkeyExpired') : t('signIn.passkeyFailed')}
+                  </Alert>
+                )}
+                <Button size="lg" fullWidth loading={passkey.pending} onClick={() => void passkey.start()}>
+                  <Key aria-hidden />
+                  {t('signIn.passkey')}
+                </Button>
+              </>
+            )}
+            {providers.length > 0 && <ExternalLoginButtons providers={providers} next={next} verb="signIn" />}
+          </div>
         </div>
       )}
     </div>

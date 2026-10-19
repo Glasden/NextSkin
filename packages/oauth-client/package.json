@@ -1,0 +1,19 @@
+{
+  "name": "@nextskin/oauth-client",
+  "version": "0.0.0",
+  "private": true,
+  "description": "官方登录插件共用的 OAuth 请求与 ID 令牌校验（ADR-0034）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

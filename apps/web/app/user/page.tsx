@@ -1,5 +1,5 @@
 import type { OwnedPlayer, ScoreEntry } from '@nextskin/domain'
-import { cx, FigurePlaceholder, Link, Markdown, NameTag, Stage } from '@nextskin/ui'
+import { Alert, cx, FigurePlaceholder, Link, Markdown, NameTag, Stage } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -23,7 +23,7 @@ const LAUNCHER_STEPS = ['add', 'login', 'twoFactor'] as const
 export default async function DashboardPage() {
   const user = await requireUser('/user')
   const { core } = await getServer()
-  const [overview, players, history, settings, mailConfigured, root, t, format] = await Promise.all([
+  const [overview, players, history, settings, mailConfigured, hasPassword, root, t, format] = await Promise.all([
     core.users.overview(user.uid),
     core.players.listOwned(user.uid),
     core.score.recent(user.uid),
@@ -35,6 +35,7 @@ export default async function DashboardPage() {
       'site.url',
     ]),
     core.mail.configured(),
+    core.externalLogin.hasPassword(user.uid),
     getRequestRoot(),
     getTranslations('user.dashboard'),
     getFormatter(),
@@ -117,6 +118,14 @@ export default async function DashboardPage() {
             </div>
             <p className="text-xs text-pretty text-text-muted">{t('launcher.dragHint')}</p>
           </div>
+          {/* 启动器登录只认密码：经第三方登录注册的账号要先设置密码（ADR-0034） */}
+          {!hasPassword && (
+            <Alert tone="warning">
+              {t.rich('launcher.passwordRequired', {
+                link: (chunks) => <Link render={<NextLink href="/user/security#password" />}>{chunks}</Link>,
+              })}
+            </Alert>
+          )}
           <ol className="grid gap-6 border-t border-border pt-6 sm:grid-cols-3">
             {LAUNCHER_STEPS.map((step, index) => (
               <li key={step} className="flex gap-4 sm:flex-col sm:gap-2">
