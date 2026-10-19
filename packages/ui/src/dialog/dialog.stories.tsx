@@ -92,3 +92,38 @@ export const Confirm: Story = {
     blur()
   },
 }
+
+/** 对照一份清单做决定：加宽的对话框，例如安装插件之前列出它会做什么 */
+export const Wide: Story = {
+  render: () => (
+    <Dialog
+      size="lg"
+      trigger={<Button variant="primary">上传插件</Button>}
+      title="安装邀请码？"
+      description="上传的插件会在服务器上运行，能做下面列出的事。只安装你信任的插件。"
+      actions={
+        <>
+          <DialogClose>取消</DialogClose>
+          <Button variant="primary">安装</Button>
+        </>
+      }
+    >
+      <dl className="grid grid-cols-4 gap-x-4 gap-y-2 text-sm">
+        <dt className="text-text-muted">读写的数据</dt>
+        <dd className="col-span-3">建自己的数据表</dd>
+        <dt className="text-text-muted">拦截的操作</dt>
+        <dd className="col-span-3">注册：可以拒绝</dd>
+        <dt className="text-text-muted">提供的接口</dt>
+        <dd className="col-span-3 font-mono text-xs">POST /plugins/invitation-codes/codes</dd>
+      </dl>
+    </Dialog>
+  ),
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '上传插件' }))
+    const dialog = await screen.findByRole('dialog', { name: '安装邀请码？' })
+    await waitFor(() => expect(dialog).toBeVisible())
+    // 加宽到 672px：一行放得下标签和接口地址
+    await expect(dialog.getBoundingClientRect().width).toBeGreaterThan(600)
+    blur()
+  },
+}

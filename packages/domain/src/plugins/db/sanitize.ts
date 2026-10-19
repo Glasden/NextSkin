@@ -81,11 +81,20 @@ export function sanitizePluginQuery(input: unknown, options: SanitizeOptions): R
   return new Rebuilder(options, collectAliases(input)).root(input)
 }
 
+/**
+ * 一个插件的物理名都以它开头：`p_<插件 id，连字符换成下划线>__`。插件 id 里没有连续的连字符、对象名不以下划线开头，
+ * 所以不同插件的前缀互不包含
+ */
+export function physicalPrefix(pluginId: string): string {
+  if (!PLUGIN_ID.test(pluginId)) throw new PluginQueryRejected(`invalid plugin id ${pluginId}`)
+  return `p_${pluginId.replaceAll('-', '_')}__`
+}
+
 /** 物理名：`p_<插件 id，连字符换成下划线>__<对象名>`。 */
 export function physicalName(pluginId: string, name: string): string {
-  if (!PLUGIN_ID.test(pluginId)) throw new PluginQueryRejected(`invalid plugin id ${pluginId}`)
+  const prefix = physicalPrefix(pluginId)
   if (!OBJECT_NAME.test(name)) throw new PluginQueryRejected(`invalid object name ${JSON.stringify(name)}`)
-  const physical = `p_${pluginId.replaceAll('-', '_')}__${name}`
+  const physical = `${prefix}${name}`
   if (physical.length > MAX_PHYSICAL_IDENT) throw new PluginQueryRejected(`physical name too long: ${physical}`)
   return physical
 }

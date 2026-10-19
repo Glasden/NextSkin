@@ -84,6 +84,17 @@ const statuses = {
   plugin_error: 502,
   plugin_not_found: 404,
   plugin_migration_failed: 500,
+  plugin_load_failed: 500,
+  plugin_package_invalid: 400,
+  plugin_api_incompatible: 400,
+  plugin_id_reserved: 409,
+  plugin_version_not_newer: 409,
+  plugin_requires_unmet: 409,
+  plugin_conflict: 409,
+  plugin_package_changed: 409,
+  plugin_busy: 409,
+  plugin_required_by: 409,
+  plugin_official: 400,
   dead_letter_not_found: 404,
 } as const satisfies Partial<Record<ErrorCode, number>>
 type ResponseCode = keyof typeof statuses

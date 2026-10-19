@@ -2,7 +2,7 @@ import { coreMigrations, migrateToLatest, toIsoTimestamp, type CoreDatabase } fr
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import { afterAll, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import { DomainError } from '../errors.ts'
-import { backoffMs, createJobRunner, type JobHandler, type JobRunnerOptions } from './runner.ts'
+import { backoffMs, createJobRunner, JobDeferredError, type JobHandler, type JobRunnerOptions } from './runner.ts'
 import { claimJob, findDueJobs, insertJob } from './store.ts'
 
 vi.mock('./store.ts', { spy: true })
@@ -115,6 +115,56 @@ test('失败按退避重试，只记固定的错误码；次数用完移进死�
   expect(dead).toMatchObject({ name: 'core:flaky', attempts: 3, last_error: 'error', failed_at: iso() })
   expect(JSON.parse(dead!.payload)).toEqual({ redacted: true })
   expect(JSON.stringify([lines, await failed()])).not.toContain('SECRET_TOKEN_CANARY')
+})
+
+test('暂停的任务照常入队、不被认领；恢复后执行', async () => {
+  let paused = true
+  const seen: unknown[] = []
+  const r = runner({
+    'plugin:p:job:x': {
+      paused: () => paused,
+      run: ({ payload }) => {
+        seen.push(payload)
+        return Promise.resolve()
+      },
+    },
+  })
+  await r.enqueue(database.db, 'plugin:p:job:x', { n: 1 })
+  await r.drain()
+  expect(seen).toEqual([])
+  expect(await jobs()).toMatchObject([{ name: 'plugin:p:job:x', attempts: 0 }])
+  paused = false
+  await r.drain()
+  expect(seen).toEqual([{ n: 1 }])
+  expect(await jobs()).toEqual([])
+})
+
+test('处理函数抛 JobDeferredError：放回队列、不算一次尝试，也不进死信', async () => {
+  let defer = true
+  const attempts: number[] = []
+  const r = runner({
+    'plugin:p:job:x': {
+      maxAttempts: 1,
+      run: ({ attempt }) => {
+        attempts.push(attempt)
+        return defer ? Promise.reject(new JobDeferredError(5_000)) : Promise.resolve()
+      },
+    },
+  })
+  await r.enqueue(database.db, 'plugin:p:job:x', {})
+  await r.drain()
+  await r.drain()
+  expect(await jobs()).toMatchObject([{ attempts: 0, run_at: iso(5_000), lease_id: null }])
+  expect(await failed()).toEqual([])
+  advance(5_000)
+  await r.drain()
+  defer = false
+  advance(5_000)
+  await r.drain()
+  // 退回去的尝试不累计：每次都是第 1 次
+  expect(attempts).toEqual([1, 1, 1])
+  expect(await jobs()).toEqual([])
+  expect(await failed()).toEqual([])
 })
 
 test('退避从 10 秒起指数增长，上限 1 小时，抖动在 ±20% 以内', () => {

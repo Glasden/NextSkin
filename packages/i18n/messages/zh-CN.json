@@ -114,6 +114,17 @@
     "plugin_error": "插件出错了，请稍后重试。",
     "plugin_not_found": "找不到这个插件。",
     "plugin_migration_failed": "插件的数据表没有建好，所以没有启用。原因显示在插件页上。",
+    "plugin_load_failed": "插件没能在 plugin host 里加载，所以没有启用。原因显示在插件页上。",
+    "plugin_package_invalid": "{reason, select, too_large {插件包不能超过 10 MiB，解开后不能超过 64 MiB。} invalid_archive {这不是插件包：请上传 nextskin-plugin build 生成的 .tgz 文件。} unsupported_entry {插件包里只能有 manifest.json、服务端代码和 locales 文案，不能有链接或别的文件。} invalid_path {插件包里有不允许的文件路径。} duplicate_path {插件包里有重复的文件。} too_many_files {插件包里的文件太多了。} missing_manifest {插件包里没有 manifest.json。} invalid_manifest {插件包的 manifest.json 不对，请用 nextskin-plugin build 重新构建。} missing_entry {插件包里找不到服务端代码。} integrity_mismatch {插件包里的文件和 manifest 记的不一致，可能传坏了或被改过。} invalid_locale {插件包里的文案文件不对。} invalid_settings {插件的设置项里有后台表单显示不了的类型。} invalid_cron {插件的定时任务里有调度器认不出来的 cron 表达式。} locales_too_large {插件包里的文案加起来超过了 1 MiB。} other {这不是有效的插件包。}}",
+    "plugin_api_incompatible": "这个插件需要插件 API {api}，本站提供的是 {current}。",
+    "plugin_id_reserved": "官方插件已经用了 {plugin} 这个 id。",
+    "plugin_version_not_newer": "已经安装了 {installed}，只能升级到更高的版本。",
+    "plugin_requires_unmet": "这个插件需要先安装并启用 {plugin}（{range}）。",
+    "plugin_conflict": "这个插件和已经启用的 {plugin} 冲突。",
+    "plugin_package_changed": "插件包和预览时的不一样，请重新上传。",
+    "plugin_busy": "这个插件正在被另一个操作改动（安装、升级、启用、卸载或卸载后的清理），或者刚被别人改过。刷新页面看看现在的状态再试。",
+    "plugin_required_by": "已经启用的 {plugin} 依赖这个插件（{range}）。先停用 {plugin}，或者换一个版本在这个范围里的包。",
+    "plugin_official": "官方插件不能卸载，只能停用。",
     "dead_letter_not_found": "找不到这个失败的任务，可能已经重试过或删掉了。"
   },
   "score": {
@@ -1052,7 +1063,11 @@
         "pluginEnable": "启用插件",
         "pluginDisable": "停用插件",
         "pluginSettings": "修改插件设置",
-        "pluginDeadLetter": "处理失败的任务"
+        "pluginDeadLetter": "处理失败的任务",
+        "pluginInstall": "安装插件",
+        "pluginUpgrade": "升级插件",
+        "pluginUninstall": "卸载插件",
+        "pluginRestartHost": "重启 plugin host"
       },
       "subjects": {
         "user": "用户 #{id}",
@@ -1060,7 +1075,8 @@
         "report": "举报 #{id}",
         "other": "{type} #{id}",
         "setting": "设置",
-        "plugin": "插件 {name}"
+        "plugin": "插件 {name}",
+        "pluginHost": "plugin host"
       },
       "actorSystem": "系统",
       "actorPlugin": "插件 {id}",
@@ -1080,7 +1096,8 @@
         },
         "pluginVersion": "版本 {version}",
         "pluginSetting": "{label}：{change}",
-        "pluginDeadLetter": "{action, select, retry {重试} other {删除}}任务 #{job}"
+        "pluginDeadLetter": "{action, select, retry {重试} other {删除}}任务 #{job}",
+        "pluginUpgrade": "版本 {from} → {to}"
       },
       "filterActor": "只看操作者 #{uid}",
       "filterSubject": "只看 {subject}",
@@ -1474,9 +1491,9 @@
     },
     "plugins": {
       "title": "插件",
-      "description": "官方插件随站点一起发布，启用之后才会运行。启用、停用和修改设置都记在审计日志里。",
+      "description": "官方插件随站点一起发布；也可以上传第三方插件，它们在单独的 plugin host 进程里运行。插件启用之后才会运行；安装、启用、停用和修改设置都记在审计日志里。",
       "tableLabel": "插件",
-      "empty": "这个版本没有带官方插件。",
+      "empty": "还没有插件。",
       "columns": {
         "plugin": "插件",
         "version": "版本",
@@ -1484,12 +1501,16 @@
         "deadLetters": "失败的任务"
       },
       "official": "官方",
+      "installed": "上传安装",
       "status": {
         "enabled": "已启用",
         "disabled": "未启用",
-        "switching": "切换中"
+        "switching": "切换中",
+        "unavailable": "不可用"
       },
       "lastError": "出错了",
+      "packageMissing": "取不到插件包",
+      "packageMissingHint": "这个实例取不到插件表里这个版本的插件包（存储里没有，或者校验没通过），插件在这里不可用；它要是拦截注册，注册已经暂停。可以停用或卸载它，或者恢复插件包的存储之后等几秒。",
       "all": "所有插件",
       "enable": "启用插件",
       "disable": "停用插件",
@@ -1570,6 +1591,44 @@
       "providers": {
         "passwordHasher": "核对旧系统的密码",
         "login": "第三方登录"
+      },
+      "host": {
+        "failed": "plugin host 连续崩溃，已经停止自动重启。上传安装的插件都暂停了：要经过它们的注册会被拒绝，它们的任务留在队列里。先找出出问题的插件（可以停用它），再重启。",
+        "restarting": "plugin host 正在重启，上传安装的插件暂时不可用。",
+        "lastError": "原因：{error}",
+        "restart": "重启 plugin host",
+        "restarted": "plugin host 已经重启",
+        "networkUnrestricted": "这台服务器的 Node.js 拦不住上传的插件绕过站点直接连网（Node.js 26 起才能）。插件通过站点发出的请求仍然只能访问它声明的地址。"
+      },
+      "upload": {
+        "button": "上传插件",
+        "label": "选择插件包",
+        "checking": "正在检查插件包…",
+        "installTitle": "安装{name}？",
+        "upgradeTitle": "把{name}从 {from} 升级到 {to}？",
+        "trust": "上传的插件会在服务器上运行，能做下面列出的事。站点会拦住它申请之外的数据访问，但拦不住恶意代码：这是安全带，不是沙箱。插件没有经过审核或签名，只安装你信任的插件。",
+        "highRisk": "它要用到高风险的能力：{list}。",
+        "added": "新增",
+        "addedHint": "新版本比 {from} 多要了标着“新增”的能力或外部地址。",
+        "upgradeEnabled": "这个插件正在运行：会先在新版本里建好数据表、确认能加载，再切换过去。",
+        "upgradeDisabled": "插件没有启用，升级之后仍然不启用。",
+        "installHint": "安装之后插件还不会运行，到插件页启用它。",
+        "confirmInstall": "安装",
+        "confirmUpgrade": "升级",
+        "installedToast": "已安装{name}",
+        "upgradedToast": "已把{name}升级到 {version}",
+        "drop": "把插件包拖到这里",
+        "dropHint": "nextskin-plugin build 生成的 .tgz 文件，最大 10 MiB。",
+        "failed": "没能检查这个插件包，稍后再试。"
+      },
+      "uninstall": {
+        "title": "卸载",
+        "description": "卸载会删掉插件的数据表、存的数据、设置、排队的任务和失败的任务，还有上传的插件包，不能恢复。正在运行的插件会先停用。",
+        "button": "卸载插件",
+        "dialogTitle": "卸载{name}？",
+        "dialogHint": "插件的数据表、存的数据和设置都会删掉，不能恢复。要保留数据，停用就够了。",
+        "confirm": "卸载",
+        "done": "已卸载{name}"
       }
     }
   },

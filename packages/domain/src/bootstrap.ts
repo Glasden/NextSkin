@@ -2,6 +2,8 @@ import { mkdir } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { coreMigrations, createDatabase, migrateToLatest, type CoreDatabase, type DatabaseConfig } from '@nextskin/db'
 import { createCore, type Core } from './core.ts'
+import type { PluginHostEntry } from './plugins/host.ts'
+import { createLocalPluginPackageStore, createPluginPackages } from './plugins/packages.ts'
 import type { OfficialPlugin } from './plugins/system.ts'
 import { createLocalRenderCache } from './textures/render-cache.ts'
 import { createLocalTextureStorage } from './textures/storage.ts'
@@ -13,6 +15,10 @@ export interface CoreConfig {
   /** 本地材质存储目录 */
   textureDirectory: string
   renderCacheDirectory: string
+  /** 安装插件的包（存储接口的本地驱动）：`<数据目录>/plugin-packages` */
+  pluginPackageDirectory: string
+  /** 本实例解开的安装插件：`<数据目录>/plugins/{id}/{版本}`（ADR-0009） */
+  pluginDirectory: string
   secretKey: string
   production: boolean
 }
@@ -54,6 +60,8 @@ export function coreConfigFromEnv(
     dataDirectory,
     textureDirectory: join(dataDirectory, 'textures'),
     renderCacheDirectory: join(dataDirectory, 'render-cache'),
+    pluginPackageDirectory: join(dataDirectory, 'plugin-packages'),
+    pluginDirectory: join(dataDirectory, 'plugins'),
     secretKey,
     production: options.production,
   }
@@ -61,11 +69,17 @@ export function coreConfigFromEnv(
 
 /**
  * 连接数据库、执行核心迁移、启动任务执行器，返回领域层的入口。启动器落地之前，由 Web 进程在启动时调用。
- * 命令行脚本（例如 `pnpm set-role`）传 `startJobs: false`：只执行自己的用例，不去认领后台任务
+ * 命令行脚本（例如 `pnpm set-role`）传 `startJobs: false`：只执行自己的用例，不去认领后台任务。
+ * `pluginHost` 是 plugin host 的入口：启动器落地之前由核心进程拉起 host（ADR-0033）；命令行脚本不传，
+ * 安装插件在脚本里不运行，它们的拦截器按失败策略处理
  */
 export async function openCore(
   config: CoreConfig,
-  options: { startJobs?: boolean; officialPlugins?: readonly OfficialPlugin[] } = {},
+  options: {
+    startJobs?: boolean
+    officialPlugins?: readonly OfficialPlugin[]
+    pluginHost?: PluginHostEntry | null
+  } = {},
 ): Promise<{ core: Core; close(): Promise<void> }> {
   if (config.database.dialect === 'sqlite') await mkdir(dirname(config.database.file), { recursive: true })
   const db = createDatabase<CoreDatabase>(config.database)
@@ -83,6 +97,11 @@ export async function openCore(
       plugins: {
         official: options.officialPlugins ?? [],
         sqliteFile: config.database.dialect === 'sqlite' ? config.database.file : undefined,
+        host: options.pluginHost ?? null,
+        packages: createPluginPackages({
+          directory: config.pluginDirectory,
+          store: createLocalPluginPackageStore(config.pluginPackageDirectory),
+        }),
       },
     })
     // 先切到表里启用的插件，再启动执行器：插件的任务处理函数和定时任务要先登记上。

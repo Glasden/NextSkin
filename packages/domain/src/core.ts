@@ -12,7 +12,9 @@ import { createCloset } from './closet/service.ts'
 import { createReports } from './reports/service.ts'
 import { dialectOf, toIsoTimestamp, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
 import { createPluginDbGateway } from './plugins/db/gateway.ts'
-import { createPluginSystem, type OfficialPlugin } from './plugins/system.ts'
+import { createPluginSystem, PLUGIN_CLEANUP_JOB, type OfficialPlugin } from './plugins/system.ts'
+import type { PluginHostEntry } from './plugins/host.ts'
+import type { PluginPackages } from './plugins/packages.ts'
 import type { loadPlugin } from '@nextskin/plugin-host'
 import { createPluginAdmin } from './plugins/admin.ts'
 import { PLUGIN_KV_CLEANUP_JOB } from './plugins/kv.ts'
@@ -75,6 +77,12 @@ export interface CoreOptions {
     log?: (line: string) => void
     /** 测试用：替换进程内的插件加载 */
     load?: typeof loadPlugin
+    /** plugin host 的入口；没有时安装插件不运行（命令行脚本） */
+    host?: PluginHostEntry | null
+    /** 安装插件的包（存储接口）和本实例解开的目录 */
+    packages?: PluginPackages | null
+    /** host 崩溃后的重启策略；测试用来缩短等待 */
+    hostRestart?: { maxCrashes?: number; baseDelayMs?: number }
   }
 }
 
@@ -146,8 +154,12 @@ export function createCore(options: CoreOptions) {
     syncIntervalMs: options.plugins?.syncIntervalMs,
     log: options.plugins?.log,
     load: options.plugins?.load,
+    host: options.plugins?.host ?? null,
+    packages: options.plugins?.packages ?? null,
+    hostRestart: options.plugins?.hostRestart,
   })
   handlers.set(PLUGIN_KV_CLEANUP_JOB, { run: () => plugins.kv.cleanup() })
+  handlers.set(PLUGIN_CLEANUP_JOB, { run: ({ payload }) => plugins.cleanupUninstalled(payload) })
   schedules.add({ name: PLUGIN_KV_CLEANUP_JOB, job: PLUGIN_KV_CLEANUP_JOB, cron: '37 4 * * *' })
   schedules.add({ name: AUTH_CLEANUP_JOB, job: AUTH_CLEANUP_JOB, cron: '17 4 * * *' })
   schedules.add({ name: AUDIT_CLEANUP_JOB, job: AUDIT_CLEANUP_JOB, cron: '27 4 * * *' })

@@ -23,6 +23,8 @@ const protocolRewrites = [
 const config: NextConfig = {
   output: 'standalone',
   outputFileTracingRoot: root,
+  // plugin host 是单独的 Node 进程，入口不在任何模块的 import 里，追踪不到（ADR-0033、lib/server.ts）
+  outputFileTracingIncludes: { '/*': ['../../packages/plugin-host/dist/host.mjs'] },
   turbopack: { root },
   poweredByHeader: false,
   // 材质和用户上传的图片不经过 next/image，Image Optimization 保持关闭（不变量 8、ADR-0003）

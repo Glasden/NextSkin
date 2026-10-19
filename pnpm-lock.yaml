@@ -239,6 +239,9 @@ catalogs:
     react-dom:
       specifier: 19.3.1
       version: 19.3.1
+    rolldown:
+      specifier: 1.2.14
+      version: 1.2.14
     storybook:
       specifier: 10.6.2
       version: 10.6.2
@@ -552,6 +555,28 @@ importers:
         specifier: 'catalog:'
         version: 5.0.5(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
+  packages/plugin-cli:
+    dependencies:
+      '@nextskin/plugin-host':
+        specifier: workspace:*
+        version: link:../plugin-host
+      '@nextskin/plugin-sdk':
+        specifier: workspace:*
+        version: link:../plugin-sdk
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.2.14
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.5(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
   packages/plugin-host:
     dependencies:
       '@nextskin/plugin-sdk':
@@ -570,6 +595,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.2.14
       vitest:
         specifier: 'catalog:'
         version: 5.0.5(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))

@@ -2,7 +2,7 @@ import type { ImportGateway } from '../import-gateway.ts'
 import { registerSetup } from './setup.ts'
 import { registerImport } from './import.ts'
 import { registerAdmin } from './admin.ts'
-import { registerPluginAdmin } from './plugins.ts'
+import { MAX_PLUGIN_PACKAGE_REQUEST_BYTES, registerPluginAdmin } from './plugins.ts'
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { DomainError, type Core } from '@nextskin/domain'
 import type { MiddlewareHandler } from 'hono'
@@ -21,6 +21,8 @@ import { registerRegistration } from './register.ts'
 import { registerTextures } from './textures.ts'
 import { registerYggdrasilTokens } from './yggdrasil-tokens.ts'
 
+/** 上传插件包的两个接口：请求体是 multipart，上限按插件包算 */
+const PLUGIN_PACKAGE_PATH = /\/admin\/plugin-packages(?:\/preview)?\/?$/
 export function createRestApp(
   core: Core,
   options: { rateLimiter?: RateLimiter; uploadRateLimiter?: RateLimiter; importer?: ImportGateway } = {},
@@ -62,6 +64,22 @@ export function createRestApp(
   app.use(
     '*',
     createMiddleware<AppEnv>(async (c, next) => {
+      if (c.req.method === 'POST' && PLUGIN_PACKAGE_PATH.test(c.req.path)) {
+        // 插件包（ADR-0033"安装"）：和材质一样逐块计数，不信任 Content-Length
+        const maxSize = MAX_PLUGIN_PACKAGE_REQUEST_BYTES
+        const tooLarge = () => new DomainError('plugin_package_invalid', { reason: 'too_large' })
+        if (Number(c.req.header('content-length')) > maxSize) throw tooLarge()
+        const headers = new Headers(c.req.raw.headers)
+        headers.delete('content-length')
+        c.req.raw = new Request(c.req.raw, { headers })
+        const limit = bodyLimit({
+          maxSize,
+          onError: () => {
+            throw tooLarge()
+          },
+        }) as MiddlewareHandler<AppEnv>
+        return limit(c, next)
+      }
       if (c.req.method !== 'POST' || !/\/textures\/?$/.test(c.req.path)) {
         // 设置里的公告和内容政策各能写 20000 个字，按 UTF-8 最多 4 字节一个字算（ADR-0028）
         const maxSize =
@@ -109,7 +127,7 @@ export function createRestApp(
   app.use(
     '*',
     createMiddleware<AppEnv>(async (c, next) => {
-      if (c.req.method === 'POST' && /\/textures\/?$/.test(c.req.path)) {
+      if (c.req.method === 'POST' && (/\/textures\/?$/.test(c.req.path) || PLUGIN_PACKAGE_PATH.test(c.req.path))) {
         if (!/^multipart\/form-data(?:\s*;|$)/i.test(c.req.header('content-type') ?? ''))
           return errorResponse(c, 'invalid_request', undefined, undefined, 415)
         return next()

@@ -83,8 +83,10 @@ export { createMemorySessionCache, type YggdrasilSessionCache, type JoinSession 
 
 export type { PodiumEntry, Podium, SiteStats } from './home/queries.ts'
 
-export type { OfficialPlugin, PluginFormField, PluginRouteRequest } from './plugins/system.ts'
-export type { PluginSummary, PluginDetail } from './plugins/admin.ts'
+export type { OfficialPlugin, PluginFormField, PluginHostStatus, PluginRouteRequest } from './plugins/system.ts'
+export type { PluginSummary, PluginDetail, PluginPackagePreview } from './plugins/admin.ts'
+export type { PluginHostEntry } from './plugins/host.ts'
+export { pluginHostEntry } from '@nextskin/plugin-host'
 export type { PluginSettingView } from './plugins/settings.ts'
 export type { PluginReferences } from './plugins/references.ts'
 /** 后台渲染插件声明的界面要用的类型（SDK 的 ui.ts） */

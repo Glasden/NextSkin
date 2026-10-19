@@ -26,6 +26,10 @@ const actionKeys = {
   'plugin.disable': 'pluginDisable',
   'plugin.settings': 'pluginSettings',
   'plugin.deadLetter': 'pluginDeadLetter',
+  'plugin.install': 'pluginInstall',
+  'plugin.upgrade': 'pluginUpgrade',
+  'plugin.uninstall': 'pluginUninstall',
+  'plugin.restartHost': 'pluginRestartHost',
 } as const
 
 // 处理举报的 details.action 可能是接口的动作，也可能是 SDK 的处理方式，都映射到同一份文案
@@ -110,6 +114,7 @@ export async function AuditTable({
     const { type, id, exists } = entry.subject
     // 插件也没有整数 id（记作 0），插件 id 在 details 里；插件还在就链接到它的页面（ADR-0033）
     if (type === 'plugin') {
+      if (entry.action === 'plugin.restartHost') return t('subjects.pluginHost')
       const plugin = text(entry.details.plugin)
       if (!plugin) return t('subjects.other', { type, id })
       const label = t('subjects.plugin', { name: core.plugins.get(plugin) ? pluginName(core, plugin, locale) : plugin })
@@ -223,8 +228,18 @@ export async function AuditTable({
       summary = t('details.userSetRole', { from: role(entry.details.from), to: role(entry.details.to) })
     } else if (entry.action === 'setting.update') {
       summary = settingChange(entry.details)
-    } else if (entry.action === 'plugin.enable' || entry.action === 'plugin.disable') {
+    } else if (
+      entry.action === 'plugin.enable' ||
+      entry.action === 'plugin.disable' ||
+      entry.action === 'plugin.install' ||
+      entry.action === 'plugin.uninstall'
+    ) {
       summary = t('details.pluginVersion', { version: text(entry.details.version) ?? '' })
+    } else if (entry.action === 'plugin.upgrade') {
+      summary = t('details.pluginUpgrade', {
+        from: text(entry.details.from) ?? '',
+        to: text(entry.details.version) ?? '',
+      })
     } else if (entry.action === 'plugin.settings') {
       summary = pluginSettingChange(entry.details)
     } else if (entry.action === 'plugin.deadLetter') {

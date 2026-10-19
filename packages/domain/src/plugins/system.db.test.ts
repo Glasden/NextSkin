@@ -573,6 +573,7 @@ test('准备上下文时插件被停用：不再调用插件', async () => {
   await hold.entered
   await env.core.plugins.admin.disable(actor, 'a')
   hold.release()
-  await expect(pending).rejects.toMatchObject({ code: 'plugin_error' })
+  // 插件已经停用：和 host 不可用时一样按 503 处理
+  await expect(pending).rejects.toMatchObject({ code: 'plugin_unavailable' })
   expect(calls).toBe(0)
 })

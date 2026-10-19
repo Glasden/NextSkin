@@ -12,12 +12,20 @@ type AuditAction =
   | 'plugin.disable'
   | 'plugin.settings'
   | 'plugin.deadLetter'
+  | 'plugin.install'
+  | 'plugin.upgrade'
+  | 'plugin.uninstall'
+  | 'plugin.restartHost'
 // 插件和设置项一样没有整数 id，subject_id 记 0，插件 id 放在 details 里（ADR-0028 的做法）
 const subjects: Record<AuditAction, string> = {
   'plugin.enable': 'plugin',
   'plugin.disable': 'plugin',
   'plugin.settings': 'plugin',
   'plugin.deadLetter': 'plugin',
+  'plugin.install': 'plugin',
+  'plugin.upgrade': 'plugin',
+  'plugin.uninstall': 'plugin',
+  'plugin.restartHost': 'plugin',
   'site.setup': 'user',
   'setting.update': 'setting',
   'report.resolve': 'report',

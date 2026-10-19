@@ -39,11 +39,11 @@ export interface PluginPackageJson {
 export const PLUGIN_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 /** 表名、索引名：拼进物理名 `p_<id>__<名字>`，不允许连续下划线（S5） */
 export const OBJECT_NAME = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/
-const KEY = /^[A-Za-z][A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*$/
-const ROUTE_KEY =
+export const KEY = /^[A-Za-z][A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*$/
+export const ROUTE_KEY =
   /^(GET|POST|PUT|PATCH|DELETE) (\/(?:[A-Za-z0-9._~-]+|:[A-Za-z][A-Za-z0-9]*)(?:\/(?:[A-Za-z0-9._~-]+|:[A-Za-z][A-Za-z0-9]*))*|\/)$/
 const DEFAULT_BODY_BYTES = 1024 * 1024
-const MAX_BODY_BYTES = 10 * 1024 * 1024
+export const MAX_BODY_BYTES = 10 * 1024 * 1024
 
 export class PluginDefinitionError extends Error {
   override name = 'PluginDefinitionError'
@@ -291,7 +291,7 @@ export function describePlugin(definition: AnyPluginDefinition): PluginContribut
   }
 }
 
-function validateUi(ui: PluginContributions['ui'], permissions: ReadonlySet<string>) {
+export function validateUi(ui: PluginContributions['ui'], permissions: ReadonlySet<string>) {
   for (const key of Object.keys(ui))
     if (key !== 'nav' && key !== 'pages' && key !== 'formFields') fail(`ui 里没有 ${key} 这一项`)
   const pages = ui.pages ?? {}

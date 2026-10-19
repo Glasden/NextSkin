@@ -1,7 +1,16 @@
 import { toIsoTimestamp, type CoreDatabase, type IsoTimestamp } from '@nextskin/db'
 import type { Kysely } from 'kysely'
 import { DomainError } from '../errors.ts'
-import { claimJob, completeJob, failJob, findDueJobs, insertJob, rescheduleJob, type ClaimedJob } from './store.ts'
+import {
+  claimJob,
+  completeJob,
+  deferJob,
+  failJob,
+  findDueJobs,
+  insertJob,
+  rescheduleJob,
+  type ClaimedJob,
+} from './store.ts'
 
 /** 一种任务的处理方式。处理函数在事务之外执行，至少执行一次，必须容忍重复（ADR-0021）。 */
 export interface JobHandler {
@@ -20,6 +29,24 @@ export interface JobHandler {
    * 返回 null 时退回错误码
    */
   errorText?(error: unknown): string | null
+  /**
+   * 返回 true 时暂时不认领这种任务，入队照常。插件的 host 不可用时用它：事件和任务留在表里，
+   * 等插件能运行了再执行（ADR-0033）
+   */
+  paused?(): boolean
+}
+
+/**
+ * 处理函数抛它表示这次根本没有执行（例如插件的 host 中途退出了）：任务放回队列，过一会儿再认领，不算一次尝试，
+ * 也不进死信
+ */
+export class JobDeferredError extends Error {
+  override name = 'JobDeferredError'
+  readonly delayMs: number
+  constructor(delayMs = 30_000) {
+    super('任务这次没有执行，稍后再试')
+    this.delayMs = delayMs
+  }
 }
 
 export interface JobRunnerOptions {
@@ -91,7 +118,9 @@ export function createJobRunner(options: JobRunnerOptions) {
         skipped = false
         const free = concurrency - active.size
         if (free <= 0 || stopping) break
-        const names = [...handlers.keys()].filter((name) => !saturated(name))
+        const names = [...handlers.entries()]
+          .filter(([name, handler]) => !saturated(name) && !handler.paused?.())
+          .map(([name]) => name)
         const due = await findDueJobs(db, { names, now: at(), limit: free })
         for (const { id, name } of due) {
           if (active.size >= concurrency || stopping) break
@@ -158,6 +187,11 @@ export function createJobRunner(options: JobRunnerOptions) {
         }),
       ])
     } catch (error) {
+      if (error instanceof JobDeferredError) {
+        log(`[jobs] deferred ${job.name} attempt=${job.attempts}`)
+        await deferJob(db, lease, { runAt: at(error.delayMs) })
+        return
+      }
       const code = errorCode(error)
       log(`[jobs] failed ${job.name} code=${code} attempt=${job.attempts}`)
       const text = (error instanceof JobTimeoutError ? null : describe(handler, error)) ?? code

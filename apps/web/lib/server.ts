@@ -1,6 +1,7 @@
+import { resolve } from 'node:path'
 import { createImportService, type ImportService } from '@nextskin/importer'
 import { createApp } from '@nextskin/api'
-import { coreConfigFromEnv, DomainError, openCore, type Core } from '@nextskin/domain'
+import { coreConfigFromEnv, DomainError, openCore, pluginHostEntry, type Core } from '@nextskin/domain'
 import { officialPlugins } from './official-plugins'
 
 export interface Server {
@@ -22,11 +23,12 @@ export function getServer(): Promise<Server> {
 }
 
 async function open(): Promise<Server> {
-  const config = coreConfigFromEnv(process.env, {
-    cwd: process.cwd(),
-    production: process.env.NODE_ENV === 'production',
-  })
-  const opened = await openCore(config, { officialPlugins })
+  const production = process.env.NODE_ENV === 'production'
+  const config = coreConfigFromEnv(process.env, { cwd: process.cwd(), production })
+  // 工作目录是 apps/web（next dev）或 standalone 产物里的 apps/web（server.js 会切过去），上两级是根目录。
+  // 产物里运行打好包的 host，它由 next.config.ts 的 outputFileTracingIncludes 带进去
+  const pluginHost = pluginHostEntry({ root: resolve(process.cwd(), '../..'), bundled: production })
+  const opened = await openCore(config, { officialPlugins, pluginHost })
   const { core } = opened
   try {
     const importer = await createImportService({

@@ -55,6 +55,10 @@ export function pluginEnvironment() {
       if (!core) throw new Error('Call boot first')
       return core
     },
+    /** SQLite 的数据库文件；其他数据库是 undefined */
+    get databaseFile() {
+      return database.config.dialect === 'sqlite' ? database.config.file : undefined
+    },
     lines,
     async boot(plugins: readonly OfficialPlugin[], options: Partial<CoreOptions> = {}) {
       await core?.shutdown()

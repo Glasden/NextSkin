@@ -33,9 +33,28 @@ export type {
   CoreMethod,
   CoreRequests,
   CoreRpc,
+  CoreToHost,
+  HostLoadResult,
+  HostPluginSpec,
+  HostToCore,
   InterceptOutcome,
   InvocationContext,
   PluginCall,
   SerializedRequest,
   SerializedResponse,
+  WireError,
 } from './protocol.ts'
+export { pluginHostEntry } from './entry.ts'
+export {
+  ChannelBackpressureError,
+  ChannelClosedError,
+  createFrameChannel,
+  FrameTooLargeError,
+  MAX_FRAME_BYTES,
+  type FrameChannel,
+} from './channel.ts'
+export * from './package/semver.ts'
+export * from './package/tar.ts'
+export * from './package/archive.ts'
+export * from './package/manifest-schema.ts'
+export * from './package/module-loader.ts'

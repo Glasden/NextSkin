@@ -32,12 +32,18 @@ const pluginsSite = `http://localhost:${pluginsPort}`
 const pluginsDataDirectory = (process.env.NEXTSKIN_E2E_PLUGINS_DATA_DIR ??= mkdtempSync(
   join(tmpdir(), 'nextskin-e2e-plugins-'),
 ))
+// 同样两个参考插件，打成插件包、换个 id 上传安装，在 plugin host 里运行（ADR-0033"验收：参考插件"）
+const pluginsHostPort = 3105
+const pluginsHostSite = `http://localhost:${pluginsHostPort}`
+const pluginsHostDataDirectory = (process.env.NEXTSKIN_E2E_PLUGINS_HOST_DATA_DIR ??= mkdtempSync(
+  join(tmpdir(), 'nextskin-e2e-plugins-host-'),
+))
 const oldSiteDirectory = (process.env.NEXTSKIN_E2E_OLD_SITE_DIR ??= mkdtempSync(join(tmpdir(), 'nextskin-e2e-bs-')))
 const server = { NEXTSKIN_SECRET: secret, HOSTNAME: '127.0.0.1' }
 // 后台和插件的用例（e2e/admin.spec.ts、plugins.spec.ts）用 set-role 脚本设定超级管理员，要用同一个密钥打开服务的数据目录
 process.env.NEXTSKIN_E2E_SECRET = secret
 
-export default defineConfig({
+export default defineConfig<{ pluginHost: boolean }>({
   testDir: 'e2e',
   forbidOnly: !!process.env.CI,
   use: { baseURL: `http://localhost:${port}` },
@@ -61,6 +67,11 @@ export default defineConfig({
       testMatch: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts', 'admin.spec.ts'],
     },
     { name: 'plugins', use: { ...devices['Desktop Chrome'], baseURL: pluginsSite }, testMatch: ['plugins.spec.ts'] },
+    {
+      name: 'plugins-host',
+      use: { ...devices['Desktop Chrome'], baseURL: pluginsHostSite, pluginHost: true },
+      testMatch: ['plugins.spec.ts'],
+    },
     // 每个用例自己指定站点（两个未初始化的服务），用例之间不共享状态
     { name: 'setup', use: { ...devices['Desktop Chrome'] }, testMatch: ['setup.spec.ts'] },
   ],
@@ -94,6 +105,15 @@ export default defineConfig({
       ].join(' && '),
       env: { ...server, PORT: String(pluginsPort), NEXTSKIN_DATA_DIR: pluginsDataDirectory },
       url: pluginsSite,
+      reuseExistingServer: false,
+    },
+    {
+      command: [
+        `node ../../tests/contract/scripts/seed-sqlite.ts ${pluginsHostDataDirectory} ${pluginsHostSite}`,
+        'node .next/standalone/apps/web/server.js',
+      ].join(' && '),
+      env: { ...server, PORT: String(pluginsHostPort), NEXTSKIN_DATA_DIR: pluginsHostDataDirectory },
+      url: pluginsHostSite,
       reuseExistingServer: false,
     },
     {

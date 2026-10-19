@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "build": "node scripts/build-host.ts",
     "lint": "eslint --max-warnings 0 .",
     "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
     "test": "vitest run"
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "rolldown": "catalog:",
     "vitest": "catalog:"
   }
 }

@@ -1,6 +1,7 @@
 export { createDatabase, type DatabaseConfig } from './database.ts'
 export { readSnapshot, type SnapshotSource } from './snapshot.ts'
 export { transactionWithRetry } from './transaction-retry.ts'
+export { ExclusiveLockBusyError, withExclusiveLock } from './exclusive-lock.ts'
 export {
   containsInsensitive,
   isUniqueViolation,
@@ -78,6 +79,7 @@ export {
   compilePluginQuery,
   createPluginQueryExecutor,
   dropPluginTables,
+  listTablesWithPrefix,
   pluginQueryError,
   PluginQueryExecutionError,
 } from './sqlite/plugin-query.ts'

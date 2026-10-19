@@ -4,6 +4,7 @@ import { AlertDialog } from '@base-ui/react/alert-dialog'
 import { Dialog as BaseDialog } from '@base-ui/react/dialog'
 import type { ReactElement, ReactNode } from 'react'
 import { Button } from '../button/button.tsx'
+import { cx } from '../cx.ts'
 
 export interface DialogProps {
   /** 打开对话框的按钮，例如 `<Button>添加角色</Button>`。不传时用 open 和 onOpenChange 控制 */
@@ -22,13 +23,28 @@ export interface DialogProps {
   actions: ReactNode
   /** 确认不可逆的操作：点对话框外面不会关闭，读屏软件按 alertdialog 朗读 */
   alert?: boolean
+  /**
+   * `lg` 给要对照着一份清单做决定的确认框，例如安装插件之前列出它会做什么。
+   * 只是加宽，内容超出视口时整个对话框随页面滚动；编辑详情仍然用 Sheet
+   */
+  size?: 'md' | 'lg'
 }
 
 /**
  * 需要用户做决定、并且应当打断当前流程的对话框。打开时焦点限制在框内，落在第一个可以聚焦的元素上；
  * 关闭后焦点回到触发它的元素（DESIGN.md §9）。展示大量内容或编辑详情改用 Sheet
  */
-export function Dialog({ trigger, open, onOpenChange, title, description, children, actions, alert }: DialogProps) {
+export function Dialog({
+  trigger,
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  actions,
+  alert,
+  size = 'md',
+}: DialogProps) {
   // AlertDialog 只有 Root 和 Trigger 是自己的，其余部件就是 Dialog 的
   const Root = alert ? AlertDialog.Root : BaseDialog.Root
   const Trigger = alert ? AlertDialog.Trigger : BaseDialog.Trigger
@@ -44,10 +60,11 @@ export function Dialog({ trigger, open, onOpenChange, title, description, childr
         />
         <BaseDialog.Viewport className="fixed inset-0 z-50 grid place-items-center overflow-y-auto p-4">
           <BaseDialog.Popup
-            className={
+            className={cx(
               // 渲染在 body 下，不在页面的字体设置范围内，字体自己设。进出场与 Toast 相同：四格阶跃，上移 8px 并淡入
-              'flex w-full max-w-md flex-col gap-6 rounded-md border border-border-strong bg-surface-raised p-6 font-sans text-text shadow-pixel-lg outline-none transition-[opacity,translate] duration-base ease-step motion-reduce:transition-none data-ending-style:opacity-0 data-starting-style:translate-y-2 data-starting-style:opacity-0'
-            }
+              'flex w-full flex-col gap-6 rounded-md border border-border-strong bg-surface-raised p-6 font-sans text-text shadow-pixel-lg outline-none transition-[opacity,translate] duration-base ease-step motion-reduce:transition-none data-ending-style:opacity-0 data-starting-style:translate-y-2 data-starting-style:opacity-0',
+              size === 'lg' ? 'max-w-2xl' : 'max-w-md',
+            )}
           >
             <div className="flex flex-col gap-2">
               <BaseDialog.Title className="font-pixel text-pixel-2 text-text">{title}</BaseDialog.Title>

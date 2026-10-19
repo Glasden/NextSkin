@@ -5,13 +5,14 @@ import {
   createPluginSqliteReader,
   dialectOf,
   dropPluginTables,
+  listTablesWithPrefix,
   pluginQueryError,
   PluginQueryExecutionError,
   PluginReadError,
   type CoreDatabase,
 } from '@nextskin/db'
 import { SelectQueryNode, type Kysely, type QueryResult } from 'kysely'
-import { physicalName, PLUGIN_ID, PluginQueryRejected, sanitizePluginQuery } from './sanitize.ts'
+import { physicalName, physicalPrefix, PLUGIN_ID, PluginQueryRejected, sanitizePluginQuery } from './sanitize.ts'
 
 export interface PluginQueryScope {
   pluginId: string
@@ -100,6 +101,17 @@ export function createPluginDbGateway(options: {
           db,
           [...new Set(tables)].map((table) => physicalName(pluginId, table)),
         )
+      } catch (error) {
+        if (error instanceof PluginDbError) throw error
+        if (error instanceof PluginQueryRejected) throw new PluginDbError('rejected', error.message)
+        throw new PluginDbError(pluginQueryError(error).code)
+      }
+    },
+    /** 卸载之后：这个插件的全部表，按物理名的前缀找，不依赖 manifest（处理卸载的实例可能没有它的包） */
+    async dropAllTables(pluginId: string): Promise<void> {
+      try {
+        if (closed) throw new PluginDbError('failed')
+        await dropPluginTables(db, await listTablesWithPrefix(db, physicalPrefix(pluginId)))
       } catch (error) {
         if (error instanceof PluginDbError) throw error
         if (error instanceof PluginQueryRejected) throw new PluginDbError('rejected', error.message)

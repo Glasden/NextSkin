@@ -17,6 +17,18 @@ export function nextRunAt(cron: string, timeZone: string, from: Date): Date {
   return next
 }
 
+/** 能不能当定时任务用：五段、croner 认得、有下一次执行时间。上传的插件安装前用它检查 manifest（ADR-0033） */
+export function isValidCron(cron: string): boolean {
+  const trimmed = cron.trim()
+  if (trimmed.split(/\s+/).length !== 5) return false
+  try {
+    nextRunAt(trimmed, 'UTC', new Date())
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function createScheduler(options: {
   db: Kysely<CoreDatabase>
   jobs: Pick<JobRunner, 'enqueue'>

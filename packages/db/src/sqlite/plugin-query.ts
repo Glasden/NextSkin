@@ -256,6 +256,26 @@ export function createPluginQueryExecutor<DB>(db: Kysely<DB>) {
   }
 }
 
+/**
+ * 当前库里名字以 prefix 开头的表（不含视图）。卸载插件时按物理名的前缀找它的表，不依赖插件包里的 manifest。
+ * MySQL 只看当前库，PostgreSQL 只看当前 schema
+ */
+export async function listTablesWithPrefix<DB>(db: Kysely<DB>, prefix: string): Promise<string[]> {
+  const pattern = `${prefix.replace(/[!%_]/g, (character) => `!${character}`)}%`
+  const dialect = dialectOf(db)
+  const query =
+    dialect === 'sqlite'
+      ? sql<{ name: string }>`select name from sqlite_master where type = 'table' and name like ${pattern} escape '!'`
+      : dialect === 'postgres'
+        ? sql<{ name: string }>`select tablename as name from pg_tables
+            where schemaname = current_schema() and tablename like ${pattern} escape '!'`
+        : sql<{ name: string }>`select table_name as name from information_schema.tables
+            where table_schema = database() and table_type = 'BASE TABLE' and table_name like ${pattern} escape '!'`
+  const { rows } = await query.execute(db)
+  // LIKE 在 MySQL 上不区分大小写：按原样再筛一遍
+  return rows.map((row) => row.name).filter((name) => name.startsWith(prefix))
+}
+
 /** 调用方已校验物理名。SQLite 延迟检查外键；PG 同时删除；MySQL 在专用连接暂时关闭检查。 */
 export async function dropPluginTables<DB>(db: Kysely<DB>, names: readonly string[]): Promise<void> {
   if (!names.length) return

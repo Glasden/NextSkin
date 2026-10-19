@@ -130,6 +130,21 @@ export async function rescheduleJob(
   return result.numUpdatedRows > 0n
 }
 
+/** 这次没有执行：放回队列，认领时加上的那次尝试退回去（原子地减，不先读再写） */
+export async function deferJob(
+  db: Kysely<CoreDatabase>,
+  lease: { id: number; leaseId: string },
+  options: { runAt: IsoTimestamp },
+): Promise<boolean> {
+  const result = await db
+    .updateTable('jobs')
+    .set((eb) => ({ run_at: options.runAt, lease_id: null, attempts: eb('attempts', '-', 1) }))
+    .where('id', '=', lease.id)
+    .where('lease_id', '=', lease.leaseId)
+    .executeTakeFirstOrThrow()
+  return result.numUpdatedRows > 0n
+}
+
 export async function failJob(
   db: Kysely<CoreDatabase>,
   lease: { id: number; leaseId: string },

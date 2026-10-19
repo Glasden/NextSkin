@@ -114,6 +114,17 @@
     "plugin_error": "The plugin ran into an error. Please try again later.",
     "plugin_not_found": "This plugin could not be found.",
     "plugin_migration_failed": "The plugin's tables couldn't be set up, so it wasn't enabled. The reason is shown on the plugins page.",
+    "plugin_load_failed": "The plugin couldn't be loaded in the plugin host, so it wasn't enabled. The reason is shown on the plugin's page.",
+    "plugin_package_invalid": "{reason, select, too_large {A plugin package can be at most 10 MiB, and at most 64 MiB unpacked.} invalid_archive {This is not a plugin package. Upload the .tgz file made by nextskin-plugin build.} unsupported_entry {A plugin package can only contain manifest.json, the server code and locales, with no links or other files.} invalid_path {The plugin package contains a file path that is not allowed.} duplicate_path {The plugin package contains duplicate files.} too_many_files {The plugin package contains too many files.} missing_manifest {The plugin package has no manifest.json.} invalid_manifest {The manifest.json in the plugin package is invalid. Rebuild it with nextskin-plugin build.} missing_entry {The plugin package has no server code.} integrity_mismatch {The files in the plugin package don't match its manifest. It may be corrupted or modified.} invalid_locale {A locale file in the plugin package is invalid.} invalid_settings {The plugin has a setting type the admin form can't display.} invalid_cron {One of the plugin's scheduled jobs has a cron expression the scheduler can't parse.} locales_too_large {The plugin package's locale files add up to more than 1 MiB.} other {This is not a valid plugin package.}}",
+    "plugin_api_incompatible": "This plugin needs plugin API {api}; this site provides {current}.",
+    "plugin_id_reserved": "An official plugin already uses the id {plugin}.",
+    "plugin_version_not_newer": "Version {installed} is already installed. You can only upgrade to a higher version.",
+    "plugin_requires_unmet": "This plugin needs {plugin} ({range}) to be installed and enabled first.",
+    "plugin_conflict": "This plugin conflicts with {plugin}, which is enabled.",
+    "plugin_package_changed": "The plugin package is different from the one you previewed. Upload it again.",
+    "plugin_busy": "This plugin is being changed by another operation (install, upgrade, enable, uninstall or the cleanup after an uninstall), or someone just changed it. Refresh the page to see its current state, then try again.",
+    "plugin_required_by": "{plugin}, which is enabled, depends on this plugin ({range}). Disable {plugin} first, or use a package whose version is in that range.",
+    "plugin_official": "Official plugins can't be uninstalled, only disabled.",
     "dead_letter_not_found": "This failed job could not be found. It may already have been retried or deleted."
   },
   "score": {
@@ -1052,7 +1063,11 @@
         "pluginEnable": "Enabled plugin",
         "pluginDisable": "Disabled plugin",
         "pluginSettings": "Changed plugin setting",
-        "pluginDeadLetter": "Handled failed job"
+        "pluginDeadLetter": "Handled failed job",
+        "pluginInstall": "Install plugin",
+        "pluginUpgrade": "Upgrade plugin",
+        "pluginUninstall": "Uninstall plugin",
+        "pluginRestartHost": "Restart plugin host"
       },
       "subjects": {
         "user": "User #{id}",
@@ -1060,7 +1075,8 @@
         "report": "Report #{id}",
         "other": "{type} #{id}",
         "setting": "Settings",
-        "plugin": "Plugin {name}"
+        "plugin": "Plugin {name}",
+        "pluginHost": "Plugin host"
       },
       "actorSystem": "System",
       "actorPlugin": "Plugin {id}",
@@ -1080,7 +1096,8 @@
         },
         "pluginVersion": "Version {version}",
         "pluginSetting": "{label}: {change}",
-        "pluginDeadLetter": "{action, select, retry {Retried} other {Deleted}} job #{job}"
+        "pluginDeadLetter": "{action, select, retry {Retried} other {Deleted}} job #{job}",
+        "pluginUpgrade": "Version {from} → {to}"
       },
       "filterActor": "Only actor #{uid}",
       "filterSubject": "Only {subject}",
@@ -1474,9 +1491,9 @@
     },
     "plugins": {
       "title": "Plugins",
-      "description": "Official plugins ship with the site and only run once enabled. Enabling, disabling and changing settings are all recorded in the audit log.",
+      "description": "Official plugins ship with the site; you can also upload third-party plugins, which run in a separate plugin host process. A plugin only runs once enabled. Installing, enabling, disabling and changing settings are all recorded in the audit log.",
       "tableLabel": "Plugins",
-      "empty": "This release doesn't include any official plugins.",
+      "empty": "There are no plugins yet.",
       "columns": {
         "plugin": "Plugin",
         "version": "Version",
@@ -1484,12 +1501,16 @@
         "deadLetters": "Failed jobs"
       },
       "official": "Official",
+      "installed": "Uploaded",
       "status": {
         "enabled": "Enabled",
         "disabled": "Disabled",
-        "switching": "Switching"
+        "switching": "Switching",
+        "unavailable": "Unavailable"
       },
       "lastError": "Error",
+      "packageMissing": "Package unavailable",
+      "packageMissingHint": "This instance can't get the package for the version in the plugins table (it isn't in storage, or it failed verification), so the plugin is unavailable here. If it intercepts registration, registration is paused. You can disable or uninstall it, or restore the package storage and wait a few seconds.",
       "all": "All plugins",
       "enable": "Enable plugin",
       "disable": "Disable plugin",
@@ -1570,6 +1591,44 @@
       "providers": {
         "passwordHasher": "Check passwords from an old system",
         "login": "Third-party sign-in"
+      },
+      "host": {
+        "failed": "The plugin host kept crashing, so it is no longer restarted automatically. Uploaded plugins are paused: registrations that go through them are refused, and their jobs stay in the queue. Find the plugin causing it (you can disable it), then restart.",
+        "restarting": "The plugin host is restarting. Uploaded plugins are unavailable for now.",
+        "lastError": "Reason: {error}",
+        "restart": "Restart plugin host",
+        "restarted": "Plugin host restarted",
+        "networkUnrestricted": "This server's Node.js can't stop uploaded plugins from connecting to the network directly, bypassing the site (Node.js 26 and later can). Requests a plugin makes through the site are still limited to the addresses it declares."
+      },
+      "upload": {
+        "button": "Upload plugin",
+        "label": "Choose a plugin package",
+        "checking": "Checking the plugin package…",
+        "installTitle": "Install {name}?",
+        "upgradeTitle": "Upgrade {name} from {from} to {to}?",
+        "trust": "An uploaded plugin runs on the server and can do what is listed below. The site blocks data access beyond what it asks for, but it can't stop malicious code: this is a seat belt, not a sandbox. Plugins are not reviewed or signed, so only install plugins you trust.",
+        "highRisk": "It uses high-risk capabilities: {list}.",
+        "added": "New",
+        "addedHint": "The new version asks for the capabilities or external addresses marked “New” that {from} did not.",
+        "upgradeEnabled": "This plugin is running. Its tables are migrated and the new version is loaded first; the switch happens only if that works.",
+        "upgradeDisabled": "The plugin is not enabled and stays disabled after the upgrade.",
+        "installHint": "The plugin won't run until you enable it on its page.",
+        "confirmInstall": "Install",
+        "confirmUpgrade": "Upgrade",
+        "installedToast": "Installed {name}",
+        "upgradedToast": "Upgraded {name} to {version}",
+        "drop": "Drop the plugin package here",
+        "dropHint": "The .tgz file made by nextskin-plugin build, up to 10 MiB.",
+        "failed": "Couldn't check this plugin package. Try again later."
+      },
+      "uninstall": {
+        "title": "Uninstall",
+        "description": "Uninstalling deletes the plugin's tables, stored data, settings, queued and failed jobs, and the uploaded package. This can't be undone. A running plugin is disabled first.",
+        "button": "Uninstall plugin",
+        "dialogTitle": "Uninstall {name}?",
+        "dialogHint": "The plugin's tables, stored data and settings will be deleted and can't be restored. To keep the data, disabling is enough.",
+        "confirm": "Uninstall",
+        "done": "Uninstalled {name}"
       }
     }
   },

@@ -35,10 +35,10 @@ function setup(peer: string | null = '192.0.2.10') {
         method,
         headers: {
           origin: 'http://example.test',
-          ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+          ...(body === undefined || body instanceof FormData ? {} : { 'content-type': 'application/json' }),
           ...headers,
         },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        ...(body === undefined ? {} : { body: body instanceof FormData ? body : JSON.stringify(body) }),
       },
       { peer },
     )
@@ -60,20 +60,26 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(11)
+  expect(routes).toHaveLength(15)
   for (const route of routes) {
     const path = route.path
       .slice('/api'.length)
       .replace(/^\/admin\/plugins\/:id/, '/admin/plugins/missing')
       .replace(/:(?:id|tid|uid|job)/g, '7')
       .replace(':key', 'yggdrasil.signingKey')
-    const body = route.path.endsWith('/settings')
-      ? { values: {} }
-      : route.method === 'POST'
-        ? { action: 'dismiss' }
-        : route.method === 'PATCH'
-          ? { role: 'banned' }
-          : undefined
+    // 上传插件包的接口只收 multipart：先检查内容类型，再检查权限
+    const upload = new FormData()
+    upload.set('file', new Blob([new Uint8Array([1])]), 'plugin.tgz')
+    upload.set('packageHash', '0'.repeat(64))
+    const body = route.path.startsWith('/api/admin/plugin-packages')
+      ? upload
+      : route.path.endsWith('/settings')
+        ? { values: {} }
+        : route.method === 'POST'
+          ? { action: 'dismiss' }
+          : route.method === 'PATCH'
+            ? { role: 'banned' }
+            : undefined
     for (const loggedIn of [true, false]) {
       authenticated = loggedIn
       const response = await request(route.method, path, body)
