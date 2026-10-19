@@ -784,6 +784,16 @@ test('官方插件的 id 不能被安装插件占用', async () => {
   await expect(env.core.plugins.admin.uninstall(actor, 'probe')).rejects.toMatchObject({ code: 'plugin_official' })
 })
 
+/** 路由 /wait 停在一个出站请求上，测试控制它什么时候返回；/limit 按 ip 限流 */
+const waiter = (limit: number) => `import { definePlugin } from '@nextskin/plugin-sdk'
+  export default definePlugin({ capabilities: [], network: ['https://example.test'], routes: {
+    'GET /wait': { auth: 'public', handler: async ({ ctx }) => {
+      ctx.signal.addEventListener('abort', () => process.stderr.write('WAIT_ABORTED\\n'), { once: true })
+      return await ctx.fetch('https://example.test/wait')
+    } },
+    'GET /limit': { auth: 'public', rateLimit: { limit: ${limit}, windowSec: 60, by: 'ip' }, handler: () => Promise.resolve(new Response('ok')) },
+  } })`
+
 test('升级保留在途调用；停用取消退役一代里本插件的调用，出站请求也中止', async () => {
   let entered = Promise.withResolvers<void>()
   let outgoing = Promise.withResolvers<Response>()
@@ -796,16 +806,8 @@ test('升级保留在途调用；停用取消退役一代里本插件的调用�
       return outgoing.promise
     },
   })
-  const source = `import { definePlugin } from '@nextskin/plugin-sdk'
-    export default definePlugin({ capabilities: [], network: ['https://example.test'], routes: {
-      'GET /wait': { auth: 'public', handler: async ({ ctx }) => {
-        ctx.signal.addEventListener('abort', () => process.stderr.write('WAIT_ABORTED\\n'), { once: true })
-        return await ctx.fetch('https://example.test/wait')
-      } },
-      'GET /limit': { auth: 'public', rateLimit: { limit: LIMIT, windowSec: 60, by: 'ip' }, handler: () => Promise.resolve(new Response('ok')) },
-    } })`
-  const first = await buildPackage({ id: 'waiter', source: source.replace('LIMIT', '1') })
-  const upgraded = await buildPackage({ id: 'waiter', version: '1.1.0', source: source.replace('LIMIT', '2') })
+  const first = await buildPackage({ id: 'waiter', source: waiter(1) })
+  const upgraded = await buildPackage({ id: 'waiter', version: '1.1.0', source: waiter(2) })
   const other = await buildPackage({ id: 'other', source: probe('other') })
   const actor = await env.actor()
   await install(first, actor)
@@ -836,4 +838,33 @@ test('升级保留在途调用；停用取消退役一代里本插件的调用�
   await rejected
   await until(() => env.lines.some((line) => line.includes('WAIT_ABORTED')))
   expect(text((await env.core.plugins.route(route('other', '/version'))).body)).toBe('other')
+})
+
+test('表里换成了本实例取不到的新版本：插件不可用，但在途的调用照常做完，不中止', async () => {
+  const entered = Promise.withResolvers<void>()
+  const outgoing = Promise.withResolvers<Response>()
+  let signal: AbortSignal | undefined
+  await boot({
+    fetch: (_url, init) => {
+      signal = init?.signal ?? undefined
+      entered.resolve()
+      return outgoing.promise
+    },
+  })
+  const actor = await env.actor()
+  await install(await buildPackage({ id: 'waiter', source: waiter(1) }), actor)
+  await env.core.plugins.admin.enable(actor, 'waiter')
+  const pending = env.core.plugins.route(route('waiter', '/wait'))
+  await entered.promise
+  // 别的实例升级了它，本实例暂时取不到新版本的包：这是换代，不是停用
+  await env.db
+    .updateTable('plugins')
+    .set({ version: '1.1.0', package_hash: 'f'.repeat(64) })
+    .where('id', '=', 'waiter')
+    .execute()
+  await env.core.plugins.sync()
+  expect(env.core.plugins.isActive('waiter')).toBe(false)
+  expect(signal?.aborted).toBe(false)
+  outgoing.resolve(new Response('old call completed'))
+  expect(text((await pending).body)).toBe('old call completed')
 })

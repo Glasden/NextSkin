@@ -12,6 +12,7 @@
     "lint": "eslint --max-warnings 0 .",
     "typegen": "next typegen",
     "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run",
     "e2e": "playwright test"
   },
   "dependencies": {
@@ -42,6 +43,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "tailwindcss": "catalog:"
+    "tailwindcss": "catalog:",
+    "vitest": "catalog:"
   }
 }

@@ -30,7 +30,8 @@ export async function callPlugin(
   body?: unknown,
 ): Promise<{ ok: boolean; message: string | null }> {
   const url = pluginUrl(pluginId, path, 'https://plugin.invalid')
-  const { status, data } = await sendJson(method, url.pathname + url.search, body)
+  // 不跟随重定向：插件的路由回一个 307，浏览器就会带着会话、原样把方法和请求体发到核心的接口（ADR-0011）
+  const { status, data } = await sendJson(method, url.pathname + url.search, body, { redirect: 'error' })
   const record = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {}
   if (status >= 200 && status < 300) return { ok: true, message: text(record.message) }
   return { ok: false, message: apiError(data)?.message ?? text(record.error) ?? text(record.message) }

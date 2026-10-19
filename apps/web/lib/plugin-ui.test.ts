@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { fillRoute, callPlugin } from '../../../apps/web/app/_plugins/plugin-request.ts'
-import { pluginUrl, pluginSourceQuery } from '../../../apps/web/lib/plugin-url.ts'
-import { pluginSettingText } from '../../../apps/web/lib/plugin-settings.ts'
+import { callPlugin, fillRoute } from '../app/_plugins/plugin-request'
+import { pluginSettingText } from './plugin-settings'
+import { pluginSourceQuery, pluginUrl } from './plugin-url'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -51,4 +51,15 @@ test('对象内枚举选项使用 fields.<属性>.options.<值> 文案，缺失�
     control: { kind: 'object', properties: [{ name: 'color', control: { kind: 'select', options: ['blue', 'red'] } }] },
   })
   expect(text.fields?.color?.options).toEqual({ blue: '蓝色', red: 'red' })
+})
+
+test('动作请求不跟随重定向：插件的路由回 3xx 时按失败处理，不会带着会话请求别的地址', async () => {
+  // 浏览器的 fetch 在 redirect: 'error' 时遇到重定向就抛 TypeError
+  const fetch = vi.fn<typeof globalThis.fetch>(() => Promise.reject(new TypeError('Failed to fetch')))
+  vi.stubGlobal('fetch', fetch)
+  await expect(callPlugin('example', 'POST', '/go', { a: 1 })).resolves.toEqual({ ok: false, message: null })
+  expect(fetch).toHaveBeenCalledWith(
+    '/plugins/example/go',
+    expect.objectContaining({ method: 'POST', redirect: 'error' }),
+  )
 })

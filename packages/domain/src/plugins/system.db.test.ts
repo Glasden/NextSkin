@@ -578,6 +578,39 @@ test('准备上下文时插件被停用：不再调用插件', async () => {
   expect(calls).toBe(0)
 })
 
+test('准备上下文时先改了授权（换代）、再被停用：同样不再调用插件', async () => {
+  let calls = 0
+  await env.boot([
+    official(
+      'a',
+      definePlugin({
+        capabilities: ['users.read'],
+        routes: {
+          'GET /hello': {
+            auth: 'public',
+            handler: () => {
+              calls++
+              return Promise.resolve(new Response('late'))
+            },
+          },
+        },
+      }),
+    ),
+  ])
+  const actor = await enable('a')
+  const hold = holdSiteSettings()
+  const pending = env.core.plugins.route(routeInput('/hello'))
+  await hold.entered
+  // 改授权是换代：准备中的调用拿着的旧登记被换掉，停用只标记新的登记
+  await env.db.updateTable('plugins').set({ capabilities: '[]' }).where('id', '=', 'a').execute()
+  await env.core.plugins.sync()
+  expect(env.core.plugins.isActive('a')).toBe(true)
+  await env.core.plugins.admin.disable(actor, 'a')
+  hold.release()
+  await expect(pending).rejects.toMatchObject({ code: 'plugin_unavailable' })
+  expect(calls).toBe(0)
+})
+
 test('public 路由经核心直调也匿名，并共用路由限流', async () => {
   await env.boot([
     official(

@@ -292,6 +292,11 @@ export function createPluginSystem(options: {
   const known = new Map<string, KnownPlugin>()
   const active = new Map<string, ActivePlugin>()
   const routeWindows = new Map<string, { count: number; expiresAt: number }>()
+  /**
+   * 每个插件被停用（取消在途调用）过几次。还在准备上下文的调用拿着的登记可能已经因为换代被换掉，
+   * 换掉之后的停用只标记新的登记，所以准备完按这个次数判断
+   */
+  const cancellations = new Map<string, number>()
   const breakers = new Map<string, { failures: number; openUntil: number }>()
   const officialIds = new Set<string>()
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -702,6 +707,7 @@ export function createPluginSystem(options: {
     const id = plugin.known.manifest.id
     const invocationId = randomUUID()
     const controller = new AbortController()
+    const cancelled = cancellations.get(id) ?? 0
     const started = Date.now()
     const point =
       call.kind === 'event'
@@ -738,7 +744,8 @@ export function createPluginSystem(options: {
         deadline,
       ])
       // 准备的这段时间里插件可能被停用了：停用时取消的只是已经开始的调用，这里不能再开始新的
-      if (plugin.stopped) throw new PluginInvocationError(id, 'unavailable', '插件已经停用')
+      if (plugin.stopped || (cancellations.get(id) ?? 0) !== cancelled)
+        throw new PluginInvocationError(id, 'unavailable', '插件已经停用')
       invocations.set(invocationId, {
         pluginId: id,
         known: plugin.known,
@@ -967,6 +974,7 @@ export function createPluginSystem(options: {
     for (const [event, name] of state.registered.events) events.unsubscribe(event as never, name)
     for (const name of state.registered.jobs) handlers.delete(name)
     if (cancel) {
+      cancellations.set(id, (cancellations.get(id) ?? 0) + 1)
       for (const [invocationId, invocation] of invocations) {
         if (invocation.pluginId !== id) continue
         invocation.controller.abort()
@@ -1018,13 +1026,15 @@ export function createPluginSystem(options: {
         current.granted.size === granted.size &&
         [...granted].every((capability) => current.granted.has(capability))
       if (same) continue
-      if (current) deactivate(id, !granted)
+      // 表里还启用着就是换代（升级、改授权、本实例暂时取不到新版本的包）：在途的调用照常做完
+      if (current) deactivate(id, row?.is_enabled !== 1)
       if (!granted) continue
       try {
         activate(plugin, granted)
       } catch (error) {
-        // 例如定时任务的 cron 调度器不认：撤销已经登记的部分，这个插件按不可用处理，别的插件照常
-        deactivate(id)
+        // 例如定时任务的 cron 调度器不认：撤销已经登记的部分，这个插件按不可用处理，别的插件照常；
+        // 上一个版本在途的调用照常做完
+        deactivate(id, false)
         const key = `activate:${id}:${plugin.manifest.version}`
         if (!warned.has(key)) log(`[plugins] ${id} activate_failed ${errorMessage(error)}`)
         warned.add(key)
