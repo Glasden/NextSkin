@@ -273,7 +273,7 @@ BS 这里的问题：
 **角色页** `/admin/players`，要有 `players.manage`：
 
 - 按角色名搜索（不分大小写的包含匹配），或者按 UUID 精确查找（带不带连字符都行）；`?owner={uid}` 列出某个用户的角色，用户详情页链接到这里。服主最常问的是"这个游戏名是谁的"，用户列表查不到。
-- 列：pid、头像和角色名、UUID、主人、皮肤和披风、更新时间、操作。每页 50 行（ADR-0027）。
+- 列：pid、头像和角色名、UUID、主人、皮肤和披风、更新时间、操作。每页 50 行（ADR-0027）。查询服务每行还给出主人的身份和角色的 `score_paid`：行内操作只给主人身份比自己低的角色显示，转让的确认框写明不退多少积分。
 
 **共同的规则**：
 
@@ -293,7 +293,7 @@ BS 这里的问题：
 
 - 页面上输入新主人的 uid 或邮箱（按邮箱查要有 `users.ban`），经 `GET /api/admin/users/lookup` 查到之后，确认框显示新主人的头像、昵称、邮箱和身份，以及后果：原主人付的积分不退、新主人的 `score_paid` 记 0；要清掉的材质，由角色现在的皮肤和披风各调一次 `GET /api/admin/textures/{tid}?owner={新主人}`、按 `visibleToOwner` 列出；"绑定这个角色的启动器登录会失效"，不写数量。转回去也恢复不了这些。uid 填错一位，带着游戏服务器数据的 UUID 就到了陌生人手里。
 - 新主人不存在返回 404 `user_not_found`；原主人和新主人都要严格低于自己。新主人和原主人相同时什么也不做。新主人被封禁也照样转让，确认框写明之后协议端点对这个角色返回 403。
-- 加锁：自己 → 原主人和新主人按 uid 升序 → 角色 → 材质。
+- 加锁：自己 → 原主人和新主人按 uid 升序 → 材质（tid 升序）。角色这一行不单独加锁：改角色的写入都先锁主人，锁住两个主人之后它不会再变。唯一的例外是上传者改材质的模型，它只锁上传者和材质，再改引用这个材质的角色的 `updated_at`；先锁角色再锁材质，就会和它形成环。
 - UUID、名字不变；`updated_at` 更新；`score_paid` 清零（ADR-0022）。**原主人当初付的积分不退**，同 BS；需要补偿时用"改积分"，留有审计。
 - **新主人看不到的材质从角色上清掉**：别人上传的私有材质，包括原主人的。公开材质和新主人自己的私有材质保留。
 - 先改 `user_id`、清材质、改 `updated_at`，再用同一个转让之后的 `Player` 发事件：清掉了材质就发 `player.texturesChanged`（`previous` 是原来的材质），然后发 `player.transferred`。两个事件里的 `player.uid` 都是新主人。
@@ -482,7 +482,7 @@ BS 这里的问题：
 | `DELETE /api/admin/players/{pid}` | — | 200 |
 | `PATCH /api/admin/textures/{tid}` | `{ name?, type?, description? }`，至少一项 | 200，材质 |
 | `POST /api/admin/textures/{tid}/unpublish` | — | 200，材质 |
-| `GET /api/admin/textures/{tid}` | 查询参数 `owner`：衣柜或角色的主人 | 200，`{ tid, name, type, public, uploaderId, hash, visibleToOwner }` |
+| `GET /api/admin/textures/{tid}` | 查询参数 `owner`：衣柜或角色的主人 | 200，`{ tid, name, type, public, uploaderId, hash, scale, visibleToOwner }`（`scale` 供预览，尺寸认不出时为 `null`） |
 
 - **两个读接口**：ADR-0027 的后台页面由服务端组件直接调查询服务；转让和按 tid 输入的 Dialog 要在提交之前按输入查数据，所以加两个 GET，同用户侧的 `GET /api/closet`。按"别人的材质"一节的同一个标准收紧，免得以后拆权限时比用户详情页还宽：
   - 查用户要有 `players.manage`（只有转让用它），只返回身份严格低于操作者的用户（转让也只接受这些人），其他一律 404 `user_not_found`。按邮箱查、以及返回邮箱，还要有 `users.ban`：否则只拿一个邮箱试探，也能查出它属于谁。

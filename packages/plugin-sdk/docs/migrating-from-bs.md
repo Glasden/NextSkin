@@ -14,6 +14,7 @@
 | UserProfileUpdated | user.profileUpdated，只给 uid 和 fields，不暴露可修改的 Eloquent 用户 |
 | PlayerWasAdded、PlayerWasDeleted | player.created、player.deleted |
 | PlayerProfileUpdated | 按动作分别用 player.renamed、player.texturesChanged |
+| player.owner.updated | player.transferred |
 | PlayerWillBeAdded/Deleted、TextureDeleting | 第一版没有对应的前置拦截器；完成后可订阅 player.created/deleted、texture.deleted |
 | PlayerRetrieved | 没有读取时任意改核心结果的 filter；用只读 players API，不能替换协议返回 |
 | UserAuthenticated、UserLoggedIn、UserTryToLogin | 没有通用登录事件或登录拦截点；外部密码用 passwordHasher，第三方登录用 login Provider |

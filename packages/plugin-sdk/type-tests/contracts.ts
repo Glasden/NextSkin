@@ -7,6 +7,18 @@
  */
 import { definePlugin, deny, secret, table, z, type ExternalIdentity } from '@nextskin/plugin-sdk'
 
+// 转让事件不需要能力，携带新主人和原主人的 uid。
+definePlugin({
+  capabilities: [],
+  on: {
+    'player.transferred': async ({ event }) => {
+      const uid: number = event.data.player.uid
+      const previousUid: number = event.data.previousUid
+      void [uid, previousUid]
+    },
+  },
+})
+
 // 没申请 storage.tables 就没有 ctx.db；没申请 users.readPrivate 就看不到邮箱。
 definePlugin({
   capabilities: ['users.read'],

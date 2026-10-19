@@ -1,6 +1,7 @@
 import { Chart } from 'pixelarticons/react/Chart.js'
 import { Database } from 'pixelarticons/react/Database.js'
 import { Flag } from 'pixelarticons/react/Flag.js'
+import { Gamepad } from 'pixelarticons/react/Gamepad.js'
 import { Notebook } from 'pixelarticons/react/Notebook.js'
 import { Plug } from 'pixelarticons/react/Plug.js'
 import { Sliders } from 'pixelarticons/react/Sliders.js'
@@ -16,6 +17,7 @@ export const adminNavItems = [
   { href: '/admin', icon: Chart, label: 'overview', permission: null },
   { href: '/admin/reports', icon: Flag, label: 'reports', permission: 'reports.review' },
   { href: '/admin/users', icon: Users, label: 'users', permission: 'users.ban' },
+  { href: '/admin/players', icon: Gamepad, label: 'players', permission: 'players.manage' },
   { href: '/admin/audit', icon: Notebook, label: 'audit', permission: 'audit.read' },
   { href: '/admin/settings', icon: Sliders, label: 'settings', permission: 'settings.manage' },
   { href: '/admin/plugins', icon: Plug, label: 'plugins', permission: 'plugins.manage' },

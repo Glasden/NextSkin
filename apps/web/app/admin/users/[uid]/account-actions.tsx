@@ -4,7 +4,7 @@ import { Button, Field, Input, Select } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { postJson, sendJson } from '../../../../lib/api-client'
-import { ActionDialog } from './action-dialog'
+import { ActionDialog } from '../../action-dialog'
 
 interface Target {
   uid: number

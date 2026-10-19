@@ -2,6 +2,7 @@ import { createRoute, z, type OpenAPIHono } from '@hono/zod-openapi'
 import type { Core } from '@nextskin/domain'
 import { clientIp } from '../client-ip.ts'
 import type { AppEnv } from '../env.ts'
+import { registerAdminPlayers } from './admin-players.ts'
 import { registerAdminUsers } from './admin-users.ts'
 import { errorSchema } from './errors.ts'
 import { requireSession } from './session.ts'
@@ -154,4 +155,6 @@ export function registerAdmin(app: OpenAPIHono<AppEnv>, core: Core) {
   )
   // 用户的账号操作，包括改身份的 PATCH（ADR-0036）
   registerAdminUsers(app, core)
+  // 角色管理，以及转让、换材质时按输入查用户和材质的两个读接口（ADR-0036）
+  registerAdminPlayers(app, core)
 }

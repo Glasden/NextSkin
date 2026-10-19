@@ -72,6 +72,11 @@ export type {
   AdminSetPasswordInput,
   PublicTexturesOnDelete,
   AdminUserDetail,
+  AdminHiddenTexture,
+  AdminPlayer,
+  AdminPlayerUpdate,
+  AdminUserLookup,
+  AdminTextureForOwner,
 } from './admin/types.ts'
 export { AUDIT_ACTIONS, type AuditAction } from './audit/write.ts'
 

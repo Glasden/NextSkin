@@ -105,6 +105,10 @@ export interface CoreEvents {
             cape: Tid | null;
         };
     };
+    'player.transferred': {
+        player: Player;
+        previousUid: Uid;
+    };
     // (undocumented)
     'report.created': {
         reportId: number;

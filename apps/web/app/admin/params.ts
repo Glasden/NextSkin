@@ -108,3 +108,29 @@ export function auditHref(params: AuditParams, changes: Partial<AuditParams> = {
   if (next.page > 1) query.set('page', String(next.page))
   return withQuery('/admin/audit', query)
 }
+
+export interface PlayerParams {
+  /** 角色名（包含匹配）或 UUID（精确） */
+  q: string
+  /** 只看某个用户的角色：`?owner=5`，用户详情页链接到这里 */
+  owner: number | null
+  page: number
+}
+
+export function parsePlayerParams(search: SearchParams): PlayerParams {
+  return {
+    // UUID 带连字符是 36 个字符
+    q: first(search.q).trim().slice(0, 64),
+    owner: parseId(first(search.owner)),
+    page: parsePage(first(search.page)),
+  }
+}
+
+export function playersHref(params: PlayerParams, changes: Partial<PlayerParams> = {}): string {
+  const next = { ...params, page: 1, ...changes }
+  const query = new URLSearchParams()
+  if (next.q) query.set('q', next.q)
+  if (next.owner !== null) query.set('owner', String(next.owner))
+  if (next.page > 1) query.set('page', String(next.page))
+  return withQuery('/admin/players', query)
+}

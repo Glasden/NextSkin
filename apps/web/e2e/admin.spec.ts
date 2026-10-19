@@ -7,7 +7,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 // 后台的主流程（ADR-0027）：举报 → 管理员删除材质 → 举报人看到已采纳 → 审计日志；封禁上传者 → 他只看到封禁说明，
 // CSL 对他的角色返回 403。设置页（ADR-0028）：只有超级管理员能进，改了立即生效。
-// 用户详情页（ADR-0036）：替丢了验证器的用户关掉两步验证、重设密码。
+// 用户详情页（ADR-0036）：替丢了验证器的用户关掉两步验证、重设密码；角色页：改名、换材质、转让、删除。
 // 跑在 account 项目上：上传是 multipart 表单，接口按站点地址检查 Origin（playwright.config.ts）。
 // 两个用例放在同一个文件里按顺序跑：第一个按条数检查审计日志，另一个文件并行任命管理员会打乱它
 const t = createTranslator('zh-CN')
@@ -330,4 +330,138 @@ test('用户丢了验证器：管理员关掉两步验证，用户只用密码�
     audit.getByRole('cell', { name: t('admin.audit.actions.userDisableTwoFactor'), exact: true }),
   ).toBeVisible()
   await expect(audit.getByRole('cell', { name: t('admin.audit.actions.userSetPassword'), exact: true })).toBeVisible()
+})
+
+test('角色页：从用户详情页进来，改名、设上主人的私有皮肤、转给别人时清掉它，最后删除；审计都记在主人名下', async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  // 原主人传一张私有皮肤、一张公开披风，新主人只注册
+  const ownerContext = await browser.newContext({ locale: 'zh-CN' })
+  const owner = await ownerContext.newPage()
+  const ownerName = `Orig${suffix}`
+  const ownerEmail = await register(owner, '203.0.113.130', ownerName)
+  const textureName = `私藏 ${suffix}`
+  const uploaded = await owner.request.post('/api/textures', {
+    headers: { Origin: new URL(baseURL!).origin },
+    multipart: {
+      file: { name: 'deadmau5.png', mimeType: 'image/png', buffer: readFileSync(fixture('deadmau5')) },
+      name: textureName,
+      type: 'steve',
+      public: 'false',
+    },
+  })
+  expect(uploaded.status()).toBe(201)
+  const { texture } = (await uploaded.json()) as { texture: { tid: number; hash: string } }
+  const capeUploaded = await owner.request.post('/api/textures', {
+    headers: { Origin: new URL(baseURL!).origin },
+    multipart: {
+      file: { name: 'mojang_cape.png', mimeType: 'image/png', buffer: readFileSync(fixture('mojang_cape')) },
+      name: `披风 ${suffix}`,
+      type: 'cape',
+      public: 'true',
+    },
+  })
+  expect(capeUploaded.status()).toBe(201)
+  const { texture: cape } = (await capeUploaded.json()) as { texture: { tid: number; hash: string } }
+  await ownerContext.close()
+  const recipientContext = await browser.newContext({ locale: 'zh-CN' })
+  const recipientName = `New${suffix}`
+  const recipientEmail = await register(await recipientContext.newPage(), '203.0.113.131', recipientName)
+  await recipientContext.close()
+
+  // 管理员从用户详情页的角色一节进角色页，只列出这个用户的角色
+  setRole(await register(page, '203.0.113.132', `Pm${suffix}`), 'superadmin')
+  await page.goto(`/admin/users?q=${encodeURIComponent(ownerEmail)}`)
+  await page.getByRole('link', { name: ownerName, exact: true }).click()
+  await page
+    .getByRole('region', { name: t('admin.userDetail.players.title'), exact: true })
+    .getByRole('link', { name: t('admin.userDetail.players.manage') })
+    .click()
+  await expect(page.getByText(t('admin.players.ownerFilter', { nickname: ownerName }))).toBeVisible()
+  const table = page.getByRole('table', { name: t('admin.players.tableLabel') })
+  await expect(table.getByRole('link', { name: ownerName, exact: true })).toBeVisible()
+  const manage = (name: string) => page.getByRole('button', { name: t('admin.players.manageLabel', { name }) })
+
+  // 改名：UUID 不变，CSL 跟着新名字走
+  const renamed = `Moved${suffix}`
+  await manage(ownerName).click()
+  await page.getByRole('menuitem', { name: t('admin.players.rename') }).click()
+  const rename = page.getByRole('dialog', { name: t('admin.players.renameTitle', { name: ownerName }) })
+  await rename.getByLabel(t('admin.players.renameLabel')).fill(renamed)
+  await rename.getByRole('button', { name: t('admin.players.renameConfirm') }).click()
+  await expect(page.getByText(t('admin.players.renamed', { name: renamed }))).toBeVisible()
+  expect((await page.request.get(`/csl/${ownerName}.json`)).status()).toBe(404)
+  expect((await page.request.get(`/csl/${renamed}.json`)).status()).toBe(200)
+
+  // 换材质：主人自己的私有皮肤可以设，不要求在衣柜里；预览按编号查出名字
+  await manage(renamed).click()
+  await page.getByRole('menuitem', { name: t('admin.players.textures') }).click()
+  const textures = page.getByRole('dialog', { name: t('admin.players.texturesTitle', { name: renamed }) })
+  await textures.getByLabel(t('admin.players.skinLabel')).fill(String(texture.tid))
+  await expect(textures.getByText(textureName)).toBeVisible()
+  await textures.getByLabel(t('admin.players.capeLabel')).fill(String(cape.tid))
+  await expect(textures.getByText(`披风 ${suffix}`)).toBeVisible()
+  await textures.getByRole('button', { name: t('admin.players.texturesConfirm') }).click()
+  await expect(page.getByText(t('admin.players.texturesChanged', { name: renamed }))).toBeVisible()
+  await expect(table.getByRole('link', { name: t('admin.players.skinLink', { tid: texture.tid }) })).toBeVisible()
+  type Csl = { skins: Record<string, string | null>; cape: string | null }
+  const csl = (await (await page.request.get(`/csl/${renamed}.json`)).json()) as Csl
+  expect(Object.values(csl.skins)).toContain(texture.hash)
+  expect(csl.cape).toBe(cape.hash)
+  const { id: uuid } = (await (
+    await page.request.get(`/api/yggdrasil/api/users/profiles/minecraft/${renamed}`)
+  ).json()) as { id: string }
+
+  // 转让：按邮箱查到新主人，确认框列出会清掉的私有皮肤；转让之后皮肤槽空了，主人换了
+  await manage(renamed).click()
+  await page.getByRole('menuitem', { name: t('admin.players.transfer') }).click()
+  const transfer = page.getByRole('alertdialog', { name: t('admin.players.transferTitle', { name: renamed }) })
+  const confirm = transfer.getByRole('button', { name: t('admin.players.transferConfirm') })
+  await expect(confirm).toBeDisabled()
+  await transfer.getByLabel(t('admin.players.recipientLabel')).fill(recipientEmail)
+  await transfer.getByRole('button', { name: t('admin.players.lookup') }).click()
+  await expect(transfer.getByText(recipientEmail)).toBeVisible()
+  await expect(
+    transfer.getByText(
+      t('admin.players.texturesCleared', {
+        items: t('admin.players.clearedItemNamed', { slot: 'skin', name: textureName }),
+      }),
+    ),
+  ).toBeVisible()
+  await confirm.click()
+  await expect(page.getByText(t('admin.players.transferred', { name: renamed, nickname: recipientName }))).toBeVisible()
+  await page.goto(`/admin/players?q=${encodeURIComponent(renamed.toLowerCase())}`)
+  await expect(table.getByRole('link', { name: recipientName, exact: true })).toBeVisible()
+  await expect(table.getByRole('link', { name: t('admin.players.skinLink', { tid: texture.tid }) })).toHaveCount(0)
+  await expect(table.getByRole('link', { name: t('admin.players.capeLink', { tid: cape.tid }) })).toBeVisible()
+
+  // 按 UUID 查档案仍是同一个 UUID，CSL 照常返回公开的披风，新主人在自己的角色页看到它
+  const profile = await page.request.get(`/api/yggdrasil/sessionserver/session/minecraft/profile/${uuid}`)
+  expect(await profile.json()).toMatchObject({ id: uuid, name: renamed })
+  const moved = (await (await page.request.get(`/csl/${renamed}.json`)).json()) as Csl
+  expect(moved.skins).toEqual({ default: null })
+  expect(moved.cape).toBe(cape.hash)
+  const recipientPage = await (await browser.newContext({ locale: 'zh-CN' })).newPage()
+  await signIn(recipientPage, recipientEmail, password, '/user/players')
+  await expect(recipientPage.getByText(renamed, { exact: true })).toBeVisible()
+  await recipientPage.context().close()
+
+  // 删除：确认框写明 UUID 会失效；之后 CSL 查不到
+  await manage(renamed).click()
+  await page.getByRole('menuitem', { name: t('admin.players.delete') }).click()
+  const remove = page.getByRole('alertdialog', { name: t('admin.players.deleteTitle', { name: renamed }) })
+  await expect(remove).toContainText(t('admin.players.deleteHint'))
+  await remove.getByRole('button', { name: t('admin.players.deleteConfirm') }).click()
+  await expect(page.getByText(t('admin.players.deleted', { name: renamed }))).toBeVisible()
+  await expect(table.getByText(t('admin.players.emptyFiltered'))).toBeVisible()
+  expect((await page.request.get(`/csl/${renamed}.json`)).status()).toBe(404)
+
+  // 改名、换材质、转让记在原主人名下，转让和删除记在新主人名下
+  await page.goto(`/admin/users?q=${encodeURIComponent(recipientEmail)}`)
+  await page.getByRole('link', { name: recipientName, exact: true }).click()
+  const audit = page.getByRole('table', { name: t('admin.userDetail.audit.tableLabel') })
+  await expect(audit.getByRole('cell', { name: t('admin.audit.actions.playerTransfer'), exact: true })).toBeVisible()
+  await expect(audit.getByRole('cell', { name: t('admin.audit.actions.playerDelete'), exact: true })).toBeVisible()
 })

@@ -129,6 +129,10 @@ export default definePlugin({
     'player.texturesChanged': async ({ event, ctx }) => {
       await refresh(playerPaths(event.data.player.name), ctx)
     },
+    // 转让改变协议响应：新主人被封禁时 CSL、USM、旧版接口返回 403，updated_at 也进了 CSL 的 Last-Modified 和 USM 的 last_update。
+    'player.transferred': async ({ event, ctx }) => {
+      await refresh(playerPaths(event.data.player.name), ctx)
+    },
     'player.renamed': async ({ event, ctx }) => {
       await refresh([...playerPaths(event.data.previousName), ...playerPaths(event.data.player.name)], ctx)
     },

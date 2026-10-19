@@ -4,7 +4,7 @@ import { Button, Field, Input, Textarea } from '@nextskin/ui'
 import { useFormatter, useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { postJson } from '../../../../lib/api-client'
-import { ActionDialog } from './action-dialog'
+import { ActionDialog } from '../../action-dialog'
 
 const MAX_SCORE = 2147483647
 

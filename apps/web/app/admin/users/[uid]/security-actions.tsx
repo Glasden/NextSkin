@@ -6,7 +6,7 @@ import { Copy } from 'pixelarticons/react/Copy.js'
 import { Reload } from 'pixelarticons/react/Reload.js'
 import { useState } from 'react'
 import { postJson, sendJson } from '../../../../lib/api-client'
-import { ActionDialog } from './action-dialog'
+import { ActionDialog } from '../../action-dialog'
 
 type Revoked = { revokedSessions: number; revokedTokens: number }
 

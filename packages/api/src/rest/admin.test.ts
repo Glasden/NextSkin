@@ -61,15 +61,22 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(23)
+  expect(routes).toHaveLength(28)
   for (const route of routes) {
     const path = route.path
       .slice('/api'.length)
       .replace(/^\/admin\/plugins\/:id/, '/admin/plugins/missing')
-      .replace(/:(?:id|tid|uid|job)/g, '7')
+      .replace(/:(?:id|tid|uid|pid|job)/g, '7')
       .replace(':key', 'yggdrasil.signingKey')
       .replace(':pluginId', 'missing')
       .replace(':providerId', 'missing')
+    // 两个读接口的查询参数是必填的
+    const query =
+      path === '/admin/users/lookup'
+        ? '?q=7'
+        : route.method === 'GET' && path.startsWith('/admin/textures/')
+          ? '?owner=8'
+          : ''
     // 上传插件包的接口只收 multipart：先检查内容类型，再检查权限
     const upload = new FormData()
     upload.set('file', new Blob([new Uint8Array([1])]), 'plugin.tgz')
@@ -85,15 +92,19 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
             ? { password: 'new-password-123' }
             : route.path.endsWith('/score')
               ? { delta: 1 }
-              : route.method === 'POST'
-                ? { action: 'dismiss' }
-                : route.method === 'PATCH'
-                  ? { role: 'banned' }
-                  : undefined
+              : route.path.endsWith('/transfer')
+                ? { uid: 8 }
+                : route.path.startsWith('/api/admin/players/') && route.method === 'PATCH'
+                  ? { name: 'Steve' }
+                  : route.method === 'POST'
+                    ? { action: 'dismiss' }
+                    : route.method === 'PATCH'
+                      ? { role: 'banned' }
+                      : undefined
     for (const loggedIn of [true, false]) {
       authenticated = loggedIn
-      const response = await request(route.method, path, body)
-      expect(response.status).toBe(loggedIn ? 403 : 401)
+      const response = await request(route.method, path + query, body)
+      expect(response.status, `${route.method} ${path}`).toBe(loggedIn ? 403 : 401)
       expect(await response.json()).toMatchObject({
         error: { code: loggedIn ? 'permission_denied' : 'unauthenticated' },
       })
@@ -234,6 +245,9 @@ test('参数校验、CSRF、JSON 类型和请求体上限；OpenAPI 声明这些
     '/admin/users/{uid}/bindings/{pluginId}/{providerId}',
     '/admin/users/{uid}/sessions',
     '/admin/users/{uid}/score',
+    '/admin/users/lookup',
+    '/admin/players/{pid}',
+    '/admin/players/{pid}/transfer',
   ])
     expect(spec.paths[path]).toBeDefined()
   // 改用户和删除用户共用一个路径

@@ -10,21 +10,24 @@
 
 抛错或超时默认最多尝试 5 次。失败后按 10 秒起的指数退避，基础值最多 1 小时，再乘 0.8–1.2 的随机抖动。用尽次数进入后台插件详情页的死信，可重试或删除；重试从 0 次重新开始。host 不可用时积压留在队列，不算失败尝试。不要吞掉需要重试的错误，也不要把机密放进异常消息：消息会进入错误记录。任务机制详见[任务](./jobs.md)。
 
-## 信封和 16 个事件
+## 信封和 17 个事件
 
 每个 handler 收到 `{ event, ctx }`。`event` 有 `id`（全局唯一）、`name`、`occurredAt`（UTC ISO 字符串）、`actor` 和 `data`。下表完整列出 data 字段；DTO 的具体字段见 SDK 类型声明和[上下文](./context.md)。
 
-**下列 16 个事件的订阅都不需要能力**，也不会因为未申请读取能力而去掉 data。仅在 handler 额外调用 ctx API 时才按能力检查。
+actor 是发起这次操作的人。后台操作和连带效果（材质改私有或删除后，清理别人的衣柜、角色、头像）里，`data` 里的用户可能不是 actor；后台操作也可能波及管理员自己。只看信封分不出后台操作和连带效果。
+
+**下列 17 个事件的订阅都不需要能力**，也不会因为未申请读取能力而去掉 data。仅在 handler 额外调用 ctx API 时才按能力检查。
 
 | 事件 | 何时发出 | data |
 |---|---|---|
 | `user.registered` | 注册用例建用户成功，包括第三方首次完成注册；安装向导建首个超级管理员也发出（通常尚无插件订阅） | `user: PublicUser`、`extra: ExtraFields`（只含本插件的注册字段） |
 | `user.profileUpdated` | 用户资料更新 | `uid`、`fields`：`nickname`、`email`、`password`、`avatar`、`locale` 或以后新增值 |
-| `user.roleChanged` | 封禁或变更用户角色 | `uid`、`from: UserRole`、`to: UserRole` |
+| `user.roleChanged` | 封禁或变更用户的身份 | `uid`、`from: UserRole`、`to: UserRole` |
 | `user.deleted` | 删除用户 | `uid` |
 | `player.created` | 创建 Minecraft 角色 | `player: Player` |
 | `player.renamed` | 角色改名 | `player: Player`（改后）、`previousName` |
-| `player.texturesChanged` | 角色的皮肤或披风槽改变，包括材质删除引起的清空 | `player: Player`（改后）、`previous: { skin: Tid \| null, cape: Tid \| null }` |
+| `player.texturesChanged` | 角色的皮肤或披风槽改变，包括材质删除引起的清空、后台转让时清掉新主人看不到的材质、材质被下架（管理员下架公开材质时连带清掉角色上的材质） | `player: Player`（改后）、`previous: { skin: Tid \| null, cape: Tid \| null }` |
+| `player.transferred` | 管理员在后台把角色转让给另一个用户 | `player: Player`（转让之后，`uid` 是新主人）、`previousUid` |
 | `player.deleted` | 删除角色，包括删除用户时其名下角色 | `pid`、`uid`、`name`、`uuid` |
 | `texture.uploaded` | 上传材质条目 | `texture: Texture` |
 | `texture.updated` | 更新材质信息 | `texture: Texture`（改后）、`fields`：`name`、`type`、`public`、`description` 或以后新增值 |

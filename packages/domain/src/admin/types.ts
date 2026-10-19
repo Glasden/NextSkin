@@ -106,3 +106,53 @@ export interface AdminUserDetail {
   /** 以这个用户为对象的最近 10 条审计 */
   recentAudit: AuditEntry[]
 }
+
+/** 后台角色页的一行（ADR-0036"后台的角色管理"） */
+export interface AdminPlayer {
+  pid: number
+  name: string
+  uuid: string
+  /** 主人创建时实付的积分；转让的确认框写明不退 */
+  scorePaid: number
+  updatedAt: IsoTimestamp
+  owner: { uid: number; nickname: string; role: UserRole }
+  /** 材质文件的尺寸认不出时也给出 tid，scale 为 null，页面只显示编号 */
+  skin: { tid: number; hash: string; type: TextureType; scale: number | null } | AdminHiddenTexture | null
+  cape: { tid: number; hash: string; scale: number | null } | AdminHiddenTexture | null
+}
+/** 别人的私有材质：操作者没有 textures.manage 时只给出 tid，页面只显示"私有材质"和编号（ADR-0036"别人的材质"） */
+export interface AdminHiddenTexture {
+  tid: number
+  hidden: true
+}
+/** 后台改角色的 PATCH：至少一项；skin、cape 为 null 清空 */
+export interface AdminPlayerUpdate {
+  name?: string
+  skin?: number | null
+  cape?: number | null
+}
+/** 转让时按 uid 或邮箱查新主人；没有 users.ban 时 email 为 null（ADR-0036"接口"） */
+export interface AdminUserLookup {
+  uid: number
+  nickname: string
+  email: string | null
+  role: UserRole
+  avatar: { hash: string; scale: number } | null
+}
+/**
+ * 按 tid 查材质、判断某个主人能不能用（ADR-0036"接口"）。别人的私有材质在操作者没有 textures.manage 时
+ * 只给出 tid、public 和 visibleToOwner
+ */
+export type AdminTextureForOwner =
+  | {
+      tid: number
+      name: string
+      type: TextureType
+      public: boolean
+      uploaderId: number | null
+      hash: string
+      /** 预览用；材质文件的尺寸认不出时为 null */
+      scale: number | null
+      visibleToOwner: boolean
+    }
+  | { tid: number; public: false; visibleToOwner: boolean }

@@ -33,6 +33,9 @@ const actionKeys = {
   'user.revokeSessions': 'userRevokeSessions',
   'user.adjustScore': 'userAdjustScore',
   'user.delete': 'userDelete',
+  'player.rename': 'playerRename',
+  'player.setTextures': 'playerSetTextures',
+  'player.transfer': 'playerTransfer',
   'player.delete': 'playerDelete',
   'setting.update': 'settingUpdate',
   'plugin.enable': 'pluginEnable',
@@ -228,6 +231,8 @@ export async function AuditTable({
   }
 
   const number = (value: unknown) => format.number(count(value))
+  /** 角色槽上的材质编号，null 是空槽 */
+  const textureId = (value: unknown) => (typeof value === 'number' ? `#${value}` : t('details.textureNone'))
   const signed = (value: unknown) => `${count(value) > 0 ? '+' : ''}${number(value)}`
 
   // 每个动作的详情摘要，按 AuditAction 穷举；没有什么可写的返回 null
@@ -282,6 +287,33 @@ export async function AuditTable({
         kept: count(typeof kept === 'object' && kept !== null ? (kept as { count?: unknown }).count : 0),
       })
     },
+    'player.rename': (details) =>
+      t('details.playerRename', {
+        from: text(details.from) ?? '',
+        to: text(details.to) ?? '',
+        uuid: text(details.uuid) ?? '',
+      }),
+    'player.setTextures': (details) =>
+      t('details.playerSetTextures', {
+        name: text(details.name) ?? '',
+        changes: format.list(
+          (['skin', 'cape'] as const).flatMap((slot) => {
+            const change = details[slot]
+            if (typeof change !== 'object' || change === null) return []
+            const { from, to } = change as { from?: unknown; to?: unknown }
+            return [t('details.playerTextureSlot', { slot, from: textureId(from), to: textureId(to) })]
+          }),
+        ),
+      }),
+    'player.transfer': (details) =>
+      t('details.playerTransfer', {
+        name: text(details.name) ?? '',
+        uuid: text(details.uuid) ?? '',
+        from: count(details.from),
+        to: count(details.to),
+        cleared:
+          typeof details.cleared === 'object' && details.cleared !== null ? Object.keys(details.cleared).length : 0,
+      }),
     'player.delete': (details) =>
       t('details.playerDelete', { name: text(details.name) ?? '', uuid: text(details.uuid) ?? '' }),
     'setting.update': settingChange,

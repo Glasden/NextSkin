@@ -9,6 +9,7 @@ const names = {
   'player.created': true,
   'player.renamed': true,
   'player.texturesChanged': true,
+  'player.transferred': true,
   'player.deleted': true,
   'texture.uploaded': true,
   'texture.updated': true,

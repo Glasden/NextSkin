@@ -249,6 +249,11 @@ export default async function AdminUserPage({ params }: { params: Promise<{ uid:
         badge={<Badge>{t('players.count', { count: counts.players })}</Badge>}
       >
         <PlayerList players={detail.players} total={counts.players} />
+        {counts.players > 0 && can(viewer.role, 'players.manage') && (
+          <span className="text-sm">
+            <Link render={<NextLink href={`/admin/players?owner=${uid}`} />}>{t('players.manage')}</Link>
+          </span>
+        )}
       </Section>
 
       <Section id="textures" title={t('textures.title')}>

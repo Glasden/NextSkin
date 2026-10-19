@@ -1,5 +1,5 @@
 import { buildManifest } from '@nextskin/plugin-host'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { normalizePath, playerPaths } from './index.ts'
 import plugin from './official.ts'
 
@@ -20,6 +20,7 @@ test('manifest 能从定义里提取出来，机密设置标成 writeOnly', () =
     'player.deleted',
     'player.renamed',
     'player.texturesChanged',
+    'player.transferred',
     'texture.deleted',
   ])
   const properties = (manifest.settingsSchema as { properties: Record<string, { writeOnly?: boolean }> }).properties
@@ -49,6 +50,52 @@ test('角色名的地址按 URL 编码', () => {
     '/usm/Steve.json',
     '/skin/Steve.png',
     '/cape/Steve.png',
+  ])
+})
+
+test('角色转让后刷新事件里角色名字的那组地址', async () => {
+  const requests: URL[] = []
+  const handler = plugin.definition.on!['player.transferred']!
+  await handler({
+    event: {
+      id: 'transfer-1',
+      name: 'player.transferred',
+      occurredAt: '2026-10-19T00:00:00.000Z',
+      actor: { kind: 'user', uid: 1, role: 'admin' },
+      data: {
+        player: {
+          pid: 1,
+          uid: 3,
+          name: 'Alex',
+          uuid: '0123456789abcdef0123456789abcdef',
+          skin: null,
+          cape: null,
+          updatedAt: '2026-10-19T00:00:00.000Z',
+        },
+        previousUid: 2,
+      },
+    },
+    ctx: {
+      plugin: { id: 'cdn-refresh', version: '1.0.0' },
+      site: { url: 'https://skin.example.test', name: 'NextSkin' },
+      settings: plugin.definition.settings!.parse({ accessKeyId: 'id', accessKeySecret: 'secret' }),
+      t: (key) => key,
+      log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+      signal: new AbortController().signal,
+      jobs: { enqueue: vi.fn() },
+      fetch: async (input) => {
+        requests.push(new URL(input))
+        return Response.json({ RefreshTaskId: '1' })
+      },
+    },
+  })
+  expect(requests).toHaveLength(1)
+  expect(requests[0]!.searchParams.get('ObjectPath')?.split('\n')).toEqual([
+    'https://skin.example.test/Alex.json',
+    'https://skin.example.test/csl/Alex.json',
+    'https://skin.example.test/usm/Alex.json',
+    'https://skin.example.test/skin/Alex.png',
+    'https://skin.example.test/cape/Alex.png',
   ])
 })
 

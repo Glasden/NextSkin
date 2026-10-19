@@ -6,7 +6,7 @@ import NextLink from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { sendJson } from '../../../../lib/api-client'
-import { ActionDialog } from './action-dialog'
+import { ActionDialog } from '../../action-dialog'
 
 export interface DeleteUserDialogProps {
   uid: number

@@ -34,6 +34,11 @@ export interface CoreEvents {
   'player.created': { player: Player }
   'player.renamed': { player: Player; previousName: string }
   'player.texturesChanged': { player: Player; previous: { skin: Tid | null; cape: Tid | null } }
+  /**
+   * 管理员在后台转让角色；player 是转让之后的样子，player.uid 是新主人，pid、UUID、名字不变。
+   * 转让时清掉了新主人看不到的材质，会先发 player.texturesChanged。
+   */
+  'player.transferred': { player: Player; previousUid: Uid }
   'player.deleted': { pid: Pid; uid: Uid; name: string; uuid: string }
 
   'texture.uploaded': { texture: Texture }

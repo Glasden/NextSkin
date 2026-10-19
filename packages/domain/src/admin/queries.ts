@@ -9,13 +9,27 @@ import {
   type UserRole,
 } from '@nextskin/db'
 import type { Kysely, SelectQueryBuilder } from 'kysely'
-import { can, hasAdminAccess, type CorePermission } from '../access/permissions.ts'
+import { can, hasAdminAccess, outranks, type CorePermission } from '../access/permissions.ts'
 import { DomainError } from '../errors.ts'
-import { textureScaleOrNull } from '../players/queries.ts'
+import { textureScaleOrNull, toNameKey } from '../players/queries.ts'
+import { textureRows } from '../textures/dto.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { rejectNul } from '../text.ts'
 import { todayStart } from '../time.ts'
-import type { AdminOverview, AdminReport, AdminUser, AdminUserDetail, AuditEntry } from './types.ts'
+import type {
+  AdminOverview,
+  AdminPlayer,
+  AdminReport,
+  AdminTextureForOwner,
+  AdminUser,
+  AdminUserDetail,
+  AdminUserLookup,
+  AuditEntry,
+} from './types.ts'
+
+const MAX_INT32 = 2147483647
+/** 带不带连字符都行（ADR-0036"后台的角色管理"） */
+const UUID_PATTERN = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i
 
 function pagination(input: { page: number; perPage?: number }) {
   const perPage = Math.max(1, Math.min(100, Math.trunc(input.perPage ?? 50)))
@@ -229,6 +243,77 @@ async function auditViews(db: Kysely<CoreDatabase>, ids: number[]): Promise<Audi
     details: parseDetails(row.details),
   }))
 }
+function playerRows(db: Kysely<CoreDatabase>) {
+  return db
+    .selectFrom('players')
+    .innerJoin('users as owner', 'owner.id', 'players.user_id')
+    .leftJoin('textures as skin', 'skin.id', 'players.skin_texture_id')
+    .leftJoin('textures as cape', 'cape.id', 'players.cape_texture_id')
+    .leftJoin('texture_files as skinFile', 'skinFile.hash', 'skin.hash')
+    .leftJoin('texture_files as capeFile', 'capeFile.hash', 'cape.hash')
+    .select([
+      'players.id as pid',
+      'players.name',
+      'players.uuid',
+      'players.score_paid as scorePaid',
+      'players.updated_at as updatedAt',
+      'owner.id as ownerId',
+      'owner.nickname as ownerNickname',
+      'owner.role as ownerRole',
+      'skin.id as skinId',
+      'skin.hash as skinHash',
+      'skin.type as skinType',
+      'skin.is_public as skinPublic',
+      'skin.uploader_id as skinUploader',
+      'skinFile.width as skinWidth',
+      'skinFile.height as skinHeight',
+      'cape.id as capeId',
+      'cape.hash as capeHash',
+      'cape.type as capeType',
+      'cape.is_public as capePublic',
+      'cape.uploader_id as capeUploader',
+      'capeFile.width as capeWidth',
+      'capeFile.height as capeHeight',
+    ])
+}
+type PlayerRow = Awaited<ReturnType<ReturnType<typeof playerRows>['execute']>>[number]
+
+/** reveal 判断能不能给出这个材质的预览：别人的私有材质要有 textures.manage */
+function toAdminPlayer(
+  row: PlayerRow,
+  reveal: (isPublic: number | null, uploader: number | null) => boolean,
+): AdminPlayer {
+  return {
+    pid: row.pid,
+    name: row.name,
+    uuid: row.uuid,
+    scorePaid: row.scorePaid,
+    updatedAt: row.updatedAt,
+    owner: { uid: row.ownerId, nickname: row.ownerNickname, role: row.ownerRole },
+    skin:
+      row.skinId === null || row.skinHash === null || row.skinType === null
+        ? null
+        : reveal(row.skinPublic, row.skinUploader)
+          ? {
+              tid: row.skinId,
+              hash: row.skinHash,
+              type: row.skinType,
+              scale: textureScaleOrNull(row.skinType, row.skinWidth, row.skinHeight),
+            }
+          : { tid: row.skinId, hidden: true },
+    cape:
+      row.capeId === null || row.capeHash === null
+        ? null
+        : reveal(row.capePublic, row.capeUploader)
+          ? {
+              tid: row.capeId,
+              hash: row.capeHash,
+              scale: textureScaleOrNull(row.capeType, row.capeWidth, row.capeHeight),
+            }
+          : { tid: row.capeId, hidden: true },
+  }
+}
+
 export function createAdminQueries(
   db: Kysely<CoreDatabase>,
   settings: ReturnType<typeof createSettingQueries>,
@@ -238,6 +323,7 @@ export function createAdminQueries(
     const user = await db.selectFrom('users').select('role').where('id', '=', uid).executeTakeFirst()
     if (!user || !(permission ? can(user.role, permission) : hasAdminAccess(user.role)))
       throw new DomainError('permission_denied')
+    return user.role
   }
   return {
     async overview(viewer: number): Promise<AdminOverview> {
@@ -391,6 +477,93 @@ export function createAdminQueries(
           db,
           recentAudit.map((r) => r.id),
         ),
+      }
+    },
+    /**
+     * 角色页（ADR-0036"后台的角色管理"）：按角色名不分大小写地包含匹配，或者按 UUID 精确查找；owner 列出某个用户的角色。
+     * 按 pid 从新到旧。按 owner 筛选时一并给出主人的昵称，用户不存在时为 null。别人的私有材质要有 textures.manage 才给出预览
+     */
+    async listPlayers(viewer: number, input: { q?: string; owner?: number; page: number; perPage?: number }) {
+      const role = await authorize(viewer, 'players.manage')
+      const textures = can(role, 'textures.manage')
+      const reveal = (isPublic: number | null, uploader: number | null) =>
+        textures || isPublic === 1 || uploader === viewer
+      const { limit, offset } = pagination(input)
+      const q = rejectNul(input.q ?? '').trim()
+      const filter = <Q extends SelectQueryBuilder<CoreDatabase, 'players', object>>(query: Q): Q => {
+        let filtered = query
+        if (q)
+          filtered = filtered.where((eb) =>
+            eb.or([
+              // name_key 是 JS 转的小写，SQLite 的 lower() 只认 ASCII，所以拿它和转好小写的输入比
+              containsInsensitive('players.name_key', toNameKey(q)),
+              ...(UUID_PATTERN.test(q) ? [eb('players.uuid', '=', q.replaceAll('-', '').toLowerCase())] : []),
+            ]),
+          ) as Q
+        if (input.owner !== undefined) filtered = filtered.where('players.user_id', '=', input.owner) as Q
+        return filtered
+      }
+      const rows = await filter(playerRows(db)).orderBy('players.id', 'desc').limit(limit).offset(offset).execute()
+      const owner =
+        input.owner === undefined
+          ? undefined
+          : ((await db
+              .selectFrom('users')
+              .select(['id', 'nickname'])
+              .where('id', '=', input.owner)
+              .executeTakeFirst()) ?? null)
+      return {
+        total: await countRows(filter(db.selectFrom('players'))),
+        items: rows.map((row) => toAdminPlayer(row, reveal)),
+        ...(owner === undefined ? {} : { owner: owner && { uid: owner.id, nickname: owner.nickname } }),
+      }
+    },
+    /**
+     * 转让时按 uid 或邮箱精确查新主人（ADR-0036"接口"）：要有 players.manage，只返回身份严格低于自己的用户，其余一律
+     * user_not_found。按邮箱查、返回邮箱还要有 users.ban，否则拿一个邮箱试探就能查出它属于谁
+     */
+    async lookupUser(viewer: number, q: string): Promise<AdminUserLookup> {
+      const self = await db.selectFrom('users').select('role').where('id', '=', viewer).executeTakeFirst()
+      if (!self || !can(self.role, 'players.manage')) throw new DomainError('permission_denied')
+      const emails = can(self.role, 'users.ban')
+      const query = rejectNul(q).trim()
+      const row = /^\d+$/.test(query)
+        ? Number(query) <= MAX_INT32
+          ? await userRows(db).where('users.id', '=', Number(query)).executeTakeFirst()
+          : undefined
+        : emails && query
+          ? await userRows(db).where('users.email', '=', query.toLowerCase()).executeTakeFirst()
+          : undefined
+      if (!row || !outranks(self.role, row.role)) throw new DomainError('user_not_found')
+      const { uid, nickname, email, role, avatar } = toUser(row)
+      return { uid, nickname, email: emails ? email : null, role, avatar }
+    },
+    /**
+     * 按 tid 查材质、判断主人能不能用（ADR-0036"接口"）：转让和换材质、加入衣柜的 Dialog 在提交之前用。要有 players.manage
+     * 或 users.manage，owner 要是自己能管理的用户。别人的私有材质在没有 textures.manage 时只给出 tid、public 和 visibleToOwner
+     */
+    async textureForOwner(viewer: number, tid: number, owner: number): Promise<AdminTextureForOwner> {
+      const users = await db.selectFrom('users').select(['id', 'role']).where('id', 'in', [viewer, owner]).execute()
+      const self = users.find((user) => user.id === viewer)
+      if (!self || !(can(self.role, 'players.manage') || can(self.role, 'users.manage')))
+        throw new DomainError('permission_denied')
+      const target = users.find((user) => user.id === owner)
+      if (!target) throw new DomainError('user_not_found')
+      if (!outranks(self.role, target.role)) throw new DomainError('user_not_manageable')
+      const row = await textureRows(db).where('textures.id', '=', tid).executeTakeFirst()
+      if (!row) throw new DomainError('texture_not_found')
+      const visibleToOwner = row.is_public === 1 || row.uploader_id === owner
+      if (row.is_public === 0 && row.uploader_id !== viewer && !can(self.role, 'textures.manage'))
+        return { tid: row.id, public: false, visibleToOwner }
+      return {
+        tid: row.id,
+        name: row.name,
+        type: row.type,
+        public: row.is_public === 1,
+        uploaderId: row.uploader_id,
+        hash: row.hash,
+        scale: textureScaleOrNull(row.type, row.width, row.height),
+        visibleToOwner,
       }
     },
     async textureDeletionImpact(

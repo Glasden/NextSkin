@@ -4,18 +4,23 @@ import { Alert, Button, Dialog, DialogClose, Form, useToast } from '@nextskin/ui
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState, type ReactElement, type ReactNode } from 'react'
-import { apiError } from '../../../../lib/api-client'
+import { apiError } from '../../lib/api-client'
 
 export interface ActionDialogProps {
   /** 表单的 id，确认按钮靠它提交表单；一页上不能重复 */
   id: string
-  trigger: ReactElement
+  /** 打开对话框的按钮。不传时由 open 和 onOpenChange 控制，例如从行内菜单打开 */
+  trigger?: ReactElement
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   title: string
   /** 写明后果（DESIGN.md §7） */
   description?: ReactNode
   confirm: string
   /** 不可逆的操作：确认按钮用 danger，对话框是 alert（点外面不关闭） */
   danger?: boolean
+  /** 还不能提交，例如转让之前还没查到新主人 */
+  confirmDisabled?: boolean
   /** 对话框打开时调用，用来重置受控的输入 */
   onOpen?: () => void
   /** 发请求。values 是表单里各个 Field 的值；受控的输入由调用方自己读 */
@@ -33,16 +38,19 @@ export interface ActionDialogProps {
 }
 
 /**
- * 用户详情页上的一个操作：确认框加表单，成功后用 Toast 报告结果并刷新页面（ADR-0036"页面"）。
+ * 后台的一个操作：确认框加表单，成功后用 Toast 报告结果并刷新页面（ADR-0036"页面"），用户详情页和角色页共用。
  * 错误文案由接口按请求的语言给出，后台的路径用对管理员说话的 admin.errors
  */
 export function ActionDialog({
   id,
   trigger,
+  open: controlled,
+  onOpenChange,
   title,
   description,
   confirm,
   danger = false,
+  confirmDisabled = false,
   onOpen,
   send,
   done,
@@ -55,12 +63,16 @@ export function ActionDialog({
   const common = useTranslations('common')
   const router = useRouter()
   const toast = useToast()
-  const [open, setOpen] = useState(false)
+  const [uncontrolled, setUncontrolled] = useState(false)
+  const open = controlled ?? uncontrolled
+  const setOpen = (next: boolean) => (onOpenChange ? onOpenChange(next) : setUncontrolled(next))
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   async function submit(values: Record<string, unknown>) {
+    // 在输入框里按回车也会提交表单
+    if (confirmDisabled) return
     setPending(true)
     setError(null)
     setErrors({})
@@ -101,7 +113,13 @@ export function ActionDialog({
       actions={
         <>
           <DialogClose>{common('cancel')}</DialogClose>
-          <Button type="submit" form={id} variant={danger ? 'danger' : 'primary'} loading={pending}>
+          <Button
+            type="submit"
+            form={id}
+            variant={danger ? 'danger' : 'primary'}
+            loading={pending}
+            disabled={confirmDisabled}
+          >
             {confirm}
           </Button>
         </>

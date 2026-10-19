@@ -242,6 +242,8 @@ export function createTokens(options: {
       assertNotBanned(token)
       assertOwned(token)
       let playerId = token.player_id
+      /** 这次刷新新选的角色 */
+      let selectedPid: number | null = null
       if (profileGiven(input.selectedProfile)) {
         const selected = input.selectedProfile
         const name =
@@ -259,11 +261,23 @@ export function createTokens(options: {
         const id = typeof selected === 'object' && selected !== null && 'id' in selected ? selected.id : null
         const owned = (await profiles(db, token.user_id)).find((player) => player.id === id)
         if (!owned) throw forbidden('profile_not_owned', token.locale)
-        playerId = owned.pid
+        playerId = selectedPid = owned.pid
       }
       const values = await tokenSettings()
       return transactionWithRetry(db, async (tx) => {
         if (!(await lockOwner(tx, token.user_id))) throw forbidden('token_invalid', token.locale)
+        // 新选的角色在事务外确认过属于令牌的用户，锁住用户之后再确认一次：后台转让锁着原主人，恰好在两者之间提交的话，
+        // 不能再给原主人签发绑定这个角色的令牌（ADR-0036"转让"）。已经绑定的令牌不用：转让在同一个事务里删掉了它
+        if (
+          selectedPid !== null &&
+          !(await tx
+            .selectFrom('players')
+            .select('id')
+            .where('id', '=', selectedPid)
+            .where('user_id', '=', token.user_id)
+            .executeTakeFirst())
+        )
+          throw forbidden('profile_not_owned', token.locale)
         const removed = await tx
           .deleteFrom('yggdrasil_tokens')
           .where('id', '=', token.id)
