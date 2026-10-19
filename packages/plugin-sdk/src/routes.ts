@@ -7,7 +7,8 @@ import type { Actor, UserActor } from './dto.ts'
  * 键的格式是 'METHOD /path'，路径参数写 `:name`，例如 'DELETE /codes/:code'。
  * 参数名为 `[A-Za-z][A-Za-z0-9]*`；固定段为 `[A-Za-z0-9._~-]+`，不接受末尾斜杠（根路径除外）。
  * 每次调用限 30 秒；public 路由一律匿名，scope.actor 为 system。
- * 核心统一处理：登录态（只认会话 Cookie）、权限、CSRF（非 GET 请求校验 Origin）、限流、请求体大小。
+ * 核心统一处理：登录态（只认会话 Cookie）、权限、CSRF（带着会话的非 GET 请求校验 Origin；public 路由不认会话，不检查）、
+ * 限流、请求体大小。
  * 请求体完整读入后才交给插件，所以有大小上限；响应体同样完整读出，不超过 10 MiB，不支持流式响应。
  * 交给插件的请求里没有 Cookie、Authorization、Proxy-Authorization：登录的是谁看 scope.actor，
  * 插件要自己的令牌认证就用自己的请求头。响应不能设置 Cookie，CSP 由核心决定；

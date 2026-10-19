@@ -42,7 +42,7 @@ export const PLUGIN_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 const MAX_PHYSICAL_IDENT = 63
 
 /** 三种数据库语义一致的运算符。不含 `||`（MySQL 里是 OR）和各方言特有运算符。 */
-const BINARY_OPERATORS = new Set([
+export const BINARY_OPERATORS = new Set([
   '=',
   '!=',
   '<>',
@@ -63,13 +63,13 @@ const BINARY_OPERATORS = new Set([
   '/',
   '%',
 ])
-const UNARY_OPERATORS = new Set(['not', 'exists', 'not exists', '-'])
-const FUNCTIONS = new Set(['lower', 'upper', 'abs', 'round', 'coalesce', 'nullif'])
-const AGGREGATES = new Set(['count', 'sum', 'avg', 'min', 'max'])
-const JOIN_TYPES = new Set(['InnerJoin', 'LeftJoin'])
-const SELECT_MODIFIERS = new Set(['Distinct'])
-const FK_ACTIONS = new Set(['cascade', 'set null', 'restrict', 'no action'])
-const DATA_TYPE =
+export const UNARY_OPERATORS = new Set(['not', 'exists', 'not exists', '-'])
+export const FUNCTIONS = new Set(['lower', 'upper', 'abs', 'round', 'coalesce', 'nullif'])
+export const AGGREGATES = new Set(['count', 'sum', 'avg', 'min', 'max'])
+export const JOIN_TYPES = new Set(['InnerJoin', 'LeftJoin'])
+export const SELECT_MODIFIERS = new Set(['Distinct'])
+export const FK_ACTIONS = new Set(['cascade', 'set null', 'restrict', 'no action'])
+export const DATA_TYPE =
   /^(?:varchar\((\d{1,4})\)|char\((\d{1,3})\)|text|integer|bigint|smallint|boolean|real|double precision|(?:numeric|decimal)\(\d{1,2}, \d{1,2}\))$/
 const SAFE_DEFAULT_STRING = /^[\p{L}\p{N} _.:-]{0,64}$/u
 

@@ -7,10 +7,12 @@ NextSkin 的插件 API。NextSkin 是用 TypeScript 重写的 Blessing Skin Serv
 ## 安装
 
 ```sh
-npm install @nextskin/plugin-sdk
-npm install --save-dev @nextskin/plugin-cli @types/node
+npm install --save-exact @nextskin/plugin-sdk@rc
+npm install --save-dev --save-exact @nextskin/plugin-cli@rc
+npm install --save-dev @types/node
 ```
 
+- 1.0.0 发布之前只有候选版（npm 的 `rc` 标签），发布之后去掉 `@rc`。
 - `@nextskin/plugin-cli` 提供构建命令 `nextskin-plugin build`。两个包要装同一个版本。
 - 插件项目是 ESM（package.json 里写 `"type": "module"`），需要 Node 24 或更新的版本。
 
@@ -29,6 +31,8 @@ npm install --save-dev @nextskin/plugin-cli @types/node
 ```
 
 `src/index.ts`：
+
+<!-- docs-example: readme.ts -->
 
 ```ts
 import { definePlugin } from '@nextskin/plugin-sdk'

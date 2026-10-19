@@ -12,7 +12,7 @@ import { Selectable } from 'kysely';
 import { Updateable } from 'kysely';
 import { z } from 'zod';
 
-// @public (undocumented)
+// @public
 export interface Action {
     readonly confirm?: MessageKey;
     readonly form?: readonly Field[];
@@ -857,7 +857,7 @@ export { z }
 //
 // dist/context.d.ts:141:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
 // dist/context.d.ts:145:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
-// dist/routes.d.ts:34:5 - (ae-forgotten-export) The symbol "RouteArgs" needs to be exported by the entry point index.d.ts
+// dist/routes.d.ts:35:5 - (ae-forgotten-export) The symbol "RouteArgs" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

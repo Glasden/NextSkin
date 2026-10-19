@@ -7,7 +7,7 @@
  */
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { cp, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -79,7 +79,15 @@ try {
       /^dist\/[a-z-]+\.(?:js|d\.ts)$/,
       /^docs\/.+\.md$/,
     ],
-    ['package.json', 'README.md', 'LICENSE', 'dist/index.js', 'dist/index.d.ts'],
+    [
+      'package.json',
+      'README.md',
+      'LICENSE',
+      'dist/index.js',
+      'dist/index.d.ts',
+      // 作者文档随包发布（ADR-0035）
+      ...(await readdir(join(repository, 'packages', 'plugin-sdk', 'docs'))).map((name) => `docs/${name}`),
+    ],
   )
   checkFiles(
     cli,

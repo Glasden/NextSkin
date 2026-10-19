@@ -34,17 +34,9 @@ CI 用 `changeset status` 检查：本包 `src` 有任何改动都要附 changes
 - **`src` 里的相对导入写 `.ts` 扩展名。** set-role、导入器的命令行这些 Node 直接运行的脚本经 domain → plugin-host 加载本包的源码，Node 的类型剥离不补扩展名，类型检查却不报错。
 - **新增拦截点要谨慎。** 每个拦截点都必须在 `interceptorPolicies` 里写明失败策略、超时和是否在事务内。不加"拦截任意数据"的通用 filter，这是 ADR-0010 明确否决的。
 
-## 插件自有表的硬性规则（S5 验证得出，核心会在运行时强制执行）
+## 插件自有表
 
-- 插件 id：`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`。表名、索引名、约束名：`^[a-z][a-z0-9]*(_[a-z0-9]+)*$`。物理名 `p_<id，连字符换成下划线>__<名字>` 不超过 63 字符。不要放宽这两个正则：它们保证不同插件的物理名不可能相同。
-- 一个 FROM 项加最多 4 个 inner/left JOIN；没有 INSERT…SELECT、CTE、窗口函数；RETURNING 只能用在 INSERT 上。
-- 运算符、函数、聚合、数据类型都有白名单（见 `spikes/s5-remote-kysely/src/sanitize.ts`）。SDK 文档里列出的能力必须与这些白名单一致。
-- 第一版插件不能自己开事务（ADR-0033）：每条语句单独提交，需要原子性就用一条带条件的语句。只有事务内的拦截器加入核心事务，那里的 `ctx` 只有 `db` 和不用等核心回应的几项，没有 `fetch`、`kv`、`jobs`。插件的读查询在专用 worker 连接上执行，带期限，超时被中止（S2）。
+面向作者的规则、SQL 白名单和四种数据库的坑在 `docs/tables.md`，实现在 `packages/domain/src/plugins/db/`（`sanitize.ts`、`gateway.ts`）。文档列出的白名单由 `db/docs.test.ts` 和实现比对。
 
-## 写插件表迁移时的坑（同样要写进面向插件作者的文档）
-
-- 自增主键在三种数据库里写法不同（`autoIncrement()` 在 PostgreSQL 上不可用）。优先使用自然键或字符串键。
-- MySQL 的主键和索引列不能是 `text`，用 `varchar(n)`。
-- 日期列一律存 ISO 字符串：SQLite 没有原生日期类型，三种数据库的时区行为也不一致。查询参数传 `Date` 会被核心拒绝：node:sqlite 会把排在第一位的对象参数当成命名参数表，后面的参数整体错位，不报错（见 `spikes/s2-node-sqlite/README.md`）。
-- `count()` 返回值在不同数据库里可能是 number、string 或 bigint，一律套 `Number()`。
-- MySQL 不支持 `returning`。需要新行的 id 时，用 `insertId` 或改用自然键。
+- 不要放宽插件 id（`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`）和表名（`^[a-z][a-z0-9]*(_[a-z0-9]+)*$`）的正则：它们保证不同插件的物理名 `p_<id>__<名字>` 不可能相同。
+- 网关支持的查询范围和设置项能生成控件的形状是契约（ADR-0035 的两个例外），只放宽、不收紧。

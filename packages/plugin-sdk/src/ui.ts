@@ -58,6 +58,7 @@ export interface Column {
   readonly format?: 'text' | 'code' | 'number' | 'datetime' | 'boolean' | 'status' | 'user' | 'player' | 'texture'
 }
 
+/** 浏览器发动作请求时不跟随重定向：路由回 3xx 按失败显示 */
 export interface Action {
   readonly label: MessageKey
   readonly method: 'POST' | 'PUT' | 'PATCH' | 'DELETE'
