@@ -430,7 +430,7 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 | — | email_version | 0：BS 的邮箱修改立即生效，没有待确认的链接（ADR-0024） |
 | register_at | created_at、updated_at | |
 | verified | email_verified | |
-| password | accounts 里 `provider_id = 'credential'` 的一行 | `account_id` 写 uid 的字符串（Better Auth 按它找密码）。哈希登录成功后换成当前算法（ADR-0007）。BS 的算法和盐取决于旧站 `.env` 的 `PWD_METHOD` 和 `SALT`，导入命令要拿到这两项：bcrypt、argon2（`BCRYPT`、`ARGON2I`、`PHP_PASSWORD_HASH`）原样保存；十六进制摘要（`MD5`、`SALTED2SHA256` 等六种）存成 `$bs$<算法>$<小写摘要>`（`auth/legacy-passwords.ts` 的 `formatLegacyDigest`）。认不出的哈希（空、长度与算法不符）不建这一行，用户可以找回密码；没有提供 `.env` 却遇到十六进制摘要时停止。`SALT` 是全站的 pepper，不进哈希，存进机密设置 `auth.legacyPasswordSalt` |
+| password | accounts 里 `provider_id = 'credential'` 的一行 | `account_id` 写 uid 的字符串（Better Auth 按它找密码）。哈希登录成功后换成当前算法（ADR-0007）。BS 的算法和盐取决于旧站 `.env` 的 `PWD_METHOD` 和 `SALT`，导入命令要拿到这两项：bcrypt、argon2（`BCRYPT`、`ARGON2I`、`PHP_PASSWORD_HASH`）原样保存；十六进制摘要（`MD5`、`SALTED2SHA256` 等六种）存成 `$bs$<算法>$<小写摘要>`（`auth/legacy-passwords.ts` 的 `formatLegacyDigest`）。authme-integration 在 `SALTED2MD5`、`SALTED2SHA512` 下加的 `users.salt` 列非空时，盐和摘要拼成 `$authme$<算法>$<盐>$<小写摘要>`（`formatAuthmeSalted`），由官方插件"AuthMe 密码"核对。别的看起来像哈希的值（8 到 255 个可打印的 ASCII 字符，例如 AuthMe 的 `$SHA$…`）原样保存，留给 passwordHasher 插件认领（ADR-0033）；`$bs$`、`$authme$` 开头的不会来自 BS，不保存。认不出的哈希（空、长度与算法不符、带空白）不建这一行，用户可以找回密码；没有提供 `.env` 却遇到十六进制摘要时停止。`SALT` 是全站的 pepper，不进哈希，存进机密设置 `auth.legacyPasswordSalt` |
 
 不导入：`is_dark_mode`、`verification_token`、`remember_token`。
 
