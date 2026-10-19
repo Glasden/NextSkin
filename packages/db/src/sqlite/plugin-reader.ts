@@ -98,6 +98,10 @@ export function createPluginSqliteReader(file: string) {
     }
   }
   return {
+    /** 放弃了、还没退出的 worker 数（诊断和测试用） */
+    get abandoned(): number {
+      return abandoned.size
+    },
     execute(request: PluginReadRequest): Promise<{ rows: Record<string, unknown>[] }> {
       if (closed) return Promise.reject(new PluginReadError('failed'))
       if (abandoned.size >= 2) return Promise.reject(new PluginReadError('timeout'))

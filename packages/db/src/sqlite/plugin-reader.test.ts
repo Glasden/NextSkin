@@ -1,5 +1,4 @@
 import { DatabaseSync } from 'node:sqlite'
-import { setTimeout as delay } from 'node:timers/promises'
 import { sql } from 'kysely'
 import { afterAll, beforeAll, expect, test } from 'vitest'
 import { createTestDatabase, type TestDatabase } from '../testing.ts'
@@ -7,12 +6,21 @@ import { createPluginSqliteReader } from './plugin-reader.ts'
 
 let database: TestDatabase<Record<string, never>>
 let reader: ReturnType<typeof createPluginSqliteReader>
+let file: string
 const request = (query: string, timeoutMs = 2000, pluginId = 'sample') => ({
   pluginId,
   sql: query,
   parameters: [],
   deadline: Date.now() + timeoutMs,
 })
+/**
+ * 不带期限函数、只能跑完的原生查询：本机约 0.6 秒，远长于测试给的期限；负载高的 2 核机器上会慢十倍，
+ * 所以等它退出的地方都留足时间。不用四张表的全量连接：那要 2.7 秒，被放弃之后还会在后台占着 CPU
+ */
+const slow =
+  'select sum(a.n+b.n+c.n+d.n) from p_sample__numbers a join p_sample__numbers b on 1=1 join p_sample__numbers c on 1=1 join p_sample__numbers d on 1=1 where a.n<=50 and b.n<=50 and c.n<=50 and d.n<=50'
+const count = 'select count(*) as n from p_sample__numbers'
+
 beforeAll(async () => {
   database = await createTestDatabase<Record<string, never>>()
   if (database.config.dialect !== 'sqlite') throw new Error('此测试只使用 SQLite')
@@ -23,7 +31,8 @@ beforeAll(async () => {
     database.db,
   )
   await sql`create table p_other__numbers(n integer)`.execute(database.db)
-  reader = createPluginSqliteReader(database.config.file)
+  file = database.config.file
+  reader = createPluginSqliteReader(file)
 })
 afterAll(async () => {
   await reader?.close()
@@ -73,7 +82,7 @@ test('写连接、读连接和事务连接都注册期限函数，期限参数�
 })
 
 test('绕过重建器的原始 SQL 仍然不能读取核心表、其他插件或写表；不沿用前一次授权', async () => {
-  expect((await reader.execute(request('select count(*) as n from p_sample__numbers'))).rows).toEqual([{ n: 80 }])
+  expect((await reader.execute(request(count))).rows).toEqual([{ n: 80 }])
   for (const query of [
     'select * from users',
     'select count(*) from users',
@@ -96,12 +105,10 @@ test('worker 的期限函数中止慢查询后，同一个 worker 可继续服�
   await expect(reader.execute({ ...request(slow), parameters: [Date.now() + 30] })).rejects.toMatchObject({
     code: 'timeout',
   })
-  expect((await reader.execute(request('select count(*) as n from p_sample__numbers'))).rows).toEqual([{ n: 80 }])
+  expect((await reader.execute(request(count))).rows).toEqual([{ n: 80 }])
 })
 
 test('没有期限函数的原生查询被放弃，事件循环不阻塞，新 worker 能继续服务', async () => {
-  const slow =
-    'select sum(a.n+b.n+c.n+d.n) from p_sample__numbers a join p_sample__numbers b on 1=1 join p_sample__numbers c on 1=1 join p_sample__numbers d on 1=1'
   let ticked = false
   const timer = setTimeout(() => {
     ticked = true
@@ -111,29 +118,27 @@ test('没有期限函数的原生查询被放弃，事件循环不阻塞，新 w
   clearTimeout(timer)
   expect(ticked).toBe(true)
   expect(performance.now() - start).toBeLessThan(1000)
-  expect((await reader.execute(request('select count(*) as n from p_sample__numbers'))).rows).toEqual([{ n: 80 }])
-  // 等旧的原生查询退出，测试库清理时不留下仍占用文件的连接。
-  await delay(2000)
-})
+  expect((await reader.execute(request(count))).rows).toEqual([{ n: 80 }])
+  // 等旧的原生查询退出：不把它留给后面的测试，测试库清理时也不留下仍占用文件的连接
+  await expect.poll(() => reader.abandoned, { timeout: 60_000, interval: 100 }).toBe(0)
+}, 90_000)
 
 test('最多放弃两个仍未退出的 worker，退出后恢复服务', async () => {
-  const slow =
-    'select sum(a.n+b.n+c.n+d.n) from p_sample__numbers a join p_sample__numbers b on 1=1 join p_sample__numbers c on 1=1 join p_sample__numbers d on 1=1'
-  for (let i = 0; i < 2; i++)
-    await expect(reader.execute(request(slow, 120))).rejects.toMatchObject({ code: 'timeout' })
-  await expect(reader.execute(request('select count(*) as n from p_sample__numbers'))).rejects.toMatchObject({
-    code: 'timeout',
-  })
-  await expect
-    .poll(
-      async () => {
-        try {
-          return (await reader.execute(request('select count(*) as n from p_sample__numbers'))).rows
-        } catch {
-          return null
-        }
-      },
-      { timeout: 10_000, interval: 100 },
-    )
-    .toEqual([{ n: 80 }])
-}, 15_000)
+  const own = createPluginSqliteReader(file)
+  const counted = () => own.execute(request(count, 10_000))
+  try {
+    // 先用快查询把 worker 起好再发慢查询：worker 收到请求时已经过了期限就不执行，也就不会被放弃
+    for (let attempt = 0; own.abandoned < 2; attempt++) {
+      expect(attempt).toBeLessThan(10)
+      expect((await counted()).rows).toEqual([{ n: 80 }])
+      await expect(own.execute(request(slow, 50))).rejects.toMatchObject({ code: 'timeout' })
+    }
+    await expect(counted()).rejects.toMatchObject({ code: 'timeout' })
+    // 原生查询跑完、worker 退出之后才空出名额
+    await expect.poll(() => own.abandoned, { timeout: 60_000, interval: 100 }).toBeLessThan(2)
+    expect((await counted()).rows).toEqual([{ n: 80 }])
+    await expect.poll(() => own.abandoned, { timeout: 60_000, interval: 100 }).toBe(0)
+  } finally {
+    await own.close()
+  }
+}, 150_000)
