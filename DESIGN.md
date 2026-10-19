@@ -236,6 +236,7 @@
 | 披风 | cape | |
 | 角色 | player | Minecraft 里的玩家名；一个用户可以有多个角色 |
 | 用户 | user | 站点账号 |
+| 身份 | role | 用户在站点上的身份：封禁、用户、管理员、超级管理员（`users.role`）；不叫“角色”，角色是 player |
 | 衣柜 | closet | 用户收藏的材质 |
 | 皮肤库 | skin library | |
 | 积分 | score | |

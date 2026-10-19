@@ -43,7 +43,7 @@ Better Auth 的 user 模型加上我们的领域字段。领域字段都有默�
 | locale | varchar(16) | 可空 | |
 | registration_ip | varchar(45) | 可空 | 用于"同一 IP 注册数"限制 |
 | last_check_in_at | 时间 | 可空 | 上次签到时间。签到用一条带条件的 UPDATE 同时改它和积分，保证一天只能签到一次 |
-| email_version | integer | 非空，默认 0 | 邮箱每改一次加一。改邮箱的确认链接带着签发时的版本，版本对不上就作废（ADR-0024） |
+| email_version | integer | 非空，默认 0 | 邮箱每改一次加一；后台发起改邮箱、作废在途的登录时也加一（ADR-0036）。改邮箱的确认链接带着签发时的版本，版本对不上就作废（ADR-0024） |
 
 `users` 和 `textures` 互相引用，所以 `avatar_texture_id` 在建完 `textures` 之后再加。
 
@@ -59,7 +59,7 @@ Better Auth 的 user 模型加上我们的领域字段。领域字段都有默�
 |---|---|---|
 | sessions | 核心 | |
 | accounts | 核心 | 密码存在这里：`provider_id = 'credential'` 的那一行。第三方登录的绑定也在这里：`provider_id` 是 `plugin:<插件 id>:<Provider id>`，`account_id` 是第三方的 subject，令牌各列留空；`account_id`、`provider_id` 是 ascii 的 `authStringType(255)`，`(provider_id, account_id)` 和 `(user_id, provider_id)` 各有唯一索引（ADR-0034） |
-| verifications | 核心 | 找回密码等一次性令牌（邮箱验证用的是 JWT，不经过这张表） |
+| verifications | 核心 | 一次性令牌：找回密码 `reset-password:<令牌>`（值是 uid）；两步验证的挑战 `2fa-<随机>`（值是 uid）和它的尝试计数 `2fa-attempts-2fa-<随机>`（值是次数）；"信任这台设备" `trust-device-<随机>`（值是 uid）；通行密钥的 WebAuthn 挑战（标识是不带前缀的随机串）；第三方登录的暂存 `external-login:state:…`、`external-login:pending:…`（`…` 是 Cookie 里随机值的 sha256，ADR-0034）。Better Auth 写的标识按明文存储（`verification.storeIdentifier` 保持默认），后台按格式和值（uid）删除：作废在途的登录删掉找回密码链接和两步验证的挑战（连同尝试计数），关两步验证删掉两步验证的挑战和"信任这台设备"，邮箱改动生效时删掉找回密码链接（ADR-0036）。邮箱验证用的是 JWT，不经过这张表 |
 | jwks | jwt | ID 令牌的签名密钥 |
 | oauth_clients、oauth_resources、oauth_client_resources | oauth-provider | |
 | oauth_access_tokens、oauth_refresh_tokens | oauth-provider | 令牌按我们指定的 sha256 存储（ADR-0007） |
@@ -82,7 +82,7 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | player_id | integer | 非空；外键 → players，cascade | |
 | created_at | 时间 | 非空 | |
 
-令牌兑换或请求被拒绝后删除这一行。设备码过期后没人处理的，由 `core:auth-cleanup` 删除（ADR-0029）。
+令牌兑换、请求被拒绝，或者角色被后台转让（ADR-0036）后删除这一行。设备码过期后没人处理的，由 `core:auth-cleanup` 删除（ADR-0029）。
 
 ## 角色
 
@@ -165,7 +165,7 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | uploader_id | integer | 可空；外键 → users，set null | 上传者删除账号后，公开材质保留、这一列置空；私有材质随账号删除（ADR-0023） |
 | is_public | 开关 | 非空 | |
 | likes | integer | 非空，默认 0 | 收藏数，即有多少个衣柜里有它（包括上传者自己的）。和 `closet_items` 的增删在同一事务里原子增减（不变量 5） |
-| score_paid | integer | 非空，默认 0 | 上传者为当前可见性实际付的存储费，删除时按它退还，不按现价。改公开或私有时按现价重新计价、多退少补，这一列改成新的存储费（ADR-0025） |
+| score_paid | integer | 非空，默认 0 | 上传者实付的存储费，删除时按它退还，不按现价。上传者改公开或私有时按现价重新计价、多退少补，这一列改成新的存储费（ADR-0025）；管理员下架不重新计价，这一列不变，所以不一定等于当前可见性的价格（ADR-0036） |
 | created_at | 时间 | 非空 | |
 | updated_at | 时间 | 非空 | |
 
@@ -299,7 +299,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | actor_type | varchar(16) | 非空 | `user`、`system`、`plugin` 之一，同 SDK 的 `Actor` |
 | actor_user_id | integer | 可空，不建外键 | 操作者是用户时的 uid |
 | actor_plugin_id | varchar(64) | 可空 | 操作者是插件时的插件 id |
-| action | varchar(64) | 非空 | 例如 `report.resolve`，取值见 ADR-0027 |
+| action | varchar(64) | 非空 | 例如 `report.resolve`，取值见领域层导出的动作清单（ADR-0027、ADR-0036） |
 | subject_type | varchar(32) | 非空 | 例如 `user`、`texture`、`report`、`setting` |
 | subject_id | integer | 非空，不建外键 | 站点设置没有整数 id，记 0，键名在 `details` 里（ADR-0028） |
 | details | text | 非空 | JSON：操作时的快照，例如材质名、角色的新旧值 |
@@ -331,10 +331,10 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 
 - 另建 `(user_id, id)`（裁剪上限、列出）、`(expires_at)`（清理）索引。
 - 两个时间在签发时按当时的设置算好，之后改设置不影响已经签发的令牌。
-- 每次使用都检查：绑定的角色此刻仍属于令牌的用户（转让之后按无效处理），用户没有被封禁。封禁不删令牌。
+- 每次使用都检查：绑定的角色此刻仍属于令牌的用户（转让之后按无效处理），用户没有被封禁。封禁不删令牌。后台转让角色时，在同一个事务里删掉绑定它的令牌（ADR-0036）。
 - 签发的事务先锁住用户行（同一用户的签发依次进行），再插入新令牌，按 `id` 倒序只保留 `yggdrasil.tokensPerUser` 个。用密码登录时还要锁住 `accounts` 里密码那一行、确认它仍是核对过的哈希，改密码的吊销才不会漏掉正在签发的令牌。
-- 刷新用带条件的 DELETE 抢旧令牌，删到 1 行才签发新令牌。
-- 改密码、重设密码时删除这个用户的全部令牌，单独提交，不与密码变更事件放在同一个事务里。
+- 刷新用带条件的 DELETE 抢旧令牌，删到 1 行才签发新令牌。带 `selectedProfile` 时，锁住用户行之后再确认角色属于令牌的用户（ADR-0036）。
+- 改密码、重设密码时删除这个用户的全部令牌。经 Better Auth 改的密码已经先提交了，这时删令牌单独提交，不与密码变更事件放在同一个事务里；后台改密码（包括收回账号）和命令行的 `set-password` 在同一个事务里改密码、删令牌，后台删通行密钥、解绑、退出全部登录也在各自的事务里删令牌（ADR-0036 的"作废在途的登录"）。
 - 过期超过 1 天的由 `core:auth-cleanup` 按 `expires_at` 删除（ADR-0029）。
 
 进服记录（serverId 对应哪个角色和客户端 IP）只保留 120 秒，放在缓存接口里，默认是进程内存，不建表。签名私钥存在 `settings` 的机密项里。
