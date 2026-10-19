@@ -45,6 +45,8 @@ const statuses = {
   report_reason_length: 400,
   texture_not_found: 404,
   texture_not_owned: 403,
+  admin_own_texture: 403,
+  texture_uploader_gone: 409,
   texture_duplicate: 409,
   texture_file_invalid: 400,
   texture_size_invalid: 400,

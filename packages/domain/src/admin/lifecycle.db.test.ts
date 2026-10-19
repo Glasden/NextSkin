@@ -90,7 +90,11 @@ test('管理员从举报删除：收藏者按实付退还，上传者不退，�
   const b = await env.core.reports.create(other, { tid, reason: 'B' })
   await env.setting('score.perClosetItem', 50)
   await env.setting('report.cost', 80)
-  expect(await env.core.admin.textureDeletionImpact(admin.uid, tid)).toEqual({ likes: 1, pendingReports: 2 })
+  expect(await env.core.admin.textureDeletionImpact(admin.uid, tid)).toEqual({
+    likes: 1,
+    pendingReports: 2,
+    othersInCloset: 1,
+  })
   expect(await env.core.admin.resolveReport(admin, a.id, 'deleteTexture')).toMatchObject({
     status: 'resolved',
     resolution: 'textureDeleted',

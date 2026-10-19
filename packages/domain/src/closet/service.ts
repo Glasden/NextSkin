@@ -8,7 +8,8 @@ import {
   type IsoTimestamp,
   type TextureType,
 } from '@nextskin/db'
-import type { Kysely } from 'kysely'
+import type { Actor } from '@nextskin/plugin-sdk'
+import type { Kysely, Transaction } from 'kysely'
 import { DomainError } from '../errors.ts'
 import type { Events } from '../events/emit.ts'
 import { textureScaleOrNull } from '../players/queries.ts'
@@ -33,6 +34,134 @@ export interface ClosetItem {
   addedAt: IsoTimestamp
 }
 
+const rows = (connection: Kysely<CoreDatabase>) =>
+  connection
+    .selectFrom('closet_items')
+    .innerJoin('textures', 'textures.id', 'closet_items.texture_id')
+    .innerJoin('texture_files', 'texture_files.hash', 'textures.hash')
+    .select([
+      'textures.id as tid',
+      'closet_items.name',
+      'textures.name as textureName',
+      'textures.type',
+      'textures.hash',
+      'textures.is_public',
+      'closet_items.score_paid as scorePaid',
+      'closet_items.created_at as addedAt',
+      'texture_files.width',
+      'texture_files.height',
+    ])
+function toItem(row: Awaited<ReturnType<ReturnType<typeof rows>['executeTakeFirstOrThrow']>>): ClosetItem {
+  const { width, height, is_public, ...item } = row
+  // 导入的旧尺寸可能不合法；仍保留可管理的衣柜项，预览按标准倍率回退。
+  return { ...item, public: is_public === 1, scale: textureScaleOrNull(item.type, width, height) ?? 1 }
+}
+export async function findClosetItem(connection: Kysely<CoreDatabase>, uid: number, tid: number) {
+  const row = await rows(connection).where('user_id', '=', uid).where('texture_id', '=', tid).executeTakeFirst()
+  if (!row) throw new DomainError('closet_item_not_found')
+  return toItem(row)
+}
+/** 已锁住衣柜主人；可见性检查、收藏数和插入与材质锁一起完成。 */
+export async function addClosetItem(
+  tx: Transaction<CoreDatabase>,
+  events: Events,
+  uid: number,
+  input: { tid: number; name?: string },
+  options: { actor: Actor; paid: number; now: IsoTimestamp },
+): Promise<ClosetItem> {
+  // 插件运行时落地后，在这里调用 closet.add 拦截器（同一事务）。
+  const updated = await tx
+    .updateTable('textures')
+    .set((eb) => ({ likes: eb('likes', '+', 1) }))
+    .where('id', '=', input.tid)
+    .where((eb) => eb.or([eb('is_public', '=', 1), eb('uploader_id', '=', uid)]))
+    .executeTakeFirstOrThrow()
+  if (updated.numUpdatedRows === 0n) throw new DomainError('texture_not_found')
+  const texture = await tx.selectFrom('textures').select('name').where('id', '=', input.tid).executeTakeFirstOrThrow()
+  const { now: timestamp, paid, actor } = options
+  if (
+    !(await insertOrIgnore(
+      tx,
+      'closet_items',
+      {
+        user_id: uid,
+        texture_id: input.tid,
+        name: input.name ?? texture.name,
+        score_paid: paid,
+        created_at: timestamp,
+      },
+      ['user_id', 'texture_id'],
+    ))
+  )
+    throw new DomainError('closet_item_exists')
+  if (paid > 0)
+    await adjustScore(tx, {
+      uid,
+      delta: -paid,
+      reason: 'score.reasons.closetItemAdded',
+      subject: { type: 'texture', id: input.tid },
+      now: timestamp,
+    })
+  await events.emit(tx, 'closet.itemAdded', actor, { uid, tid: input.tid }, timestamp)
+  return findClosetItem(tx, uid, input.tid)
+}
+
+/** 已锁住主人和材质；移出时按实付退款、清掉角色，头像保留。 */
+export async function removeClosetItem(
+  tx: Transaction<CoreDatabase>,
+  events: Events,
+  uid: number,
+  tid: number,
+  options: { actor: Actor; refund: boolean; now: IsoTimestamp },
+): Promise<{ refunded: number; item: ClosetItem }> {
+  const item = await findClosetItem(tx, uid, tid)
+  await tx.deleteFrom('closet_items').where('user_id', '=', uid).where('texture_id', '=', tid).execute()
+  await tx
+    .updateTable('textures')
+    .set((eb) => ({ likes: eb('likes', '-', 1) }))
+    .where('id', '=', tid)
+    .execute()
+  const { now: timestamp, actor: eventActor } = options
+  const refunded = options.refund ? item.scorePaid : 0
+  if (refunded > 0)
+    await adjustScore(tx, {
+      uid,
+      delta: refunded,
+      reason: 'score.reasons.closetItemRemoved',
+      subject: { type: 'texture', id: tid },
+      now: timestamp,
+    })
+  const players = await tx
+    .selectFrom('players')
+    .selectAll()
+    .where('user_id', '=', uid)
+    // 两个槽都清理，兼容 BS 导入的类型错配。
+    .where((eb) => eb.or([eb('skin_texture_id', '=', tid), eb('cape_texture_id', '=', tid)]))
+    .orderBy('id')
+    .execute()
+  for (const row of players) {
+    const skin = row.skin_texture_id === tid ? null : row.skin_texture_id
+    const cape = row.cape_texture_id === tid ? null : row.cape_texture_id
+    await tx
+      .updateTable('players')
+      .set({ skin_texture_id: skin, cape_texture_id: cape, updated_at: timestamp })
+      .where('id', '=', row.id)
+      .execute()
+    await events.emit(
+      tx,
+      'player.texturesChanged',
+      eventActor,
+      {
+        player: { pid: row.id, uid, name: row.name, uuid: row.uuid, skin, cape, updatedAt: timestamp },
+        previous: { skin: row.skin_texture_id, cape: row.cape_texture_id },
+      },
+      timestamp,
+    )
+  }
+  await events.emit(tx, 'closet.itemRemoved', eventActor, { uid, tid }, timestamp)
+  return { refunded, item }
+}
+
 export function createCloset(options: {
   db: Kysely<CoreDatabase>
   settings: ReturnType<typeof createSettingQueries>
@@ -40,33 +169,6 @@ export function createCloset(options: {
   now: () => Date
 }) {
   const { db, settings, events, now } = options
-  const rows = (connection = db) =>
-    connection
-      .selectFrom('closet_items')
-      .innerJoin('textures', 'textures.id', 'closet_items.texture_id')
-      .innerJoin('texture_files', 'texture_files.hash', 'textures.hash')
-      .select([
-        'textures.id as tid',
-        'closet_items.name',
-        'textures.name as textureName',
-        'textures.type',
-        'textures.hash',
-        'textures.is_public',
-        'closet_items.score_paid as scorePaid',
-        'closet_items.created_at as addedAt',
-        'texture_files.width',
-        'texture_files.height',
-      ])
-  function toItem(row: Awaited<ReturnType<ReturnType<typeof rows>['executeTakeFirstOrThrow']>>): ClosetItem {
-    const { width, height, is_public, ...item } = row
-    // 导入的旧尺寸可能不合法；仍保留可管理的衣柜项，预览按标准倍率回退。
-    return { ...item, public: is_public === 1, scale: textureScaleOrNull(item.type, width, height) ?? 1 }
-  }
-  async function find(connection: Kysely<CoreDatabase>, uid: number, tid: number) {
-    const row = await rows(connection).where('user_id', '=', uid).where('texture_id', '=', tid).executeTakeFirst()
-    if (!row) throw new DomainError('closet_item_not_found')
-    return toItem(row)
-  }
   return {
     async list(
       uid: number,
@@ -74,7 +176,7 @@ export function createCloset(options: {
     ): Promise<{ items: ClosetItem[]; total: number }> {
       const perPage = Math.max(1, Math.min(60, Math.trunc(input.perPage ?? 20)))
       const page = Math.max(1, Math.trunc(input.page))
-      let query = rows()
+      let query = rows(db)
         .where('user_id', '=', uid)
         .where('textures.type', 'in', input.type === 'skin' ? ['steve', 'alex'] : ['cape'])
         .where((eb) => eb.or([eb('textures.is_public', '=', 1), eb('textures.uploader_id', '=', uid)]))
@@ -95,52 +197,17 @@ export function createCloset(options: {
       return transactionWithRetry(db, async (tx) => {
         const user = await lockUser(tx, actor.uid)
         assertPlayerManagementAllowed(user, false)
-        // 插件运行时落地后，在这里调用 closet.add 拦截器（同一事务）。
-        const updated = await tx
-          .updateTable('textures')
-          .set((eb) => ({ likes: eb('likes', '+', 1) }))
-          .where('id', '=', input.tid)
-          .where((eb) => eb.or([eb('is_public', '=', 1), eb('uploader_id', '=', actor.uid)]))
-          .executeTakeFirstOrThrow()
-        if (updated.numUpdatedRows === 0n) throw new DomainError('texture_not_found')
-        const texture = await tx
-          .selectFrom('textures')
-          .select('name')
-          .where('id', '=', input.tid)
-          .executeTakeFirstOrThrow()
-        const timestamp = toIsoTimestamp(now())
-        const paid = values['score.perClosetItem']
-        if (
-          !(await insertOrIgnore(
-            tx,
-            'closet_items',
-            {
-              user_id: actor.uid,
-              texture_id: input.tid,
-              name: name ?? texture.name,
-              score_paid: paid,
-              created_at: timestamp,
-            },
-            ['user_id', 'texture_id'],
-          ))
-        )
-          throw new DomainError('closet_item_exists')
-        if (paid > 0)
-          await adjustScore(tx, {
-            uid: actor.uid,
-            delta: -paid,
-            reason: 'score.reasons.closetItemAdded',
-            subject: { type: 'texture', id: input.tid },
-            now: timestamp,
-          })
-        await events.emit(
+        return addClosetItem(
           tx,
-          'closet.itemAdded',
-          { kind: 'user', uid: actor.uid, role: user.role },
-          { uid: actor.uid, tid: input.tid },
-          timestamp,
+          events,
+          actor.uid,
+          { tid: input.tid, name },
+          {
+            actor: { kind: 'user', uid: actor.uid, role: user.role },
+            paid: values['score.perClosetItem'],
+            now: toIsoTimestamp(now()),
+          },
         )
-        return find(tx, actor.uid, input.tid)
       })
     },
     async rename(actor: UserActor, tid: number, input: { name: string }): Promise<ClosetItem> {
@@ -150,14 +217,14 @@ export function createCloset(options: {
         const user = await lockUser(tx, actor.uid)
         assertPlayerManagementAllowed(user, false)
         await lockTexture(tx, tid)
-        await find(tx, actor.uid, tid)
+        await findClosetItem(tx, actor.uid, tid)
         await tx
           .updateTable('closet_items')
           .set({ name })
           .where('user_id', '=', actor.uid)
           .where('texture_id', '=', tid)
           .execute()
-        return find(tx, actor.uid, tid)
+        return findClosetItem(tx, actor.uid, tid)
       })
     },
     async remove(actor: UserActor, tid: number): Promise<{ refunded: number }> {
@@ -166,52 +233,11 @@ export function createCloset(options: {
         const user = await lockUser(tx, actor.uid)
         assertPlayerManagementAllowed(user, false)
         await lockTexture(tx, tid)
-        const item = await find(tx, actor.uid, tid)
-        await tx.deleteFrom('closet_items').where('user_id', '=', actor.uid).where('texture_id', '=', tid).execute()
-        await tx
-          .updateTable('textures')
-          .set((eb) => ({ likes: eb('likes', '-', 1) }))
-          .where('id', '=', tid)
-          .execute()
-        const timestamp = toIsoTimestamp(now())
-        const eventActor = { kind: 'user' as const, uid: actor.uid, role: user.role }
-        const refunded = values['score.refundOnDelete'] ? item.scorePaid : 0
-        if (refunded > 0)
-          await adjustScore(tx, {
-            uid: actor.uid,
-            delta: refunded,
-            reason: 'score.reasons.closetItemRemoved',
-            subject: { type: 'texture', id: tid },
-            now: timestamp,
-          })
-        const players = await tx
-          .selectFrom('players')
-          .selectAll()
-          .where('user_id', '=', actor.uid)
-          // 两个槽都清理，兼容 BS 导入的类型错配。
-          .where((eb) => eb.or([eb('skin_texture_id', '=', tid), eb('cape_texture_id', '=', tid)]))
-          .orderBy('id')
-          .execute()
-        for (const row of players) {
-          const skin = row.skin_texture_id === tid ? null : row.skin_texture_id
-          const cape = row.cape_texture_id === tid ? null : row.cape_texture_id
-          await tx
-            .updateTable('players')
-            .set({ skin_texture_id: skin, cape_texture_id: cape, updated_at: timestamp })
-            .where('id', '=', row.id)
-            .execute()
-          await events.emit(
-            tx,
-            'player.texturesChanged',
-            eventActor,
-            {
-              player: { pid: row.id, uid: actor.uid, name: row.name, uuid: row.uuid, skin, cape, updatedAt: timestamp },
-              previous: { skin: row.skin_texture_id, cape: row.cape_texture_id },
-            },
-            timestamp,
-          )
-        }
-        await events.emit(tx, 'closet.itemRemoved', eventActor, { uid: actor.uid, tid }, timestamp)
+        const { refunded } = await removeClosetItem(tx, events, actor.uid, tid, {
+          actor: { kind: 'user', uid: actor.uid, role: user.role },
+          refund: values['score.refundOnDelete'],
+          now: toIsoTimestamp(now()),
+        })
         return { refunded }
       })
     },

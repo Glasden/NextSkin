@@ -198,7 +198,7 @@ test.each(failures)('%s（%s）由 %s 抛出时映射状态码，按路径选文
   }
 })
 
-test('OpenAPI 声明这些接口；材质的路径同时有查询和删除', async () => {
+test('OpenAPI 声明这些接口；材质的路径同时有查询、修改和删除', async () => {
   const { app } = setup()
   const spec = (await (await app.request('http://example.test/api/openapi.json')).json()) as {
     paths: Record<string, object>
@@ -206,5 +206,5 @@ test('OpenAPI 声明这些接口；材质的路径同时有查询和删除', asy
   expect(Object.keys(spec.paths['/admin/players/{pid}']!).sort()).toEqual(['delete', 'patch'])
   expect(Object.keys(spec.paths['/admin/players/{pid}/transfer']!)).toEqual(['post'])
   expect(Object.keys(spec.paths['/admin/users/lookup']!)).toEqual(['get'])
-  expect(Object.keys(spec.paths['/admin/textures/{tid}']!).sort()).toEqual(['delete', 'get'])
+  expect(Object.keys(spec.paths['/admin/textures/{tid}']!).sort()).toEqual(['delete', 'get', 'patch'])
 })

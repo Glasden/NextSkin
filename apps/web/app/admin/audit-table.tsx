@@ -37,6 +37,10 @@ const actionKeys = {
   'player.setTextures': 'playerSetTextures',
   'player.transfer': 'playerTransfer',
   'player.delete': 'playerDelete',
+  'closet.add': 'closetAdd',
+  'closet.remove': 'closetRemove',
+  'texture.update': 'textureUpdate',
+  'texture.unpublish': 'textureUnpublish',
   'setting.update': 'settingUpdate',
   'plugin.enable': 'pluginEnable',
   'plugin.disable': 'pluginDisable',
@@ -316,6 +320,44 @@ export async function AuditTable({
       }),
     'player.delete': (details) =>
       t('details.playerDelete', { name: text(details.name) ?? '', uuid: text(details.uuid) ?? '' }),
+    'closet.add': (details) => t('details.closetAdd', { tid: count(details.tid), name: text(details.name) ?? '' }),
+    'closet.remove': (details) =>
+      t('details.closetRemove', {
+        tid: count(details.tid),
+        name: text(details.name) ?? '',
+        refunded: count(details.refunded),
+      }),
+    'texture.update': (details) => {
+      const changes = typeof details.changes === 'object' && details.changes !== null ? details.changes : {}
+      const change = (field: string) => {
+        const value = (changes as Record<string, unknown>)[field]
+        return typeof value === 'object' && value !== null ? (value as { from?: unknown; to?: unknown }) : null
+      }
+      const typeName = (value: unknown) => {
+        const type = oneOf(textureTypes, value)
+        return type ? types(type) : (text(value) ?? '')
+      }
+      const name = change('name'),
+        type = change('type'),
+        description = change('description')
+      return t('details.textureUpdate', {
+        name: text(details.name) ?? '',
+        changes: format.list([
+          ...(name ? [t('details.textureName', { from: text(name.from) ?? '', to: text(name.to) ?? '' })] : []),
+          ...(type ? [t('details.textureModel', { from: typeName(type.from), to: typeName(type.to) })] : []),
+          // 描述只记前后长度，不记内容（ADR-0036"审计日志"）
+          ...(description
+            ? [t('details.textureDescription', { from: count(description.from), to: count(description.to) })]
+            : []),
+        ]),
+      })
+    },
+    'texture.unpublish': (details) =>
+      t('details.textureUnpublish', {
+        name: text(details.name) ?? '',
+        closets: count(details.closetItemsRemoved),
+        refunded: count(details.refunded),
+      }),
     'setting.update': settingChange,
     'plugin.enable': (details) => t('details.pluginVersion', { version: text(details.version) ?? '' }),
     'plugin.disable': (details) => t('details.pluginVersion', { version: text(details.version) ?? '' }),

@@ -25,7 +25,7 @@ export interface ActionDialogProps {
   onOpen?: () => void
   /** 发请求。values 是表单里各个 Field 的值；受控的输入由调用方自己读 */
   send: (values: Record<string, unknown>) => Promise<{ status: number; data: unknown }>
-  /** 请求成功（200）之后的 Toast 标题 */
+  /** 请求成功（200、201）之后的 Toast 标题 */
   done: (data: unknown) => string
   /** 成功之后另做的事；不传时刷新页面 */
   after?: (data: unknown) => void
@@ -78,7 +78,7 @@ export function ActionDialog({
     setErrors({})
     const { status, data } = await send(values)
     setPending(false)
-    if (status === 200) {
+    if (status === 200 || status === 201) {
       setOpen(false)
       toast.show({ tone: 'success', title: done(data) })
       if (after) after(data)

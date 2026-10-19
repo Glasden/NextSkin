@@ -1,6 +1,7 @@
 import { containsInsensitive, countRows, type CoreDatabase } from '@nextskin/db'
 import type { Texture } from '../dto.ts'
 import type { Kysely } from 'kysely'
+import { can } from '../access/permissions.ts'
 import { textureScaleOrNull } from '../players/queries.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { storageFee, textureRows, toTexture, type TextureRow } from './dto.ts'
@@ -34,6 +35,7 @@ export interface TextureSummary extends Texture {
   inCloset: boolean
 }
 export interface TextureDetail extends Omit<TextureSummary, 'uploader'> {
+  othersPrivate: boolean
   closetItem: { name: string; scorePaid: number } | null
   reported: boolean
   uploader: { uid: number; nickname: string; avatar: { hash: string; scale: number } | null } | null
@@ -43,7 +45,7 @@ export interface TextureListInput {
   viewer: number | null
   type: 'skin' | 'steve' | 'alex' | 'cape'
   q?: string
-  uploader?: number
+  uploader?: number | 'gone'
   sort: 'latest' | 'popular'
   page: number
   perPage?: number
@@ -82,14 +84,25 @@ export function createTextureLibraryQueries(
       inCloset: ids.has(row.id),
     }))
   }
+  async function canManage(viewer: number | null): Promise<boolean> {
+    if (viewer === null) return false
+    const user = await db.selectFrom('users').select('role').where('id', '=', viewer).executeTakeFirst()
+    return user !== undefined && can(user.role, 'textures.manage')
+  }
   return {
     async list(input: TextureListInput): Promise<{ items: TextureSummary[]; total: number }> {
       const perPage = Math.max(1, Math.min(60, Math.trunc(input.perPage ?? 20)))
       const page = Math.max(1, Math.trunc(input.page))
       let query = rows().where('textures.type', 'in', input.type === 'skin' ? ['steve', 'alex'] : [input.type])
-      if (input.uploader !== undefined) query = query.where('textures.uploader_id', '=', input.uploader)
-      if (input.uploader === undefined || input.viewer === null || input.uploader !== input.viewer)
-        query = query.where('textures.is_public', '=', 1)
+      // 只有按别人筛选、或者 gone 时才要看身份；总列表不多查一次
+      const manage =
+        input.uploader !== undefined && input.uploader !== input.viewer ? await canManage(input.viewer) : false
+      if (typeof input.uploader === 'number') {
+        query = query.where('textures.uploader_id', '=', input.uploader)
+        if (input.viewer !== input.uploader && !manage) query = query.where('textures.is_public', '=', 1)
+      } else if (input.uploader === 'gone' && manage) {
+        query = query.where('textures.uploader_id', 'is', null)
+      } else query = query.where('textures.is_public', '=', 1)
       const q = input.q?.trim()
       if (q) query = query.where(containsInsensitive('textures.name', q))
       const total = await countRows(query.clearSelect())
@@ -103,7 +116,9 @@ export function createTextureLibraryQueries(
     },
     async detail(viewer: number | null, tid: number): Promise<TextureDetail | null> {
       const row = await rows().where('textures.id', '=', tid).executeTakeFirst()
-      if (!row || (row.is_public === 0 && (viewer === null || row.uploader_id !== viewer))) return null
+      if (!row) return null
+      const othersPrivate = row.is_public === 0 && (viewer === null || row.uploader_id !== viewer)
+      if (othersPrivate && !(await canManage(viewer))) return null
       const [summary] = await summaries(viewer, [row])
       const uploaderRow =
         row.uploader_id === null
@@ -174,6 +189,7 @@ export function createTextureLibraryQueries(
               .executeTakeFirst()
       return {
         ...summary!,
+        othersPrivate,
         uploader,
         // node:sqlite 的行是无原型对象，传不进客户端组件
         closetItem: item ? { name: item.name, scorePaid: item.scorePaid } : null,

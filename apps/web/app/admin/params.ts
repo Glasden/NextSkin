@@ -134,3 +134,12 @@ export function playersHref(params: PlayerParams, changes: Partial<PlayerParams>
   if (next.page > 1) query.set('page', String(next.page))
   return withQuery('/admin/players', query)
 }
+
+/** 用户详情页衣柜节的页码（`?closet=`）：每页 50 行，翻页回到衣柜节（ADR-0036"页面"） */
+export function parseClosetPage(search: SearchParams): number {
+  return parsePage(first(search.closet))
+}
+
+export function closetHref(uid: number, page: number): string {
+  return page > 1 ? `/admin/users/${uid}?closet=${page}#closet` : `/admin/users/${uid}#closet`
+}

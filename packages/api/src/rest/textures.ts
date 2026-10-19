@@ -19,7 +19,7 @@ const errors = {
   503: errorContent,
 }
 const type = z.enum(['steve', 'alex', 'cape'])
-const texture = z.object({
+export const texture = z.object({
   tid: z.number().int(),
   name: z.string(),
   type,

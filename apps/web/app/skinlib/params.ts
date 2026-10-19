@@ -8,7 +8,8 @@ export interface LibraryParams {
   type: (typeof LIBRARY_TYPES)[number]
   sort: (typeof LIBRARY_SORTS)[number]
   q: string
-  uploader: number | null
+  /** `gone` 列出上传者已注销的材质，只对有 textures.manage 的人生效（ADR-0036"别人的材质"） */
+  uploader: number | 'gone' | null
   page: number
 }
 
@@ -30,7 +31,12 @@ export function parseLibraryParams(search: SearchParams): LibraryParams {
     type: oneOf(LIBRARY_TYPES, first(search.type), 'skin'),
     sort: oneOf(LIBRARY_SORTS, first(search.sort), 'latest'),
     q: first(search.q).trim().slice(0, 64),
-    uploader: /^[1-9]\d{0,9}$/.test(uploader) && Number(uploader) <= 2147483647 ? Number(uploader) : null,
+    uploader:
+      uploader === 'gone'
+        ? 'gone'
+        : /^[1-9]\d{0,9}$/.test(uploader) && Number(uploader) <= 2147483647
+          ? Number(uploader)
+          : null,
     page: /^[1-9]\d{0,5}$/.test(page) ? Number(page) : 1,
   }
 }

@@ -17,6 +17,7 @@ import type { createSettingQueries } from '../settings/queries.ts'
 import { rejectNul } from '../text.ts'
 import { todayStart } from '../time.ts'
 import type {
+  AdminClosetItem,
   AdminOverview,
   AdminPlayer,
   AdminReport,
@@ -30,6 +31,14 @@ import type {
 const MAX_INT32 = 2147483647
 /** 带不带连字符都行（ADR-0036"后台的角色管理"） */
 const UUID_PATTERN = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i
+
+/**
+ * 后台衣柜项：别人的私有材质只有 textures.manage 才给出名字和预览（ADR-0036"别人的材质"）。
+ * 衣柜名默认就是材质名，所以一并隐藏。衣柜列表和后台加入衣柜的响应共用
+ */
+export function toAdminClosetItem(item: AdminClosetItem, reveal: boolean): AdminClosetItem {
+  return reveal ? item : { ...item, name: null, texture: null }
+}
 
 function pagination(input: { page: number; perPage?: number }) {
   const perPage = Math.max(1, Math.min(100, Math.trunc(input.perPage ?? 50)))
@@ -479,6 +488,60 @@ export function createAdminQueries(
         ),
       }
     },
+    async listCloset(
+      viewer: number,
+      uid: number,
+      input: { page: number; perPage?: number },
+    ): Promise<{ total: number; items: AdminClosetItem[] }> {
+      const role = await authorize(viewer, 'users.ban')
+      const { limit, offset } = pagination(input)
+      const query = db
+        .selectFrom('closet_items')
+        .innerJoin('textures', 'textures.id', 'closet_items.texture_id')
+        .innerJoin('texture_files', 'texture_files.hash', 'textures.hash')
+        .where('closet_items.user_id', '=', uid)
+      const rows = await query
+        .select([
+          'closet_items.texture_id as tid',
+          'closet_items.name',
+          'closet_items.score_paid as scorePaid',
+          'closet_items.created_at as addedAt',
+          'textures.name as textureName',
+          'textures.type',
+          'textures.hash',
+          'textures.is_public',
+          'textures.uploader_id',
+          'texture_files.width',
+          'texture_files.height',
+        ])
+        .orderBy('closet_items.created_at', 'desc')
+        .orderBy('closet_items.texture_id', 'desc')
+        .limit(limit)
+        .offset(offset)
+        .execute()
+      return {
+        total: await countRows(query),
+        items: rows.map((row) =>
+          toAdminClosetItem(
+            {
+              tid: row.tid,
+              name: row.name,
+              scorePaid: row.scorePaid,
+              addedAt: row.addedAt,
+              visibleToOwner: row.is_public === 1 || row.uploader_id === uid,
+              texture: {
+                name: row.textureName,
+                type: row.type,
+                hash: row.hash,
+                public: row.is_public === 1,
+                scale: textureScaleOrNull(row.type, row.width, row.height) ?? 1,
+              },
+            },
+            row.is_public === 1 || row.uploader_id === viewer || can(role, 'textures.manage'),
+          ),
+        ),
+      }
+    },
     /**
      * 角色页（ADR-0036"后台的角色管理"）：按角色名不分大小写地包含匹配，或者按 UUID 精确查找；owner 列出某个用户的角色。
      * 按 pid 从新到旧。按 owner 筛选时一并给出主人的昵称，用户不存在时为 null。别人的私有材质要有 textures.manage 才给出预览
@@ -569,13 +632,23 @@ export function createAdminQueries(
     async textureDeletionImpact(
       viewer: number,
       tid: number,
-    ): Promise<{ likes: number; pendingReports: number } | null> {
+    ): Promise<{ likes: number; pendingReports: number; othersInCloset: number } | null> {
       const user = await db.selectFrom('users').select('role').where('id', '=', viewer).executeTakeFirst()
       if (!user || !can(user.role, 'textures.manage')) return null
-      const texture = await db.selectFrom('textures').select('likes').where('id', '=', tid).executeTakeFirst()
+      const texture = await db
+        .selectFrom('textures')
+        .select(['likes', 'uploader_id'])
+        .where('id', '=', tid)
+        .executeTakeFirst()
       return texture
         ? {
             likes: texture.likes,
+            othersInCloset: await countRows(
+              db
+                .selectFrom('closet_items')
+                .where('texture_id', '=', tid)
+                .$if(texture.uploader_id !== null, (query) => query.where('user_id', '!=', texture.uploader_id!)),
+            ),
             pendingReports: await countRows(
               db.selectFrom('reports').where('texture_id', '=', tid).where('status', '=', 'pending'),
             ),

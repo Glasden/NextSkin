@@ -1,5 +1,5 @@
 import { can } from '@nextskin/domain'
-import { Badge, Link, PlayerHead, SkinViewer } from '@nextskin/ui'
+import { Alert, Badge, Link, PlayerHead, SkinViewer } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -58,7 +58,10 @@ export async function generateMetadata({ params }: { params: Promise<{ tid: stri
   return { title: texture ? texture.name : t('notFound') }
 }
 
-/** 材质详情：3D 预览是视觉中心（DESIGN.md §2）。别人的私有材质与不存在的一样是 404（ADR-0025） */
+/**
+ * 材质详情：3D 预览是视觉中心（DESIGN.md §2）。别人的私有材质与不存在的一样是 404（ADR-0025），有 textures.manage 的人除外：
+ * 他们只看得到管理面板，加入衣柜、设为角色的材质、设为头像、举报都不显示（ADR-0036"别人的材质"）
+ */
 export default async function TexturePage({ params }: { params: Promise<{ tid: string }> }) {
   const texture = await loadTexture((await params).tid)
   if (!texture) notFound()
@@ -68,16 +71,20 @@ export default async function TexturePage({ params }: { params: Promise<{ tid: s
     getTranslations('skinlib'),
     getFormatter(),
   ])
-  const viewer = user && user.role !== 'banned' ? await loadViewer(user.uid) : null
+  // 别人的私有材质对管理员也只放开查看：不加载衣柜、角色这些操作要用的数据，也就不显示它们
+  const viewer = user && user.role !== 'banned' && !texture.othersPrivate ? await loadViewer(user.uid) : null
   const subject = { tid: texture.tid, name: texture.name, type: texture.type }
   const type = t(`types.${texture.type}`)
   const management = texture.management
   const settings = management ? await core.settings.read(['texture.nameRegex']) : null
-  // 别人的材质：有 textures.manage 的人可以删除（ADR-0027）。上传者自己走上面的 management
-  const adminImpact =
+  // 别人的材质：有 textures.manage 的人可以编辑、下架、删除（ADR-0027、ADR-0036）。上传者自己走上面的 management
+  const [adminImpact, adminSettings] =
     user && !management && can(user.role, 'textures.manage')
-      ? await core.admin.textureDeletionImpact(user.uid, texture.tid)
-      : null
+      ? await Promise.all([
+          core.admin.textureDeletionImpact(user.uid, texture.tid),
+          core.settings.read(['texture.nameRegex', 'score.refundOnDelete']),
+        ])
+      : [null, null]
   const uploaded = format.dateTime(new Date(texture.uploadedAt), { dateStyle: 'medium' })
 
   return (
@@ -108,6 +115,7 @@ export default async function TexturePage({ params }: { params: Promise<{ tid: s
               {!texture.public && <Badge>{t('private')}</Badge>}
               {texture.inCloset && <Badge tone="success">{t('inCloset')}</Badge>}
             </div>
+            {texture.othersPrivate && <Alert tone="info">{t('detail.othersPrivate')}</Alert>}
           </header>
 
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-md border border-border bg-surface p-4">
@@ -218,10 +226,20 @@ export default async function TexturePage({ params }: { params: Promise<{ tid: s
             />
           )}
 
-          {adminImpact && (
+          {adminImpact && adminSettings && (
             <TextureAdminActions
-              texture={{ tid: texture.tid, name: texture.name }}
+              texture={{
+                tid: texture.tid,
+                name: texture.name,
+                type: texture.type,
+                public: texture.public,
+                description: texture.description,
+                square: texture.width === texture.height,
+                uploaderGone: texture.uploader === null,
+              }}
               impact={adminImpact}
+              refund={adminSettings['score.refundOnDelete']}
+              nameRegex={adminSettings['texture.nameRegex']}
               // 上传者在后台的详情页，要有 users.ban（ADR-0036"页面"）
               uploader={
                 texture.uploader && user && can(user.role, 'users.ban')

@@ -1,6 +1,13 @@
-import { can, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, outranks, type AdminUserDetail } from '@nextskin/domain'
+import {
+  can,
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  outranks,
+  type AdminClosetItem,
+  type AdminUserDetail,
+} from '@nextskin/domain'
 import { matchLocale } from '@nextskin/i18n'
-import { Alert, Badge, cx, Link, PlayerHead, Table } from '@nextskin/ui'
+import { Alert, Badge, cx, FigurePlaceholder, Link, Pagination, PlayerHead, SkinFigure, Table } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -10,12 +17,13 @@ import { localeOptions } from '../../../../lib/locales'
 import { pluginIcon } from '../../../../lib/plugins'
 import { getServer } from '../../../../lib/server'
 import { getRequestRoot, requireAdmin } from '../../../../lib/session'
-import { headSrc } from '../../../../lib/textures'
+import { figureSrc, headSrc } from '../../../../lib/textures'
 import { AuditTable } from '../../audit-table'
-import { auditHref, parseId } from '../../params'
+import { ADMIN_PER_PAGE, auditHref, closetHref, parseClosetPage, parseId } from '../../params'
 import { roleChanges, roleTones } from '../role-changes'
 import { UserActions } from '../user-actions'
 import { EmailDialog, NicknameDialog, VerifiedDialog } from './account-actions'
+import { AddClosetItemDialog, RemoveClosetItemDialog } from './closet-actions'
 import { DeleteUserDialog } from './delete-user-dialog'
 import { ScoreDialog } from './score-dialog'
 import {
@@ -32,11 +40,18 @@ export async function generateMetadata({ params }: { params: Promise<{ uid: stri
 }
 
 /**
- * 一个用户（ADR-0036"页面"）：账号、积分、登录与安全、角色、材质、审计和删除。要有 users.ban；
+ * 一个用户（ADR-0036"页面"）：账号、积分、登录与安全、角色、材质、衣柜、审计和删除。要有 users.ban；
  * 改动要有 users.manage，并且只能对身份比自己低的人做。这里按权限决定显示哪些操作，防线在用例里（ADR-0027）
  */
-export default async function AdminUserPage({ params }: { params: Promise<{ uid: string }> }) {
-  const { uid: raw } = await params
+export default async function AdminUserPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ uid: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const [{ uid: raw }, search] = await Promise.all([params, searchParams])
+  const closetPage = parseClosetPage(search)
   const viewer = await requireAdmin(`/admin/users/${raw}`, 'users.ban')
   const uid = parseId(raw)
   if (uid === null) notFound()
@@ -45,11 +60,12 @@ export default async function AdminUserPage({ params }: { params: Promise<{ uid:
   const detail = await core.admin.userDetail(viewer.uid, uid)
   if (!detail) notFound()
   const root = await getRequestRoot()
-  const [security, accounts, mailConfigured, settings, t, admin, format, locale] = await Promise.all([
+  const [security, accounts, closet, mailConfigured, settings, t, admin, format, locale] = await Promise.all([
     core.auth.security(uid, root),
     core.externalLogin.accounts(uid),
+    core.admin.listCloset(viewer.uid, uid, { page: closetPage, perPage: ADMIN_PER_PAGE }),
     core.mail.configured(),
-    core.settings.read(['auth.requireEmailVerification', 'audit.retentionDays']),
+    core.settings.read(['auth.requireEmailVerification', 'audit.retentionDays', 'score.refundOnDelete']),
     getTranslations('admin.userDetail'),
     getTranslations('admin'),
     getFormatter(),
@@ -257,21 +273,48 @@ export default async function AdminUserPage({ params }: { params: Promise<{ uid:
       </Section>
 
       <Section id="textures" title={t('textures.title')}>
-        <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-3">
+        <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
           <Fact label={t('textures.public')}>
             <span className="tabular-nums">{format.number(counts.publicTextures)}</span>
           </Fact>
           <Fact label={t('textures.private')}>
             <span className="tabular-nums">{format.number(counts.privateTextures)}</span>
           </Fact>
-          <Fact label={t('textures.closet')}>
-            <span className="tabular-nums">{format.number(counts.closetItems)}</span>
-          </Fact>
         </dl>
         {counts.publicTextures + counts.privateTextures > 0 && (
           <span className="text-sm">
             <Link render={<NextLink href={`/skinlib?uploader=${uid}`} />}>{t('textures.browse')}</Link>
           </span>
+        )}
+      </Section>
+
+      <Section
+        id="closet"
+        title={t('closet.title')}
+        badge={<Badge>{t('closet.count', { count: closet.total })}</Badge>}
+        description={t('closet.description')}
+      >
+        <ClosetList
+          uid={uid}
+          items={closet.items}
+          canManage={canManage}
+          refund={settings['score.refundOnDelete']}
+          dateTime={dateTime}
+        />
+        <Pagination
+          page={closetPage}
+          pageCount={Math.ceil(closet.total / ADMIN_PER_PAGE)}
+          href={(page) => closetHref(uid, page)}
+          linkAs={NextLink}
+          label={t('closet.pagination')}
+          previousLabel={admin('previous')}
+          nextLabel={admin('next')}
+          pageLabel={(page) => admin('page', { page })}
+        />
+        {canManage && (
+          <Actions>
+            <AddClosetItemDialog uid={uid} nickname={user.nickname} />
+          </Actions>
         )}
       </Section>
 
@@ -391,6 +434,94 @@ async function PlayerList({ players, total }: { players: AdminUserDetail['player
         <p className="text-sm text-text-muted">{t('truncated', { shown: players.length, total })}</p>
       )}
     </div>
+  )
+}
+
+/**
+ * 衣柜里的材质，包括主人看不见的导入遗留项（别人上传的私有材质），标出来；它们也能移出（ADR-0036"衣柜"）。
+ * 别人的私有材质在没有 textures.manage 时查询服务不给名字和预览，只写"私有材质"和编号
+ */
+async function ClosetList({
+  uid,
+  items,
+  canManage,
+  refund,
+  dateTime,
+}: {
+  uid: number
+  items: AdminClosetItem[]
+  canManage: boolean
+  refund: boolean
+  dateTime: (iso: string) => string
+}) {
+  const [t, skinlib, format] = await Promise.all([
+    getTranslations('admin.userDetail.closet'),
+    getTranslations('skinlib'),
+    getFormatter(),
+  ])
+  return (
+    <Table<'texture' | 'name' | 'scorePaid' | 'addedAt' | 'actions'>
+      label={t('tableLabel')}
+      empty={t('empty')}
+      columns={[
+        { key: 'texture', header: t('columns.texture'), shrink: true },
+        { key: 'name', header: t('columns.name') },
+        { key: 'scorePaid', header: t('columns.scorePaid'), align: 'end', shrink: true },
+        { key: 'addedAt', header: t('columns.addedAt'), shrink: true },
+        ...(canManage ? [{ key: 'actions' as const, header: t('columns.actions'), shrink: true }] : []),
+      ]}
+      rows={items.map((item) => {
+        const texture = item.texture
+        // 别人的私有材质在没有 textures.manage 时连衣柜名也不给（默认就是材质名），只写"私有材质"和编号
+        const name = item.name ?? t('hidden', { tid: item.tid })
+        return {
+          key: item.tid,
+          cells: {
+            texture: (
+              <span className="grid h-26 w-14 shrink-0 place-items-center rounded-sm bg-stage">
+                {texture ? (
+                  <SkinFigure
+                    src={figureSrc(texture.hash, texture.type)}
+                    type={texture.type}
+                    textureScale={texture.scale}
+                    scale={3}
+                    alt={skinlib('figureAlt', { name: texture.name, type: skinlib(`types.${texture.type}`) })}
+                  />
+                ) : (
+                  <FigurePlaceholder scale={3} label={t('hidden', { tid: item.tid })} />
+                )}
+              </span>
+            ),
+            name: (
+              <span className="flex min-w-48 flex-col gap-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="min-w-0 font-medium break-all">{name}</span>
+                  {texture && <Badge>{skinlib(`types.${texture.type}`)}</Badge>}
+                  {texture && !texture.public && <Badge>{skinlib('private')}</Badge>}
+                  {!item.visibleToOwner && <Badge tone="warning">{t('invisible')}</Badge>}
+                </span>
+                {texture && (
+                  <span className="text-sm text-text-muted">
+                    <Link render={<NextLink href={`/skinlib/${item.tid}`} />}>
+                      {t('texture', { tid: item.tid, name: texture.name })}
+                    </Link>
+                  </span>
+                )}
+              </span>
+            ),
+            scorePaid: <span className="tabular-nums">{format.number(item.scorePaid)}</span>,
+            addedAt: <time dateTime={item.addedAt}>{dateTime(item.addedAt)}</time>,
+            actions: canManage ? (
+              <RemoveClosetItemDialog
+                uid={uid}
+                item={{ tid: item.tid, name, scorePaid: item.scorePaid }}
+                refund={refund}
+              />
+            ) : null,
+          },
+        }
+      })}
+    />
   )
 }
 

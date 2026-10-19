@@ -19,7 +19,7 @@ export interface PendingReport {
   reporterGone: boolean
   texture: {
     name: string
-    /** 收藏了它的衣柜数：删除时从这些衣柜里移除并退还衣柜费 */
+    /** 收藏了它的衣柜数：删除时从这些衣柜里移除，开着 score.refundOnDelete 时退还衣柜费 */
     closets: number
     /** 这个材质上另外几条待处理的举报：删除时一并采纳 */
     others: number
@@ -34,7 +34,16 @@ export interface PendingReport {
  * 一条待处理举报的“处理”菜单：驳回、删除材质、封禁上传者（ADR-0027）。
  * 每一项都打开确认框写明后果（DESIGN.md §7）；有人抢先处理了，接口返回 409，提示后刷新列表
  */
-export function ReportActions({ report, reward }: { report: PendingReport; reward: number }) {
+export function ReportActions({
+  report,
+  reward,
+  refund: refundCloset,
+}: {
+  report: PendingReport
+  reward: number
+  /** `score.refundOnDelete`：删除材质时退不退收藏者的衣柜费 */
+  refund: boolean
+}) {
   const t = useTranslations('admin.reports')
   const admin = useTranslations('admin')
   const common = useTranslations('common')
@@ -79,6 +88,7 @@ export function ReportActions({ report, reward }: { report: PendingReport; rewar
         others: report.texture.others,
         paid: refund,
         reward: award,
+        refund: refundCloset ? 'yes' : 'no',
       }),
       confirm: t('deleteConfirm'),
     },

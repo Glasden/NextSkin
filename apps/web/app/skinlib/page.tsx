@@ -1,3 +1,4 @@
+import { can } from '@nextskin/domain'
 import { Button, EmptyState, Input, Link, Pagination } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
@@ -14,15 +15,22 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('title') }
 }
 
-/** 皮肤库：只列公开材质；按上传者筛选自己时，私有材质也列出来，这就是“我上传的”（ADR-0025） */
+/**
+ * 皮肤库：只列公开材质；按上传者筛选自己时，私有材质也列出来，这就是“我上传的”（ADR-0025）。有 textures.manage 的人
+ * 按上传者筛选时也看得到私有材质，`?uploader=gone` 列出上传者已注销的材质（ADR-0036"别人的材质"）；查询服务按数据库里的身份判断，
+ * 页面按会话里的身份选说明文字
+ */
 export default async function SkinlibPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const params = parseLibraryParams(await searchParams)
+  const parsed = parseLibraryParams(await searchParams)
   const [{ core }, user, t] = await Promise.all([getServer(), getSessionUser(), getTranslations('skinlib')])
   const viewer = user?.uid ?? null
+  const manager = user !== null && can(user.role, 'textures.manage')
+  // 其他人的 gone 当作没有这个筛选，同查询服务
+  const params = parsed.uploader === 'gone' && !manager ? { ...parsed, uploader: null } : parsed
   const { items, total } = await core.textures.list({
     viewer,
     type: params.type,
@@ -50,9 +58,13 @@ export default async function SkinlibPage({
           <p className="text-sm text-pretty text-text-muted">
             {mine
               ? t('list.mineDescription')
-              : params.uploader !== null
-                ? t('list.uploaderDescription', { name: uploaderName ?? `#${params.uploader}` })
-                : t('list.description')}
+              : params.uploader === 'gone'
+                ? t('list.goneDescription')
+                : params.uploader !== null
+                  ? t(manager ? 'list.uploaderDescriptionAll' : 'list.uploaderDescription', {
+                      name: uploaderName ?? `#${params.uploader}`,
+                    })
+                  : t('list.description')}
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-4 text-sm">
@@ -62,6 +74,9 @@ export default async function SkinlibPage({
             viewer !== null && (
               <Link render={<NextLink href={libraryHref(params, { uploader: viewer })} />}>{t('list.mine')}</Link>
             )
+          )}
+          {manager && params.uploader !== 'gone' && (
+            <Link render={<NextLink href={libraryHref(params, { uploader: 'gone' })} />}>{t('list.gone')}</Link>
           )}
           <Link render={<NextLink href="/skinlib/upload" />}>{t('list.upload')}</Link>
         </div>

@@ -20,7 +20,7 @@ export function createTextureRemoval(events: Events, files: TextureFiles) {
       /** 删除账号时传入被删的用户：他不退积分（积分随账号删除），也不再为他发头像事件 */
       deletedAccountUid?: number
     },
-  ): Promise<number> {
+  ): Promise<{ actorRefund: number; closetItemsRemoved: number; refunded: number }> {
     const { actor, refund, now } = options
     const affected = await tx
       .selectFrom('users')
@@ -48,7 +48,8 @@ export function createTextureRemoval(events: Events, files: TextureFiles) {
       .orderBy('users.id')
       .execute()
     let removed = 0,
-      actorRefund = 0
+      actorRefund = 0,
+      refunded = 0
     for (const { id: uid } of affected) {
       if (uid === options.excludeUid) continue
       // affected 是预读结果；头像引用者可能在读完后注销，缺失用户不应使操作者的事务失败。
@@ -76,6 +77,7 @@ export function createTextureRemoval(events: Events, files: TextureFiles) {
             subject: { type: 'texture', id: row.id },
             now,
           })
+          refunded += item.score_paid
           if (actor.kind === 'user' && actor.uid === uid) actorRefund += item.score_paid
         }
         await events.emit(tx, 'closet.itemRemoved', actor, { uid, tid: row.id }, now)
@@ -130,7 +132,7 @@ export function createTextureRemoval(events: Events, files: TextureFiles) {
         .set((eb) => ({ likes: eb('likes', '-', removed) }))
         .where('id', '=', row.id)
         .execute()
-    return actorRefund
+    return { actorRefund, closetItemsRemoved: removed, refunded }
   }
   async function remove(
     tx: Transaction<CoreDatabase>,
@@ -155,7 +157,7 @@ export function createTextureRemoval(events: Events, files: TextureFiles) {
     },
   ): Promise<{ refunded: number; resolvedReports: number }> {
     const { actor, refund, now } = options
-    let refunded = await cleanup(tx, row, { ...options, deleting: true })
+    let { actorRefund: refunded } = await cleanup(tx, row, { ...options, deleting: true })
     if (
       refund &&
       options.refundUploader !== false &&

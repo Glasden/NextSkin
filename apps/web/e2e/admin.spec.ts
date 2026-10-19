@@ -7,7 +7,8 @@ import { expect, test, type Page } from '@playwright/test'
 
 // 后台的主流程（ADR-0027）：举报 → 管理员删除材质 → 举报人看到已采纳 → 审计日志；封禁上传者 → 他只看到封禁说明，
 // CSL 对他的角色返回 403。设置页（ADR-0028）：只有超级管理员能进，改了立即生效。
-// 用户详情页（ADR-0036）：替丢了验证器的用户关掉两步验证、重设密码；角色页：改名、换材质、转让、删除。
+// 用户详情页（ADR-0036）：替丢了验证器的用户关掉两步验证、重设密码；角色页：改名、换材质、转让、删除；
+// 下架别人的材质、替用户加入和移出衣柜。
 // 跑在 account 项目上：上传是 multipart 表单，接口按站点地址检查 Origin（playwright.config.ts）。
 // 两个用例放在同一个文件里按顺序跑：第一个按条数检查审计日志，另一个文件并行任命管理员会打乱它
 const t = createTranslator('zh-CN')
@@ -116,7 +117,9 @@ test('举报的材质被管理员删除，举报人看到已采纳；封禁上�
   await page.getByRole('button', { name: t('admin.reports.handleLabel', { id: reportId }) }).click()
   await page.getByRole('menuitem', { name: t('admin.reports.deleteTexture') }).click()
   const deleteDialog = page.getByRole('alertdialog', { name: t('admin.reports.deleteTitle', { name: textureName }) })
-  await expect(deleteDialog).toContainText(t('admin.reports.deleteHint', { closets: 1, others: 0, paid: 0, reward: 0 }))
+  await expect(deleteDialog).toContainText(
+    t('admin.reports.deleteHint', { closets: 1, refund: 'yes', others: 0, paid: 0, reward: 0 }),
+  )
   await deleteDialog.getByRole('button', { name: t('admin.reports.deleteConfirm') }).click()
   await expect(page.getByText(t('admin.reports.deleted', { name: textureName, others: 0 }))).toBeVisible()
   await expect(page.getByText(reason)).toHaveCount(0)
@@ -464,4 +467,91 @@ test('角色页：从用户详情页进来，改名、设上主人的私有皮�
   const audit = page.getByRole('table', { name: t('admin.userDetail.audit.tableLabel') })
   await expect(audit.getByRole('cell', { name: t('admin.audit.actions.playerTransfer'), exact: true })).toBeVisible()
   await expect(audit.getByRole('cell', { name: t('admin.audit.actions.playerDelete'), exact: true })).toBeVisible()
+})
+
+test('下架别人的材质：收藏者的衣柜里没有了，管理员仍能打开详情页；在用户详情页替收藏者加入、移出衣柜', async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  // 上传者传一张公开的皮肤、一张公开的披风；收藏者把皮肤加入衣柜。account 项目共用一个库，公开材质按像素查重，
+  // 用其他用例没有公开上传过的图
+  const origin = new URL(baseURL!).origin
+  const uploaderContext = await browser.newContext({ locale: 'zh-CN' })
+  const uploader = await uploaderContext.newPage()
+  await register(uploader, '203.0.113.133', `Pub${suffix}`)
+  const upload = async (file: string, name: string, type: string) => {
+    const response = await uploader.request.post('/api/textures', {
+      headers: { Origin: origin },
+      multipart: {
+        file: { name: `${file}.png`, mimeType: 'image/png', buffer: readFileSync(fixture(file)) },
+        name,
+        type,
+        public: 'true',
+      },
+    })
+    expect(response.status()).toBe(201)
+    return ((await response.json()) as { texture: { tid: number } }).texture.tid
+  }
+  const textureName = `下架 ${suffix}`
+  const tid = await upload('hacksore', textureName, 'steve')
+  const capeName = `送的披风 ${suffix}`
+  const capeTid = await upload('legacy_cape', capeName, 'cape')
+  await uploaderContext.close()
+  const collectorContext = await browser.newContext({ locale: 'zh-CN' })
+  const collector = await collectorContext.newPage()
+  const collectorName = `Fan${suffix}`
+  const collectorEmail = await register(collector, '203.0.113.134', collectorName)
+  expect((await collector.request.post('/api/closet', { data: { tid, name: '收藏' } })).status()).toBe(201)
+
+  // 管理员在详情页下架：确认框写明从一个别人的衣柜里移除并退还衣柜费，以及上传者能重新公开
+  setRole(await register(page, '203.0.113.135', `Tm${suffix}`), 'admin')
+  await page.goto(`/skinlib/${tid}`)
+  await page.getByRole('button', { name: t('skinlib.admin.unpublish'), exact: true }).click()
+  const unpublish = page.getByRole('alertdialog', { name: t('skinlib.admin.unpublishTitle', { name: textureName }) })
+  await expect(unpublish).toContainText(t('skinlib.admin.unpublishHint', { closets: 1, refund: 'yes' }))
+  await expect(unpublish).toContainText(t('skinlib.admin.unpublishWarning'))
+  await unpublish.getByRole('button', { name: t('skinlib.admin.unpublishConfirm') }).click()
+  await expect(page.getByText(t('skinlib.admin.unpublished', { name: textureName }))).toBeVisible()
+
+  // 管理员仍能打开详情页，注明是别人的私有材质，不能再下架；收藏者的衣柜里没有它，详情页 404
+  await page.reload()
+  await expect(page.getByText(t('skinlib.detail.othersPrivate'))).toBeVisible()
+  await expect(page.getByRole('button', { name: t('skinlib.admin.unpublish'), exact: true })).toHaveCount(0)
+  const closet = (await (await collector.request.get('/api/closet')).json()) as { items: { tid: number }[] }
+  expect(closet.items.map((item) => item.tid)).not.toContain(tid)
+  expect((await collector.request.get(`/skinlib/${tid}`)).status()).toBe(404)
+  await collectorContext.close()
+
+  // 在收藏者的详情页按编号加入：下架的皮肤预览里写明主人不能用；披风可以，不扣分
+  await page.goto(`/admin/users?q=${encodeURIComponent(collectorEmail)}`)
+  await page.getByRole('link', { name: collectorName, exact: true }).click()
+  const section = page.getByRole('region', { name: t('admin.userDetail.closet.title'), exact: true })
+  await expect(section.getByText(t('admin.userDetail.closet.empty'))).toBeVisible()
+  await section.getByRole('button', { name: t('admin.userDetail.closet.add') }).click()
+  const add = page.getByRole('dialog', { name: t('admin.userDetail.closet.addTitle', { nickname: collectorName }) })
+  const tidInput = add.getByLabel(t('admin.userDetail.closet.tid'))
+  await tidInput.fill(String(tid))
+  await expect(add.getByText(t('admin.textureLookup.textureHidden'))).toBeVisible()
+  await tidInput.fill(String(capeTid))
+  await expect(add.getByText(capeName)).toBeVisible()
+  await add.getByRole('button', { name: t('admin.userDetail.closet.addConfirm') }).click()
+  await expect(page.getByText(t('admin.userDetail.closet.added', { name: capeName }))).toBeVisible()
+  const items = section.getByRole('table', { name: t('admin.userDetail.closet.tableLabel') })
+  await expect(
+    items.getByRole('link', { name: t('admin.userDetail.closet.texture', { tid: capeTid, name: capeName }) }),
+  ).toBeVisible()
+
+  // 移出：实付是 0，确认框写明不退积分
+  await items.getByRole('button', { name: t('admin.userDetail.closet.removeLabel', { name: capeName }) }).click()
+  const remove = page.getByRole('alertdialog', { name: t('admin.userDetail.closet.removeTitle', { name: capeName }) })
+  await expect(remove).toContainText(t('admin.userDetail.closet.removeHint', { refund: 0 }))
+  await remove.getByRole('button', { name: t('admin.userDetail.closet.removeConfirm') }).click()
+  await expect(page.getByText(t('admin.userDetail.closet.removed', { name: capeName, refunded: 0 }))).toBeVisible()
+  await expect(section.getByText(t('admin.userDetail.closet.empty'))).toBeVisible()
+
+  // 加入和移出都记在收藏者名下
+  const audit = page.getByRole('table', { name: t('admin.userDetail.audit.tableLabel') })
+  await expect(audit.getByRole('cell', { name: t('admin.audit.actions.closetAdd'), exact: true })).toBeVisible()
+  await expect(audit.getByRole('cell', { name: t('admin.audit.actions.closetRemove'), exact: true })).toBeVisible()
 })

@@ -34,7 +34,7 @@ export default async function AdminReportsPage({
   const { core } = await getServer()
   const [{ items, total, counts }, settings, t, admin, skinlib, format] = await Promise.all([
     core.admin.listReports(user.uid, { status: params.status, page: params.page, perPage: ADMIN_PER_PAGE }),
-    core.settings.read(['report.reward']),
+    core.settings.read(['report.reward', 'score.refundOnDelete']),
     getTranslations('admin.reports'),
     getTranslations('admin'),
     getTranslations('skinlib'),
@@ -42,6 +42,7 @@ export default async function AdminReportsPage({
   ])
   const pageCount = Math.ceil(total / ADMIN_PER_PAGE)
   const manageUsers = can(user.role, 'users.ban')
+  const manageTextures = can(user.role, 'textures.manage')
   const dateTime = (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'short', timeStyle: 'short' })
 
   const person = (who: { uid: number; nickname: string } | null) =>
@@ -77,8 +78,8 @@ export default async function AdminReportsPage({
         {texture ? (
           <span className="flex min-w-0 flex-col gap-1">
             <span className="min-w-0 truncate">
-              {/* 别人的私有材质在详情页是 404（ADR-0025），只给公开的加链接 */}
-              {texture.public ? (
+              {/* 别人的私有材质在详情页只对有 textures.manage 的人可见（ADR-0036），其他人只给公开的加链接 */}
+              {texture.public || manageTextures ? (
                 <Link render={<NextLink href={`/skinlib/${texture.tid}`} />}>{texture.name}</Link>
               ) : (
                 texture.name
@@ -135,6 +136,7 @@ export default async function AdminReportsPage({
             actions: report.texture ? (
               <ReportActions
                 reward={settings['report.reward']}
+                refund={settings['score.refundOnDelete']}
                 report={{
                   id: report.id,
                   paid: report.scorePaid,

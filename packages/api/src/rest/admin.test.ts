@@ -61,7 +61,7 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(28)
+  expect(routes).toHaveLength(32)
   for (const route of routes) {
     const path = route.path
       .slice('/api'.length)
@@ -94,13 +94,17 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
               ? { delta: 1 }
               : route.path.endsWith('/transfer')
                 ? { uid: 8 }
-                : route.path.startsWith('/api/admin/players/') && route.method === 'PATCH'
-                  ? { name: 'Steve' }
-                  : route.method === 'POST'
-                    ? { action: 'dismiss' }
-                    : route.method === 'PATCH'
-                      ? { role: 'banned' }
-                      : undefined
+                : route.path.endsWith('/closet') && route.method === 'POST'
+                  ? { tid: 7 }
+                  : route.path.startsWith('/api/admin/textures/') && route.method === 'PATCH'
+                    ? { name: 'Skin' }
+                    : route.path.startsWith('/api/admin/players/') && route.method === 'PATCH'
+                      ? { name: 'Steve' }
+                      : route.method === 'POST'
+                        ? { action: 'dismiss' }
+                        : route.method === 'PATCH'
+                          ? { role: 'banned' }
+                          : undefined
     for (const loggedIn of [true, false]) {
       authenticated = loggedIn
       const response = await request(route.method, path + query, body)
@@ -234,6 +238,9 @@ test('参数校验、CSRF、JSON 类型和请求体上限；OpenAPI 声明这些
   for (const path of [
     '/admin/reports/{id}/resolve',
     '/admin/textures/{tid}',
+    '/admin/textures/{tid}/unpublish',
+    '/admin/users/{uid}/closet',
+    '/admin/users/{uid}/closet/{tid}',
     '/admin/users/{uid}',
     '/admin/settings',
     '/admin/settings/{key}/generate',

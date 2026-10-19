@@ -161,7 +161,9 @@
     "password_already_set": "A password is already set. Use Change password to change it.",
     "session_not_fresh": "For your security, sign in again before doing this.",
     "score_out_of_range": "The adjusted balance is out of range: the current balance is {balance}, and it can't go below 0 or above 2147483647.",
-    "email_changed": "This user's email address has just changed. Refresh the page and check the new address before trying again."
+    "email_changed": "This user's email address has just changed. Refresh the page and check the new address before trying again.",
+    "admin_own_texture": "You uploaded this texture yourself. Edit it from its page as the uploader.",
+    "texture_uploader_gone": "The uploader has deleted their account, so this texture cannot be unpublished. Delete it instead."
   },
   "score": {
     "reasons": {
@@ -822,6 +824,9 @@
       "mineDescription": "Textures you uploaded, including private ones only you can see.",
       "uploaderDescription": "Public textures uploaded by {name}.",
       "allUploaders": "All uploaders",
+      "uploaderDescriptionAll": "Textures uploaded by {name}, including private ones.",
+      "goneDescription": "Textures whose uploaders have deleted their accounts, including private ones.",
+      "gone": "From deleted accounts",
       "mine": "My uploads",
       "upload": "Upload a texture",
       "typeLabel": "Texture type",
@@ -873,7 +878,8 @@
       "uploaderGone": "The uploader deleted their account",
       "description": "Description",
       "noDescription": "The uploader didn’t write a description.",
-      "download": "Download PNG"
+      "download": "Download PNG",
+      "othersPrivate": "This is someone else’s private texture. Only the uploader and admins can see it, and admins can’t add it to a closet, put it on a player, or report it either."
     },
     "manage": {
       "edit": "Edit",
@@ -975,11 +981,18 @@
     },
     "admin": {
       "title": "Moderation",
-      "description": "This texture belongs to someone else. You can delete it as an admin.",
+      "description": "This texture belongs to someone else. You can edit, unpublish, or delete it as an admin.",
       "delete": "Delete texture",
       "deleteTitle": "Delete {name}?",
-      "deleteHint": "{closets, plural, =0 {Nobody has it in their closet. } one {It will be removed from # closet with the fee refunded, and players using it switch back to the default skin. } other {It will be removed from # closets with fees refunded, and players using it switch back to the default skin. }}The uploader’s storage fee isn’t refunded. {reports, plural, =0 {} one {# pending report on this texture will be accepted. } other {# pending reports on this texture will be accepted. }}This can’t be undone.",
+      "deleteHint": "{closets, plural, =0 {Nobody has it in their closet. } one {It will be removed from # closet{refund, select, yes { with the fee refunded} other {}}, and players using it switch back to the default skin. } other {It will be removed from # closets{refund, select, yes { with fees refunded} other {}}, and players using it switch back to the default skin. }}The uploader’s storage fee isn’t refunded. {reports, plural, =0 {} one {# pending report on this texture will be accepted. } other {# pending reports on this texture will be accepted. }}This can’t be undone.",
       "deleteConfirm": "Delete texture",
+      "unpublish": "Unpublish",
+      "unpublishTitle": "Unpublish {name}?",
+      "unpublishHint": "It becomes private and disappears from the skin library. {closets, plural, =0 {Nobody else has it in their closet. } one {It will be removed from # other closet{refund, select, yes { with the fee refunded} other {}}. } other {It will be removed from # other closets{refund, select, yes { with fees refunded} other {}}. }}Other players using it switch back to the default skin and avatars using it are cleared; the uploader’s own closet and players stay as they are, and the uploader’s score doesn’t change.",
+      "unpublishWarning": "The uploader can make it public again at any time, and removed closet items, cleared player textures, and avatars won’t come back. Delete textures that break the rules.",
+      "unpublishConfirm": "Unpublish texture",
+      "unpublished": "Unpublished {name}",
+      "uploaderGoneHint": "The uploader has deleted their account, so this texture can’t be unpublished. Delete it instead.",
       "deleted": "Deleted {name}{reports, plural, =0 {} one {; # report accepted} other {; # reports accepted}}",
       "failed": "That didn’t work. Please try again later.",
       "uploader": "View uploader {nickname} in the admin panel"
@@ -1079,7 +1092,7 @@
       "dismissed": "Rejected report #{id}",
       "deleteTexture": "Delete texture",
       "deleteTitle": "Delete {name}?",
-      "deleteHint": "{closets, plural, =0 {Nobody has it in their closet. } one {It will be removed from # closet with the fee refunded, and players using it switch back to the default skin. } other {It will be removed from # closets with fees refunded, and players using it switch back to the default skin. }}The uploader’s storage fee isn’t refunded. {others, plural, =0 {} one {# other pending report on this texture will be accepted too. } other {# other pending reports on this texture will be accepted too. }}{paid, plural, =0 {} one {The reporter gets back # point. } other {The reporter gets back # points. }}{reward, plural, =0 {} one {The reporter is rewarded # point. } other {The reporter is rewarded # points. }}This can’t be undone.",
+      "deleteHint": "{closets, plural, =0 {Nobody has it in their closet. } one {It will be removed from # closet{refund, select, yes { with the fee refunded} other {}}, and players using it switch back to the default skin. } other {It will be removed from # closets{refund, select, yes { with fees refunded} other {}}, and players using it switch back to the default skin. }}The uploader’s storage fee isn’t refunded. {others, plural, =0 {} one {# other pending report on this texture will be accepted too. } other {# other pending reports on this texture will be accepted too. }}{paid, plural, =0 {} one {The reporter gets back # point. } other {The reporter gets back # points. }}{reward, plural, =0 {} one {The reporter is rewarded # point. } other {The reporter is rewarded # points. }}This can’t be undone.",
       "deleteConfirm": "Delete texture",
       "deleted": "Deleted {name}{others, plural, =0 {} one {; # other report accepted too} other {; # other reports accepted too}}",
       "banUploader": "Ban uploader",
@@ -1177,13 +1190,6 @@
       "capeLabel": "Cape ID",
       "texturesConfirm": "Save",
       "texturesChanged": "Updated textures of {name}",
-      "lookingUp": "Looking up…",
-      "lookupFailed": "Could not look up this texture. Try again later.",
-      "textureNotFound": "No texture with ID {tid}.",
-      "textureHidden": "This is someone else's private texture. The owner can't see it, so it can't be used.",
-      "textureWrongSlot": "{slot, select, skin {This is a cape and can't go in the skin slot.} other {This is a skin and can't go in the cape slot.}}",
-      "privateTexture": "Someone else's private texture",
-      "private": "Private",
       "transfer": "Transfer",
       "transferTitle": "Transfer {name}",
       "transferHint": "Hand the player and its UUID over to another user. Look up the new owner first and check the avatar, nickname, and email before you confirm. You can only transfer to users whose role is below yours.",
@@ -1209,6 +1215,15 @@
       "deleteRefund": "Points are not refunded; adjust the owner's score on the user details page if needed.{mail, select, yes { The owner gets a notification email.} other {}}",
       "deleteConfirm": "Delete player",
       "deleted": "Deleted {name}"
+    },
+    "textureLookup": {
+      "lookingUp": "Looking up…",
+      "lookupFailed": "Could not look up this texture. Try again later.",
+      "textureNotFound": "No texture with ID {tid}.",
+      "textureHidden": "This is someone else's private texture. The owner can't see it, so it can't be used.",
+      "textureWrongSlot": "{slot, select, skin {This is a cape and can't go in the skin slot.} other {This is a skin and can't go in the cape slot.}}",
+      "privateTexture": "Someone else's private texture",
+      "private": "Private"
     },
     "audit": {
       "title": "Audit log",
@@ -1249,7 +1264,11 @@
         "playerDelete": "Delete player",
         "playerRename": "Rename player",
         "playerSetTextures": "Change player textures",
-        "playerTransfer": "Transfer player"
+        "playerTransfer": "Transfer player",
+        "closetAdd": "Add to closet",
+        "closetRemove": "Remove from closet",
+        "textureUpdate": "Edit texture",
+        "textureUnpublish": "Unpublish texture"
       },
       "subjects": {
         "user": "User #{id}",
@@ -1294,7 +1313,14 @@
         "playerTextureSlot": "{slot, select, skin {Skin} other {Cape}} {from} → {to}",
         "playerSetTextures": "{name}: {changes}",
         "textureNone": "none",
-        "playerTransfer": "{name} ({uuid}): UID {from} → UID {to}{cleared, plural, =0 {} one {, # texture removed} other {, # textures removed}}"
+        "playerTransfer": "{name} ({uuid}): UID {from} → UID {to}{cleared, plural, =0 {} one {, # texture removed} other {, # textures removed}}",
+        "closetAdd": "#{tid} “{name}”",
+        "closetRemove": "#{tid} “{name}”{refunded, plural, =0 {} one {, # point refunded} other {, # points refunded}}",
+        "textureUpdate": "{name}: {changes}",
+        "textureName": "name “{from}” → “{to}”",
+        "textureModel": "model {from} → {to}",
+        "textureDescription": "description {from} → {to} characters",
+        "textureUnpublish": "{name}{closets, plural, =0 {} one {, removed from # closet} other {, removed from # closets}}{refunded, plural, =0 {} one {, # point refunded} other {, # points refunded}}"
       },
       "filterActor": "Only actor #{uid}",
       "filterSubject": "Only {subject}",
@@ -1847,7 +1873,9 @@
       "external_account_not_found": "This user doesn't have this linked account. It may already have been unlinked; refresh the page.",
       "email_unchanged": "The new email is the same as the user's current email.",
       "email_taken": "This email is already used by another account.",
-      "texture_not_found": "Texture not found, or it is a private texture the owner can't see."
+      "texture_not_found": "Texture not found, or it is a private texture the owner can't see.",
+      "closet_item_exists": "This texture is already in the user's closet.",
+      "closet_item_not_found": "This texture is not in the user's closet."
     },
     "userDetail": {
       "metaTitle": "User #{uid}",
@@ -1993,8 +2021,39 @@
         "title": "Textures",
         "public": "Public textures",
         "private": "Private textures",
-        "closet": "Closet",
         "browse": "View this user’s uploads in the skin library"
+      },
+      "closet": {
+        "title": "Closet",
+        "count": "{count, plural, one {# item} other {# items}}",
+        "description": "Textures the user has collected. Other people's private textures (usually left over from an import) are invisible to the owner; they are marked and can still be removed.",
+        "tableLabel": "Textures in the closet",
+        "empty": "The closet is empty.",
+        "pagination": "Closet pages",
+        "columns": {
+          "texture": "Preview",
+          "name": "Name",
+          "scorePaid": "Paid",
+          "addedAt": "Added",
+          "actions": "Actions"
+        },
+        "texture": "Texture #{tid} “{name}”",
+        "hidden": "Private texture #{tid}",
+        "invisible": "Invisible to owner",
+        "add": "Add by ID",
+        "addTitle": "Add a texture to {nickname}'s closet",
+        "addHint": "No points are charged and the paid amount is recorded as 0, so removing it later refunds nothing. The texture must be public or uploaded by this user.",
+        "addConfirm": "Add to closet",
+        "tid": "Texture ID",
+        "name": "Name",
+        "nameHint": "Leave empty to use the texture's name.",
+        "added": "Added “{name}”",
+        "remove": "Remove",
+        "removeLabel": "Remove “{name}” from the closet",
+        "removeTitle": "Remove “{name}” from the closet?",
+        "removeHint": "{refund, plural, =0 {No points are refunded. } one {The # point paid for it is refunded. } other {The # points paid for it are refunded. }}This user's players using it switch back to the default skin; the avatar stays.",
+        "removeConfirm": "Remove from closet",
+        "removed": "Removed “{name}”{refunded, plural, =0 {} one {; # point refunded} other {; # points refunded}}"
       },
       "audit": {
         "title": "Audit",

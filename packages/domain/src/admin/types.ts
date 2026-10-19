@@ -156,3 +156,16 @@ export type AdminTextureForOwner =
       visibleToOwner: boolean
     }
   | { tid: number; public: false; visibleToOwner: boolean }
+
+/** 后台衣柜查询保留导入遗留的不可见项（ADR-0036）。 */
+export interface AdminClosetItem {
+  tid: number
+  /** 衣柜里的名字。默认就是材质名，所以 texture 为 null 时它也为 null */
+  name: string | null
+  scorePaid: number
+  addedAt: IsoTimestamp
+  /** 别人上传的私有材质（导入遗留）主人看不见，为 false */
+  visibleToOwner: boolean
+  /** 别人的私有材质在操作者没有 textures.manage 时为 null */
+  texture: { name: string; type: TextureType; hash: string; scale: number; public: boolean } | null
+}

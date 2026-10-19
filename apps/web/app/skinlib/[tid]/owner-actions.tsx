@@ -51,14 +51,26 @@ export function TextureOwnerActions({
 }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <EditTextureDialog texture={texture} nameRegex={nameRegex} />
+      <EditTextureDialog texture={texture} nameRegex={nameRegex} endpoint={`/api/textures/${texture.tid}`} />
       <VisibilityDialog texture={texture} management={management} />
       <DeleteTextureDialog texture={texture} management={management} />
     </div>
   )
 }
 
-function EditTextureDialog({ texture, nameRegex }: { texture: OwnerTexture; nameRegex: string }) {
+/**
+ * 编辑名字、模型和描述，只提交改了的项。上传者走 `/api/textures/{tid}`，有 textures.manage 的人改别人的材质走
+ * `/api/admin/textures/{tid}`（ADR-0036"别人的材质"），规则相同
+ */
+export function EditTextureDialog({
+  texture,
+  nameRegex,
+  endpoint,
+}: {
+  texture: Pick<OwnerTexture, 'tid' | 'name' | 'type' | 'description' | 'square'>
+  nameRegex: string
+  endpoint: string
+}) {
   const t = useTranslations('skinlib.manage')
   const types = useTranslations('skinlib.types')
   const common = useTranslations('common')
@@ -85,7 +97,7 @@ function EditTextureDialog({ texture, nameRegex }: { texture: OwnerTexture; name
     setPending(true)
     setError(null)
     setErrors({})
-    const { status, data } = await sendJson('PATCH', `/api/textures/${texture.tid}`, body)
+    const { status, data } = await sendJson('PATCH', endpoint, body)
     setPending(false)
     if (status === 200) {
       toast.show({ tone: 'success', title: t('saved') })

@@ -161,7 +161,9 @@
     "password_already_set": "已经设置过密码了，要换密码请用「修改密码」。",
     "session_not_fresh": "为了账号安全，请重新登录之后再操作。",
     "score_out_of_range": "调整之后的积分超出了范围：现在的余额是 {balance}，扣完不能少于 0，加完不能超过 2147483647。",
-    "email_changed": "对方的邮箱刚刚改过了。请刷新页面，核对新的地址之后再操作。"
+    "email_changed": "对方的邮箱刚刚改过了。请刷新页面，核对新的地址之后再操作。",
+    "admin_own_texture": "这是你自己上传的材质，请在详情页里用上传者的操作修改。",
+    "texture_uploader_gone": "上传者已经注销，这个材质不能下架；要处理的话请删除它。"
   },
   "score": {
     "reasons": {
@@ -822,6 +824,9 @@
       "mineDescription": "你上传的材质，包括只有你自己看得到的私有材质。",
       "uploaderDescription": "{name} 上传的公开材质。",
       "allUploaders": "看全部上传者",
+      "uploaderDescriptionAll": "{name} 上传的材质，包括私有材质。",
+      "goneDescription": "上传者已经注销的材质，包括私有材质。",
+      "gone": "上传者已注销的",
       "mine": "我上传的",
       "upload": "上传材质",
       "typeLabel": "材质类型",
@@ -873,7 +878,8 @@
       "uploaderGone": "上传者已注销",
       "description": "描述",
       "noDescription": "上传者没有写描述。",
-      "download": "下载 PNG"
+      "download": "下载 PNG",
+      "othersPrivate": "这是别人的私有材质，只有上传者和管理员看得到。管理员也不能把它加入衣柜、设到角色上或者举报。"
     },
     "manage": {
       "edit": "编辑",
@@ -975,11 +981,18 @@
     },
     "admin": {
       "title": "管理",
-      "description": "这是别人的材质。你有管理权限，可以删除它。",
+      "description": "这是别人的材质。你有管理权限，可以编辑、下架或删除它。",
       "delete": "删除材质",
       "deleteTitle": "删除 {name}？",
-      "deleteHint": "{closets, plural, =0 {没有人收藏它。} other {它会从 # 个衣柜里移除并退还衣柜费，正在用它的角色换回默认皮肤。}}上传者的存储费不退。{reports, plural, =0 {} other {这个材质上 # 条待处理的举报一并采纳。}}无法恢复。",
+      "deleteHint": "{closets, plural, =0 {没有人收藏它。} other {它会从 # 个衣柜里移除{refund, select, yes {并退还衣柜费} other {}}，正在用它的角色换回默认皮肤。}}上传者的存储费不退。{reports, plural, =0 {} other {这个材质上 # 条待处理的举报一并采纳。}}无法恢复。",
       "deleteConfirm": "删除材质",
+      "unpublish": "下架",
+      "unpublishTitle": "下架 {name}？",
+      "unpublishHint": "它会改成私有，从皮肤库里消失。{closets, plural, =0 {别人的衣柜里没有它。} other {它会从 # 个别人的衣柜里移除{refund, select, yes {并退还衣柜费} other {}}。}}别人用着它的角色换回默认皮肤，头像清掉；上传者自己的衣柜和角色不动，上传者的积分不变。",
+      "unpublishWarning": "上传者可以随时重新公开，被移出的衣柜项、清掉的角色材质和头像不会恢复。处置违规内容请删除。",
+      "unpublishConfirm": "下架材质",
+      "unpublished": "已下架 {name}",
+      "uploaderGoneHint": "上传者已经注销，这个材质不能下架；要处理请删除。",
       "deleted": "已删除 {name}{reports, plural, =0 {} other {，# 条举报一并采纳}}",
       "failed": "没有成功，请稍后重试。",
       "uploader": "在后台查看上传者 {nickname}"
@@ -1079,7 +1092,7 @@
       "dismissed": "已驳回举报 #{id}",
       "deleteTexture": "删除材质",
       "deleteTitle": "删除 {name}？",
-      "deleteHint": "{closets, plural, =0 {没有人收藏它。} other {它会从 # 个衣柜里移除并退还衣柜费，正在用它的角色换回默认皮肤。}}上传者的存储费不退。{others, plural, =0 {} other {这个材质上另外 # 条待处理的举报一并采纳。}}{paid, plural, =0 {} other {举报人拿回 # 积分花费。}}{reward, plural, =0 {} other {举报人获得 # 积分奖励。}}无法恢复。",
+      "deleteHint": "{closets, plural, =0 {没有人收藏它。} other {它会从 # 个衣柜里移除{refund, select, yes {并退还衣柜费} other {}}，正在用它的角色换回默认皮肤。}}上传者的存储费不退。{others, plural, =0 {} other {这个材质上另外 # 条待处理的举报一并采纳。}}{paid, plural, =0 {} other {举报人拿回 # 积分花费。}}{reward, plural, =0 {} other {举报人获得 # 积分奖励。}}无法恢复。",
       "deleteConfirm": "删除材质",
       "deleted": "已删除 {name}{others, plural, =0 {} other {，另外 # 条举报一并采纳}}",
       "banUploader": "封禁上传者",
@@ -1177,13 +1190,6 @@
       "capeLabel": "披风的编号",
       "texturesConfirm": "保存",
       "texturesChanged": "已更新 {name} 的材质",
-      "lookingUp": "正在查找……",
-      "lookupFailed": "查不到这个材质，请稍后再试。",
-      "textureNotFound": "找不到编号为 {tid} 的材质。",
-      "textureHidden": "这是别人的私有材质，主人看不到，不能设置。",
-      "textureWrongSlot": "{slot, select, skin {这是披风，不能放在皮肤槽。} other {这是皮肤，不能放在披风槽。}}",
-      "privateTexture": "别人的私有材质",
-      "private": "私有",
       "transfer": "转让",
       "transferTitle": "转让 {name}",
       "transferHint": "把角色连同 UUID 交给另一个用户。先查到新主人，核对头像、昵称和邮箱之后再确认。只能转给身份比你低的用户。",
@@ -1209,6 +1215,15 @@
       "deleteRefund": "不退积分，需要补偿时到用户详情页改积分。{mail, select, yes {会给主人发通知邮件。} other {}}",
       "deleteConfirm": "删除角色",
       "deleted": "已删除 {name}"
+    },
+    "textureLookup": {
+      "lookingUp": "正在查找……",
+      "lookupFailed": "查不到这个材质，请稍后再试。",
+      "textureNotFound": "找不到编号为 {tid} 的材质。",
+      "textureHidden": "这是别人的私有材质，主人看不到，不能使用。",
+      "textureWrongSlot": "{slot, select, skin {这是披风，不能放在皮肤槽。} other {这是皮肤，不能放在披风槽。}}",
+      "privateTexture": "别人的私有材质",
+      "private": "私有"
     },
     "audit": {
       "title": "审计日志",
@@ -1249,7 +1264,11 @@
         "playerDelete": "删除角色",
         "playerRename": "角色改名",
         "playerSetTextures": "更换角色的材质",
-        "playerTransfer": "转让角色"
+        "playerTransfer": "转让角色",
+        "closetAdd": "加入衣柜",
+        "closetRemove": "移出衣柜",
+        "textureUpdate": "修改材质",
+        "textureUnpublish": "下架材质"
       },
       "subjects": {
         "user": "用户 #{id}",
@@ -1294,7 +1313,14 @@
         "playerTextureSlot": "{slot, select, skin {皮肤} other {披风}} {from} → {to}",
         "playerSetTextures": "{name}：{changes}",
         "textureNone": "无",
-        "playerTransfer": "{name}（{uuid}）：UID {from} → UID {to}{cleared, plural, =0 {} other {，清掉 # 个材质}}"
+        "playerTransfer": "{name}（{uuid}）：UID {from} → UID {to}{cleared, plural, =0 {} other {，清掉 # 个材质}}",
+        "closetAdd": "#{tid}「{name}」",
+        "closetRemove": "#{tid}「{name}」{refunded, plural, =0 {} other {，退还 # 积分}}",
+        "textureUpdate": "{name}：{changes}",
+        "textureName": "名字「{from}」→「{to}」",
+        "textureModel": "模型 {from} → {to}",
+        "textureDescription": "描述 {from} 字 → {to} 字",
+        "textureUnpublish": "{name}{closets, plural, =0 {} other {，从 # 个衣柜里移除}}{refunded, plural, =0 {} other {，退还 # 积分}}"
       },
       "filterActor": "只看操作者 #{uid}",
       "filterSubject": "只看 {subject}",
@@ -1847,7 +1873,9 @@
       "external_account_not_found": "对方没有这个绑定，可能已经解绑了。刷新页面看看。",
       "email_unchanged": "新邮箱和对方现在的邮箱相同。",
       "email_taken": "这个邮箱已经被另一个账号用了。",
-      "texture_not_found": "找不到这个材质，或者它是主人看不到的私有材质。"
+      "texture_not_found": "找不到这个材质，或者它是主人看不到的私有材质。",
+      "closet_item_exists": "这个材质已经在这个用户的衣柜里了。",
+      "closet_item_not_found": "这个用户的衣柜里没有这个材质。"
     },
     "userDetail": {
       "metaTitle": "用户 #{uid}",
@@ -1993,8 +2021,39 @@
         "title": "材质",
         "public": "公开材质",
         "private": "私有材质",
-        "closet": "衣柜",
         "browse": "在皮肤库里查看这个用户上传的材质"
+      },
+      "closet": {
+        "title": "衣柜",
+        "count": "{count, plural, other {# 件}}",
+        "description": "用户收藏的材质。别人上传的私有材质（多半是导入留下的）主人看不见，标了出来，也能移出。",
+        "tableLabel": "衣柜里的材质",
+        "empty": "衣柜是空的。",
+        "pagination": "衣柜分页",
+        "columns": {
+          "texture": "预览",
+          "name": "名字",
+          "scorePaid": "实付",
+          "addedAt": "加入时间",
+          "actions": "操作"
+        },
+        "texture": "材质 #{tid}「{name}」",
+        "hidden": "私有材质 #{tid}",
+        "invisible": "主人看不见",
+        "add": "按编号加入",
+        "addTitle": "把材质加入 {nickname} 的衣柜",
+        "addHint": "不扣积分，实付记 0，之后移出也就不退。材质要是公开的，或者是这个用户自己上传的。",
+        "addConfirm": "加入衣柜",
+        "tid": "材质编号",
+        "name": "名字",
+        "nameHint": "留空就用材质的名字。",
+        "added": "已加入「{name}」",
+        "remove": "移出",
+        "removeLabel": "把「{name}」移出衣柜",
+        "removeTitle": "把「{name}」移出衣柜？",
+        "removeHint": "{refund, plural, =0 {不退积分。} other {按这一件的实付退还 # 积分。}}这个用户名下用着它的角色换回默认皮肤，头像不动。",
+        "removeConfirm": "移出衣柜",
+        "removed": "已移出「{name}」{refunded, plural, =0 {} other {，退还 # 积分}}"
       },
       "audit": {
         "title": "审计",
