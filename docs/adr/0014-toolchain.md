@@ -1,6 +1,6 @@
 # ADR-0014 工具链：pnpm + Turborepo，TypeScript 7 做类型检查，ESLint、Prettier、Vitest、changesets
 
-- 状态：已采纳
+- 状态：已采纳（对外发布的包怎么发布由 ADR-0035 补充）
 - 日期：2026-10-16
 
 ## 背景
