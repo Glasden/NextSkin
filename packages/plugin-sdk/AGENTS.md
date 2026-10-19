@@ -23,6 +23,7 @@ CI 用 `changeset status` 检查：本包 `src` 有任何改动都要附 changes
 - **能在类型层面拒绝的错误，就不要留到运行时。** 能力不足、权限名拼错、拦截器改字段、事务内的拦截器发网络请求、插件开事务、路由键格式错误，现在都会编译失败，见 `type-tests/contracts.ts`。新增约束时同步加一条 `@ts-expect-error` 用例。一个 `definePlugin` 调用里只放一个结构性错误，原因见该文件头部注释。
 - **类型约束不等于安全。** 插件可以是手写 JS，所以核心在运行时必须重复每一条检查：能力、表名白名单、拦截器的返回值、事务内拦截器能用的 RPC、出站 origin。
 - **manifest 是核心唯一认的东西。** 核心登记路由、事件、拦截器、Provider、任务所需的每一项（任务的重试次数和超时、路由的请求体上限……）都要出现在 `PluginManifest` 里，`definePlugin` 新加的字段要同步加进 manifest 和核心的提取函数。
+- **运行时导出由 host 提供。** `nextskin-plugin build` 不把本包和 `zod` 打进插件包，plugin host 用自己带的那份（`packages/plugin-host/src/package/module-loader.ts` 的 `PLUGIN_EXTERNALS`），`instanceof` 和 zod 的全局注册表（`secret()`）才和核心一致；插件的其他裸导入一律拒绝。本包新增运行时依赖时，要么打进本包自己，要么加进 `PLUGIN_EXTERNALS`。
 - **`src` 里的相对导入写 `.ts` 扩展名。** set-role、导入器的命令行这些 Node 直接运行的脚本经 domain → plugin-host 加载本包的源码，Node 的类型剥离不补扩展名，类型检查却不报错。
 - **新增拦截点要谨慎。** 每个拦截点都必须在 `interceptorPolicies` 里写明失败策略、超时和是否在事务内。不加"拦截任意数据"的通用 filter，这是 ADR-0010 明确否决的。
 

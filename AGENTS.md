@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制、注册用例和注册规则、邮件发送、注册接口（`POST /api/register`，第一个 REST 接口，`packages/api/src/rest/`）、登录注册和找回密码的页面已经落地（ADR-0018），Yggdrasil Connect 还没有。国际化已接入（ADR-0019）。后台任务和积分流水已经落地（ADR-0021）：任务表和执行器、事件在业务事务里按订阅者展开成任务、邮件改为持久的任务、`adjustScore`。用户中心已经落地（ADR-0022）：外壳和导航、仪表盘（积分、签到）、角色管理，写接口认会话 Cookie。个人资料和账号安全已经落地（ADR-0023、ADR-0024）：改昵称和语言、改邮箱、删除账号、两步验证、通行密钥；核对密码的 REST 接口按用户限流。材质上传和皮肤库已经落地（ADR-0025）：纯 JS 的 PNG 解码、图像 worker 池、出图端点 `/render/…`、上传和上传者的管理、皮肤库和详情页（3D 预览）、用延迟任务推进的文件回收。衣柜、换材质和举报已经落地（ADR-0026）：衣柜页和 `GET /api/closet`、给角色换材质、头像、提交举报和“我的举报”。后台已经落地（ADR-0027）：固定角色映射到具名权限（`can()`）、审计日志、处理举报、管理员删除材质、封禁和任免管理员；用户管理的其余操作还没有。设置页已经落地（ADR-0028）：表单由设置注册表生成，只有超级管理员能改；公告和内容政策（Markdown，不渲染原始 HTML）、生成签名密钥、测试邮件。定时任务已经落地（ADR-0029）：`job_schedules` 和调度器（cron 按站点时区解释，用 croner），清理过期的认证数据、按保留期清理审计日志、回收材质存储里的孤儿文件和临时文件。Yggdrasil 已经落地（ADR-0030）：authserver 的令牌表和五个端点、进服、启动器上传和删除材质，开了两步验证的账号在密码后面接验证码；仪表盘的外置登录配置、安全页的启动器登录列表；契约测试支持有状态的场景。BS 导入器已经落地（ADR-0031）：导入引擎（`packages/importer`）、`import_runs`、对账报告和命令行，网页登录核对旧格式的哈希时接受 trim 之前的密码，录制环境上的导入回放检查；安装向导 `/setup`（安装码、"新站"、从 BS 导入）、后台的"数据迁移"、导入期间的维护模式（页面换成维护页，接口返回 503，任务和定时任务暂停）。首页已经落地（ADR-0032）：领奖台（最近 7 天新加进衣柜最多的三个皮肤）、站点统计、最新上传、外置登录三步，全站页脚，站点描述、关键词和页脚文字三个设置项；标志改成“折起来的头”，站点图标由 `pnpm design:sync` 从 token 生成。插件系统第一版的第一步已经落地（ADR-0033）：插件在核心进程内运行（`packages/domain/src/plugins/`、`packages/plugin-host`），能力检查、事件、任务和定时任务、KV、设置；插件自有表经网关查询（重建 SQL，SQLite 用专用的只读连接）；`/plugins/{id}/*` 路由网关；声明式的页面、导航和注册表单字段；`user.register` 拦截器；后台的“插件”页（启用、停用、设置、死信）；邀请码和 CDN 刷新两个官方插件。plugin host 进程、安装第三方插件、passwordHasher 和第三方登录还没有。
+monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate 已经搭好（ADR-0013、ADR-0014）。已经落地：核心表的第一批迁移；只读协议端点（CSL、USM、Legacy、`/textures`、Yggdrasil 的元数据和角色查询）及其契约测试。认证切片进行中：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制、注册用例和注册规则、邮件发送、注册接口（`POST /api/register`，第一个 REST 接口，`packages/api/src/rest/`）、登录注册和找回密码的页面已经落地（ADR-0018），Yggdrasil Connect 还没有。国际化已接入（ADR-0019）。后台任务和积分流水已经落地（ADR-0021）：任务表和执行器、事件在业务事务里按订阅者展开成任务、邮件改为持久的任务、`adjustScore`。用户中心已经落地（ADR-0022）：外壳和导航、仪表盘（积分、签到）、角色管理，写接口认会话 Cookie。个人资料和账号安全已经落地（ADR-0023、ADR-0024）：改昵称和语言、改邮箱、删除账号、两步验证、通行密钥；核对密码的 REST 接口按用户限流。材质上传和皮肤库已经落地（ADR-0025）：纯 JS 的 PNG 解码、图像 worker 池、出图端点 `/render/…`、上传和上传者的管理、皮肤库和详情页（3D 预览）、用延迟任务推进的文件回收。衣柜、换材质和举报已经落地（ADR-0026）：衣柜页和 `GET /api/closet`、给角色换材质、头像、提交举报和“我的举报”。后台已经落地（ADR-0027）：固定角色映射到具名权限（`can()`）、审计日志、处理举报、管理员删除材质、封禁和任免管理员；用户管理的其余操作还没有。设置页已经落地（ADR-0028）：表单由设置注册表生成，只有超级管理员能改；公告和内容政策（Markdown，不渲染原始 HTML）、生成签名密钥、测试邮件。定时任务已经落地（ADR-0029）：`job_schedules` 和调度器（cron 按站点时区解释，用 croner），清理过期的认证数据、按保留期清理审计日志、回收材质存储里的孤儿文件和临时文件。Yggdrasil 已经落地（ADR-0030）：authserver 的令牌表和五个端点、进服、启动器上传和删除材质，开了两步验证的账号在密码后面接验证码；仪表盘的外置登录配置、安全页的启动器登录列表；契约测试支持有状态的场景。BS 导入器已经落地（ADR-0031）：导入引擎（`packages/importer`）、`import_runs`、对账报告和命令行，网页登录核对旧格式的哈希时接受 trim 之前的密码，录制环境上的导入回放检查；安装向导 `/setup`（安装码、"新站"、从 BS 导入）、后台的"数据迁移"、导入期间的维护模式（页面换成维护页，接口返回 503，任务和定时任务暂停）。首页已经落地（ADR-0032）：领奖台（最近 7 天新加进衣柜最多的三个皮肤）、站点统计、最新上传、外置登录三步，全站页脚，站点描述、关键词和页脚文字三个设置项；标志改成“折起来的头”，站点图标由 `pnpm design:sync` 从 token 生成。插件系统第一版的第一步已经落地（ADR-0033）：插件在核心进程内运行（`packages/domain/src/plugins/`、`packages/plugin-host`），能力检查、事件、任务和定时任务、KV、设置；插件自有表经网关查询（重建 SQL，SQLite 用专用的只读连接）；`/plugins/{id}/*` 路由网关；声明式的页面、导航和注册表单字段；`user.register` 拦截器；后台的“插件”页（启用、停用、设置、死信）；邀请码和 CDN 刷新两个官方插件。第二步也已落地：上传的插件在 plugin host 进程里运行（核心进程拉起；stdin/stdout 上带长度前缀的帧；`--permission`，环境变量为空，Node 26 起不能直接连网；整代切换，新一代报告的定义要和 manifest 一致；崩溃后退避重启，连续崩溃就停下、等管理员在后台重启）；`nextskin-plugin build` 打插件包（`packages/plugin-cli`）；后台上传安装、升级（列出新增的能力）、卸载，都写审计；多实例按 `plugins.package_hash` 从存储接口取包。passwordHasher 和第三方登录还没有。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
@@ -28,7 +28,7 @@ nextskin 启动器（进程监管 + 命令行）
 |---|---|
 | `pnpm dev` | 启动开发环境，不依赖任何外部服务（默认 SQLite，数据在 `apps/web/data`；环境变量见 `packages/domain/src/bootstrap.ts`。种子数据还没有：空库先在 `/setup` 建站，安装码在数据目录的 `setup-code`，安装之前不能注册） |
 | `pnpm check` | lint + 类型检查 + 单元测试 + 格式检查；提交前必须通过。CI 还会跑 `test:db` 和 `e2e`，改了数据库代码或 Next 配置时先在本地跑 |
-| `pnpm build` | 构建 Next standalone 产物和插件 SDK 的声明文件。Next 关了构建期类型检查，所以会先对构建涉及的每个包跑 `typecheck` |
+| `pnpm build` | 构建 Next standalone 产物、插件 SDK 的声明文件和 plugin host 的单文件包（`packages/plugin-host/dist/host.mjs`，standalone 里运行它）。Next 关了构建期类型检查，所以会先对构建涉及的每个包跑 `typecheck` |
 | `pnpm test <path>` | 只跑指定文件或目录的测试 |
 | `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑 `*.db.test.ts`（需要 Docker，测试库容器跑完后保留；`pnpm test` 只用 SQLite 跑） |
 | `pnpm test:contract` | 协议契约测试：回放从真实 BS v6 录制的用例，不需要 Docker，`pnpm check` 也会跑。录制见 `tests/contract/README.md` |
@@ -71,7 +71,8 @@ nextskin 启动器（进程监管 + 命令行）
 | `packages/skin` | 材质的前处理和 2D 渲染，纯函数，服务端出图和浏览器上传页共用（ADR-0017） |
 | `packages/i18n` | 界面文案（`messages/<语言>.json`）和语言解析，网页和领域层共用（ADR-0019） |
 | `packages/email` | 邮件模板，无依赖的 HTML 模板函数（ADR-0020） |
-| `packages/plugin-sdk`、`plugin-host` | 插件 API（公开面，ADR-0033）；插件侧的运行时：加载插件定义、构造 `ctx`。核心侧的注册表、网关和调用在 `packages/domain/src/plugins/` |
+| `packages/plugin-sdk`、`plugin-host` | 插件 API（公开面，ADR-0033）；插件侧的运行时：host 进程的入口和帧协议、加载插件定义、构造 `ctx`、插件包的格式和校验。核心侧的注册表、网关、换代和安装在 `packages/domain/src/plugins/` |
+| `packages/plugin-cli` | `nextskin-plugin build`：把插件打成插件包（manifest、单文件的服务端代码、文案），插件作者和测试共用 |
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |
 | `packages/importer` | 从 BS v6 只读导入（ADR-0031）：导入引擎、命令行和网页导入服务（`apps/web` 创建、注入 Hono），迁移指南在 `MIGRATION.md`，该目录有自己的 AGENTS.md |
 | `plugins/*` | 官方插件，只用公开 API 编写，随站点发布、在后台启用；也是 ADR-0033 的参考插件 |
@@ -104,7 +105,7 @@ nextskin 启动器（进程监管 + 命令行）
 - Better Auth：`database.transaction` 默认是 `false`，必须打开；用户表主键列名只能叫 `id`。
 - 服务端的 worker 写成 `new Worker(new URL('./x.ts', import.meta.url), …)`，Turbopack 会把它打成单独的 chunk，`next dev` 和 standalone 产物里都能运行。`workerData` 只能传普通对象：Turbopack 会把它展开、再塞进自己的字段，传数字、数组、TypedArray 会丢失或变形。不要用 `next build --webpack`，worker chunk 的路径会错。
 - 脚本里不写裸的 `tsc`：`node_modules/.bin/tsc` 可能指向 TS 6 也可能指向 TS 7，类型检查按路径调用 TS 7（ADR-0014）。
-- Node 直接运行的代码（脚本、ESLint 插件，以及将来的启动器和 plugin host）里，相对导入要写 `.ts` 扩展名：Node 的类型剥离不补扩展名，类型检查却不会报错。
+- Node 直接运行的代码（脚本、ESLint 插件、开发和测试时的 plugin host，以及将来的启动器）里，相对导入要写 `.ts` 扩展名：Node 的类型剥离不补扩展名，类型检查却不会报错。
 - pnpm 12 拒绝安装发布不到 1 天的版本（`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`）。换一个早一点的版本，不要往 `pnpm-workspace.yaml` 里加 `minimumReleaseAgeExclude`。
 - 术语：**材质**是皮肤和披风的统称；**角色**（player）是 Minecraft 里的玩家名，不是**用户**（user）。一个用户可以有多个角色。
 
