@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-正在做插件系统第一版的第三步（ADR-0033）：passwordHasher 已经落地，第三方登录还没有。各领域已经落地和还没做的部分逐项列在 `PROGRESS.md`；判断某个功能有没有、做到哪一步，先看它。
+正在做插件系统第一版的第三步（ADR-0033）：passwordHasher 已经落地，第三方登录的 ADR-0034 已采纳、还没有实现。各领域已经落地和还没做的部分逐项列在 `PROGRESS.md`；判断某个功能有没有、做到哪一步，先看它。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。

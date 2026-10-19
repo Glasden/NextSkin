@@ -33,7 +33,7 @@ Better Auth 的 user 模型加上我们的领域字段。领域字段都有默�
 | nickname | varchar(255) | 非空 | Better Auth 的 `name` 字段 |
 | email | varchar(255) | 非空，唯一 | 一律小写 |
 | email_verified | BA 布尔 | 非空 | |
-| image | text | 可空 | Better Auth 的字段，第三方登录会写入头像 URL；站内头像用 `avatar_texture_id` |
+| image | text | 可空 | Better Auth 的字段，不写入：第三方登录不取头像（ADR-0034）；站内头像用 `avatar_texture_id` |
 | two_factor_enabled | BA 布尔 | 可空 | 两步验证插件的字段 |
 | created_at | BA 时间 | 非空 | 注册时间 |
 | updated_at | BA 时间 | 非空 | |
@@ -58,7 +58,7 @@ Better Auth 的 user 模型加上我们的领域字段。领域字段都有默�
 | 表 | 插件 | 备注 |
 |---|---|---|
 | sessions | 核心 | |
-| accounts | 核心 | 密码存在这里：`provider_id = 'credential'` 的那一行 |
+| accounts | 核心 | 密码存在这里：`provider_id = 'credential'` 的那一行。第三方登录的绑定也在这里：`provider_id` 是 `plugin:<插件 id>:<Provider id>`，`account_id` 是第三方的 subject，令牌各列留空；`account_id`、`provider_id` 是 ascii 的 `authStringType(255)`，`(provider_id, account_id)` 和 `(user_id, provider_id)` 各有唯一索引（ADR-0034） |
 | verifications | 核心 | 找回密码等一次性令牌（邮箱验证用的是 JWT，不经过这张表） |
 | jwks | jwt | ID 令牌的签名密钥 |
 | oauth_clients、oauth_resources、oauth_client_resources | oauth-provider | |
