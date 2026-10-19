@@ -230,7 +230,7 @@ test.each(['bcrypt', 'sha256'])('旧 %s 密码支持 PHP trim 回退，升级只
   await database.db.updateTable('accounts').set({ password: hash }).where('user_id', '=', uid).execute()
   const signIn = (value: string) =>
     new Browser().request('/api/auth/sign-in/email', { json: { email: 'trim@example.test', password: value } })
-  const salt = () => Promise.resolve('')
+  const salt = { legacySalt: () => Promise.resolve('') }
   expect(await checkUserPassword(database.db, uid, ' secret\t', salt)).toBe(true)
   expect(await checkUserPassword(database.db, uid, 'wrong', salt)).toBe(false)
   expect((await signIn('secret\u00a0')).status).toBe(401)

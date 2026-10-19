@@ -176,12 +176,15 @@ export function createCore(options: CoreOptions) {
     removal,
     now,
   }
+  // 哈希既不是当前算法、也不是 BS 旧格式时交给 passwordHasher 插件：网页登录、启动器登录和敏感操作前的核对密码（ADR-0033）
+  const passwordPlugins = (input: { hash: string; password: string }) => plugins.verifyPassword(input)
   const auth = createAuthService({
     db: options.db,
     secretKey: options.secretKey,
     settings,
     production: options.production,
     mail,
+    passwordPlugins,
     onPasswordChanged: async (uid) => {
       // 吊销启动器令牌单独提交：事件入队失败会回滚它所在的事务，而改密码已经成功了（ADR-0030）
       await transactionWithRetry(options.db, (tx) =>
@@ -204,7 +207,7 @@ export function createCore(options: CoreOptions) {
   const players = { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events, now) }
   const closet = createCloset(textureOptions)
   const upload = createTextureUpload(textureOptions)
-  const tokens = createTokens({ db: options.db, settings, secretKey: options.secretKey, now })
+  const tokens = createTokens({ db: options.db, settings, secretKey: options.secretKey, now, passwordPlugins })
   const yggdrasil = {
     getSigningKey,
     ...tokens.service,
@@ -263,7 +266,7 @@ export function createCore(options: CoreOptions) {
       register: createRegister(options.db, settings, auth, mail, events, plugins),
       checkIn: createCheckIn(options.db, settings),
       ...createUserQueries(options.db, settings),
-      ...createUserManagement(options, settings, mail, jobs, events, removal, now),
+      ...createUserManagement(options, settings, mail, jobs, events, removal, now, passwordPlugins),
     },
     score: createScoreQueries(options.db),
     yggdrasil,

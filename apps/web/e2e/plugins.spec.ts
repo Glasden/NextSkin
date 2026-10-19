@@ -1,13 +1,15 @@
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import { createTranslator } from '@nextskin/i18n'
 import { expect, test as base, type Page } from '@playwright/test'
 
-// 两个参考插件跑通（ADR-0033"验收：参考插件"）：后台启用、插件的设置、插件加的页面和导航、注册表单上的字段和
-// 事务内的拦截器。跑两遍：plugins 项目里是随站点发布的官方插件，在核心进程内运行；plugins-host 项目里先用
+// 参考插件跑通（ADR-0033"验收：参考插件"）：后台启用、插件的设置、插件加的页面和导航、注册表单上的字段和
+// 事务内的拦截器、核对导入的旧密码。跑两遍：plugins 项目里是随站点发布的官方插件，在核心进程内运行；plugins-host 项目里先用
 // nextskin-plugin build 打成插件包、换个 id，从后台上传安装，在 plugin host 里运行，最后卸载。
 // 各自跑在自己的服务上（playwright.config.ts）：启用邀请码之后注册都要填邀请码，和别的用例共用一个站点会让它们注册失败
 const test = base.extend<object, { pluginHost: boolean }>({
@@ -37,7 +39,7 @@ const pluginId = (id: string, host: boolean) => (host ? `host-${id}` : id)
 test.beforeAll(({ pluginHost }) => {
   if (!pluginHost) return
   // 和插件作者一样用 nextskin-plugin build 打包；只换 package.json 里的 id
-  for (const id of ['invitation-codes', 'cdn-refresh']) {
+  for (const id of ['invitation-codes', 'cdn-refresh', 'authme-password']) {
     const dir = mkdtempSync(join(tmpdir(), `nextskin-e2e-${id}-`))
     const source = join(repository, 'plugins', id)
     cpSync(join(source, 'src'), join(dir, 'src'), { recursive: true })
@@ -92,8 +94,8 @@ function setRole(email: string, role: string, host: boolean) {
   })
 }
 
-/** 从后台上传插件包：确认框里写着插件的名字和信任提示，装好之后到插件页，还没启用 */
-async function upload(page: Page, id: string, name: string) {
+/** 从后台上传插件包：确认框里写着插件的名字和信任提示（要用高风险能力的还有 `highRisk`），装好之后到插件页，还没启用 */
+async function upload(page: Page, id: string, name: string, highRisk?: string) {
   const file = packages.get(id)
   if (!file) throw new Error(`没有打出 ${id} 的插件包`)
   await page.goto('/admin/plugins')
@@ -105,12 +107,39 @@ async function upload(page: Page, id: string, name: string) {
   const confirm = page.getByRole('dialog', { name: t('admin.plugins.upload.installTitle', { name }) })
   await expect(confirm).toContainText(t('admin.plugins.upload.trust'))
   await expect(confirm).toContainText(pluginId(id, true))
+  if (highRisk) await expect(confirm).toContainText(highRisk)
   await confirm.getByRole('button', { name: t('admin.plugins.upload.confirmInstall'), exact: true }).click()
   await expect(page.getByText(t('admin.plugins.upload.installedToast', { name }))).toBeVisible()
   await expect(page).toHaveURL(`/admin/plugins/${pluginId(id, true)}`)
   await expect(page.getByText(t('admin.plugins.installed'), { exact: true })).toBeVisible()
   await expect(page.getByText(t('admin.plugins.status.disabled'), { exact: true })).toBeVisible()
 }
+
+/** 这个服务的 SQLite 数据库（playwright.config.ts 给每个服务一个数据目录） */
+function database(host: boolean) {
+  const directory = host ? process.env.NEXTSKIN_E2E_PLUGINS_HOST_DATA_DIR : process.env.NEXTSKIN_E2E_PLUGINS_DATA_DIR
+  if (!directory) throw new Error('没有插件服务的数据目录')
+  const db = new DatabaseSync(join(directory, 'nextskin.sqlite'))
+  db.exec('PRAGMA busy_timeout = 5000')
+  return db
+}
+
+/** 用户的密码哈希；`hash` 不为空时先换成它，相当于导入器从 BS 写进来的值 */
+function passwordHash(email: string, host: boolean, hash?: string): string {
+  const db = database(host)
+  try {
+    const user = "(select id from users where email = ?) and provider_id = 'credential'"
+    if (hash !== undefined) db.prepare(`update accounts set password = ? where user_id = ${user}`).run(hash, email)
+    const row = db.prepare(`select password from accounts where user_id = ${user}`).get(email) as
+      { password: string } | undefined
+    if (!row) throw new Error(`${email} 没有密码`)
+    return row.password
+  } finally {
+    db.close()
+  }
+}
+
+const hex = (algorithm: string, value: string) => createHash(algorithm).update(value).digest('hex')
 
 /** 在后台的插件页启用或停用一个插件，确认框里写着插件的名字 */
 async function toggle(page: Page, id: string, name: string, action: 'enable' | 'disable') {
@@ -318,4 +347,69 @@ test('CDN 刷新：设置里的密钥不回显；插件的表单页把插件给�
     }),
   ).toBeVisible()
   expect(await page.content()).not.toContain(secretValue)
+})
+
+test('AuthMe 密码：导入的 AuthMe 哈希在启用插件后能登录，登录一次就换成站点自己的算法', async ({
+  page,
+  browser,
+  pluginHost,
+}) => {
+  const am = pluginText('authme-password')
+  const name = am('plugin.name')
+  const id = pluginId('authme-password', pluginHost)
+  const passwordHasher = t('admin.plugins.providers.passwordHasher')
+  setRole(await register(page, '203.0.113.160', `Am${suffix}`), 'superadmin', pluginHost)
+  if (pluginHost)
+    await upload(page, 'authme-password', name, t('admin.plugins.upload.highRisk', { list: passwordHasher }))
+
+  // 两个从 BS 导入的用户：一个是 SHA256 下 AuthMe 的哈希，一个是 SALTED2MD5 下带独立盐、由导入器打包的哈希
+  const old = `authme old ${suffix}`
+  const imported = async (ip: string, playerName: string, hash: string) => {
+    const context = await browser.newContext({ locale: 'zh-CN' })
+    const email = await register(await context.newPage(), ip, playerName)
+    await context.close()
+    passwordHash(email, pluginHost, hash)
+    return email
+  }
+  const salt = '0123456789abcdef'
+  const webEmail = await imported(
+    '203.0.113.161',
+    `AmWeb${suffix}`,
+    `$SHA$${salt}$${hex('sha256', hex('sha256', old) + salt)}`,
+  )
+  const launcherEmail = await imported(
+    '203.0.113.162',
+    `AmLa${suffix}`,
+    `$authme$salted2md5$a1b2c3$${hex('md5', hex('md5', old) + 'a1b2c3')}`,
+  )
+
+  // 插件页列出它提供的功能，标着高风险
+  await page.goto(`/admin/plugins/${id}`)
+  await expect(
+    page.getByText(t('admin.plugins.manifest.providerItem', { kind: passwordHasher, label: am('hasher.authme') })),
+  ).toBeVisible()
+
+  // 没启用时旧密码登录不了
+  const visitorContext = await browser.newContext({ locale: 'zh-CN' })
+  const visitor = await visitorContext.newPage()
+  await visitor.goto('/sign-in')
+  await visitor.getByLabel(t('auth.email')).fill(webEmail)
+  await visitor.getByLabel(t('auth.password')).fill(old)
+  await visitor.getByRole('button', { name: t('auth.signIn.submit'), exact: true }).click()
+  await expect(visitor.getByText(t('auth.signIn.invalidCredentials'))).toBeVisible()
+
+  // 启用后能登录；登录之后库里换成了站点自己的算法
+  await toggle(page, id, name, 'enable')
+  await visitor.getByLabel(t('auth.password')).fill(old)
+  await visitor.getByRole('button', { name: t('auth.signIn.submit'), exact: true }).click()
+  await visitor.waitForURL('/user')
+  await visitorContext.close()
+  expect(passwordHash(webEmail, pluginHost)).toMatch(/^[0-9a-f]{32}:[0-9a-f]{128}$/)
+
+  // 启动器登录同样经过插件，令牌照常签发
+  const authenticated = await page.request.post('/api/yggdrasil/authserver/authenticate', {
+    data: { username: launcherEmail, password: old },
+  })
+  expect(authenticated.status()).toBe(200)
+  expect(passwordHash(launcherEmail, pluginHost)).toMatch(/^[0-9a-f]{32}:[0-9a-f]{128}$/)
 })

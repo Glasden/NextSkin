@@ -140,6 +140,10 @@ const EVENT_TIMEOUT_MS = 60_000
 const ROUTE_TIMEOUT_MS = 30_000
 const MIGRATION_TIMEOUT_MS = 60_000
 const SETTINGS_TIMEOUT_MS = 5_000
+/** passwordHasher 每次调用的期限，写在 SDK 的说明里（providers.ts） */
+const PASSWORD_TIMEOUT_MS = 5_000
+/** 比这更长的值不是哈希，不拿去匹配插件的 detect.pattern */
+const MAX_PLUGIN_HASH_LENGTH = 512
 /** 同一个拦截器连续失败这么多次，就在冷却期内不再调用它，直接按失败策略处理（ADR-0033） */
 const BREAKER_THRESHOLD = 3
 const BREAKER_COOLDOWN_MS = 30_000
@@ -679,7 +683,9 @@ export function createPluginSystem(options: {
             ? `route:${call.method} ${call.path}`
             : call.kind === 'job'
               ? `job:${call.name}`
-              : call.kind
+              : call.kind === 'passwordHasher'
+                ? `passwordHasher:${call.provider}`
+                : call.kind
     let outcome = 'ok'
     let timer: ReturnType<typeof setTimeout> | undefined
     // 期限从调用开始算，读设置这些准备工作也算在里面：注册事务里的拦截器不能因为准备工作卡住而一直占着写锁
@@ -1049,6 +1055,19 @@ export function createPluginSystem(options: {
     return [...active.values()].filter((plugin) => test(plugin.known.manifest[key]))
   }
 
+  /** detect.pattern 编译后的正则，按源码缓存；manifest 校验时已经确认能编译 */
+  const patterns = new Map<string, RegExp>()
+  function detects(detect: PluginManifest['providers']['passwordHasher'][number]['detect'], hash: string): boolean {
+    if (detect.prefix?.some((prefix) => hash.startsWith(prefix))) return true
+    if (detect.pattern === undefined) return false
+    let pattern = patterns.get(detect.pattern)
+    if (!pattern) {
+      pattern = new RegExp(detect.pattern, 'u')
+      patterns.set(detect.pattern, pattern)
+    }
+    return pattern.test(hash)
+  }
+
   return {
     /** 启动时先切到表里的启用集合，再开始轮询；执行器在这之后才启动，插件的任务不会被漏认领 */
     async start(): Promise<void> {
@@ -1260,6 +1279,50 @@ export function createPluginSystem(options: {
         recordFailure(key)
         throw new DomainError('plugin_unavailable')
       }
+    },
+
+    /**
+     * passwordHasher：哈希既不是当前算法、也不是 BS 旧格式时由 auth/password.ts 调用。先在本进程内按 detect 匹配，
+     * 匹配上了才调用插件，按插件 id、声明顺序依次调用，有一个通过就算通过。超时、抛错、返回值不对、熔断中都按不通过处理：
+     * 插件不可用时这些用户登录不了，不能放行（ADR-0033）。参数里有明文密码，日志只记插件 id、Provider 和失败原因，
+     * 不记插件抛出的消息
+     */
+    async verifyPassword(input: { hash: string; password: string }): Promise<boolean> {
+      if (input.hash.length > MAX_PLUGIN_HASH_LENGTH) return false
+      const list = activeWith('providers', (providers) => providers.passwordHasher.length > 0).sort((a, b) =>
+        a.known.manifest.id.localeCompare(b.known.manifest.id),
+      )
+      for (const plugin of list) {
+        const id = plugin.known.manifest.id
+        for (const provider of plugin.known.manifest.providers.passwordHasher) {
+          if (!detects(provider.detect, input.hash)) continue
+          const key = breakerKey(id, `passwordHasher:${provider.id}`)
+          if (breakerOpen(key)) continue
+          let result: unknown
+          try {
+            result = await invoke(
+              plugin,
+              { kind: 'passwordHasher', provider: provider.id, password: input.password, hash: input.hash },
+              { timeoutMs: PASSWORD_TIMEOUT_MS },
+            )
+          } catch (error) {
+            recordFailure(key)
+            log(
+              `[plugins] ${id} password_verify_failed ${provider.id} ${error instanceof PluginInvocationError ? error.reason : 'error'}`,
+            )
+            continue
+          }
+          // 插件侧可能被完全控制：返回值在这里再检查一遍
+          if (typeof result !== 'boolean') {
+            recordFailure(key)
+            log(`[plugins] ${id} password_verify_failed ${provider.id} invalid_result`)
+            continue
+          }
+          breakers.delete(key)
+          if (result) return true
+        }
+      }
+      return false
     },
 
     /** `/plugins/{id}/*`：登录态和 Origin 已由 HTTP 层检查；这里检查权限、调用插件 */

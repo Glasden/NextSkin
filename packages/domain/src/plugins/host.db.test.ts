@@ -160,6 +160,41 @@ test('邀请码在 plugin host 里运行：安装、启用，注册时的拦截�
   ).toEqual({ used_by: result.uid })
 })
 
+test('AuthMe 密码在 plugin host 里运行：安装时列为高风险，启用后认领 AuthMe 的哈希，启动器登录后换成当前算法', async () => {
+  await boot()
+  const actor = await env.actor()
+  const preview = await install(await buildPackage({ id: 'authme-password', from: 'plugins/authme-password' }), actor)
+  expect(preview.highRisk).toEqual(['provider.passwordHasher'])
+  // AuthMe 自己的测试向量，密码都是 password
+  const sha256 = '$SHA$11aa0706173d7272$dbba96681c2ae4e0bfdf226d70fbbc5e4ee3d8071faa613bc533fe8a64817d10'
+  const salted = '$authme$salted2md5$9b5f5749$9f3d13dc01a6fe61fd669954174399f3'
+  expect(await env.core.plugins.verifyPassword({ hash: sha256, password: 'password' })).toBe(false)
+
+  await env.core.plugins.admin.enable(actor, 'authme-password')
+  expect(env.core.plugins.isRunning('authme-password')).toBe(true)
+  expect(await env.core.plugins.verifyPassword({ hash: salted, password: 'password' })).toBe(true)
+  expect(await env.core.plugins.verifyPassword({ hash: salted, password: 'PassWord1' })).toBe(false)
+
+  const input = env.input()
+  const { uid } = await env.core.users.register(input)
+  await env.db.updateTable('accounts').set({ password: sha256 }).where('user_id', '=', uid).execute()
+  const response = await env.core.yggdrasil.authenticate({
+    username: input.email,
+    password: 'password',
+    rawPassword: 'password',
+    clientToken: null,
+    requestUser: false,
+  })
+  expect(response.accessToken).toBeTruthy()
+  const { password } = await env.db
+    .selectFrom('accounts')
+    .select('password')
+    .where('user_id', '=', uid)
+    .executeTakeFirstOrThrow()
+  expect(password).not.toBe(sha256)
+  expect(password).toMatch(/^[0-9a-f]{32}:[0-9a-f]{128}$/)
+})
+
 test('host 读不到 .env、数据目录和数据库文件，环境变量为空；Node 25 起也不能直接连网', async () => {
   const storage = await boot()
   const actor = await env.actor()

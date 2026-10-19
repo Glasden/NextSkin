@@ -196,6 +196,18 @@ export function loadPlugin(options: {
         if (!(response instanceof Response)) throw new Error('路由处理函数必须返回 Response')
         return serializeResponse(response, MAX_RESPONSE_BYTES) satisfies Promise<SerializedResponse>
       }
+      case 'passwordHasher': {
+        const provider = definition.providers?.passwordHasher?.find((item) => item.id === call.provider) as
+          { verify(args: { password: string; hash: string; ctx: unknown }): Promise<unknown> } | undefined
+        if (!provider) throw new Error(`插件没有 passwordHasher ${call.provider}`)
+        const result = await provider.verify({
+          password: call.password,
+          hash: call.hash,
+          ctx: buildContext(context, signal, false),
+        })
+        if (typeof result !== 'boolean') throw new Error('passwordHasher 的 verify 必须返回布尔值')
+        return result
+      }
       case 'migrate': {
         const migration = definition.migrations?.[call.name]
         if (!migration) throw new Error(`插件没有迁移 ${call.name}`)

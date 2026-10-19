@@ -4,6 +4,7 @@ import type { MailService } from '../mail/service.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { AUTH_BASE_PATH, CLIENT_IP_HEADER, createAuth, type Auth } from './auth.ts'
 import { normalizeClientAuthentication } from './client-authentication.ts'
+import type { PluginPasswordVerifier } from './password.ts'
 import { withoutSerialUnsafeMetadata } from './serial-safety.ts'
 
 export interface AuthServiceOptions {
@@ -16,6 +17,8 @@ export interface AuthServiceOptions {
    */
   production: boolean
   mail: MailService
+  /** passwordHasher 插件（ADR-0033） */
+  passwordPlugins?: PluginPasswordVerifier
   onPasswordChanged?: (uid: number) => Promise<void>
 }
 
@@ -49,6 +52,7 @@ export function createAuthService(options: AuthServiceOptions) {
         siteUrl,
         siteName: values['site.name'],
         legacyPasswordSalt: async () => (await settings.read(['auth.legacyPasswordSalt']))['auth.legacyPasswordSalt'],
+        passwordPlugins: options.passwordPlugins,
         mail: options.mail,
         onPasswordChanged: options.onPasswordChanged,
       })

@@ -14,9 +14,14 @@ import {
   MIN_PASSWORD_LENGTH,
   RESET_PASSWORD_TTL_SECONDS,
 } from './password-policy.ts'
-import { isLegacyPasswordHash } from './legacy-passwords.ts'
 import { coreModelNaming, withNamingConvention } from './naming.ts'
-import { matchStoredPassword, verifyStoredPassword } from './password.ts'
+import {
+  isCurrentPasswordHash,
+  matchStoredPassword,
+  verifyStoredPassword,
+  type PluginPasswordVerifier,
+  type StoredPasswordCheck,
+} from './password.ts'
 import { serialSafety } from './serial-safety.ts'
 
 /** Better Auth 挂在这个路径下（Hono 的 /api/auth/*） */
@@ -34,6 +39,8 @@ export interface AuthConfig {
   siteName: string
   /** BS 的全站盐（旧站 .env 的 SALT），只有校验旧摘要格式的密码时才读 */
   legacyPasswordSalt: () => Promise<string>
+  /** passwordHasher 插件（ADR-0033）；没有时插件格式的哈希一律不通过 */
+  passwordPlugins?: PluginPasswordVerifier
   mail?: MailService
   onPasswordChanged?: (uid: number) => Promise<void>
 }
@@ -77,6 +84,7 @@ async function isAdmin(db: Kysely<CoreDatabase>, userId: string | number): Promi
 export function authOptions(config: AuthConfig) {
   const { db } = config
   const site = new URL(config.siteUrl)
+  const passwords: StoredPasswordCheck = { legacySalt: config.legacyPasswordSalt, plugins: config.passwordPlugins }
   async function passwordChanged(uid: string) {
     try {
       await config.onPasswordChanged?.(Number(uid))
@@ -110,8 +118,8 @@ export function authOptions(config: AuthConfig) {
       onPasswordReset: ({ user }) => passwordChanged(user.id),
       password: {
         hash: hashPassword,
-        // 从 BS 导入的旧哈希在这里校验，登录成功后由下面的 after 钩子换成当前算法
-        verify: (input) => verifyStoredPassword(input, config.legacyPasswordSalt),
+        // 从 BS 导入的旧哈希和插件格式的哈希在这里校验，登录成功后由下面的 after 钩子换成当前算法
+        verify: (input) => verifyStoredPassword(input, passwords),
       },
     },
     emailVerification: {
@@ -145,14 +153,22 @@ export function authOptions(config: AuthConfig) {
       after: createAuthMiddleware(async (ctx) => {
         if (ctx.path !== '/sign-in/email' || !ctx.context.newSession) return
         // newSession 只在密码校验通过之后才有。Better Auth 1.7.10 把 ctx.body.password 原样传给 verify，不会先 trim；
-        // 旧哈希可能是按 trim 之后的值通过的，所以重新求出通过的那个值，按它换算法
+        // 旧哈希可能是按 trim 之后的值通过的，所以重新求出通过的那个值，按它换算法。插件格式的哈希要再调用一次插件
         const password: unknown = (ctx.body as Record<string, unknown> | undefined)?.password
         const userId = ctx.context.newSession.user.id
         const accounts = await ctx.context.internalAdapter.findAccounts(userId)
         const credential = accounts.find((account) => account.providerId === 'credential')
-        if (typeof password === 'string' && credential?.password && isLegacyPasswordHash(credential.password)) {
-          const matched = await matchStoredPassword({ hash: credential.password, password }, config.legacyPasswordSalt)
-          if (matched !== null) await ctx.context.internalAdapter.updatePassword(userId, await hashPassword(matched))
+        if (typeof password === 'string' && credential?.password && !isCurrentPasswordHash(credential.password)) {
+          const matched = await matchStoredPassword({ hash: credential.password, password }, passwords)
+          // 只替换核对过的那个旧哈希：核对要等插件、算 bcrypt，这期间密码被重设或修改了，就不能拿旧密码覆盖它
+          if (matched !== null)
+            await db
+              .updateTable('accounts')
+              .set({ password: await hashPassword(matched) })
+              .where('user_id', '=', Number(userId))
+              .where('provider_id', '=', 'credential')
+              .where('password', '=', credential.password)
+              .execute()
         }
       }),
     },

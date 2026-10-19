@@ -60,6 +60,7 @@ export function pluginEnvironment() {
       return database.config.dialect === 'sqlite' ? database.config.file : undefined
     },
     lines,
+    secretKey,
     async boot(plugins: readonly OfficialPlugin[], options: Partial<CoreOptions> = {}) {
       await core?.shutdown()
       core = createCore({

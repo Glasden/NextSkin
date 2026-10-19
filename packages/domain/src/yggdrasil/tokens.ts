@@ -10,6 +10,7 @@ import type { Kysely } from 'kysely'
 import { sha256 } from '../auth/auth.ts'
 import { normalizeNameLookup } from '../players/queries.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
+import type { PluginPasswordVerifier } from '../auth/password.ts'
 import { createCredentials, type CredentialsInput } from './credentials.ts'
 import { forbidden, YggdrasilError } from './errors.ts'
 
@@ -70,6 +71,7 @@ export function createTokens(options: {
   settings: ReturnType<typeof createSettingQueries>
   secretKey: string
   now: () => Date
+  passwordPlugins?: PluginPasswordVerifier
 }) {
   const { db, settings, now } = options
   const credentials = createCredentials(options)

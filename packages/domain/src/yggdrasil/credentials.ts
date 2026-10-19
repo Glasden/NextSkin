@@ -4,8 +4,12 @@ import { hashPassword, symmetricDecrypt } from 'better-auth/crypto'
 import { sql, type Kysely, type Selectable } from 'kysely'
 import { z } from 'zod'
 import { deriveSecret } from '../auth/auth.ts'
-import { isLegacyPasswordHash } from '../auth/legacy-passwords.ts'
-import { matchStoredPassword } from '../auth/password.ts'
+import {
+  isCurrentPasswordHash,
+  matchStoredPassword,
+  type PluginPasswordVerifier,
+  type StoredPasswordCheck,
+} from '../auth/password.ts'
 import { normalizeNameLookup } from '../players/queries.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { forbidden, YggdrasilError } from './errors.ts'
@@ -36,13 +40,18 @@ export function createCredentials(options: {
   settings: ReturnType<typeof createSettingQueries>
   secretKey: string
   now: () => Date
+  /** passwordHasher 插件（ADR-0033） */
+  passwordPlugins?: PluginPasswordVerifier
 }) {
   const { db, settings, now } = options
   const throttle = createLoginThrottle(now)
   const secret = deriveSecret(options.secretKey)
-  const legacySalt = async () => (await settings.read(['auth.legacyPasswordSalt']))['auth.legacyPasswordSalt']
+  const passwords: StoredPasswordCheck = {
+    legacySalt: async () => (await settings.read(['auth.legacyPasswordSalt']))['auth.legacyPasswordSalt'],
+    plugins: options.passwordPlugins,
+  }
 
-  /** 核对通过时返回这时库里的密码哈希（旧格式已经换成当前算法），签发令牌的事务用它确认密码没有被改过 */
+  /** 核对通过时返回这时库里的密码哈希（旧格式、插件格式已经换成当前算法），签发令牌的事务用它确认密码没有被改过 */
   async function verify(user: Selectable<CoreDatabase['users']>, input: CredentialsInput): Promise<string | null> {
     const account = await db
       .selectFrom('accounts')
@@ -76,7 +85,7 @@ export function createCredentials(options: {
       if (candidate === null) continue
       if (factor && !/\d{6}$/.test(candidate)) continue
       const password = factor ? candidate.slice(0, -6) : candidate
-      const matched = await matchStoredPassword({ hash: account.password, password }, legacySalt)
+      const matched = await matchStoredPassword({ hash: account.password, password }, passwords)
       if (matched !== null) {
         accepted = { password: matched, code: factor ? candidate.slice(-6) : '' }
         break
@@ -84,7 +93,7 @@ export function createCredentials(options: {
     }
     if (!accepted) return null
     let current = account.password
-    if (isLegacyPasswordHash(account.password)) {
+    if (!isCurrentPasswordHash(account.password)) {
       const hash = await hashPassword(accepted.password)
       const upgraded = await db
         .updateTable('accounts')

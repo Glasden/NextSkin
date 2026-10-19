@@ -390,7 +390,6 @@ export interface PasswordHasherProvider<Ctx> {
     verify(args: {
         password: string;
         hash: string;
-        uid: Uid;
         ctx: Ctx;
     }): Promise<boolean>;
 }

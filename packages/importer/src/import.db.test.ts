@@ -259,10 +259,10 @@ test('导入覆盖对照表的每一条规则，报告逐项列出', async () =>
   expect(report.tables.users).toMatchObject({
     source: 6,
     imported: 6,
-    adjusted: { unknown_permission: 1, unsupported_locale: 1, unrecognized_password: 1, avatar_missing: 2 },
+    adjusted: { unknown_permission: 1, unsupported_locale: 1, plugin_password: 1, avatar_missing: 2 },
   })
 
-  // 密码：bcrypt、argon2 原样，十六进制摘要按 PWD_METHOD 转成 $bs$，认不出的不建 credential
+  // 密码：bcrypt、argon2 原样，十六进制摘要按 PWD_METHOD 转成 $bs$；可打印的未知格式留给插件认领
   const accounts = await db.selectFrom('accounts').selectAll().orderBy('user_id').execute()
   expect(
     accounts.map((account) => [account.user_id, account.account_id, account.provider_id, account.password]),
@@ -272,6 +272,7 @@ test('导入覆盖对照表的每一条规则，报告逐项列出', async () =>
     [3, '3', 'credential', BCRYPT],
     [4, '4', 'credential', `$bs$salted2md5$${MD5.toLowerCase()}`],
     [5, '5', 'credential', BCRYPT],
+    [7, '7', 'credential', 'not-a-hash'],
   ])
   // 积分不为 0 的写一条"导入"流水，余额等于导入的积分
   const transactions = await db.selectFrom('score_transactions').selectAll().orderBy('user_id').execute()
@@ -672,6 +673,127 @@ test('没有 .env 时遇到十六进制摘要的密码哈希就停止', async ()
   const result = await run({ passwordMethod: null })
   expect(result.status).toBe('blocked')
   expect(result.report.blocking.items).toEqual([{ code: 'password_method_required', uids: [4], total: 1 }])
+})
+
+test.each([
+  { passwordMethod: 'SALTED2MD5', algorithm: 'salted2md5', digest: MD5, prefix: '' },
+  { passwordMethod: 'SALTED2SHA512', algorithm: 'saltedsha512', digest: 'AB'.repeat(64), prefix: 'bs_' },
+])(
+  'authme-integration 的 $passwordMethod 独立盐打包，空盐沿用 BS 格式',
+  async ({ passwordMethod, algorithm, digest, prefix }) => {
+    await createBsSchema(source.db, { prefix })
+    await source.db.schema
+      .alterTable(prefix + 'users')
+      .addColumn('salt', 'varchar(6)', (column) => column.notNull().defaultTo(''))
+      .execute()
+    await insertRows(
+      source.db,
+      prefix + 'users',
+      [
+        { password: digest, salt: 'Ab12z9' },
+        { password: digest, salt: '' },
+        { password: digest, salt: 'bad!$' },
+        { password: 'ab', salt: 'Ab12z9' },
+        { password: BCRYPT, salt: 'bad!$' },
+        { password: ARGON, salt: 'bad!$' },
+      ].map((password, index) => ({
+        uid: index + 1,
+        email: `user${index + 1}@example.test`,
+        score: 0,
+        ip: '',
+        last_sign_at: '2020-01-01 00:00:00',
+        register_at: '2020-01-01 00:00:00',
+        ...password,
+      })),
+    )
+
+    const result = await run({ passwordMethod, prefix })
+    expect(result.status).toBe('succeeded')
+    expect(result.report.tables.users.adjusted).toEqual({ authme_password: 1, unrecognized_password: 2 })
+    const accounts = await target.db.selectFrom('accounts').select(['user_id', 'password']).orderBy('user_id').execute()
+    expect(accounts).toEqual([
+      { user_id: 1, password: `$authme$${algorithm}$Ab12z9$${digest.toLowerCase()}` },
+      { user_id: 2, password: `$bs$${passwordMethod.toLowerCase()}$${digest.toLowerCase()}` },
+      { user_id: 5, password: BCRYPT },
+      { user_id: 6, password: ARGON },
+    ])
+    expect(reportToMarkdown(result.report)).toContain(
+      '密码是 AuthMe 的格式，原样导入；启用官方插件"AuthMe 密码"后能用旧密码登录，登录后换成新算法 1',
+    )
+  },
+)
+
+test('SHA256 保留 AuthMe 的 $SHA$ 哈希，纯摘要仍按 BS 格式导入，不读独立盐', async () => {
+  await createBsSchema(source.db)
+  await source.db.schema
+    .alterTable('users')
+    .addColumn('salt', 'varchar(6)', (column) => column.notNull().defaultTo(''))
+    .execute()
+  const digest = 'AB'.repeat(32)
+  const authme = `$SHA$Ab12z9$${digest}`
+  await insertRows(
+    source.db,
+    'users',
+    [authme, digest].map((password, index) => ({
+      uid: index + 1,
+      email: `user${index + 1}@example.test`,
+      score: 0,
+      password,
+      salt: 'bad!$',
+      ip: '',
+      last_sign_at: '2020-01-01 00:00:00',
+      register_at: '2020-01-01 00:00:00',
+    })),
+  )
+
+  const result = await run({ passwordMethod: 'SHA256' })
+  expect(result.status).toBe('succeeded')
+  expect(result.report.tables.users.adjusted).toEqual({ authme_password: 1 })
+  expect(await target.db.selectFrom('accounts').select(['user_id', 'password']).orderBy('user_id').execute()).toEqual([
+    { user_id: 1, password: authme },
+    { user_id: 2, password: `$bs$sha256$${digest.toLowerCase()}` },
+  ])
+})
+
+test('未知的可打印密码格式留给插件，无效值和 NextSkin 自有格式不导入密码', async () => {
+  await createBsSchema(source.db)
+  const preserved = ['$pbkdf2-sha256$29000$salt$digest', '!abcdef!', '$plugin$' + 'x'.repeat(247)]
+  const rejected = [
+    '',
+    'short',
+    ' hash-with-leading-space',
+    'hash-with space',
+    'hash-with-tab\t',
+    'hash-with-newline\n',
+    '$bs$md5$' + MD5.toLowerCase(),
+    '$authme$salted2md5$Ab12z9$' + MD5.toLowerCase(),
+    'a'.repeat(32) + ':' + 'b'.repeat(128),
+    '$plugin$非ASCII',
+    '$plugin$\x7f',
+  ]
+  await insertRows(
+    source.db,
+    'users',
+    [...preserved, ...rejected].map((password, index) => ({
+      uid: index + 1,
+      email: `user${index + 1}@example.test`,
+      score: 0,
+      password,
+      ip: '',
+      last_sign_at: '2020-01-01 00:00:00',
+      register_at: '2020-01-01 00:00:00',
+    })),
+  )
+
+  const result = await run({ passwordMethod: null })
+  expect(result.status).toBe('succeeded')
+  expect(result.report.tables.users.adjusted).toEqual({ plugin_password: 3, unrecognized_password: 11 })
+  expect(await target.db.selectFrom('accounts').select(['user_id', 'password']).orderBy('user_id').execute()).toEqual(
+    preserved.map((password, index) => ({ user_id: index + 1, password })),
+  )
+  expect(reportToMarkdown(result.report)).toContain(
+    '密码哈希核心认不出，原样导入；装上认得这种格式的密码插件后能用旧密码登录，否则用找回密码重设 3',
+  )
 })
 
 test('表前缀和旧版 texture-description 的表', async () => {

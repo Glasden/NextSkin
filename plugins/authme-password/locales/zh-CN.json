@@ -1,0 +1,9 @@
+{
+  "hasher": {
+    "authme": "AuthMe 的密码格式（SHA256、SALTED2MD5、SALTEDSHA512）"
+  },
+  "plugin": {
+    "name": "AuthMe 密码",
+    "description": "从装过 authme-integration 的 Blessing Skin 导入之后，让用户用原来的密码登录：核对 AuthMe 格式的密码，登录一次就换成站点自己的算法。"
+  }
+}

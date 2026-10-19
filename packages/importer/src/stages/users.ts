@@ -1,10 +1,14 @@
 // users → users、accounts（docs/schema.md 的对照表）。头像要等材质导入之后再补（fillAvatars）
 import { countRows, writeAuthDate, type UserRole } from '@nextskin/db'
 import {
+  authmeSaltedAlgorithm,
+  formatAuthmeSalted,
   formatLegacyDigest,
+  isCurrentPasswordHash,
   isLegacyPasswordHash,
   legacyDigestAlgorithm,
   matchLocale,
+  type AuthmeSaltedAlgorithm,
   type LegacyDigestAlgorithm,
 } from '@nextskin/domain/importer'
 import { sql } from 'kysely'
@@ -17,19 +21,33 @@ const ROLES: Record<number, UserRole> = { [-1]: 'banned', 0: 'user', 1: 'admin',
 export interface PasswordFormat {
   /** null：bcrypt、argon2，原样保存；否则是十六进制摘要的算法 */
   digest: LegacyDigestAlgorithm | null
+  authmeSalted: AuthmeSaltedAlgorithm | null
   /** PWD_METHOD 是否来自旧站的 .env；没有时按 BS 的默认 BCRYPT */
   fromEnv: boolean
 }
 
 export function passwordFormat(pwdMethod: string | null): PasswordFormat {
-  return { digest: legacyDigestAlgorithm(pwdMethod ?? 'BCRYPT'), fromEnv: pwdMethod !== null }
+  return {
+    digest: legacyDigestAlgorithm(pwdMethod ?? 'BCRYPT'),
+    authmeSalted: authmeSaltedAlgorithm(pwdMethod),
+    fromEnv: pwdMethod !== null,
+  }
 }
 
-type Converted = { hash: string } | { hash: null; reason: 'unrecognized' | 'needs_env' }
+type Converted =
+  | { hash: string; reason?: 'authme_password' | 'plugin_password' }
+  | { hash: null; reason: 'unrecognized' | 'needs_env' }
 
-function convertPassword(stored: string, format: PasswordFormat): Converted {
+function convertPassword(stored: string, format: PasswordFormat, salt: string | null): Converted {
   if (/^\$2[aby]\$/.test(stored) || /^\$argon2(?:i|id)\$/.test(stored)) return { hash: stored }
   if (/^[0-9a-fA-F]+$/.test(stored)) {
+    if (format.authmeSalted && salt) {
+      try {
+        return { hash: formatAuthmeSalted(format.authmeSalted, salt, stored), reason: 'authme_password' }
+      } catch {
+        return { hash: null, reason: 'unrecognized' }
+      }
+    }
     if (format.digest) {
       try {
         const hash = formatLegacyDigest(format.digest, stored)
@@ -42,6 +60,14 @@ function convertPassword(stored: string, format: PasswordFormat): Converted {
     // 不知道是哪种摘要就导入，这些用户全都登录不了（ADR-0031）
     return format.fromEnv ? { hash: null, reason: 'unrecognized' } : { hash: null, reason: 'needs_env' }
   }
+  // 别的看起来像哈希的值原样保存，留给 passwordHasher 插件认领（ADR-0033）；$bs$、$authme$ 是 NextSkin 自己的格式，不会来自 BS
+  if (
+    /^[\x21-\x7e]{8,255}$/.test(stored) &&
+    !stored.startsWith('$bs$') &&
+    !stored.startsWith('$authme$') &&
+    !isCurrentPasswordHash(stored)
+  )
+    return { hash: stored, reason: stored.startsWith('$SHA$') ? 'authme_password' : 'plugin_password' }
   return { hash: null, reason: 'unrecognized' }
 }
 
@@ -49,6 +75,7 @@ export async function importUsers(ctx: StageContext, format: PasswordFormat): Pr
   const { src, tx, report } = ctx
   const stats = report.tables.users
   const table = ctx.schema.tables.users
+  const readSalt = format.authmeSalted !== null && ctx.schema.userSalt
   stats.source = await countRows(src.selectFrom(table))
   ctx.advance('users', 0, undefined, stats.source)
   const emails = new Map<string, number>()
@@ -67,6 +94,7 @@ export async function importUsers(ctx: StageContext, format: PasswordFormat): Pr
     'last_sign_at',
     'register_at',
     'verified',
+    ...(readSalt ? ['salt'] : []),
   ])) {
     const users = []
     const accounts = []
@@ -111,7 +139,7 @@ export async function importUsers(ctx: StageContext, format: PasswordFormat): Pr
         registration_ip: ip && ip.length <= 45 ? ip : null,
         last_check_in_at: bsDateTime(row.last_sign_at, ctx.timeZone),
       })
-      const converted = convertPassword(toText(row.password) ?? '', format)
+      const converted = convertPassword(toText(row.password) ?? '', format, readSalt ? toText(row.salt) : null)
       if (converted.hash === null) {
         if (converted.reason === 'needs_env') {
           needsEnvTotal++
@@ -119,6 +147,7 @@ export async function importUsers(ctx: StageContext, format: PasswordFormat): Pr
         } else bump(stats.adjusted, 'unrecognized_password')
         continue
       }
+      if (converted.reason) bump(stats.adjusted, converted.reason)
       // Better Auth 按 account_id 找密码，写 uid 的字符串
       accounts.push({
         account_id: String(uid),

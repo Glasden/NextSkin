@@ -1,0 +1,9 @@
+{
+  "hasher": {
+    "authme": "AuthMe password formats (SHA256, SALTED2MD5, SALTEDSHA512)"
+  },
+  "plugin": {
+    "name": "AuthMe passwords",
+    "description": "After importing from a Blessing Skin site that used authme-integration, lets users sign in with their old passwords: checks AuthMe-format password hashes and switches each one to the site's own algorithm on first sign-in."
+  }
+}

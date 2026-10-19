@@ -110,6 +110,19 @@ export function ManifestList({
           ))}
         />
         <ManifestRow
+          label={t('manifest.providers')}
+          none={t('manifest.none')}
+          stacked
+          items={(['passwordHasher', 'login'] as const).flatMap((kind) =>
+            manifest.providers[kind].map((provider) => (
+              <span key={`${kind}:${provider.id}`} className="inline-flex flex-wrap items-center gap-2">
+                {t('manifest.providerItem', { kind: t(`providers.${kind}`), label: translate(provider.label) })}
+                {highRisk.includes(`provider.${kind}`) && <Badge tone="danger">{t('manifest.highRisk')}</Badge>}
+              </span>
+            )),
+          )}
+        />
+        <ManifestRow
           label={t('manifest.formFields')}
           none={t('manifest.none')}
           items={(manifest.ui.formFields ?? []).map(({ field }) => (

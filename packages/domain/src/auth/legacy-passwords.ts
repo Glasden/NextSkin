@@ -40,6 +40,33 @@ export function formatLegacyDigest(algorithm: LegacyDigestAlgorithm, hexDigest: 
   return `$bs$${algorithm}$${hexDigest.toLowerCase()}`
 }
 
+const authmeDigestLengths = { salted2md5: 32, saltedsha512: 128 } as const
+
+export type AuthmeSaltedAlgorithm = keyof typeof authmeDigestLengths
+
+/**
+ * BS 的 authme-integration 在 SALTED2MD5、SALTED2SHA512 下给每个用户一个盐，存在它加的 users.salt 列，
+ * 摘要按 AuthMe 的算法算：md5(md5(密码) ‖ 盐)、sha512(密码 ‖ 盐)，后者和 BS 自己的 SALTED2SHA512 不同。
+ * 盐为空的用户仍按全站盐算，走上面的旧摘要格式
+ */
+export function authmeSaltedAlgorithm(pwdMethod: string | null): AuthmeSaltedAlgorithm | null {
+  return pwdMethod === 'SALTED2MD5' ? 'salted2md5' : pwdMethod === 'SALTED2SHA512' ? 'saltedsha512' : null
+}
+
+/**
+ * 盐和摘要拼成 $authme$<算法>$<盐>$<小写摘要>。核心不核对这种格式，由官方插件"AuthMe 密码"的 passwordHasher 认领（ADR-0033）
+ */
+export function formatAuthmeSalted(algorithm: AuthmeSaltedAlgorithm, salt: string, hexDigest: string): string {
+  if (
+    !Object.hasOwn(authmeDigestLengths, algorithm) ||
+    !/^[0-9A-Za-z]{1,64}$/.test(salt) ||
+    hexDigest.length !== authmeDigestLengths[algorithm] ||
+    /[^a-f0-9]/i.test(hexDigest)
+  )
+    throw new Error('AuthMe 的盐或摘要格式不对；盐只能是 1 到 64 个字母和数字，摘要是对应算法长度的十六进制')
+  return `$authme$${algorithm}$${salt}$${hexDigest.toLowerCase()}`
+}
+
 export function isLegacyPasswordHash(hash: string): boolean {
   return /^(?:\$2[aby]\$|\$argon2(?:i|id)\$|\$bs\$)/.test(hash)
 }

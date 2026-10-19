@@ -49,6 +49,8 @@ export type PluginCall =
       readonly request: SerializedRequest
       readonly scope: RequestScope
     }
+  /** passwordHasher 的 verify；`provider` 是 Provider 的 id。参数里有明文密码，核心不记录调用的内容 */
+  | { readonly kind: 'passwordHasher'; readonly provider: string; readonly password: string; readonly hash: string }
   | { readonly kind: 'migrate'; readonly name: string }
   /** 用插件自己的 zod schema 再校验一次设置；不通过时返回出错的顶层键 */
   | { readonly kind: 'validateSettings'; readonly values: Readonly<Record<string, Json>> }

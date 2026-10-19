@@ -328,6 +328,9 @@ importers:
       '@nextskin/importer':
         specifier: workspace:*
         version: link:../../packages/importer
+      '@nextskin/plugin-authme-password':
+        specifier: workspace:*
+        version: link:../../plugins/authme-password
       '@nextskin/plugin-cdn-refresh':
         specifier: workspace:*
         version: link:../../plugins/cdn-refresh
@@ -720,6 +723,22 @@ importers:
       wawoff2:
         specifier: 2.0.1
         version: 2.0.1
+
+  plugins/authme-password:
+    dependencies:
+      '@nextskin/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+    devDependencies:
+      '@nextskin/plugin-host':
+        specifier: workspace:*
+        version: link:../../packages/plugin-host
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.5(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
   plugins/cdn-refresh:
     dependencies:

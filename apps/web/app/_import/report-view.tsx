@@ -301,6 +301,8 @@ const reasonKeys = [
   'invalid_register_at',
   'unsupported_locale',
   'unrecognized_password',
+  'authme_password',
+  'plugin_password',
   'avatar_missing',
   'user_missing',
   'duplicate_name',

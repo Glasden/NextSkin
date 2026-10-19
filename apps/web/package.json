@@ -19,6 +19,7 @@
     "@nextskin/domain": "workspace:*",
     "@nextskin/i18n": "workspace:*",
     "@nextskin/importer": "workspace:*",
+    "@nextskin/plugin-authme-password": "workspace:*",
     "@nextskin/plugin-cdn-refresh": "workspace:*",
     "@nextskin/plugin-invitation-codes": "workspace:*",
     "@nextskin/skin": "workspace:*",

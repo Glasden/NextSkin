@@ -58,6 +58,8 @@ const IGNORED = new Set([
 export interface SourceSchema {
   /** 带前缀的真实表名 */
   tables: Record<keyof typeof REQUIRED, string>
+  /** authme-integration 加的 users.salt 列，不是 BS 必需的列 */
+  userSalt: boolean
   /** yggdrasil-api 或 yggdrasil-connect 的 UUID 映射表；hasPid：yggdrasil-connect 的结构，有 pid 列 */
   uuid: { table: string; hasPid: boolean } | null
   /** texture-description 插件的描述：新版是 textures_description.description，旧版是 textures_desc.desc */
@@ -117,6 +119,7 @@ export async function inspectSourceSchema(db: Kysely<SourceDatabase>, prefix: st
   }
   return {
     tables: Object.fromEntries(Object.keys(REQUIRED).map((name) => [name, prefix + name])) as SourceSchema['tables'],
+    userSalt: tables.get('users')!.has('salt'),
     uuid,
     descriptions,
     unknown,

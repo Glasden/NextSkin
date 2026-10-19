@@ -2,7 +2,7 @@ import { isUniqueViolation, toIsoTimestamp, transactionWithRetry, writeAuthDate,
 import { isLocale } from '@nextskin/i18n'
 import type { PrivateUser } from '@nextskin/plugin-sdk'
 import type { Kysely } from 'kysely'
-import { checkUserPassword } from '../auth/password.ts'
+import { checkUserPassword, type PluginPasswordVerifier } from '../auth/password.ts'
 import type { CoreOptions } from '../core.ts'
 import { DomainError } from '../errors.ts'
 import type { Events } from '../events/emit.ts'
@@ -26,6 +26,7 @@ export function createUserManagement(
   events: Events,
   textureRemoval: TextureRemoval,
   textureNow: () => Date,
+  passwordPlugins: PluginPasswordVerifier,
 ) {
   const { db } = options
   const tokens = createEmailChangeTokens(options.secretKey)
@@ -37,12 +38,10 @@ export function createUserManagement(
     if (user.role === 'banned') throw new DomainError('user_banned')
   }
   async function checkPassword(uid: number, password: string) {
-    const valid = await checkUserPassword(
-      db,
-      uid,
-      password,
-      async () => (await settings.read(['auth.legacyPasswordSalt']))['auth.legacyPasswordSalt'],
-    )
+    const valid = await checkUserPassword(db, uid, password, {
+      legacySalt: async () => (await settings.read(['auth.legacyPasswordSalt']))['auth.legacyPasswordSalt'],
+      plugins: passwordPlugins,
+    })
     if (!valid) throw new DomainError('password_incorrect')
   }
   async function previewEmailChange(token: string): Promise<{ email: string } | null> {
