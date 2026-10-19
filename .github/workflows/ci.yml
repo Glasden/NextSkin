@@ -154,4 +154,16 @@ jobs:
             echo "::warning::找不到比较基准 $BASE（新建分支或强制推送），跳过 changeset 检查"
             exit 0
           fi
-          pnpm changeset status --since="$BASE"
+          # changeset status 只认这段范围里新加的 changeset。发布提交（changeset version）把它们挪进
+          # .changeset/pre/ 或删掉，和发布提交一起推送时整段看就像没附，所以在发布提交处分段：
+          # 之前的改动在发布提交的父提交上检查，之后的从发布提交算起
+          changeset="$PWD/node_modules/@changesets/cli/bin.js"
+          from=$BASE
+          for release in $(git log --reverse --format=%H "$BASE..HEAD" -- packages/plugin-sdk/CHANGELOG.md); do
+            if [ "$(git rev-parse "$release^")" != "$(git rev-parse "$from")" ]; then
+              git worktree add --detach "$RUNNER_TEMP/changeset-$release" "$release^"
+              (cd "$RUNNER_TEMP/changeset-$release" && node "$changeset" status --since="$from")
+            fi
+            from=$release
+          done
+          pnpm changeset status --since="$from"
