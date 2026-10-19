@@ -2,21 +2,17 @@ import { expect, test } from 'vitest'
 import { definePlugin } from '@nextskin/plugin-sdk'
 import invitation from '../../../../plugins/invitation-codes/src/official.ts'
 import cdn from '../../../../plugins/cdn-refresh/src/official.ts'
-import invitationExample from '../../../plugin-sdk/examples/invitation-codes/index.ts'
-import cdnExample from '../../../plugin-sdk/examples/cdn-refresh/index.ts'
-import authmeExample from '../../../plugin-sdk/examples/authme-hasher/index.ts'
 import { buildManifest } from '../manifest.ts'
 import { parsePluginManifest } from './manifest-schema.ts'
 import { PluginPackageError } from './error.ts'
 
 const pkg = { name: 'test', version: '1.0.0', nextskin: { id: 'test' } }
-const base = buildManifest(definePlugin({ capabilities: [] }), pkg)
+const base = { ...buildManifest(definePlugin({ capabilities: [] }), pkg), entry: { server: 'server.mjs' } }
 
-test('官方插件与三个 SDK 示例的清单都能通过严格校验', () => {
+test('官方插件的清单都能通过严格校验', () => {
   const manifests = [
     buildManifest(invitation.definition, invitation.package),
     buildManifest(cdn.definition, cdn.package),
-    ...[invitationExample, cdnExample, authmeExample].map((definition) => buildManifest(definition, pkg)),
   ]
   for (const manifest of manifests) {
     const complete = { ...manifest, entry: { server: 'server.mjs' }, integrity: { 'server.mjs': 'a'.repeat(64) } }
@@ -106,4 +102,88 @@ test.each([
 ])('清单拒绝错误字段 %s', (field, patch) => {
   expect(() => parsePluginManifest({ ...base, ...patch })).toThrow(PluginPackageError)
   expect(() => parsePluginManifest({ ...base, ...patch })).toThrow(field)
+})
+
+test.each(['/../api', '/./x', '/a//b', '/a\\b', '/a#x', '/%2e%2e/api', '/a/%2F/b'])(
+  '构建和安装都拒绝 UI 路径 %s',
+  (source) => {
+    const ui = {
+      pages: {
+        test: {
+          area: 'admin' as const,
+          title: 'test',
+          view: {
+            kind: 'table' as const,
+            source: source as `/${string}`,
+            columns: [],
+            rowActions: [{ label: 'x', method: 'POST' as const, route: source as `/${string}` }],
+          },
+        },
+      },
+    }
+    expect(() => buildManifest(definePlugin({ capabilities: [], ui }), pkg)).toThrow(/路径/)
+    expect(() => parsePluginManifest({ ...base, ui })).toThrow(/ui/)
+  },
+)
+
+test('UI 的 source/load/submit/action 路径逐项检查，并允许查询', () => {
+  const form = (load: string, route: string) => ({
+    pages: {
+      test: {
+        area: 'admin',
+        title: 'test',
+        view: { kind: 'form', fields: [], load, submit: { method: 'POST', route, label: 'x' } },
+      },
+    },
+  })
+  expect(() => parsePluginManifest({ ...base, ui: form('/x?scope=active', '/save?x=1') })).not.toThrow()
+  for (const ui of [form('/../api', '/save'), form('/x', '/../api')])
+    expect(() => parsePluginManifest({ ...base, ui })).toThrow(/ui/)
+  for (const key of ['toolbar', 'rowActions']) {
+    const ui = {
+      pages: {
+        test: {
+          area: 'admin',
+          title: 'test',
+          view: {
+            kind: 'table',
+            source: '/',
+            columns: [],
+            [key]: [{ label: 'x', method: 'POST', route: '/../../api' }],
+          },
+        },
+      },
+    }
+    expect(() => parsePluginManifest({ ...base, ui })).toThrow(/ui/)
+  }
+})
+
+test.each([
+  { type: 'select' },
+  { type: 'select', options: [] },
+  { type: 'select', options: [{ value: 'x', label: 'x' }], placeholder: 'x' },
+  { type: 'boolean', placeholder: 'x' },
+  { type: 'boolean', maxLength: 2 },
+  { type: 'number', maxLength: 2 },
+  { type: 'text', options: [] },
+])('构建与安装都拒绝不匹配的 Field：%j', (properties) => {
+  const ui = { formFields: [{ form: 'auth.register', field: { name: 'x', label: 'x', ...properties } }] }
+  expect(() => buildManifest({ capabilities: [], ui } as never, pkg)).toThrow(/字段/)
+  expect(() => parsePluginManifest({ ...base, ui })).toThrow(/ui/)
+})
+
+test('安装时检查完整任务名的 128 字符上限', () => {
+  const jobs = [{ name: 'x'.repeat(64), maxAttempts: 5, timeoutMs: 1000 }]
+  expect(() => parsePluginManifest({ ...base, id: 'a'.repeat(52), jobs })).not.toThrow()
+  expect(() => parsePluginManifest({ ...base, id: 'a'.repeat(53), jobs })).toThrow('128')
+})
+
+test('安装清单不接受 null 入口和不支持的设置控件', () => {
+  expect(() => parsePluginManifest({ ...base, entry: { server: null } })).toThrow('entry.server')
+  expect(() =>
+    parsePluginManifest({
+      ...base,
+      settingsSchema: { type: 'object', properties: { x: { type: 'array', items: { type: 'number' } } } },
+    }),
+  ).toThrow('控件')
 })

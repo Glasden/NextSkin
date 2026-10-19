@@ -5,7 +5,7 @@ import {
   type CoreDatabase,
   type TextureType,
 } from '@nextskin/db'
-import type { Texture } from '@nextskin/plugin-sdk'
+import type { Texture } from '../dto.ts'
 import type { Kysely } from 'kysely'
 import { DomainError } from '../errors.ts'
 import type { Events } from '../events/emit.ts'

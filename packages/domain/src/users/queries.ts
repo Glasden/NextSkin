@@ -6,7 +6,7 @@ import {
   type IsoTimestamp,
   type UserRole,
 } from '@nextskin/db'
-import type { PrivateUser } from '@nextskin/plugin-sdk'
+import type { PrivateUser } from '../dto.ts'
 import type { Kysely } from 'kysely'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { textureScaleOrNull } from '../players/queries.ts'

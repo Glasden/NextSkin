@@ -1,4 +1,4 @@
-import type { UserRole } from '@nextskin/plugin-sdk'
+import type { UserRole } from '@nextskin/db'
 
 export type CorePermission =
   | 'reports.review'

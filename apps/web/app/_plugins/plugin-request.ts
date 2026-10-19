@@ -1,10 +1,17 @@
 import { apiError, sendJson } from '../../lib/api-client'
+import { pluginUrl } from '../../lib/plugin-url'
 
 /** 表格的行动作的路径里可以写 `:字段`，换成这一行的值（SDK 的 ui.ts） */
 export function fillRoute(route: string, row?: Readonly<Record<string, unknown>>): string {
   return route.replace(/:([A-Za-z][A-Za-z0-9_]*)/g, (_, name: string) => {
     const value = row?.[name]
-    return encodeURIComponent(typeof value === 'string' || typeof value === 'number' ? String(value) : '')
+    if (
+      (typeof value !== 'string' && (typeof value !== 'number' || !Number.isFinite(value))) ||
+      value === '.' ||
+      value === '..'
+    )
+      throw new Error('invalid plugin route parameter')
+    return encodeURIComponent(String(value))
   })
 }
 
@@ -22,7 +29,8 @@ export async function callPlugin(
   path: string,
   body?: unknown,
 ): Promise<{ ok: boolean; message: string | null }> {
-  const { status, data } = await sendJson(method, `/plugins/${pluginId}${path}`, body)
+  const url = pluginUrl(pluginId, path, 'https://plugin.invalid')
+  const { status, data } = await sendJson(method, url.pathname + url.search, body)
   const record = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {}
   if (status >= 200 && status < 300) return { ok: true, message: text(record.message) }
   return { ok: false, message: apiError(data)?.message ?? text(record.error) ?? text(record.message) }

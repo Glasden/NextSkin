@@ -1,5 +1,5 @@
 import { toIsoTimestamp, transactionWithRetry, type CoreDatabase, type TextureType } from '@nextskin/db'
-import type { Texture } from '@nextskin/plugin-sdk'
+import type { Texture } from '../dto.ts'
 import type { Kysely, Transaction, Updateable } from 'kysely'
 import { DomainError } from '../errors.ts'
 import type { Events } from '../events/emit.ts'

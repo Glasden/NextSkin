@@ -2,7 +2,7 @@ import { definePlugin } from '@nextskin/plugin-sdk'
 import { expect, test, vi } from 'vitest'
 import { z } from 'zod'
 import type { AnyPluginDefinition } from './manifest.ts'
-import type { CoreRpc, InvocationContext, PluginCall } from './protocol.ts'
+import type { CoreRpc, InvocationContext, PluginCall, SerializedRequest } from './protocol.ts'
 import { loadPlugin, PluginSettingsInvalidError } from './runtime.ts'
 
 const context: InvocationContext = {
@@ -107,5 +107,43 @@ test('拦截器的非法返回值按失败处理', async () => {
     intercept: { 'user.register': () => Promise.resolve({ action: 'allow' }) },
   } as unknown as AnyPluginDefinition)
   await expect(plugin.invoke(call, context)).rejects.toThrow('拦截器只能')
+  plugin.unload()
+})
+
+test('fetch 只读 method、headers、body，忽略手写 JS 的其他选项', async () => {
+  const rpc = vi.fn<CoreRpc>().mockResolvedValue({ status: 200, statusText: 'OK', headers: [], body: null })
+  const plugin = load(
+    definePlugin({
+      capabilities: [],
+      jobs: {
+        fetch: {
+          async handler({ ctx }) {
+            const init = {
+              method: 'POST' as const,
+              headers: { 'x-test': 'yes' },
+              body: 'payload',
+              signal: AbortSignal.abort(),
+              redirect: 'bad value',
+              integrity: 'ignored',
+            }
+            const response = await ctx.fetch(new URL('https://example.test'), init)
+            expect(response.url).toBe('')
+            expect(response.redirected).toBe(false)
+          },
+        },
+      },
+    }),
+    rpc,
+  )
+  await plugin.invoke({ kind: 'job', name: 'fetch', payload: {}, attempt: 1 }, context)
+  const [invocation, method, args] = rpc.mock.calls[0]!
+  expect(invocation).toBe('invocation')
+  expect(method).toBe('fetch')
+  expect(args).toMatchObject({
+    method: 'POST',
+    url: 'https://example.test/',
+    body: new TextEncoder().encode('payload'),
+  })
+  expect((args as SerializedRequest).headers).toContainEqual(['x-test', 'yes'])
   plugin.unload()
 })

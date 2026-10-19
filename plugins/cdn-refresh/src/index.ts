@@ -5,7 +5,7 @@
  * 这几个事件发生后刷新对应的地址。不申请任何数据访问能力：事件本身带着需要的全部信息。
  * 刷新失败就抛错，核心按退避重试，多次失败后进入死信，在后台的插件页可以重试。
  */
-import { definePlugin, secret, z } from '@nextskin/plugin-sdk'
+import { definePlugin, secret, z, type PluginFetchInit } from '@nextskin/plugin-sdk'
 import { BATCH_SIZE, refreshAliyun, refreshAzure, refreshTencent } from './providers.ts'
 
 const azureKeys = [
@@ -58,14 +58,23 @@ export function normalizePath(line: string, base: string): string | null {
 
 async function refresh(
   paths: readonly string[],
-  ctx: { settings: Settings; site: { url: string }; fetch: (input: Request) => Promise<Response> },
+  ctx: {
+    settings: Settings
+    site: { url: string }
+    fetch: (url: string | URL, init?: PluginFetchInit) => Promise<Response>
+  },
 ) {
   const base = (ctx.settings.baseUrl || ctx.site.url).replace(/\/+$/, '')
   const unique = [...new Set(paths)]
   for (let i = 0; i < unique.length; i += BATCH_SIZE) {
     const batch = unique.slice(i, i + BATCH_SIZE)
     const credentials = { accessKeyId: ctx.settings.accessKeyId, accessKeySecret: ctx.settings.accessKeySecret }
-    const fetch = (input: Request) => ctx.fetch(input)
+    const fetch = async (input: Request) =>
+      ctx.fetch(input.url, {
+        method: input.method as PluginFetchInit['method'],
+        headers: input.headers,
+        body: input.body ? await input.arrayBuffer() : null,
+      })
     switch (ctx.settings.provider) {
       case 'aliyun':
         await refreshAliyun(
@@ -115,7 +124,7 @@ export default definePlugin({
   on: {
     // 同一个 hash 还被别的材质引用时文件不删，地址依然有效，不用刷新
     'texture.deleted': async ({ event, ctx }) => {
-      if (event.data.fileDeleted) await refresh([`/textures/${event.data.hash}`], ctx)
+      if (event.data.lastReference) await refresh([`/textures/${event.data.hash}`], ctx)
     },
     'player.texturesChanged': async ({ event, ctx }) => {
       await refresh(playerPaths(event.data.player.name), ctx)

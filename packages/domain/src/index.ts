@@ -35,7 +35,8 @@ export type { CheckInRules, CheckInResult } from './users/check-in.ts'
 export type { UserOverview } from './users/queries.ts'
 export type { OwnedPlayer } from './players/queries.ts'
 export type { ScoreEntry } from './score/queries.ts'
-export type { Player, UserRole } from '@nextskin/plugin-sdk'
+export type { Player } from '@nextskin/plugin-sdk'
+export type { UserRole, TextureType } from '@nextskin/db'
 export type { IsoTimestamp } from '@nextskin/db'
 
 export type { ChangeEmailResult } from './users/manage.ts'
@@ -50,7 +51,7 @@ export {
   type RenderKey,
 } from './textures/render-cache.ts'
 
-export type { Texture, TextureType } from '@nextskin/plugin-sdk'
+export type { Texture } from './dto.ts'
 export type { TextureSummary, TextureDetail, TextureListInput } from './textures/queries.ts'
 
 export type { ClosetItem } from './closet/service.ts'

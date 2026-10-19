@@ -33,7 +33,7 @@ export default definePlugin({
           )
         },
         async exchange({ query, codeVerifier, redirectUri, ctx }) {
-          const token = await exchangeCode((request) => ctx.fetch(request), 'https://oauth2.googleapis.com/token', {
+          const token = await exchangeCode((url, init) => ctx.fetch(url, init), 'https://oauth2.googleapis.com/token', {
             query,
             codeVerifier,
             redirectUri,

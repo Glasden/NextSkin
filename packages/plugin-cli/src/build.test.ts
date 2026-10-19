@@ -46,7 +46,7 @@ test.each([
       })
       const bytes = await readFile(out)
       const unpacked = unpackPluginPackage(bytes)
-      const withoutPackageFields = (manifest: typeof unpacked.manifest) => {
+      const withoutPackageFields = (manifest: ReturnType<typeof buildManifest>) => {
         const { entry, integrity, ...rest } = manifest
         expect(entry).toBeDefined()
         expect(integrity).toBeDefined()

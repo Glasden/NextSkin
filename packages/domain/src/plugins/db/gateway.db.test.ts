@@ -597,6 +597,27 @@ test('同一核心事务内的并发插件查询不覆盖彼此的超时', async
   ])
 })
 
+test('SDK 顶层移除的方法确实被网关拒绝；executeQuery 保留白名单编译结果的执行', async () => {
+  for (const node of [
+    plugin
+      .with('cte', (db) => db.selectFrom('codes').selectAll())
+      .selectFrom('cte')
+      .selectAll()
+      .toOperationNode(),
+    plugin
+      .withRecursive('cte', (db) => db.selectFrom('codes').selectAll())
+      .selectFrom('cte')
+      .selectAll()
+      .toOperationNode(),
+    plugin.mergeInto('codes').using('logs', 'logs.code', 'codes.code').whenMatched().thenDelete().toOperationNode(),
+    plugin.replaceInto('codes').values(row('replace-rejected')).toOperationNode(),
+  ])
+    expect(() => sanitizePluginQuery(node, scope)).toThrow(/with|MergeQueryNode|replace/)
+  const compiled = plugin.selectFrom('codes').select('code').where('code', '=', 'not-present').compile()
+  expect((await plugin.executeQuery(compiled)).rows).toEqual([])
+  await expect(plugin.executeQuery(sql`select 1`.compile(plugin))).rejects.toThrow(/RawNode/)
+})
+
 test('核心表数据完好；卸载删除有外键且非空的表，重复卸载安全', async () => {
   expect(await database.db.selectFrom('users').selectAll().execute()).toEqual([])
   expect(await database.db.selectFrom('settings').selectAll().where('key', '=', sentinel.key).execute()).toEqual([

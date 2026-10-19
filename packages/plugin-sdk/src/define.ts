@@ -29,9 +29,9 @@ type InterceptorCtx<
 
 export interface JobDefinition<Ctx> {
   handler(args: { payload: Json; attempt: number; ctx: Ctx }): Promise<void>
-  /** 默认 5 */
+  /** 整数 1–20，默认 5 */
   readonly maxAttempts?: number
-  /** 默认 60000 */
+  /** 整数 1–600000 毫秒，默认 60000 */
   readonly timeoutMs?: number
 }
 
@@ -39,8 +39,8 @@ export interface JobDefinition<Ctx> {
  * 插件定义。
  *
  * 所有贡献都写成这个对象上的字段，而不是在运行时调用 `ctx.on(...)` 注册。
- * 原因：构建工具不执行任何业务逻辑就能把整个插件"会做什么"提取成 manifest.json，
- * 安装前就能展示、校验、检测冲突；读代码的人（和 agent）也只需要看一个地方。
+ * 原因：构建工具不调用 handler 就能把整个插件"会做什么"提取成 manifest.json，
+ * 构建会执行入口模块的顶层代码。安装前就能展示、校验、检测冲突；读代码的人（和 agent）也只需要看一个地方。
  */
 export interface PluginDefinition<
   C extends readonly Capability[],
@@ -52,12 +52,13 @@ export interface PluginDefinition<
   readonly capabilities: C
   /** 允许 ctx.fetch 访问的 origin */
   readonly network?: readonly `https://${string}`[]
+  /** 设置校验调用限 5 秒；支持字符串、数字、布尔、字符串枚举和一层对象，机密只能在顶层。 */
   readonly settings?: S
-  /** 插件新增的权限：键是权限名，值是给管理员看的说明文案键 */
+  /** 插件新增的权限：键为 `[A-Za-z][A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*`，值是说明文案键 */
   readonly permissions?: P
   readonly tables?: T
   /**
-   * 迁移，按键名排序执行，键名建议 '0001_create_codes' 这种格式。启用插件之前由核心执行，只往前走。
+   * 迁移名为 `[A-Za-z0-9_-]{1,128}`，需申请 storage.tables。按键名排序执行，键名建议 '0001_create_codes' 这种格式。启用插件之前由核心执行，只往前走。
    * DDL 只能写在这里；表名写逻辑名，并且必须在 `tables` 里声明。
    */
   readonly migrations?: Readonly<Record<string, PluginMigration>>
@@ -68,6 +69,7 @@ export interface PluginDefinition<
   }
   readonly providers?: Providers<Ctx<C, S, T>>
   readonly routes?: { readonly [K in RouteKey]?: RouteDefinition<Ctx<C, S, T>, P> }
+  /** 名为 `[A-Za-z][A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*`，最多 64 字符；加 plugin:<id>:job: 后不超过 128 字符。 */
   readonly jobs?: Readonly<Record<string, JobDefinition<Ctx<C, S, T>>>>
   /**
    * schedule 为五段 cron 表达式，按站点时区解释；日和星期两段都限定时取"或"，任一满足就执行。
@@ -95,7 +97,7 @@ export function table<Row extends object>(): TableDef<Row> {
 }
 
 /**
- * 敏感设置项：加密存储，后台用密码框显示，永远不会回传到浏览器。
+ * 敏感设置项，只能放在 settings 顶层：加密存储，后台用密码框显示，永远不会回传到浏览器。
  * 在 manifest 的 JSON Schema 里标成 `writeOnly`，和核心的机密设置项是同一个标记（ADR-0028）。
  */
 export function secret() {

@@ -375,12 +375,13 @@ export function startHostGeneration(options: {
     cancel(invocationId) {
       const id = byInvocation.get(invocationId)
       if (id === undefined) return
-      settle(id)?.reject(Object.assign(new Error('plugin call cancelled'), { name: 'PluginTimeoutError' }))
       try {
         if (!channel.closed) channel.send({ type: 'cancel', invocationId })
       } catch {
         // 通道已经因为积压关掉了：host 随后被杀掉，插件那边的调用也就停了
       }
+      // 先通知取消，再结算最后一个调用；退役的一代可能随结算关闭 stdin。
+      settle(id)?.reject(Object.assign(new Error('plugin call cancelled'), { name: 'PluginTimeoutError' }))
     },
     async retire() {
       if (!retiring) {

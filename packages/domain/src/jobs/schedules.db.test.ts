@@ -245,3 +245,14 @@ test('读取时区失败只记错误类型，下轮恢复后仍可触发', async
   await s.tick()
   expect(await queue()).toHaveLength(1)
 })
+
+test.each([undefined, null, false, 0, ''])('调度入队只给 undefined 补空对象，保留显式载荷：%j', async (payload) => {
+  const s = scheduler()
+  s.remove(name)
+  s.add({ name, job: name, cron: '0 0 * * *', payload })
+  await s.tick()
+  clock = new Date('2030-01-02T00:00:00Z')
+  await s.tick()
+  expect((await queue())[0]?.payload).toBe(JSON.stringify(payload === undefined ? {} : payload))
+  expect(lines).toEqual([])
+})

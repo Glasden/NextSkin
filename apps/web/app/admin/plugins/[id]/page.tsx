@@ -1,14 +1,15 @@
-import { externalCallbackPath, type PluginSettingView, type PluginSummary } from '@nextskin/domain'
+import { externalCallbackPath, type PluginSummary } from '@nextskin/domain'
 import { Alert, Badge, Link, Table } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
+import { pluginSettingText } from '../../../../lib/plugin-settings'
 import { pluginDescription, pluginName, pluginTranslator } from '../../../../lib/plugins'
 import { getServer } from '../../../../lib/server'
 import { getRequestRoot, requireAdmin } from '../../../../lib/session'
-import type { SettingItem, SettingText } from '../../settings/setting-text'
+import type { SettingItem } from '../../settings/setting-text'
 import { SettingsForm } from '../../settings/settings-form'
 import { DeadLetterActions } from '../dead-letter-actions'
 import { HostAlert, isHostDown } from '../host-alert'
@@ -25,39 +26,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     getLocale(),
   ])
   return { title: core.plugins.get(id) ? `${pluginName(core, id, locale)} · ${t('title')}` : t('title') }
-}
-
-/** 插件设置项的文案按约定取（SDK 的 ui.ts）：`settings.<键>.label`，对象的属性、枚举的选项各有一层 */
-function settingText(translate: ReturnType<typeof pluginTranslator>, view: PluginSettingView): SettingText {
-  const optional = (key: string) => {
-    const text = translate(key)
-    return text === key ? undefined : text
-  }
-  const prefix = `settings.${view.key}`
-  const label = optional(`${prefix}.label`) ?? view.key
-  const control = view.control
-  return {
-    label,
-    help: optional(`${prefix}.help`),
-    options:
-      control.kind === 'select'
-        ? Object.fromEntries(
-            control.options.map((option) => [option, optional(`${prefix}.options.${option}`) ?? option]),
-          )
-        : undefined,
-    fields:
-      control.kind === 'object'
-        ? Object.fromEntries(
-            control.properties.map(({ name }) => [
-              name,
-              {
-                label: optional(`${prefix}.fields.${name}.label`) ?? name,
-                help: optional(`${prefix}.fields.${name}.help`),
-              },
-            ]),
-          )
-        : undefined,
-  }
 }
 
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
@@ -152,7 +120,7 @@ export default async function AdminPluginPage({ params }: { params: Promise<{ id
   const items: SettingItem[] = settings.map((view) => ({
     ...view,
     generate: false,
-    text: settingText(translate, view),
+    text: pluginSettingText(translate, view),
     defaultValue: null,
   }))
   const highRisk = detail.highRisk.map((item) => {

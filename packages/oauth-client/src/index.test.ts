@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vitest'
-import { authorizationUrl, exchangeCode, fetchJson, readIdToken } from './index.ts'
+import { authorizationUrl, exchangeCode, fetchJson, readIdToken, type Fetch } from './index.ts'
 
 const args = {
   clientId: 'client & id',
@@ -49,8 +49,8 @@ test('授权地址保留 scope，编码参数，固定 code 和 S256', () => {
 test('通过传入的 fetch 发送表单，不把回调里的其他参数发给第三方', async () => {
   const requests: Request[] = []
   const result = await exchangeCode(
-    (request) => {
-      requests.push(request)
+    (url, init) => {
+      requests.push(new Request(url, init))
       return Promise.resolve(Response.json({ access_token: 'private-token' }))
     },
     'https://issuer.test/token',
@@ -76,7 +76,7 @@ test('通过传入的 fetch 发送表单，不把回调里的其他参数发给�
 test.each([{}, { code: '' }] as Readonly<Record<string, string>>[])(
   '没有授权码不发请求：%j',
   async (query: Readonly<Record<string, string>>) => {
-    const fetch = vi.fn<(request: Request) => Promise<Response>>()
+    const fetch = vi.fn<Fetch>()
     await expect(exchangeCode(fetch, 'https://issuer.test/token', { ...args, query })).rejects.toThrow(
       'missing authorization code',
     )

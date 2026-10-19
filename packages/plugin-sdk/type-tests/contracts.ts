@@ -204,7 +204,9 @@ definePlugin({
     'GET /c': {
       auth: 'public',
       async handler({ scope }) {
-        // @ts-expect-error 公开路由的 actor 可能不是用户
+        const kind: 'system' = scope.actor.kind
+        void kind
+        // @ts-expect-error 公开路由一律匿名
         scope.actor.uid
         return new Response()
       },
@@ -257,7 +259,7 @@ definePlugin({
       const texture = await ctx.textures.get(event.data.texture.tid)
       const uploader: number | null | undefined = texture?.uploader
       const description: string | null | undefined = texture?.description
-      const fields: readonly ('name' | 'type' | 'public' | 'description')[] = event.data.fields
+      const fields: readonly string[] = event.data.fields
       void uploader
       void description
       void fields
@@ -287,3 +289,202 @@ definePlugin({
     ],
   },
 })
+
+// 出站请求只有核心实际支持的参数。
+definePlugin({
+  capabilities: [],
+  jobs: {
+    check: {
+      async handler({ ctx }) {
+        await ctx.fetch(new URL('https://example.test'), { method: 'OPTIONS', body: null })
+        // @ts-expect-error 不接受 Request
+        await ctx.fetch(new Request('https://example.test'))
+        // @ts-expect-error 重定向由核心处理
+        await ctx.fetch('https://example.test', { redirect: 'manual' })
+        // @ts-expect-error 取消由 ctx.signal 决定
+        await ctx.fetch('https://example.test', { signal: new AbortController().signal })
+        // @ts-expect-error 不支持 TRACE
+        await ctx.fetch('https://example.test', { method: 'TRACE' })
+      },
+    },
+  },
+})
+
+definePlugin({
+  capabilities: [],
+  routes: {
+    'GET /x': {
+      auth: 'public',
+      // @ts-expect-error public 路由只能按 ip 限流
+      rateLimit: { limit: 1, windowSec: 1, by: 'user' },
+      handler: async () => new Response(),
+    },
+  },
+})
+
+definePlugin({
+  capabilities: [],
+  providers: {
+    passwordHasher: [
+      {
+        id: 'x',
+        label: 'x',
+        // @ts-expect-error detect 至少写一项
+        detect: {},
+        verify: async () => false,
+      },
+    ],
+  },
+})
+
+import type {
+  Field,
+  PluginManifest,
+  PluginDb,
+  PluginMigrationDb,
+  CoreEvents,
+  TextureType,
+  UserRole,
+} from '@nextskin/plugin-sdk'
+// @ts-expect-error select 必须有选项
+const missingOptions: Field = { name: 'x', label: 'x', type: 'select' }
+// @ts-expect-error select 的选项不能为空
+const emptyOptions: Field = { name: 'x', label: 'x', type: 'select', options: [] }
+// @ts-expect-error boolean 不使用 placeholder
+const booleanPlaceholder: Field = { name: 'x', label: 'x', type: 'boolean', placeholder: 'x' }
+const selectPlaceholder: Field = {
+  name: 'x',
+  label: 'x',
+  type: 'select',
+  options: [{ value: 'x', label: 'x' }],
+  // @ts-expect-error select 不使用 placeholder
+  placeholder: 'x',
+}
+// @ts-expect-error number 不使用 maxLength
+const numberLength: Field = { name: 'x', label: 'x', type: 'number', maxLength: 2 }
+// @ts-expect-error boolean 不使用 maxLength
+const booleanLength: Field = { name: 'x', label: 'x', type: 'boolean', maxLength: 2 }
+// @ts-expect-error text 不使用 options
+const textOptions: Field = { name: 'x', label: 'x', type: 'text', options: [{ value: 'x', label: 'x' }] }
+// @ts-expect-error 可安装清单必须有入口
+const noServer: PluginManifest['entry'] = { server: null }
+void [
+  missingOptions,
+  emptyOptions,
+  booleanPlaceholder,
+  selectPlaceholder,
+  numberLength,
+  booleanLength,
+  textOptions,
+  noServer,
+]
+
+declare const pluginDb: PluginDb<Record<never, never>>
+declare const migrationDb: PluginMigrationDb
+// @ts-expect-error 网关不支持 with
+void pluginDb.with
+// @ts-expect-error 网关不支持 withRecursive
+void pluginDb.withRecursive
+// @ts-expect-error 网关不支持 mergeInto
+void pluginDb.mergeInto
+// @ts-expect-error 网关不支持 replaceInto
+void pluginDb.replaceInto
+// 编译后的白名单查询仍然可执行。
+void pluginDb.executeQuery
+// @ts-expect-error 网关不支持 with
+void migrationDb.with
+// @ts-expect-error 网关不支持 withRecursive
+void migrationDb.withRecursive
+// @ts-expect-error 网关不支持 mergeInto
+void migrationDb.mergeInto
+// @ts-expect-error 网关不支持 replaceInto
+void migrationDb.replaceInto
+// 编译后的白名单查询仍然可执行。
+void migrationDb.executeQuery
+
+function receiveRole(value: UserRole) {
+  switch (value) {
+    case 'banned':
+    case 'user':
+    case 'admin':
+    case 'superadmin':
+      return
+    default: {
+      // @ts-expect-error 覆盖已知成员后仍须处理次版本新增的值
+      const exhaustive: never = value
+      void exhaustive
+    }
+  }
+}
+void receiveRole
+
+function receiveTextureType(value: TextureType) {
+  switch (value) {
+    case 'steve':
+    case 'alex':
+    case 'cape':
+      return
+    default: {
+      // @ts-expect-error 覆盖已知成员后仍须处理次版本新增的值
+      const exhaustive: never = value
+      void exhaustive
+    }
+  }
+}
+void receiveTextureType
+
+function receiveUserField(value: CoreEvents['user.profileUpdated']['fields'][number]) {
+  switch (value) {
+    case 'nickname':
+    case 'email':
+    case 'password':
+    case 'avatar':
+    case 'locale':
+      return
+    default: {
+      // @ts-expect-error 覆盖已知成员后仍须处理次版本新增的值
+      const exhaustive: never = value
+      void exhaustive
+    }
+  }
+}
+void receiveUserField
+
+function receiveTextureField(value: CoreEvents['texture.updated']['fields'][number]) {
+  switch (value) {
+    case 'name':
+    case 'type':
+    case 'public':
+    case 'description':
+      return
+    default: {
+      // @ts-expect-error 覆盖已知成员后仍须处理次版本新增的值
+      const exhaustive: never = value
+      void exhaustive
+    }
+  }
+}
+void receiveTextureField
+
+function receiveResolution(value: CoreEvents['report.resolved']['action']) {
+  switch (value) {
+    case 'dismissed':
+    case 'textureDeleted':
+    case 'uploaderBanned':
+      return
+    default: {
+      // @ts-expect-error 覆盖已知成员后仍须处理次版本新增的值
+      const exhaustive: never = value
+      void exhaustive
+    }
+  }
+}
+void receiveResolution
+
+// @ts-expect-error 服务端入口不能省略
+const absentServer: PluginManifest['entry'] = {}
+void absentServer
+
+// @ts-expect-error 提取出的清单也要求 detect 至少一项
+const emptyManifestDetect: PluginManifest['providers']['passwordHasher'][number]['detect'] = {}
+void emptyManifestDetect

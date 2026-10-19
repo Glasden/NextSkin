@@ -1,6 +1,6 @@
 import { isUniqueViolation, toIsoTimestamp, transactionWithRetry, writeAuthDate, type CoreDatabase } from '@nextskin/db'
 import { isLocale } from '@nextskin/i18n'
-import type { PrivateUser } from '@nextskin/plugin-sdk'
+import type { PrivateUser } from '../dto.ts'
 import type { Kysely } from 'kysely'
 import { checkUserPassword, type PluginPasswordVerifier } from '../auth/password.ts'
 import type { CoreOptions } from '../core.ts'

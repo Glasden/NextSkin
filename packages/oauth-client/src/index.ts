@@ -3,7 +3,14 @@
  * 每个插件的单文件里，所以只用 Web 标准 API 和 Node 内置模块；出站请求一律用调用方传进来的 `ctx.fetch`。
  * 错误消息只写笼统的原因，不带授权码、令牌和响应体。
  */
-export type Fetch = (request: Request) => Promise<Response>
+export type Fetch = (
+  url: string | URL,
+  init?: {
+    method?: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
+    headers?: RequestInit['headers']
+    body?: RequestInit['body']
+  },
+) => Promise<Response>
 
 export function authorizationUrl(
   endpoint: string,
@@ -27,7 +34,11 @@ export function authorizationUrl(
 export async function fetchJson(fetch: Fetch, request: Request, stage: 'token' | 'user'): Promise<unknown> {
   let response: Response
   try {
-    response = await fetch(request)
+    response = await fetch(request.url, {
+      method: request.method as NonNullable<Parameters<Fetch>[1]>['method'],
+      headers: request.headers,
+      body: request.body ? await request.arrayBuffer() : null,
+    })
   } catch {
     throw new Error(`${stage} request failed`)
   }

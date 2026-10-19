@@ -12,6 +12,8 @@
  *   插件按表里的启用状态登记，和 host 是否可用无关：host 不可用时拦截器照样按失败策略拒绝，
  *   插件的任务和事件留在表里，等 host 恢复（ADR-0033"运行时防护"）。
  */
+import type { UserRole } from '@nextskin/db'
+import type { ExtractedPluginManifest as PluginManifest } from '@nextskin/plugin-host'
 import { randomUUID } from 'node:crypto'
 import { ExclusiveLockBusyError, withExclusiveLock, type CoreDatabase, type IsoTimestamp } from '@nextskin/db'
 import {
@@ -37,9 +39,7 @@ import {
   type ExtraFields,
   type Field,
   type Json,
-  type PluginManifest,
   type RequestScope,
-  type UserRole,
 } from '@nextskin/plugin-sdk'
 import type { Kysely } from 'kysely'
 import { canPlugin } from '../access/permissions.ts'
@@ -291,6 +291,7 @@ export function createPluginSystem(options: {
   const invocations = new Map<string, Invocation>()
   const known = new Map<string, KnownPlugin>()
   const active = new Map<string, ActivePlugin>()
+  const routeWindows = new Map<string, { count: number; expiresAt: number }>()
   const breakers = new Map<string, { failures: number; openUntil: number }>()
   const officialIds = new Set<string>()
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -956,15 +957,23 @@ export function createPluginSystem(options: {
     log(`[plugins] ${id} activated version=${manifest.version}`)
   }
 
-  function deactivate(id: string) {
+  /** `cancel` 为 false 是换代（升级、改授权）：撤销登记，在途的调用照常做完（ADR-0035） */
+  function deactivate(id: string, cancel = true) {
     const state = active.get(id)
     if (!state) return
-    state.stopped = true
+    state.stopped = cancel
     active.delete(id)
     for (const name of state.registered.schedules) schedules.remove(name)
     for (const [event, name] of state.registered.events) events.unsubscribe(event as never, name)
     for (const name of state.registered.jobs) handlers.delete(name)
-    state.known.loaded.unload()
+    if (cancel) {
+      for (const [invocationId, invocation] of invocations) {
+        if (invocation.pluginId !== id) continue
+        invocation.controller.abort()
+        if (!invocation.known.official) invocation.known.loaded.cancel(invocationId)
+      }
+      state.known.loaded.unload()
+    }
     log(`[plugins] ${id} deactivated`)
   }
 
@@ -1009,7 +1018,7 @@ export function createPluginSystem(options: {
         current.granted.size === granted.size &&
         [...granted].every((capability) => current.granted.has(capability))
       if (same) continue
-      if (current) deactivate(id)
+      if (current) deactivate(id, !granted)
       if (!granted) continue
       try {
         activate(plugin, granted)
@@ -1107,6 +1116,7 @@ export function createPluginSystem(options: {
     providerId: string,
     call: Extract<PluginCall, { kind: 'login.authorize' | 'login.exchange' }>,
     check: (value: unknown) => unknown,
+    locale?: string,
   ): Promise<unknown> {
     const found = loginProvider(pluginId, providerId)
     if (!found) throw new DomainError('external_login_unavailable')
@@ -1116,6 +1126,7 @@ export function createPluginSystem(options: {
     try {
       result = await invoke(found.plugin, call, {
         timeoutMs: call.kind === 'login.authorize' ? LOGIN_AUTHORIZE_TIMEOUT_MS : LOGIN_EXCHANGE_TIMEOUT_MS,
+        locale,
       })
     } catch (error) {
       const reason = error instanceof PluginInvocationError ? error.reason : 'error'
@@ -1430,7 +1441,7 @@ export function createPluginSystem(options: {
     async loginAuthorize(
       pluginId: string,
       providerId: string,
-      args: { state: string; codeChallenge: string; redirectUri: string },
+      args: { state: string; codeChallenge: string; redirectUri: string; locale?: string },
     ): Promise<string> {
       const url = await invokeLogin(
         pluginId,
@@ -1444,6 +1455,7 @@ export function createPluginSystem(options: {
             return undefined
           }
         },
+        args.locale,
       )
       return url as string
     },
@@ -1452,7 +1464,7 @@ export function createPluginSystem(options: {
     async loginExchange(
       pluginId: string,
       providerId: string,
-      args: { query: Readonly<Record<string, string>>; codeVerifier: string; redirectUri: string },
+      args: { query: Readonly<Record<string, string>>; codeVerifier: string; redirectUri: string; locale?: string },
     ): Promise<ExternalIdentity> {
       const identity = await invokeLogin(
         pluginId,
@@ -1472,6 +1484,7 @@ export function createPluginSystem(options: {
             displayName: v.displayName,
           } satisfies ExternalIdentity
         },
+        args.locale,
       )
       return identity as ExternalIdentity
     },
@@ -1499,9 +1512,27 @@ export function createPluginSystem(options: {
       }
       if (input.request.body && input.request.body.byteLength > route.maxBodyBytes)
         throw new DomainError('request_too_large')
-      const actor = input.user
-        ? { kind: 'user' as const, uid: input.user.uid, role: input.user.role }
-        : { kind: 'system' as const }
+      if (route.rateLimit) {
+        const rule = route.rateLimit
+        const time = now().getTime()
+        for (const [key, window] of routeWindows) if (window.expiresAt <= time) routeWindows.delete(key)
+        const by = rule.by === 'user' && input.user ? `user:${input.user.uid}` : `ip:${input.ip}`
+        const key = JSON.stringify([input.pluginId, route.method, route.path, rule.limit, rule.windowSec, rule.by, by])
+        let window = routeWindows.get(key)
+        if (!window) {
+          window = { count: 0, expiresAt: time + rule.windowSec * 1000 }
+          routeWindows.set(key, window)
+        }
+        if (window.count >= rule.limit)
+          throw new DomainError('too_many_requests', {
+            retryAfter: Math.max(1, Math.ceil((window.expiresAt - time) / 1000)),
+          })
+        window.count++
+      }
+      const actor =
+        route.auth === 'user' && input.user
+          ? { kind: 'user' as const, uid: input.user.uid, role: input.user.role }
+          : { kind: 'system' as const }
       let result: unknown
       try {
         result = await invoke(

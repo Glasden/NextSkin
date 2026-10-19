@@ -88,3 +88,40 @@ test('插件 API 版本就是 SDK 的版本号；api 取到次版本，预发布
   expect(satisfies('2.0.0', pluginApiRange('1.0.0'))).toBe(false)
   expect(satisfies(PLUGIN_API_VERSION, buildManifest(definePlugin({ capabilities: [] }), pkg).api)).toBe(true)
 })
+
+test('定时任务只给 undefined 补默认载荷，保留 null', () => {
+  const manifest = buildManifest(
+    definePlugin({
+      capabilities: [],
+      jobs: { tick: { handler: async () => {} } },
+      cron: [
+        { schedule: '* * * * *', job: 'tick' },
+        { schedule: '* * * * *', job: 'tick', payload: null },
+      ],
+    }),
+    pkg,
+  )
+  expect(manifest.cron.map((entry) => entry.payload)).toEqual([{}, null])
+})
+
+test('构建时拒绝超过入队上限的完整任务名，边界长度可用', () => {
+  const definition = definePlugin({ capabilities: [], jobs: { ['x'.repeat(64)]: { handler: async () => {} } } })
+  expect(buildManifest(definition, { ...pkg, nextskin: { id: 'a'.repeat(52) } }).jobs).toHaveLength(1)
+  expect(() => buildManifest(definition, { ...pkg, nextskin: { id: 'a'.repeat(53) } })).toThrow('128')
+})
+
+test.each(['1.0.0+build', '1.0.0-rc.1+build'])('构建和安装共用 semver，接受 %s', (version) => {
+  expect(buildManifest(definePlugin({ capabilities: [] }), { ...pkg, version }).version).toBe(version)
+})
+
+test.each(['01.0.0', '1.0.0-01', '1.0.0\n'])('构建拒绝非法版本 %s', (version) => {
+  expect(() => buildManifest(definePlugin({ capabilities: [] }), { ...pkg, version })).toThrow('semver')
+})
+
+test.each([
+  z.object({ bad: z.array(z.number()) }),
+  z.object({ bad: z.object({ nested: z.object({ value: z.string() }) }) }),
+  z.object({ bad: z.object({ token: secret() }) }),
+])('构建时检查设置能否映射到控件', (settings) => {
+  expect(() => buildManifest(definePlugin({ capabilities: [], settings }), pkg)).toThrow(/控件|机密/)
+})

@@ -10,6 +10,7 @@ export {
   OBJECT_NAME,
   type AnyPluginDefinition,
   type PluginContributions,
+  type ExtractedPluginManifest,
   type PluginPackageJson,
 } from './manifest.ts'
 export { eventNames } from './events.ts'
@@ -59,3 +60,11 @@ export * from './package/tar.ts'
 export * from './package/archive.ts'
 export * from './package/manifest-schema.ts'
 export * from './package/module-loader.ts'
+
+export {
+  settingControl,
+  settingProperties,
+  type JsonSchema,
+  type SettingControl,
+  type PluginSettingProperty,
+} from './settings.ts'

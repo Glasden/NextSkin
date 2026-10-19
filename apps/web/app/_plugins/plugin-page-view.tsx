@@ -10,6 +10,7 @@ import { Alert, Badge, Button, Input, Link, Markdown, Pagination, PlayerHead, Ta
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import type { ReactNode } from 'react'
+import { pluginSourceQuery } from '../../lib/plugin-url'
 import { getPluginRoute, pluginName, pluginTranslator } from '../../lib/plugins'
 import { getServer } from '../../lib/server'
 import { headSrc } from '../../lib/textures'
@@ -33,10 +34,13 @@ function fieldText(translate: Translate, field: PluginField): PluginFieldText {
     type: field.type,
     label: translate(field.label),
     help: field.help ? translate(field.help) : undefined,
-    placeholder: field.placeholder ? translate(field.placeholder) : undefined,
+    placeholder: 'placeholder' in field && field.placeholder ? translate(field.placeholder) : undefined,
     required: field.required,
-    maxLength: field.maxLength,
-    options: field.options?.map((option) => ({ value: option.value, label: translate(option.label) })),
+    maxLength: 'maxLength' in field ? field.maxLength : undefined,
+    options: (field.type === 'select' ? field.options : undefined)?.map((option) => ({
+      value: option.value,
+      label: translate(option.label),
+    })),
   }
 }
 
@@ -188,7 +192,7 @@ async function TableView({
   const q = view.searchable ? param(searchParams.q).trim().slice(0, 64) : ''
   const query = new URLSearchParams({ page: String(pageNumber), pageSize: String(PAGE_SIZE) })
   if (q) query.set('q', q)
-  const response = await getPluginRoute(user, pluginId, `${view.source}?${query}`)
+  const response = await getPluginRoute(user, pluginId, pluginSourceQuery(view.source, query))
   const data = response?.status === 200 && isRecord(response.data) ? response.data : null
   if (!data || !Array.isArray(data.rows) || typeof data.total !== 'number') return null
   const rows = data.rows.filter(isRecord).slice(0, 100)

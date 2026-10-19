@@ -37,7 +37,12 @@ export function PluginFormView({
   async function send() {
     setPending(true)
     setFailure(null)
-    const result = await callPlugin(pluginId, submit.method, submit.route, fieldPayload(fields, values))
+    let result
+    try {
+      result = await callPlugin(pluginId, submit.method, submit.route, fieldPayload(fields, values))
+    } catch {
+      result = { ok: false, message: null }
+    }
     setPending(false)
     if (!result.ok) {
       setFailure(result.message ? t('failed', { message: result.message }) : t('failedPlain'))

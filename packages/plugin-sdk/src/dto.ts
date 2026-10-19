@@ -15,7 +15,8 @@ export type IsoDateTime = string
 
 export type Json = string | number | boolean | null | readonly Json[] | { readonly [key: string]: Json }
 
-export type UserRole = 'banned' | 'user' | 'admin' | 'superadmin'
+/** 次版本可能加成员，插件要处理不认识的值。 */
+export type UserRole = 'banned' | 'user' | 'admin' | 'superadmin' | (string & {})
 
 /** `users.read` 可见。 */
 export interface PublicUser {
@@ -45,7 +46,8 @@ export interface Player {
   readonly updatedAt: IsoDateTime
 }
 
-export type TextureType = 'steve' | 'alex' | 'cape'
+/** 次版本可能加成员，插件要处理不认识的值。 */
+export type TextureType = 'steve' | 'alex' | 'cape' | (string & {})
 
 export interface Texture {
   readonly tid: Tid
@@ -69,6 +71,7 @@ export interface Texture {
 export type Actor =
   | { readonly kind: 'user'; readonly uid: Uid; readonly role: UserRole }
   | { readonly kind: 'system' }
+  /** 第一版核心不会产生它；写核心数据的能力落地后才会出现。 */
   | { readonly kind: 'plugin'; readonly pluginId: string }
 
 export type UserActor = Extract<Actor, { kind: 'user' }>
@@ -76,5 +79,7 @@ export type UserActor = Extract<Actor, { kind: 'user' }>
 /**
  * 插件通过 `ui.formFields` 加到核心表单里的字段值。
  * 核心只把**本插件**贡献的字段传给本插件，键名就是字段的 `name`。
+ * 文本统一 trim，默认最多 1000 字符，禁止 NUL，空值省略；boolean 转成 "true"/"false"，required boolean 必须为 true。
+ * 插件自己的 form/Action 则提交 JSON 数字和布尔值。
  */
 export type ExtraFields = Readonly<Record<string, string>>

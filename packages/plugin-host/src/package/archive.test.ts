@@ -51,7 +51,7 @@ test.each([
   ['missing_manifest', () => gzipSync(writeTar([]))],
   ['invalid_manifest', () => rawPackage({ ...manifest, extra: true })],
   ['invalid_manifest', () => gzipSync(writeTar([{ path: 'manifest.json', bytes: encode('{') }]))],
-  ['missing_entry', () => rawPackage({ ...manifest, entry: { server: null } })],
+  ['invalid_manifest', () => rawPackage({ ...manifest, entry: { server: null } })],
   ['missing_entry', () => rawPackage({ ...manifest, entry: { server: 'missing.mjs' } })],
   ['missing_entry', () => rawPackage({ ...manifest, entry: { server: 'locales/en.json' } })],
   ['integrity_mismatch', () => rawPackage({ ...manifest, integrity: {} })],

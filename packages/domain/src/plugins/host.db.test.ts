@@ -84,10 +84,11 @@ function route(pluginId: string, path: string, user: { uid: number } | null = nu
 
 const text = (body: Uint8Array | null) => (body ? new TextDecoder().decode(body) : '')
 
-async function boot(options: { maxCrashes?: number } = {}) {
+async function boot(options: { maxCrashes?: number; fetch?: typeof fetch } = {}) {
   const storage = await pluginPackages()
   await env.boot([], {
     plugins: {
+      fetch: options.fetch,
       host: hostEntry,
       packages: storage.packages,
       hostRestart: { baseDelayMs: 50, maxCrashes: options.maxCrashes ?? 5 },
@@ -781,4 +782,58 @@ test('官方插件的 id 不能被安装插件占用', async () => {
   const bytes = await buildPackage({ id: 'probe', source: probe('1') })
   await expect(env.core.plugins.admin.preview(actor, bytes)).rejects.toMatchObject({ code: 'plugin_id_reserved' })
   await expect(env.core.plugins.admin.uninstall(actor, 'probe')).rejects.toMatchObject({ code: 'plugin_official' })
+})
+
+test('升级保留在途调用；停用取消退役一代里本插件的调用，出站请求也中止', async () => {
+  let entered = Promise.withResolvers<void>()
+  let outgoing = Promise.withResolvers<Response>()
+  let signal: AbortSignal | undefined
+  await boot({
+    fetch: async (_url, init) => {
+      signal = init?.signal ?? undefined
+      entered.resolve()
+      signal?.addEventListener('abort', () => outgoing.reject(new Error('aborted')), { once: true })
+      return outgoing.promise
+    },
+  })
+  const source = `import { definePlugin } from '@nextskin/plugin-sdk'
+    export default definePlugin({ capabilities: [], network: ['https://example.test'], routes: {
+      'GET /wait': { auth: 'public', handler: async ({ ctx }) => {
+        ctx.signal.addEventListener('abort', () => process.stderr.write('WAIT_ABORTED\\n'), { once: true })
+        return await ctx.fetch('https://example.test/wait')
+      } },
+      'GET /limit': { auth: 'public', rateLimit: { limit: LIMIT, windowSec: 60, by: 'ip' }, handler: () => Promise.resolve(new Response('ok')) },
+    } })`
+  const first = await buildPackage({ id: 'waiter', source: source.replace('LIMIT', '1') })
+  const upgraded = await buildPackage({ id: 'waiter', version: '1.1.0', source: source.replace('LIMIT', '2') })
+  const other = await buildPackage({ id: 'other', source: probe('other') })
+  const actor = await env.actor()
+  await install(first, actor)
+  await env.core.plugins.admin.enable(actor, 'waiter')
+  await env.core.plugins.route(route('waiter', '/limit'))
+  await expect(env.core.plugins.route(route('waiter', '/limit'))).rejects.toMatchObject({ code: 'too_many_requests' })
+  const pending = env.core.plugins.route(route('waiter', '/wait'))
+  await entered.promise
+  await install(upgraded, actor)
+  expect(signal?.aborted).toBe(false)
+  outgoing.resolve(new Response('old call completed'))
+  expect(text((await pending).body)).toBe('old call completed')
+  await env.core.plugins.route(route('waiter', '/limit'))
+  await env.core.plugins.route(route('waiter', '/limit'))
+  await expect(env.core.plugins.route(route('waiter', '/limit'))).rejects.toMatchObject({ code: 'too_many_requests' })
+
+  entered = Promise.withResolvers<void>()
+  outgoing = Promise.withResolvers<Response>()
+  const cancelled = env.core.plugins.route(route('waiter', '/wait'))
+  // 先订阅拒绝，停用可能在管理操作返回之前结算调用。
+  const rejected = expect(cancelled).rejects.toMatchObject({ code: 'plugin_timeout' })
+  await entered.promise
+  await install(other, actor)
+  await env.core.plugins.admin.enable(actor, 'other')
+  expect(signal?.aborted).toBe(false)
+  await env.core.plugins.admin.disable(actor, 'waiter')
+  expect(signal?.aborted).toBe(true)
+  await rejected
+  await until(() => env.lines.some((line) => line.includes('WAIT_ABORTED')))
+  expect(text((await env.core.plugins.route(route('other', '/version'))).body)).toBe('other')
 })

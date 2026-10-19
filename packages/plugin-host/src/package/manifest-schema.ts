@@ -2,6 +2,8 @@ import { capabilities, interceptorPolicies, type PluginManifest } from '@nextski
 import { z } from 'zod'
 import { eventNames } from '../events.ts'
 import { KEY, MAX_BODY_BYTES, MAX_LOGIN_ID_LENGTH, OBJECT_NAME, PLUGIN_ID, ROUTE_KEY, validateUi } from '../manifest.ts'
+import { settingProperties } from '../settings.ts'
+import { pluginFieldSchema, pluginPathSchema } from '../ui-schema.ts'
 import { PluginPackageError } from './error.ts'
 import { isValidRange, isValidVersion } from './semver.ts'
 
@@ -12,19 +14,10 @@ const range = z.string().refine(isValidRange, '版本范围格式不对')
 const integer = z.number().int().min(Number.MIN_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER)
 const positive = integer.min(1)
 const jsonObject = z.record(z.string(), z.json())
-const path = z.string().startsWith('/')
+const path = pluginPathSchema
+const field = pluginFieldSchema
 const area = z.enum(['user', 'admin'])
 const unique = <T>(values: readonly T[]) => new Set(values).size === values.length
-const field = z.strictObject({
-  name: z.string(),
-  label: z.string(),
-  type: z.enum(['text', 'textarea', 'number', 'boolean', 'select', 'password']),
-  required: z.boolean().optional(),
-  help: z.string().optional(),
-  placeholder: z.string().optional(),
-  maxLength: integer.min(0).optional(),
-  options: z.array(z.strictObject({ value: z.string(), label: z.string() })).optional(),
-})
 const action = z.strictObject({
   label: z.string(),
   method: z.enum(['POST', 'PUT', 'PATCH', 'DELETE']),
@@ -71,7 +64,7 @@ const ui = z.strictObject({
     .array(
       z.strictObject({
         form: z.literal('auth.register'),
-        field: field.extend({ name: matching(/^[A-Za-z][A-Za-z0-9]{0,31}$/) }),
+        field,
       }),
     )
     .optional(),
@@ -165,7 +158,7 @@ const schema = z.strictObject({
     }),
   ),
   ui,
-  entry: z.strictObject({ server: z.string().nullable() }),
+  entry: z.strictObject({ server: z.string() }),
   integrity: z.record(z.string(), matching(/^[0-9a-f]{64}$/)),
 })
 
@@ -198,8 +191,16 @@ export function parsePluginManifest(json: unknown): PluginManifest {
       fail(`routes.${i}.permission`, '权限必须在 permissions 里声明，且路由必须要求登录')
     if (route.rateLimit?.by === 'user' && route.auth !== 'user') fail(`routes.${i}.rateLimit`, '公开路由只能按 ip 限流')
   }
+  for (const job of manifest.jobs) {
+    if (`plugin:${manifest.id}:job:${job.name}`.length > 128) fail('jobs', '完整任务名不能超过 128 个字符')
+  }
   for (const [i, cron] of manifest.cron.entries()) {
     if (!manifest.jobs.some((job) => job.name === cron.job)) fail(`cron.${i}.job`, '必须引用 jobs 里声明的任务')
+  }
+  try {
+    settingProperties(manifest)
+  } catch (error) {
+    fail('settingsSchema', error instanceof Error ? error.message : '声明不合法')
   }
   try {
     validateUi(manifest.ui, new Set(Object.keys(manifest.permissions)))

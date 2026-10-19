@@ -1,7 +1,8 @@
 import { buildManifest } from '@nextskin/plugin-host'
-import type { Fetch } from '@nextskin/oauth-client'
 import { expect, test, vi } from 'vitest'
 import plugin from './official.ts'
+
+type Fetch = (request: Request) => Promise<Response>
 
 const provider = plugin.definition.providers!.login![0]!
 const settings = { clientId: 'client + id', clientSecret: 'private-secret' }

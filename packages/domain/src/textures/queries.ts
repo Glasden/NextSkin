@@ -1,5 +1,5 @@
 import { containsInsensitive, countRows, type CoreDatabase } from '@nextskin/db'
-import type { Texture } from '@nextskin/plugin-sdk'
+import type { Texture } from '../dto.ts'
 import type { Kysely } from 'kysely'
 import { textureScaleOrNull } from '../players/queries.ts'
 import type { createSettingQueries } from '../settings/queries.ts'

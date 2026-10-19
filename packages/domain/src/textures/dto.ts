@@ -1,5 +1,5 @@
 import type { CoreDatabase, TexturesTable } from '@nextskin/db'
-import type { Texture } from '@nextskin/plugin-sdk'
+import type { Texture } from '../dto.ts'
 import type { Kysely, Selectable } from 'kysely'
 
 export function textureRows(db: Kysely<CoreDatabase>) {

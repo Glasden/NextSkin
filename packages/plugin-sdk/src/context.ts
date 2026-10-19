@@ -12,11 +12,11 @@ export interface PluginContextLocal<S> {
   readonly site: { readonly url: string; readonly name: string }
   /** 当前设置；管理员修改后，下一次调用就能看到新值。 */
   readonly settings: Readonly<S>
-  /** 取本插件的翻译。在请求内调用时默认使用当前用户的语言。 */
+  /** 取本插件的翻译。在请求内调用时默认使用请求的语言。 */
   t(key: MessageKey, params?: Readonly<Record<string, string | number>>, locale?: string): string
   /** 日志带插件 id，核心不检查内容：不要写密码、令牌、密钥这类机密。 */
   readonly log: Logger
-  /** 插件停用、换代或这次调用超时时 abort。长时间运行的操作应该监听它。 */
+  /** 插件停用或这次调用超时时 abort；换代时在途调用照常做完。长时间运行的操作应该监听它。 */
   readonly signal: AbortSignal
 }
 
@@ -24,17 +24,31 @@ export interface PluginContextLocal<S> {
  * 插件上下文：插件接触核心的唯一途径。
  *
  * 在插件 host 进程里，这里的每个方法都是一次到核心的 RPC；
- * 对官方插件（在核心进程内运行）则是直接调用，参数和返回值同样序列化一次。插件代码不需要知道区别。
+ * 对官方插件（在核心进程内运行）则是直接调用，参数和返回值同样序列化一次。插件代码不需要知道区别。调用结束后继续使用 ctx 的 RPC 会被拒绝。
  */
 export interface PluginContextBase<S> extends PluginContextLocal<S> {
   readonly jobs: {
-    /** name 必须是本插件 `jobs` 中声明的键；载荷序列化后不超过 64 KB */
+    /** name 必须是本插件 `jobs` 中声明的键；载荷序列化后不超过 64 KiB。
+     * delaySec 是 0–2592000 的整数，默认 0；dedupeKey 是 1–255 字符且无首尾空白。
+     * 同名任务的同一键在未完成期间去重；返回值不区分是否新入队。 */
     enqueue(name: string, payload: Json, options?: { delaySec?: number; dedupeKey?: string }): Promise<void>
   }
-  /** 出站 HTTP。只允许访问定义里 `network` 声明过的 origin。 */
-  fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>
+  /**
+   * 出站 HTTP。自动跟随重定向最多 5 跳，每一跳都按 `network` 检查。
+   * 请求体和响应体完整缓冲，各不超过 10 MiB；`ctx.signal` 到期时请求中止。
+   * 返回的 Response 的 `url` 是空串，`redirected` 是 false。
+   */
+  fetch(url: string | URL, init?: PluginFetchInit): Promise<Response>
 }
 
+/** 出站请求只转发这三项。以后支持别的选项时加可选的属性，是次版本（ADR-0035） */
+export interface PluginFetchInit {
+  readonly method?: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
+  readonly headers?: RequestInit['headers']
+  readonly body?: RequestInit['body']
+}
+
+/** message 截到 1000 字符，fields 序列化后截到 2000 字符。 */
 export interface Logger {
   debug(message: string, fields?: Readonly<Record<string, Json>>): void
   info(message: string, fields?: Readonly<Record<string, Json>>): void
@@ -42,17 +56,22 @@ export interface Logger {
   error(message: string, fields?: Readonly<Record<string, Json>>): void
 }
 
+/** 所有 id 都须为正安全整数；查询字符串最多 255 字符。 */
 export interface UsersPublicApi {
   get(uid: Uid): Promise<PublicUser | null>
+  /** 最多 100 项；按 id 排序、去重，省略不存在的用户。 */
   getMany(uids: readonly Uid[]): Promise<PublicUser[]>
 }
 
+/** id 须为正安全整数，邮箱最多 255 字符。 */
 export interface UsersPrivateApi {
   get(uid: Uid): Promise<PrivateUser | null>
+  /** 最多 100 项；按 id 排序、去重，省略不存在的用户。 */
   getMany(uids: readonly Uid[]): Promise<PrivateUser[]>
   findByEmail(email: string): Promise<PrivateUser | null>
 }
 
+/** id 须为正安全整数，查询字符串最多 255 字符。 */
 export interface PlayersApi {
   get(pid: Pid): Promise<Player | null>
   findByName(name: string): Promise<Player | null>
@@ -60,19 +79,22 @@ export interface PlayersApi {
   listByUser(uid: Uid): Promise<Player[]>
 }
 
+/** tid 须为正安全整数，hash 最多 64 字符。 */
 export interface TexturesApi {
   get(tid: Tid): Promise<Texture | null>
   /** 同一 hash 可有多个条目，优先返回公开的，其次取 tid 最小的。 */
   findByHash(hash: string): Promise<Texture | null>
 }
 
+/** hash 最多 64 字符；不是 64 位小写十六进制或文件不可用时返回 null。 */
 export interface TextureFilesApi {
   read(hash: string): Promise<Uint8Array | null>
 }
 
+/** 键为 1–255 字符，不允许首尾空白。 */
 export interface KvApi {
   get<T extends Json>(key: string): Promise<T | null>
-  /** 值序列化后不超过 64 KB。`ttlSec` 到期后读到的是 null。 */
+  /** 值序列化后不超过 64 KiB。ttlSec 为 1–315360000 的整数；省略时不过期，到期后读到 null。 */
   set(key: string, value: Json, options?: { ttlSec?: number }): Promise<void>
   delete(key: string): Promise<void>
 }
@@ -101,16 +123,21 @@ type DbOmitted =
   | 'withTables'
   | 'introspection'
   | 'destroy'
+  | 'with'
+  | 'withRecursive'
+  | 'mergeInto'
+  | 'replaceInto'
 
 /**
  * 插件自己的数据库。
  *
- * - 表名写逻辑名（`codes`），核心自动映射到 `p_<插件 id>__codes`。表名只能是小写字母、数字和单个下划线。
+ * - 表名写逻辑名（`codes`），核心自动映射到 `p_<插件 id>__codes`。表名、索引名、约束名为 `[a-z][a-z0-9]*(?:_[a-z0-9]+)*`，物理名不超过 63 字符。
  * - 只能访问 `tables` 里声明过的表；不支持原始 SQL（`sql` 模板），核心会拒绝。
- * - 只支持一个 FROM 项加 JOIN；不支持 INSERT…SELECT、CTE；RETURNING 只能用在 INSERT 上；日期参数用 ISO 字符串。
+ * - 只支持一个 FROM 项加最多 4 个 inner/left JOIN；不支持 RIGHT JOIN、FOR UPDATE、流式读取；不支持 INSERT…SELECT、CTE；RETURNING 只能用在 INSERT 上；日期参数用 ISO 字符串。
  * - 每条语句单独提交。只有事务内的拦截器例外：那里的语句加入核心事务，随它一起提交或回滚。
  * - 查询在核心进程里重新编译后执行，插件永远拿不到数据库凭据。
- * 完整规则见 docs/adr/0010-plugin-api.md、docs/adr/0033-plugin-system-v1.md 与 spikes/s5-remote-kysely/README.md。
+ * 查询构建器和 schema 沿用 Kysely 类型，超出网关白名单的写法会在运行时拒绝并说明原因。
+ * 完整规则见插件作者文档的插件表一篇。
  */
 export type PluginDb<T extends TableMap> = Omit<Kysely<RowsOf<T>>, DbOmitted>
 
@@ -119,7 +146,7 @@ export type PluginDb<T extends TableMap> = Omit<Kysely<RowsOf<T>>, DbOmitted>
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type PluginMigrationDb = Omit<Kysely<any>, Exclude<DbOmitted, 'schema'>>
 
-/** 插件表的迁移。只往前走：核心不执行 down，插件也不支持降级。 */
+/** 插件表的迁移。只往前走：核心不执行 down，插件也不支持降级。每次 up 限 60 秒。 */
 export interface PluginMigration {
   up(db: PluginMigrationDb): Promise<void>
 }

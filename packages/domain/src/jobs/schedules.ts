@@ -93,7 +93,9 @@ export function createScheduler(options: {
             await transactionWithRetry(db, async (tx) => {
               const changed = await update(tx).set({ next_run_at: next() }).executeTakeFirstOrThrow()
               if (changed.numUpdatedRows === 1n)
-                await jobs.enqueue(tx, entry.job, entry.payload ?? {}, { dedupeKey: entry.name })
+                await jobs.enqueue(tx, entry.job, entry.payload === undefined ? {} : entry.payload, {
+                  dedupeKey: entry.name,
+                })
             })
           }
         } catch (error) {

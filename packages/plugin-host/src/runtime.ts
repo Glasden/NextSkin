@@ -5,7 +5,13 @@
  * 核心会拒绝那些请求。上下文只放定义里申请过的能力；核心按授予的能力再检查一遍。
  * 事务内的拦截器只拿得到 `db` 和不用等核心回应的几项（SDK 的 TransactionalPluginContext）。
  */
-import { interceptorPolicies, type Json, type Logger, type RequestScope } from '@nextskin/plugin-sdk'
+import {
+  interceptorPolicies,
+  type Json,
+  type Logger,
+  type PluginFetchInit,
+  type RequestScope,
+} from '@nextskin/plugin-sdk'
 import { Kysely } from 'kysely'
 import { z } from 'zod'
 import { deserializeRequest, deserializeResponse, serializeRequest, serializeResponse } from './http.ts'
@@ -21,9 +27,9 @@ export const MAX_RESPONSE_BYTES = 10 * 1024 * 1024
 export interface LoadedPlugin {
   readonly id: string
   invoke(call: PluginCall, context: InvocationContext): Promise<unknown>
-  /** 核心那边已经不等这次调用了（超时）：abort 它的 `ctx.signal`。调用已经结束时什么也不做 */
+  /** 核心那边已经不等这次调用了（超时或停用）：abort 它的 `ctx.signal`。调用已经结束时什么也不做 */
   cancel(invocationId: string): void
-  /** 停用或换代：abort 所有进行中调用的 `ctx.signal` */
+  /** 停用：abort 所有进行中调用的 `ctx.signal`；正常换代先等在途调用完成 */
   unload(): void
 }
 
@@ -105,8 +111,8 @@ export function loadPlugin(options: {
         })
       },
     })
-    ctx.fetch = async (input: string | URL | Request, init?: RequestInit) => {
-      const request = new Request(input, init)
+    ctx.fetch = async (url: string | URL, init?: PluginFetchInit) => {
+      const request = new Request(url, { method: init?.method, headers: init?.headers, body: init?.body })
       const response = await rpc(call, 'fetch', await serializeRequest(request, MAX_FETCH_BODY_BYTES))
       return deserializeResponse(response)
     }

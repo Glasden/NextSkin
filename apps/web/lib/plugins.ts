@@ -6,6 +6,7 @@ import { Blocks } from 'pixelarticons/react/Blocks.js'
 import { createElement, type ReactElement } from 'react'
 import type { PluginFieldText } from '../app/_plugins/types'
 import { peerAddress } from './peer-address'
+import { pluginUrl } from './plugin-url'
 import { getServer } from './server'
 import { getRequestRoot } from './session'
 
@@ -47,10 +48,13 @@ export function registerFormFields(core: Core, locale: string): { pluginId: stri
         type: field.type,
         label: translate(field.label),
         help: field.help ? translate(field.help) : undefined,
-        placeholder: field.placeholder ? translate(field.placeholder) : undefined,
+        placeholder: 'placeholder' in field && field.placeholder ? translate(field.placeholder) : undefined,
         required: field.required,
-        maxLength: field.maxLength,
-        options: field.options?.map((option) => ({ value: option.value, label: translate(option.label) })),
+        maxLength: 'maxLength' in field ? field.maxLength : undefined,
+        options: (field.type === 'select' ? field.options : undefined)?.map((option) => ({
+          value: option.value,
+          label: translate(option.label),
+        })),
       },
     }
   })
@@ -120,7 +124,12 @@ export async function getPluginRoute(
     getRequestRoot(),
     getLocale(),
   ])
-  const url = new URL(`/plugins/${pluginId}${pathWithQuery}`, root)
+  let url: URL
+  try {
+    url = pluginUrl(pluginId, pathWithQuery, root)
+  } catch {
+    return null
+  }
   const { 'network.trustedProxies': trustedProxies } = await core.settings.read(['network.trustedProxies'])
   const ip =
     resolveClientIp({
@@ -134,6 +143,7 @@ export async function getPluginRoute(
       method: 'GET',
       path: url.pathname.slice(`/plugins/${pluginId}`.length) || '/',
       request: { method: 'GET', url: url.href, headers: [['accept', 'application/json']], body: null },
+      // public 路由由核心按匿名处理（ADR-0035）
       user: { uid: user.uid, role: user.role },
       ip,
       locale,

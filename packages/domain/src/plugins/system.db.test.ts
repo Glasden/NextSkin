@@ -577,3 +577,74 @@ test('准备上下文时插件被停用：不再调用插件', async () => {
   await expect(pending).rejects.toMatchObject({ code: 'plugin_unavailable' })
   expect(calls).toBe(0)
 })
+
+test('public 路由经核心直调也匿名，并共用路由限流', async () => {
+  await env.boot([
+    official(
+      'a',
+      definePlugin({
+        capabilities: [],
+        routes: {
+          'GET /public': {
+            auth: 'public',
+            rateLimit: { limit: 2, windowSec: 60, by: 'ip' },
+            handler: ({ scope }) => Promise.resolve(Response.json(scope.actor)),
+          },
+        },
+      }),
+    ),
+  ])
+  await enable('a')
+  const input = routeInput('/public', { uid: 1, role: 'admin' })
+  const response = await env.core.plugins.route(input)
+  expect(JSON.parse(new TextDecoder().decode(response.body ?? undefined))).toEqual({ kind: 'system' })
+  await env.core.plugins.route({ ...input, user: null })
+  await expect(env.core.plugins.route(input)).rejects.toMatchObject({
+    code: 'too_many_requests',
+    params: { retryAfter: 60 },
+  })
+  await expect(env.core.plugins.route({ ...input, ip: '192.0.2.2' })).resolves.toMatchObject({ status: 200 })
+})
+
+test('login Provider 的 authorize 和 exchange 默认使用请求语言', async () => {
+  const seen: string[] = []
+  const plugin = official(
+    'a',
+    definePlugin({
+      capabilities: [],
+      providers: {
+        login: [
+          {
+            id: 'login',
+            label: 'login',
+            icon: 'login',
+            authorizeUrl: ({ ctx }) => {
+              seen.push(ctx.t('hello'))
+              return Promise.resolve('https://example.test/authorize')
+            },
+            exchange: ({ ctx }) => {
+              seen.push(ctx.t('hello'))
+              return Promise.resolve({ subject: 'id', email: null, emailVerified: false, displayName: null })
+            },
+          },
+        ],
+      },
+    }),
+  )
+  plugin.messages = { en: { hello: 'Hello' }, 'zh-CN': { hello: '你好' } }
+  await env.boot([plugin])
+  await enable('a')
+  await env.core.plugins.loginAuthorize('a', 'login', {
+    state: 's',
+    codeChallenge: 'c',
+    redirectUri: 'https://skin.example.test/callback',
+    locale: 'en',
+  })
+  await env.core.plugins.loginExchange('a', 'login', {
+    query: { code: 'c' },
+    codeVerifier: 'v',
+    redirectUri: 'https://skin.example.test/callback',
+    locale: 'en',
+  })
+  expect(seen).toEqual(['Hello', 'Hello'])
+})

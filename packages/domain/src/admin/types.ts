@@ -1,5 +1,5 @@
 import type { IsoTimestamp } from '@nextskin/db'
-import type { TextureType, UserRole } from '@nextskin/plugin-sdk'
+import type { TextureType, UserRole } from '@nextskin/db'
 
 export interface AdminActor {
   uid: number

@@ -84,7 +84,7 @@ export default defineConfig(
 
   {
     // 插件提供的函数按 API 要求一律返回 Promise（可能跨进程调用），未必有 await
-    files: ['packages/plugin-sdk/{examples,type-tests}/**', 'packages/plugin-cli/fixtures/**', 'plugins/**'],
+    files: ['packages/plugin-sdk/type-tests/**', 'packages/plugin-cli/fixtures/**', 'plugins/**'],
     rules: { '@typescript-eslint/require-await': 'off' },
   },
   {

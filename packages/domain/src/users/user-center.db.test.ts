@@ -1,3 +1,4 @@
+import type { UserRole } from '@nextskin/db'
 import {
   coreMigrations,
   countRows,
@@ -10,7 +11,7 @@ import {
   type CoreDatabase,
 } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
-import type { EventEnvelope, EventName, UserRole } from '@nextskin/plugin-sdk'
+import type { EventEnvelope, EventName } from '@nextskin/plugin-sdk'
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest'
 import { createCore, encodeSettingValue, type Core, type CoreSettingKey, type CoreSettingValue } from '../index.ts'
 import { offlineUuid } from '../players/create.ts'

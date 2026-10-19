@@ -154,6 +154,7 @@ export function registerExternalLogin(app: OpenAPIHono<AppEnv>, core: Core) {
       uid,
       next: body.intent === 'link' ? '/user/security' : safeNextPath(body.next),
       siteUrl: await siteUrl(c, core),
+      locale: requestLocale(c) ?? undefined,
     })
     setCookie(c, EXTERNAL_STATE_COOKIE, result.state, cookieOptions(c, STATE_COOKIE_PATH, EXTERNAL_STATE_TTL_SECONDS))
     return c.json({ url: result.url }, 200)
@@ -175,6 +176,7 @@ export function registerExternalLogin(app: OpenAPIHono<AppEnv>, core: Core) {
         cookieState,
         sessionUid: sessionUser?.uid ?? null,
         siteUrl: await siteUrl(c, core),
+        locale: requestLocale(c) ?? undefined,
       })
     } catch (error) {
       if (!(error instanceof DomainError)) logError(error)

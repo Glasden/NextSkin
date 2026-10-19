@@ -33,7 +33,9 @@ export type Actor = {
     readonly role: UserRole;
 } | {
     readonly kind: 'system';
-} | {
+}
+/** 第一版核心不会产生它；写核心数据的能力落地后才会出现。 */
+| {
     readonly kind: 'plugin';
     readonly pluginId: string;
 };
@@ -113,18 +115,17 @@ export interface CoreEvents {
     'report.resolved': {
         reportId: number;
         tid: Tid;
-        action: 'dismissed' | 'textureDeleted' | 'uploaderBanned';
+        action: 'dismissed' | 'textureDeleted' | 'uploaderBanned' | (string & {});
     };
     'texture.deleted': {
         tid: Tid;
         hash: string;
         type: TextureType;
-        fileDeleted: boolean;
+        lastReference: boolean;
     };
-    // (undocumented)
     'texture.updated': {
         texture: Texture;
-        fields: readonly ('name' | 'type' | 'public' | 'description')[];
+        fields: readonly ('name' | 'type' | 'public' | 'description' | (string & {}))[];
     };
     // (undocumented)
     'texture.uploaded': {
@@ -137,7 +138,7 @@ export interface CoreEvents {
     // (undocumented)
     'user.profileUpdated': {
         uid: Uid;
-        fields: readonly ('nickname' | 'email' | 'password' | 'avatar' | 'locale')[];
+        fields: readonly ('nickname' | 'email' | 'password' | 'avatar' | 'locale' | (string & {}))[];
     };
     // (undocumented)
     'user.registered': {
@@ -198,7 +199,7 @@ export interface EventEnvelope<E extends EventName> {
     readonly occurredAt: IsoDateTime;
 }
 
-// @public (undocumented)
+// @public
 export type EventHandler<E extends EventName, Ctx> = (args: {
     readonly event: EventEnvelope<E>;
     readonly ctx: Ctx;
@@ -218,42 +219,36 @@ export interface ExternalIdentity {
 // @public
 export type ExtraFields = Readonly<Record<string, string>>;
 
+// Warning: (ae-forgotten-export) The symbol "FieldBase" needs to be exported by the entry point index.d.ts
+//
 // @public (undocumented)
-export interface Field {
-    // (undocumented)
-    readonly help?: MessageKey;
-    // (undocumented)
-    readonly label: MessageKey;
-    // (undocumented)
+export type Field = FieldBase & ({
+    readonly type: 'text' | 'textarea' | 'password';
+    readonly placeholder?: MessageKey;
     readonly maxLength?: number;
-    // (undocumented)
-    readonly name: string;
-    // (undocumented)
-    readonly options?: readonly {
+} | {
+    readonly type: 'number';
+    readonly placeholder?: MessageKey;
+} | {
+    readonly type: 'select';
+    readonly options: readonly [
+        {
         readonly value: string;
         readonly label: MessageKey;
-    }[];
-    // (undocumented)
-    readonly placeholder?: MessageKey;
-    // (undocumented)
-    readonly required?: boolean;
-    // (undocumented)
-    readonly type: 'text' | 'textarea' | 'number' | 'boolean' | 'select' | 'password';
-}
+    },
+    ...{
+        readonly value: string;
+        readonly label: MessageKey;
+    }[]
+    ];
+} | {
+    readonly type: 'boolean';
+});
 
 // @public
 export type FormName = 'auth.register';
 
-// @public
-export type Gate<B extends boolean, T> = B extends true ? T : unknown;
-
 export { Generated }
-
-// @public (undocumented)
-export type Has<C extends readonly Capability[], K extends Capability> = K extends C[number] ? true : false;
-
-// @public
-export const highRiskCapabilities: readonly ["users.readPrivate", "textures.readFile"];
 
 // @public
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -318,7 +313,7 @@ export type Json = string | number | boolean | null | readonly Json[] | {
     readonly [key: string]: Json;
 };
 
-// @public (undocumented)
+// @public
 export interface KvApi {
     // (undocumented)
     delete(key: string): Promise<void>;
@@ -329,7 +324,7 @@ export interface KvApi {
     }): Promise<void>;
 }
 
-// @public (undocumented)
+// @public
 export interface Logger {
     // (undocumented)
     debug(message: string, fields?: Readonly<Record<string, Json>>): void;
@@ -364,16 +359,18 @@ export interface LoginProvider<Ctx> {
 // @public
 export type MessageKey = string;
 
-// @public (undocumented)
-export type Or<A extends boolean, B extends boolean> = A extends true ? true : B;
-
 // @public
 export interface PasswordHasherProvider<Ctx> {
-    readonly detect: {
+    readonly detect: ({
+        readonly prefix: readonly string[];
+        readonly pattern?: string;
+    } | {
+        readonly prefix?: readonly string[];
+        readonly pattern: string;
+    }) & {
         readonly prefix?: readonly string[];
         readonly pattern?: string;
     };
-    // (undocumented)
     readonly id: string;
     // (undocumented)
     readonly label: MessageKey;
@@ -408,7 +405,7 @@ export interface Player {
     readonly uuid: string;
 }
 
-// @public (undocumented)
+// @public
 export interface PlayersApi {
     // (undocumented)
     findByName(name: string): Promise<Player | null>;
@@ -420,6 +417,10 @@ export interface PlayersApi {
     listByUser(uid: Uid): Promise<Player[]>;
 }
 
+// Warning: (ae-forgotten-export) The symbol "Gate" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "Or" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "Has" needs to be exported by the entry point index.d.ts
+//
 // @public
 export type PluginContext<C extends readonly Capability[], S, T extends TableMap> = PluginContextBase<S> & Gate<Or<Has<C, 'users.read'>, Has<C, 'users.readPrivate'>>, {
     readonly users: UsersApiFor<C>;
@@ -435,7 +436,7 @@ export type PluginContext<C extends readonly Capability[], S, T extends TableMap
 
 // @public
 export interface PluginContextBase<S> extends PluginContextLocal<S> {
-    fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>;
+    fetch(url: string | URL, init?: PluginFetchInit): Promise<Response>;
     // (undocumented)
     readonly jobs: {
         enqueue(name: string, payload: Json, options?: {
@@ -482,7 +483,6 @@ export interface PluginDefinition<C extends readonly Capability[], S extends Set
     readonly intercept?: {
         readonly [I in InterceptorName]?: InterceptorRegistration<I, InterceptorCtx<I, C, S, T>>;
     };
-    // (undocumented)
     readonly jobs?: Readonly<Record<string, JobDefinition<Ctx<C, S, T>>>>;
     readonly migrations?: Readonly<Record<string, PluginMigration>>;
     readonly network?: readonly `https://${string}`[];
@@ -499,12 +499,21 @@ export interface PluginDefinition<C extends readonly Capability[], S extends Set
     readonly routes?: {
         readonly [K in RouteKey]?: RouteDefinition<Ctx<C, S, T>, P>;
     };
-    // (undocumented)
     readonly settings?: S;
     // (undocumented)
     readonly tables?: T;
     // (undocumented)
     readonly ui?: UiContributions<P>;
+}
+
+// @public
+export interface PluginFetchInit {
+    // (undocumented)
+    readonly body?: RequestInit['body'];
+    // (undocumented)
+    readonly headers?: RequestInit['headers'];
+    // (undocumented)
+    readonly method?: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 }
 
 // @public
@@ -522,11 +531,10 @@ export interface PluginManifest {
     }[];
     // (undocumented)
     readonly entry: {
-        readonly server: string | null;
+        readonly server: string;
     };
     // (undocumented)
     readonly events: readonly EventName[];
-    // (undocumented)
     readonly id: string;
     readonly integrity: Readonly<Record<string, string>>;
     // (undocumented)
@@ -553,10 +561,7 @@ export interface PluginManifest {
         readonly passwordHasher: readonly {
             readonly id: string;
             readonly label: MessageKey;
-            readonly detect: {
-                readonly prefix?: readonly string[];
-                readonly pattern?: string;
-            };
+            readonly detect: PasswordHasherProvider<unknown>['detect'];
         }[];
         readonly login: readonly {
             readonly id: string;
@@ -601,9 +606,7 @@ export type PluginMigrationDb = Omit<Kysely<any>, Exclude<DbOmitted, 'schema'>>;
 export interface PluginPackageField {
     // (undocumented)
     readonly conflicts?: readonly string[];
-    // (undocumented)
     readonly id: string;
-    // (undocumented)
     readonly requires?: Readonly<Record<string, string>>;
 }
 
@@ -659,10 +662,14 @@ export interface RequestScope {
 // Warning: (ae-forgotten-export) The symbol "RouteOptions" needs to be exported by the entry point index.d.ts
 //
 // @public (undocumented)
-export type RouteDefinition<Ctx, P> = (RouteOptions & {
+export type RouteDefinition<Ctx, P> = (RouteOptions<'ip'> & {
     readonly auth: 'public';
-    handler(args: RouteArgs<Ctx, RequestScope>): Promise<Response>;
-}) | (RouteOptions & {
+    handler(args: RouteArgs<Ctx, RequestScope & {
+        readonly actor: Extract<Actor, {
+            kind: 'system';
+        }>;
+    }>): Promise<Response>;
+}) | (RouteOptions<'ip' | 'user'> & {
     readonly auth: 'user';
     readonly permission?: NoInfer<keyof P & string>;
     handler(args: RouteArgs<Ctx, RequestScope & {
@@ -744,21 +751,21 @@ export interface Texture {
     readonly width: number;
 }
 
-// @public (undocumented)
+// @public
 export interface TextureFilesApi {
     // (undocumented)
     read(hash: string): Promise<Uint8Array | null>;
 }
 
-// @public (undocumented)
+// @public
 export interface TexturesApi {
     findByHash(hash: string): Promise<Texture | null>;
     // (undocumented)
     get(tid: Tid): Promise<Texture | null>;
 }
 
-// @public (undocumented)
-export type TextureType = 'steve' | 'alex' | 'cape';
+// @public
+export type TextureType = 'steve' | 'alex' | 'cape' | (string & {});
 
 // @public (undocumented)
 export type Tid = number;
@@ -782,7 +789,6 @@ export interface UiContributions<P> {
         readonly label: MessageKey;
         readonly icon: IconName;
     }[];
-    // (undocumented)
     readonly pages?: Readonly<Record<string, {
         readonly area: 'user' | 'admin';
         readonly title: MessageKey;
@@ -801,24 +807,22 @@ export type UserActor = Extract<Actor, {
     kind: 'user';
 }>;
 
-// @public (undocumented)
-export type UserRole = 'banned' | 'user' | 'admin' | 'superadmin';
+// @public
+export type UserRole = 'banned' | 'user' | 'admin' | 'superadmin' | (string & {});
 
-// @public (undocumented)
+// @public
 export interface UsersPrivateApi {
     // (undocumented)
     findByEmail(email: string): Promise<PrivateUser | null>;
     // (undocumented)
     get(uid: Uid): Promise<PrivateUser | null>;
-    // (undocumented)
     getMany(uids: readonly Uid[]): Promise<PrivateUser[]>;
 }
 
-// @public (undocumented)
+// @public
 export interface UsersPublicApi {
     // (undocumented)
     get(uid: Uid): Promise<PublicUser | null>;
-    // (undocumented)
     getMany(uids: readonly Uid[]): Promise<PublicUser[]>;
 }
 
@@ -851,9 +855,9 @@ export { z }
 
 // Warnings were encountered during analysis:
 //
-// dist/context.d.ts:119:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
-// dist/context.d.ts:123:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
-// dist/routes.d.ts:32:5 - (ae-forgotten-export) The symbol "RouteArgs" needs to be exported by the entry point index.d.ts
+// dist/context.d.ts:141:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
+// dist/context.d.ts:145:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
+// dist/routes.d.ts:34:5 - (ae-forgotten-export) The symbol "RouteArgs" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

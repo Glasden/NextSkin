@@ -13,7 +13,6 @@ import { getCookie } from 'hono/cookie'
 import { clientIp } from './client-ip.ts'
 import type { AppEnv } from './env.ts'
 import { createErrorResponse, logError, restErrorCode } from './rest/errors.ts'
-import { createMemoryRateLimiter, type RateLimiter } from './rest/rate-limit.ts'
 
 /** 插件路由响应体的上限（SDK 的 routes.ts） */
 const MAX_RESPONSE_BYTES = 10 * 1024 * 1024
@@ -44,17 +43,6 @@ const FORWARDED_CREDENTIALS = new Set(['cookie', 'authorization', 'proxy-authori
 
 export function registerPluginRoutes(app: Hono<AppEnv>, core: Core) {
   const errorResponse = createErrorResponse(core)
-  const limiters = new Map<string, RateLimiter>()
-
-  function limiter(key: string, rule: { limit: number; windowSec: number }) {
-    let found = limiters.get(key)
-    if (!found) {
-      found = createMemoryRateLimiter(Date.now, { limit: rule.limit, windowMs: rule.windowSec * 1000 })
-      limiters.set(key, found)
-    }
-    return found
-  }
-
   app.all('/plugins/:id/*', async (c) => {
     try {
       return await handle(c)
@@ -85,12 +73,6 @@ export function registerPluginRoutes(app: Hono<AppEnv>, core: Core) {
       if (c.req.header('origin') !== new URL(siteUrl || c.get('requestRoot')).origin)
         throw new DomainError('invalid_origin')
     }
-    if (route.rateLimit) {
-      const by = route.rateLimit.by === 'user' && sessionUser ? `user:${sessionUser.uid}` : `ip:${ip}`
-      const result = await limiter(`${pluginId} ${route.method} ${route.path}`, route.rateLimit).consume(by)
-      if (!result.allowed) throw new DomainError('too_many_requests', { retryAfter: result.retryAfter })
-    }
-
     if (Number(c.req.header('content-length')) > route.maxBodyBytes) throw new DomainError('request_too_large')
     let body: Uint8Array | null
     try {

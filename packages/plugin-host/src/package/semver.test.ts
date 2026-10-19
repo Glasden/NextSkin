@@ -73,10 +73,18 @@ test.each([
   expect(satisfies(version, range)).toBe(expected)
 })
 
-test.each(['', 'wat', '1..2', '1.2.03', '1.x.3', '1.2.3 ||', '>=', '!=1.2.3', '1.2.3 - 2.0.0', '1.2.3.4'])(
+test.each(['', 'wat', '1..2', '1.2.03', '1.x.3', '1.2.3 ||', '>=', '!=1.2.3', '1.2.3 - nope', '1.2.3.4'])(
   '拒绝非法范围 %s',
   (range) => {
     expect(isValidRange(range)).toBe(false)
     expect(satisfies('1.2.3', range)).toBe(false)
   },
 )
+
+test('连字符范围包括端点，支持部分版本和并集，预发布沿用 npm 的匹配规则', () => {
+  expect(isValidRange('1.0.0 - 2.0.0')).toBe(true)
+  for (const version of ['1.0.0', '1.5.0', '2.0.0']) expect(satisfies(version, '1.0.0 - 2.0.0')).toBe(true)
+  for (const version of ['0.9.9', '2.0.1', '1.5.0-rc.1']) expect(satisfies(version, '1.0.0 - 2.0.0')).toBe(false)
+  expect(satisfies('2.3.9', '1.2 - 2.3')).toBe(true)
+  expect(satisfies('3.0.0', '1.0.0 - 2.0.0 || 3.x')).toBe(true)
+})

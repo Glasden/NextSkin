@@ -37,7 +37,11 @@ export function collectPluginFields(
         if (field.required) invalid.push(key)
         continue
       }
-      if ([...text].length > (field.maxLength ?? DEFAULT_MAX_LENGTH) || text.includes('\0')) invalid.push(key)
+      if (
+        [...text].length > (('maxLength' in field ? field.maxLength : undefined) ?? DEFAULT_MAX_LENGTH) ||
+        text.includes('\0')
+      )
+        invalid.push(key)
       else if (field.type === 'number' && !Number.isFinite(Number(text))) invalid.push(key)
       else if (field.type === 'select' && !field.options?.some((option) => option.value === text)) invalid.push(key)
       else value = text

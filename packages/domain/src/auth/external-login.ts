@@ -306,6 +306,7 @@ export function createExternalLogin(options: {
       uid: number | null
       next: string
       siteUrl: string
+      locale?: string
     }): Promise<{ url: string; state: string }> {
       // 插件没有启用、设置没有通过校验、Provider 不存在（ADR-0034"发起和回调"）
       if (!(await available(input.pluginId, input.providerId))) throw new DomainError('external_login_not_found')
@@ -328,6 +329,7 @@ export function createExternalLogin(options: {
       const url = await plugins.loginAuthorize(input.pluginId, input.providerId, {
         state,
         codeChallenge,
+        locale: input.locale,
         redirectUri: input.siteUrl + externalCallbackPath(input.pluginId, input.providerId),
       })
       return { url, state }
@@ -344,6 +346,7 @@ export function createExternalLogin(options: {
       cookieState: string | null
       sessionUid: number | null
       siteUrl: string
+      locale?: string
     }): Promise<ExternalCallbackResult> {
       const state = input.query.state
       if (!state || !input.cookieState || !sameSecret(state, input.cookieState))
@@ -360,6 +363,7 @@ export function createExternalLogin(options: {
       try {
         identity = await plugins.loginExchange(record.pluginId, record.providerId, {
           query: input.query,
+          locale: input.locale,
           codeVerifier: record.codeVerifier,
           redirectUri: input.siteUrl + externalCallbackPath(record.pluginId, record.providerId),
         })

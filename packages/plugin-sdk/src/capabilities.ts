@@ -25,13 +25,6 @@ export const capabilities = [
 
 export type Capability = (typeof capabilities)[number]
 
-/**
- * 安装界面需要醒目提示的能力。
- * 另外，提供 passwordHasher / login 这两类 Provider 的插件会接触到明文密码或第三方身份，
- * 同样按高风险展示（由核心根据 manifest 判断）。
- */
-export const highRiskCapabilities = ['users.readPrivate', 'textures.readFile'] as const satisfies readonly Capability[]
-
 export type Has<C extends readonly Capability[], K extends Capability> = K extends C[number] ? true : false
 export type Or<A extends boolean, B extends boolean> = A extends true ? true : B
 /** 条件成立时得到 T，否则得到 unknown（与其他类型求交集时不产生任何成员）。 */

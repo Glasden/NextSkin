@@ -92,6 +92,7 @@ describe.each(['official', 'host'] as const)('GitHub 第三方登录（%s）', (
   })
 
   class Browser {
+    locale = 'en'
     readonly jar = new Map<string, string>()
     cookie() {
       return [...this.jar].map(([key, value]) => `${key}=${value}`).join('; ')
@@ -105,6 +106,7 @@ describe.each(['official', 'host'] as const)('GitHub 第三方登录（%s）', (
             host: 'skin.example.test',
             'x-forwarded-proto': 'https',
             origin,
+            'accept-language': this.locale,
             cookie: this.cookie(),
             ...(body === undefined ? {} : { 'content-type': 'application/json' }),
           },
@@ -147,6 +149,18 @@ describe.each(['official', 'host'] as const)('GitHub 第三方登录（%s）', (
     expect(state).toBeTruthy()
     return { response, url, state }
   }
+  test('授权地址和身份交换沿用各自 HTTP 请求的语言', async () => {
+    await configure()
+    const authorize = vi.spyOn(env.core.plugins, 'loginAuthorize')
+    const exchange = vi.spyOn(env.core.plugins, 'loginExchange')
+    const browser = new Browser()
+    const { state } = await start(browser)
+    expect(authorize).toHaveBeenLastCalledWith(id, 'github', expect.objectContaining({ locale: 'en' }))
+    browser.locale = 'zh-CN'
+    await browser.callback(state)
+    expect(exchange).toHaveBeenLastCalledWith(id, 'github', expect.objectContaining({ locale: 'zh-CN' }))
+  })
+
   async function account(withPassword = true) {
     const input = env.input({ email })
     const { uid } = await env.core.users.register(input)

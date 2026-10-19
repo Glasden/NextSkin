@@ -34,7 +34,7 @@ export default definePlugin({
         },
         async exchange({ query, codeVerifier, redirectUri, ctx }) {
           const token = await exchangeCode(
-            (request) => ctx.fetch(request),
+            (url, init) => ctx.fetch(url, init),
             'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
             {
               query,

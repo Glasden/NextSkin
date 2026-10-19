@@ -6,12 +6,11 @@
  */
 import { isDeepStrictEqual } from 'node:util'
 import { toIsoTimestamp, upsert, type CoreDatabase } from '@nextskin/db'
-import type { Json, PluginManifest } from '@nextskin/plugin-sdk'
+import type { PluginSettingProperty as Property, SettingControl } from '@nextskin/plugin-host'
+import type { Json } from '@nextskin/plugin-sdk'
 import type { Kysely, Transaction } from 'kysely'
-import { z } from 'zod'
 import { DomainError } from '../errors.ts'
 import { decryptSettingJson, encryptSettingJson } from '../settings/codec.ts'
-import { settingControl, type JsonSchema, type SettingControl } from '../settings/form.ts'
 
 export const pluginSettingsNamespace = (pluginId: string) => `plugin:${pluginId}`
 
@@ -25,49 +24,8 @@ export interface PluginSettingView {
   unreadable: boolean
 }
 
-interface Property {
-  key: string
-  schema: JsonSchema
-  secret: boolean
-  control: SettingControl
-  /** JSON Schema 校验：从 manifest 的 JSON Schema 还原出来的 zod schema */
-  validator: z.ZodType
-}
-
-/** schema 里顶层以下的地方有没有标 writeOnly（例如 `z.array(secret())`） */
-function nestedWriteOnly(value: unknown, top: boolean): boolean {
-  if (Array.isArray(value)) return value.some((item) => nestedWriteOnly(item, false))
-  if (typeof value !== 'object' || value === null) return false
-  if (!top && (value as { writeOnly?: unknown }).writeOnly === true) return true
-  return Object.values(value).some((item) => nestedWriteOnly(item, false))
-}
-
-/**
- * manifest 的设置 schema 拆成一项一项；映射不了控件的项在插件加载时就报错，不在页面上兜底。
- * 机密只能是顶层的一项：加密和不回传都按顶层的键做，嵌在对象、数组里的 secret() 会被当成普通值明文存储、显示和记进审计
- */
-export function settingProperties(manifest: Pick<PluginManifest, 'id' | 'settingsSchema'>): Property[] {
-  const schema = manifest.settingsSchema as JsonSchema | null
-  if (!schema) return []
-  if (schema.type !== 'object' || !schema.properties) throw new Error(`插件 ${manifest.id} 的设置 schema 不是对象`)
-  return Object.entries(schema.properties).map(([key, property]) => {
-    if (typeof property === 'boolean') throw new Error(`插件 ${manifest.id} 的设置项 ${key} 没有类型`)
-    if (nestedWriteOnly(property, true))
-      throw new Error(`插件 ${manifest.id} 的设置项 ${key} 里嵌着机密项：机密只能是顶层的一项`)
-    const control = settingControl(property)
-    if (!control) throw new Error(`插件 ${manifest.id} 的设置项 ${key} 没有对应的控件`)
-    const { default: _default, ...rest } = property
-    void _default
-    return {
-      key,
-      schema: property,
-      secret: property.writeOnly === true,
-      control,
-      // 默认值由插件自己的 schema 补；这里只校验管理员填的值
-      validator: z.fromJSONSchema(rest),
-    }
-  })
-}
+// manifest 的设置 schema 拆成一项一项的规则在 plugin-host：构建命令在构建时跑同一套检查（ADR-0035）
+export { settingProperties } from '@nextskin/plugin-host'
 
 export function createPluginSettings(db: Kysely<CoreDatabase>, secretKey: string, now: () => Date) {
   async function rows(executor: Kysely<CoreDatabase>, pluginId: string) {

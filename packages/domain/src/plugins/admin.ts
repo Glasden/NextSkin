@@ -20,7 +20,9 @@ import {
   unpackPluginPackage,
   type PluginMessages,
 } from '@nextskin/plugin-host'
-import { highRiskCapabilities, type Capability, type PluginManifest } from '@nextskin/plugin-sdk'
+import type { Capability } from '@nextskin/plugin-sdk'
+import type { ExtractedPluginManifest as PluginManifest } from '@nextskin/plugin-host'
+import { highRiskCapabilities } from './capabilities.ts'
 import type { Kysely, Transaction } from 'kysely'
 import { can } from '../access/permissions.ts'
 import type { AdminActor } from '../admin/types.ts'

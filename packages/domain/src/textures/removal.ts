@@ -202,8 +202,8 @@ export function createTextureRemoval(events: Events, files: TextureFiles) {
       })
     }
     await tx.deleteFrom('textures').where('id', '=', row.id).execute()
-    const fileDeleted = await files.release(tx, row.hash, now)
-    await events.emit(tx, 'texture.deleted', actor, { tid: row.id, hash: row.hash, type: row.type, fileDeleted }, now)
+    const lastReference = await files.release(tx, row.hash, now)
+    await events.emit(tx, 'texture.deleted', actor, { tid: row.id, hash: row.hash, type: row.type, lastReference }, now)
     return { refunded, resolvedReports }
   }
   return { cleanup, remove }

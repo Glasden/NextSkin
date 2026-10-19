@@ -18,27 +18,43 @@ import type { Json } from './dto.ts'
 export type MessageKey = string
 /** pixelarticons 的图标名（SVG 的文件名，kebab-case），例如 'mail'、'user'、'cloud-server'；认不出来的显示成积木。 */
 export type IconName = string
-/** 插件路由路径，相对于 `/plugins/{id}`。可以用 `:field` 引用表格行的字段。 */
+/** 插件路由路径，相对于 `/plugins/{id}`。允许查询参数；禁止 .、..、空段、反斜杠和 #。
+ * `:field` 只接受字符串或有限数字，不能为 . 或 ..，非法值会让操作失败并提示。 */
 export type PluginPath = `/${string}`
 
 /** 插件可以追加字段的核心表单。字段值通过拦截器和事件里的 `extra` 交给插件。 */
 export type FormName = 'auth.register'
 
-export interface Field {
+interface FieldBase {
+  /** 注册字段名为 `[A-Za-z][A-Za-z0-9]{0,31}`，同一插件内不能重复。 */
   readonly name: string
   readonly label: MessageKey
-  readonly type: 'text' | 'textarea' | 'number' | 'boolean' | 'select' | 'password'
   readonly required?: boolean
   readonly help?: MessageKey
-  readonly placeholder?: MessageKey
-  readonly maxLength?: number
-  readonly options?: readonly { readonly value: string; readonly label: MessageKey }[]
 }
+
+export type Field = FieldBase &
+  (
+    | {
+        readonly type: 'text' | 'textarea' | 'password'
+        readonly placeholder?: MessageKey
+        readonly maxLength?: number
+      }
+    | { readonly type: 'number'; readonly placeholder?: MessageKey }
+    | {
+        readonly type: 'select'
+        readonly options: readonly [
+          { readonly value: string; readonly label: MessageKey },
+          ...{ readonly value: string; readonly label: MessageKey }[],
+        ]
+      }
+    | { readonly type: 'boolean' }
+  )
 
 export interface Column {
   readonly key: string
   readonly label: MessageKey
-  /** 'user' / 'player' / 'texture'：值是对应的 id，核心渲染成带头像的链接 */
+  /** 值是对应 id：user 显示头像和昵称（仅后台带用户链接）；player 只显示名字；texture 显示 #tid 链接 */
   readonly format?: 'text' | 'code' | 'number' | 'datetime' | 'boolean' | 'status' | 'user' | 'player' | 'texture'
 }
 
@@ -97,11 +113,12 @@ export interface StatsSourceResponse {
 export interface UiContributions<P> {
   readonly nav?: readonly {
     readonly area: 'user' | 'admin'
-    /** pages 中的键 */
+    /** pages 中的键，必须存在且 area 相同。 */
     readonly page: string
     readonly label: MessageKey
     readonly icon: IconName
   }[]
+  /** 页面名为 `[a-z][a-z0-9-]{0,63}`。 */
   readonly pages?: Readonly<
     Record<
       string,

@@ -17,7 +17,9 @@ import {
 import sdkPackage from '@nextskin/plugin-sdk/package.json' with { type: 'json' }
 import { z } from 'zod'
 import { eventNames } from './events.ts'
-import { parseVersion } from './package/semver.ts'
+import { isValidVersion, parseVersion } from './package/semver.ts'
+import { settingProperties } from './settings.ts'
+import { pluginFieldSchema, pluginPathSchema } from './ui-schema.ts'
 
 /**
  * 核心实现的插件 API 版本，就是同一个提交里 SDK 的版本号（ADR-0035）。manifest 的 `api` 范围必须包含它
@@ -43,6 +45,11 @@ export type PluginContributions = Omit<
   PluginManifest,
   'manifestVersion' | 'id' | 'version' | 'api' | 'requires' | 'conflicts' | 'entry' | 'integrity'
 >
+
+/** 核心进程内的官方插件没有打包入口。 */
+export type ExtractedPluginManifest = Omit<PluginManifest, 'entry'> & {
+  readonly entry: { readonly server: string | null }
+}
 
 export interface PluginPackageJson {
   readonly name: string
@@ -141,6 +148,8 @@ export function describePlugin(definition: AnyPluginDefinition): PluginContribut
     settingsSchema = z.toJSONSchema(d.settings, { io: 'input' }) as PluginContributions['settingsSchema']
   }
 
+  settingProperties({ id: '(构建)', settingsSchema })
+
   const permissions: Record<string, string> = {}
   for (const [name, label] of Object.entries(record(d.permissions, 'permissions'))) {
     if (!KEY.test(name)) fail(`权限名 ${JSON.stringify(name)} 格式不对`)
@@ -211,7 +220,7 @@ export function describePlugin(definition: AnyPluginDefinition): PluginContribut
       detect: {
         ...(prefix !== undefined ? { prefix: [...(prefix as string[])] } : {}),
         ...(pattern !== undefined ? { pattern: pattern } : {}),
-      },
+      } as PluginContributions['providers']['passwordHasher'][number]['detect'],
     }
   })
   const login = list(providers.login, 'login').map((p) => {
@@ -285,7 +294,7 @@ export function describePlugin(definition: AnyPluginDefinition): PluginContribut
     return {
       schedule: c.schedule.trim(),
       job: c.job,
-      payload: json((c.payload ?? {}) as Json, `cron[${index}] 的 payload`),
+      payload: json((c.payload === undefined ? {} : c.payload) as Json, `cron[${index}] 的 payload`),
     }
   })
 
@@ -312,6 +321,17 @@ export function describePlugin(definition: AnyPluginDefinition): PluginContribut
 export function validateUi(ui: PluginContributions['ui'], permissions: ReadonlySet<string>) {
   for (const key of Object.keys(ui))
     if (key !== 'nav' && key !== 'pages' && key !== 'formFields') fail(`ui 里没有 ${key} 这一项`)
+  const checkField = (field: unknown) => {
+    const result = pluginFieldSchema.safeParse(field)
+    if (!result.success) fail('UI 字段的类型、选项或属性不匹配')
+  }
+  const checkPath = (path: unknown) => {
+    if (!pluginPathSchema.safeParse(path).success) fail('UI 路径不能有 .、..、空段、反斜杠或 #')
+  }
+  const checkAction = (action: { route: string; form?: readonly unknown[] }) => {
+    checkPath(action.route)
+    for (const field of action.form ?? []) checkField(field)
+  }
   const pages = ui.pages ?? {}
   for (const [name, page] of Object.entries(pages)) {
     if (!/^[a-z][a-z0-9-]{0,63}$/.test(name)) fail(`页面名 ${JSON.stringify(name)} 只能用小写字母、数字和连字符`)
@@ -321,6 +341,17 @@ export function validateUi(ui: PluginContributions['ui'], permissions: ReadonlyS
     const kind = (page.view as { kind?: unknown } | undefined)?.kind
     if (kind !== 'table' && kind !== 'form' && kind !== 'stats' && kind !== 'markdown')
       fail(`页面 ${name} 的视图只能是 table、form、stats、markdown`)
+    const view = page.view
+    if (view.kind === 'form') {
+      for (const field of view.fields) checkField(field)
+      if (view.load !== undefined) checkPath(view.load)
+      checkPath(view.submit.route)
+    } else {
+      checkPath(view.source)
+      if (view.kind === 'table') {
+        for (const action of [...(view.toolbar ?? []), ...(view.rowActions ?? [])]) checkAction(action)
+      }
+    }
   }
   for (const item of ui.nav ?? []) {
     const page = pages[item.page]
@@ -332,15 +363,19 @@ export function validateUi(ui: PluginContributions['ui'], permissions: ReadonlyS
     if (form !== 'auth.register') fail(`只有 auth.register 表单能加字段`)
     if (!/^[A-Za-z][A-Za-z0-9]{0,31}$/.test(field.name) || names.has(field.name))
       fail(`表单字段名 ${JSON.stringify(field.name)} 格式不对或重复`)
+    checkField(field)
     names.add(field.name)
   }
 }
 
-export function buildManifest(definition: AnyPluginDefinition, pkg: PluginPackageJson): PluginManifest {
+export function buildManifest(definition: AnyPluginDefinition, pkg: PluginPackageJson): ExtractedPluginManifest {
   const field = record(pkg.nextskin, 'package.json 的 nextskin')
   if (typeof field.id !== 'string' || !PLUGIN_ID.test(field.id)) fail('插件 id 只能用小写字母、数字和单个连字符')
-  if (typeof pkg.version !== 'string' || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(pkg.version))
-    fail('插件版本必须是 semver')
+  if (typeof pkg.version !== 'string' || !isValidVersion(pkg.version)) fail('插件版本必须是 semver')
+  const contributions = describePlugin(definition)
+  for (const job of contributions.jobs) {
+    if (`plugin:${field.id}:job:${job.name}`.length > 128) fail('完整任务名不能超过 128 个字符')
+  }
   return {
     manifestVersion: 1,
     id: field.id,
@@ -348,7 +383,7 @@ export function buildManifest(definition: AnyPluginDefinition, pkg: PluginPackag
     api: pluginApiRange(PLUGIN_API_VERSION),
     requires: { ...(pkg.nextskin.requires ?? {}) },
     conflicts: [...(pkg.nextskin.conflicts ?? [])],
-    ...describePlugin(definition),
+    ...contributions,
     entry: { server: null },
     integrity: {},
   }

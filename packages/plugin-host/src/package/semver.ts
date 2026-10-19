@@ -59,7 +59,7 @@ function comparator(op: Operator, value: string): Comparator {
   return { op, version }
 }
 
-/** 将简写展开为比较符；不实现 npm 的连字符范围、标签等额外语法。 */
+/** 将简写展开为比较符；不支持标签。 */
 function expand(token: string): Comparator[] {
   const match = /^(>=|<=|>|<|=|\^|~)?(.+)$/.exec(token)
   if (!match) throw new Error('版本范围不合法')
@@ -104,6 +104,12 @@ function parseRange(range: string): Comparator[][] {
   return range.split('||').map((part) => {
     const normalized = part.trim().replace(/(>=|<=|>|<|=|\^|~)\s+/g, '$1')
     if (!normalized) throw new Error('版本范围不合法')
+    const hyphen = /^(\S+)\s+-\s+(\S+)$/.exec(normalized)
+    if (hyphen) {
+      const lower = expand(`>=${hyphen[1]}`)
+      const upper = expand(`<=${hyphen[2]}`)
+      return [...lower, ...upper]
+    }
     return normalized.split(/\s+/).flatMap(expand)
   })
 }

@@ -40,7 +40,7 @@ export default definePlugin({
           })
         },
         async exchange({ query, codeVerifier, redirectUri, ctx }) {
-          const fetch = (request: Request) => ctx.fetch(request)
+          const fetch = (...args: Parameters<typeof ctx.fetch>) => ctx.fetch(...args)
           const token = tokenSchema.safeParse(
             await exchangeCode(fetch, 'https://littleskin.cn/oauth/token', {
               query,

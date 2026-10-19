@@ -423,7 +423,7 @@ test.each([true, false])('删除按实付退存储和衣柜费 %s，清所有依
   expect(await balance(other.uid)).toBe(before + (refund ? 7 : 0))
   expect(await file()).toMatchObject({ status: 'deleting', ref_count: 0, delete_attempted_at: null })
   expect(await countRows(db().selectFrom('jobs').where('name', '=', TEXTURE_RECYCLE_JOB))).toBe(1)
-  expect((await events('texture.deleted'))[0]?.data.fileDeleted).toBe(true)
+  expect((await events('texture.deleted'))[0]?.data.lastReference).toBe(true)
   expect(await events('closet.itemRemoved')).toHaveLength(2)
   expect(
     (await db().selectFrom('players').select('skin_texture_id').where('id', '=', pid).executeTakeFirstOrThrow())
@@ -439,7 +439,7 @@ test('删除共享文件的一个条目只减引用，不开始回收', async ()
   subscribe('texture.deleted')
   await core.textures.delete(owner, first.texture.tid)
   expect(await file()).toMatchObject({ status: 'active', ref_count: 1 })
-  expect((await events('texture.deleted'))[0]?.data.fileDeleted).toBe(false)
+  expect((await events('texture.deleted'))[0]?.data.lastReference).toBe(false)
   expect(await textureRow(other.texture.tid)).toBeDefined()
 })
 test('放弃认领 → 租期到期 → deleting → D 后删存储缓存和行；active 不被租期检查回收', async () => {

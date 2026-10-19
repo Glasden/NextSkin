@@ -42,12 +42,17 @@ export function PluginAction({
   async function run() {
     setPending(true)
     setFailure(null)
-    const result = await callPlugin(
-      pluginId,
-      action.method,
-      fillRoute(action.route, row),
-      fields.length ? fieldPayload(fields, values) : undefined,
-    )
+    let result
+    try {
+      result = await callPlugin(
+        pluginId,
+        action.method,
+        fillRoute(action.route, row),
+        fields.length ? fieldPayload(fields, values) : undefined,
+      )
+    } catch {
+      result = { ok: false, message: null }
+    }
     setPending(false)
     if (!result.ok) {
       const message = result.message ? t('failed', { message: result.message }) : t('failedPlain')

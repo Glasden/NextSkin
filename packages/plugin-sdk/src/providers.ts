@@ -25,10 +25,14 @@ export interface Providers<Ctx> {
  * - 密码不要写进日志，也不要放进错误消息：没被 await 的 Promise 失败时，错误消息会记进站点的日志。
  */
 export interface PasswordHasherProvider<Ctx> {
+  /** `[A-Za-z][A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*`。 */
   readonly id: string
   readonly label: MessageKey
   /** 声明式识别规则，由核心在本进程内匹配，不发生跨进程调用。两项都写时，满足任一项就算匹配。 */
-  readonly detect: {
+  readonly detect: (
+    | { readonly prefix: readonly string[]; readonly pattern?: string }
+    | { readonly prefix?: readonly string[]; readonly pattern: string }
+  ) & {
     /** 哈希的开头，区分大小写 */
     readonly prefix?: readonly string[]
     /** 正则表达式源码，按 `u` 标志编译，在核心进程里执行：要写成不会回溯爆炸的表达式 */
@@ -51,8 +55,8 @@ export interface PasswordHasherProvider<Ctx> {
  */
 export interface LoginProvider<Ctx> {
   /**
-   * 不超过 64 个字符，要永远对应同一个第三方：改名会让已有的绑定失效，
-   * 拿去对接别的第三方会让 subject 撞上别人的绑定
+   * 匹配 `[A-Za-z][A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*`，不超过 64 个字符。
+   * 要永远对应同一个第三方：改名会让已有的绑定失效，拿去对接别的第三方会让 subject 撞上别人的绑定
    */
   readonly id: string
   /** 第三方的名称，例如 GitHub。登录按钮上的"使用 … 登录"、安全页的列表和绑定通知邮件都用它 */
@@ -79,7 +83,7 @@ export interface LoginProvider<Ctx> {
 export interface ExternalIdentity {
   /**
    * 第三方那里永远指同一个人的标识：用数字 id 或 OIDC 的 `sub` 这类值，不用登录名或邮箱（它们会变）。
-   * 1 到 255 个可打印的 ASCII 字符，不合格的按插件出错处理
+   * 字符范围为 `[\x21-\x7e]{1,255}`（不含空格），不合格按插件出错处理
    */
   readonly subject: string
   /** 第三方没有给就填 null，用户在"完成注册"页上自己填 */
@@ -89,6 +93,6 @@ export interface ExternalIdentity {
    * 以及能不能把这个身份绑到一个已经没有任何登录方式的同邮箱账号上
    */
   readonly emailVerified: boolean
-  /** 首次登录时预填昵称或角色名，通不过站点的规则就不预填 */
+  /** 首次登录预填：昵称 trim 后截到 255 字符；角色名通过站点角色名规则才预填 */
   readonly displayName: string | null
 }

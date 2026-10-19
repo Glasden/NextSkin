@@ -39,7 +39,7 @@ export default definePlugin({
           )
         },
         async exchange({ query, codeVerifier, redirectUri, ctx }) {
-          const fetch = (request: Request) => ctx.fetch(request)
+          const fetch = (...args: Parameters<typeof ctx.fetch>) => ctx.fetch(...args)
           const token = tokenSchema.safeParse(
             await exchangeCode(fetch, 'https://github.com/login/oauth/access_token', {
               query,

@@ -49,9 +49,9 @@ export const interceptorPolicies = {
 
 export interface Deny {
   readonly action: 'deny'
-  /** 机器可读，例如 'invalid_code'；会出现在 API 错误响应里 */
+  /** 机器可读，例如 'invalid_code'；截到 64 字符后出现在 API 错误响应里 */
   readonly code: string
-  /** 已本地化、给最终用户看的文案 */
+  /** 已本地化、给最终用户看的文案，截到 200 字符 */
   readonly message: string
 }
 

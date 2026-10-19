@@ -1,5 +1,5 @@
 import { toIsoTimestamp, upsert } from '@nextskin/db'
-import { definePlugin } from '@nextskin/plugin-sdk'
+import { definePlugin, type PasswordHasherProvider } from '@nextskin/plugin-sdk'
 import { hashPassword, verifyPassword } from 'better-auth/crypto'
 import { afterEach, expect, test, vi } from 'vitest'
 import { isCurrentPasswordHash } from '../auth/password.ts'
@@ -12,7 +12,7 @@ afterEach(() => vi.restoreAllMocks())
 
 type Verify = (password: string, hash: string) => Promise<unknown>
 
-function hasher(id: string, detect: { prefix?: string[]; pattern?: string }, verify: Verify) {
+function hasher(id: string, detect: PasswordHasherProvider<unknown>['detect'], verify: Verify) {
   return official(
     id,
     definePlugin({
