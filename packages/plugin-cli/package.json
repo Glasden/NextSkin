@@ -1,6 +1,6 @@
 {
   "name": "@nextskin/plugin-cli",
-  "version": "0.0.0",
+  "version": "1.0.0-rc.0",
   "description": "nextskin-plugin build：把 NextSkin 插件打成插件包",
   "keywords": [
     "nextskin",
