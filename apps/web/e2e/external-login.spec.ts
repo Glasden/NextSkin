@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -36,6 +36,13 @@ test.beforeAll(({ pluginHost }) => {
       "'@nextskin/oauth-client'",
       JSON.stringify(join(repository, 'packages/oauth-client/src/index.ts')),
     ),
+  )
+  // 构建命令按插件项目里装的 SDK 算 `api`
+  mkdirSync(join(packageDirectory, 'node_modules/@nextskin'), { recursive: true })
+  symlinkSync(
+    join(repository, 'packages/plugin-sdk'),
+    join(packageDirectory, 'node_modules/@nextskin/plugin-sdk'),
+    'junction',
   )
   const { version } = JSON.parse(readFileSync(join(source, 'package.json'), 'utf8')) as { version: string }
   writeFileSync(

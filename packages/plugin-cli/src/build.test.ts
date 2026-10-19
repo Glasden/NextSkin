@@ -1,10 +1,18 @@
 import { execFile } from 'node:child_process'
-import { mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile, mkdir, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
-import { buildManifest, MAX_LOCALE_BYTES, sha256Hex, unpackPluginPackage } from '@nextskin/plugin-host'
+import sdkPackage from '@nextskin/plugin-sdk/package.json' with { type: 'json' }
+import {
+  buildManifest,
+  MAX_LOCALE_BYTES,
+  PLUGIN_API_VERSION,
+  pluginApiRange,
+  sha256Hex,
+  unpackPluginPackage,
+} from '@nextskin/plugin-host'
 import invitation from '../../../plugins/invitation-codes/src/official.ts'
 import cdn from '../../../plugins/cdn-refresh/src/official.ts'
 import { expect, test } from 'vitest'
@@ -12,6 +20,16 @@ import { expect, test } from 'vitest'
 const exec = promisify(execFile)
 const cli = fileURLToPath(new URL('./cli.ts', import.meta.url))
 const repository = fileURLToPath(new URL('../../../', import.meta.url))
+
+/** 像插件作者的项目一样，把 SDK 装进临时插件项目的 node_modules：构建命令按它算 `api` */
+async function installSdk(dir: string) {
+  await mkdir(join(dir, 'node_modules', '@nextskin'), { recursive: true })
+  await symlink(
+    join(repository, 'packages', 'plugin-sdk'),
+    join(dir, 'node_modules', '@nextskin', 'plugin-sdk'),
+    'junction',
+  )
+}
 
 test.each([
   ['invitation-codes', invitation],
@@ -68,6 +86,7 @@ test('默认目录、默认输出、内联动态导入和打包普通依赖', as
   try {
     await mkdir(join(temp, 'src'))
     await mkdir(join(temp, 'node_modules', 'dependency'), { recursive: true })
+    await installSdk(temp)
     await writeFile(
       join(temp, 'package.json'),
       JSON.stringify({ name: 'test', version: '1.2.3', nextskin: { id: 'test' } }),
@@ -116,6 +135,7 @@ test('构建自检拒绝原始文案总量超过 1 MiB 的插件', async () => {
   try {
     await mkdir(join(temp, 'src'))
     await mkdir(join(temp, 'locales'))
+    await installSdk(temp)
     await writeFile(
       join(temp, 'package.json'),
       JSON.stringify({ name: 'test', version: '1.0.0', nextskin: { id: 'test' } }),
@@ -132,3 +152,62 @@ test('构建自检拒绝原始文案总量超过 1 MiB 的插件', async () => {
     await rm(temp, { recursive: true, force: true })
   }
 }, 30_000)
+
+test('manifest 的 api 按插件项目里装的 SDK 算', async () => {
+  const unpacked = unpackPluginPackage(await readFile(await buildIn(await project())))
+  expect(unpacked.manifest.api).toBe(pluginApiRange(sdkPackage.version))
+  expect(unpacked.manifest.api).toBe(pluginApiRange(PLUGIN_API_VERSION))
+}, 30_000)
+
+test.each([
+  ['没装 SDK', null, '找不到 @nextskin/plugin-sdk'],
+  ['SDK 比构建命令新', bump(sdkPackage.version, 'minor'), '装成同一个版本'],
+  ['SDK 的大版本不同', bump(sdkPackage.version, 'major'), '装成同一个版本'],
+  ['SDK 的版本号不合法', 'next', '没有合法的版本号'],
+] as const)(
+  '插件项目里的 SDK 不合适时拒绝构建：%s',
+  async (_, version, message) => {
+    const dir = await project(version)
+    try {
+      await expect(exec(process.execPath, [cli, 'build', dir], { timeout: 20_000 })).rejects.toMatchObject({
+        code: 1,
+        stderr: expect.stringContaining(message) as unknown,
+      })
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  },
+  30_000,
+)
+
+function bump(version: string, part: 'major' | 'minor'): string {
+  const [major, minor] = version.split('.').map(Number) as [number, number]
+  return part === 'major' ? `${major + 1}.0.0` : `${major}.${minor + 1}.0`
+}
+
+/** 一个最小的插件项目；`sdk` 为 undefined 时链接仓库里的 SDK，为 null 时不装，为字符串时装一个只有版本号的假 SDK */
+async function project(sdk?: string | null): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), 'nextskin-sdk-version-'))
+  await mkdir(join(dir, 'src'))
+  await writeFile(
+    join(dir, 'package.json'),
+    JSON.stringify({ name: 'test', version: '1.0.0', nextskin: { id: 'test' } }),
+  )
+  await writeFile(join(dir, 'src', 'index.ts'), 'export default { capabilities: [] }')
+  if (sdk === undefined) await installSdk(dir)
+  else if (sdk !== null) {
+    const fake = join(dir, 'node_modules', '@nextskin', 'plugin-sdk')
+    await mkdir(fake, { recursive: true })
+    await writeFile(
+      join(fake, 'package.json'),
+      JSON.stringify({ name: '@nextskin/plugin-sdk', version: sdk, exports: { './package.json': './package.json' } }),
+    )
+  }
+  return dir
+}
+
+async function buildIn(dir: string): Promise<string> {
+  const out = join(dir, 'plugin.tgz')
+  await exec(process.execPath, [cli, 'build', dir, '--out', out], { timeout: 20_000 })
+  return out
+}

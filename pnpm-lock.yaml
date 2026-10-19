@@ -581,25 +581,25 @@ importers:
 
   packages/plugin-cli:
     dependencies:
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.2.14
+    devDependencies:
       '@nextskin/plugin-host':
         specifier: workspace:*
         version: link:../plugin-host
       '@nextskin/plugin-sdk':
         specifier: workspace:*
         version: link:../plugin-sdk
-      rolldown:
-        specifier: 'catalog:'
-        version: 1.2.14
-      zod:
-        specifier: 'catalog:'
-        version: 4.6.7
-    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
       vitest:
         specifier: 'catalog:'
         version: 5.0.5(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
 
   packages/plugin-host:
     dependencies:
@@ -629,10 +629,10 @@ importers:
   packages/plugin-sdk:
     dependencies:
       kysely:
-        specifier: ^0.29.6
+        specifier: ~0.29.6
         version: 0.29.6
       zod:
-        specifier: ^4.6.7
+        specifier: ~4.6.7
         version: 4.6.7
     devDependencies:
       '@microsoft/api-extractor':

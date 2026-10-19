@@ -4,12 +4,19 @@
 
 ## 当前状态
 
-未发布（`prepublishOnly` 会拦住误发布）。公开面已经按 `docs/adr/0033-plugin-system-v1.md` 收窄到第一版（SDK 1.0），草案里推迟的部分已经删掉，设计留在 ADR-0010、0011 和 git 历史里。新增扩展点、能力要先改 ADR；ADR-0033 的三步都落地后才发布 1.0。
+正在照 `docs/adr/0035-plugin-sdk-release.md` 准备发布 1.0：先发 `1.0.0-rc.N`，候选期里公开面还能改，1.0.0 之后冻住。公开面是 `docs/adr/0033-plugin-system-v1.md` 的第一版加上 ADR-0035 冻结前的调整；新增扩展点、能力要先改 ADR。
+
+和构建命令 `@nextskin/plugin-cli` 在 changesets 的 `fixed` 组里，版本号相同。插件 API 的版本就是本包的版本号：核心的 `PLUGIN_API_VERSION` 从这里的 package.json 读，manifest 的 `api` 取到次版本（ADR-0035）。
+
+- 仓库里 `exports` 指向 `src`；发布时 `publishConfig` 换成 `build` 生成的 `dist`（JS 和声明文件）。包里还有 `docs/`（作者文档）、README 和 LICENSE。
+- zod、kysely 的依赖锁着和 catalog 相同的次版本：插件运行时用的是核心的那一份（`packages/plugin-cli/src/release.test.ts` 守着）。
 
 `pnpm check` 覆盖本包：
 
-- `typecheck`：TS 7 检查 `src`、`examples`、`type-tests`；
-- `test`：用 TS 7 生成声明文件（`build`），再让 api-extractor 和 `etc/plugin-sdk.api.md` 比对，公开面有任何变化都会失败。
+- `typecheck`：TS 7 检查 `src`、`type-tests`；
+- `test`：用 TS 7 生成 `dist`（`build`），再让 api-extractor 和 `etc/plugin-sdk.api.md` 比对，公开面有任何变化都会失败。
+
+打成 npm 包之后能不能用，由 `pnpm test:pack` 检查（要联网，CI 跑）。
 
 公开面确实要变时：运行 `pnpm --filter @nextskin/plugin-sdk api:update` 更新报告，再运行 `pnpm changeset` 写变更记录，两者一起提交。
 

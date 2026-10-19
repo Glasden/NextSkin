@@ -7,7 +7,7 @@
   "updateInternalDependencies": "patch",
   "privatePackages": false,
   "changedFilePatterns": ["src/**"],
-  "fixed": [],
+  "fixed": [["@nextskin/plugin-sdk", "@nextskin/plugin-cli"]],
   "linked": [],
   "ignore": []
 }

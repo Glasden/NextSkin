@@ -1,7 +1,16 @@
 import { definePlugin, secret, table } from '@nextskin/plugin-sdk'
 import { expect, test } from 'vitest'
 import { z } from 'zod'
-import { buildManifest, describePlugin, PluginDefinitionError, type AnyPluginDefinition } from './manifest.ts'
+import sdkPackage from '@nextskin/plugin-sdk/package.json' with { type: 'json' }
+import {
+  buildManifest,
+  describePlugin,
+  PLUGIN_API_VERSION,
+  pluginApiRange,
+  PluginDefinitionError,
+  type AnyPluginDefinition,
+} from './manifest.ts'
+import { satisfies } from './package/semver.ts'
 
 const pkg = { name: '@test/example', version: '1.2.3', nextskin: { id: 'example' } }
 
@@ -40,7 +49,7 @@ test('manifest 提取默认值、排序迁移和机密设置的 writeOnly', () =
     manifestVersion: 1,
     id: 'example',
     version: '1.2.3',
-    api: '^1.0.0',
+    api: pluginApiRange(PLUGIN_API_VERSION),
     capabilities: ['storage.tables'],
     tables: ['codes'],
     migrations: ['001', '002'],
@@ -63,4 +72,19 @@ test('manifest 提取默认值、排序迁移和机密设置的 writeOnly', () =
     integrity: {},
   })
   expect(describePlugin(definition).routes).toEqual(manifest.routes)
+})
+
+test('插件 API 版本就是 SDK 的版本号；api 取到次版本，预发布版本取完整版本号', () => {
+  expect(PLUGIN_API_VERSION).toBe(sdkPackage.version)
+  expect(pluginApiRange('1.3.2')).toBe('^1.3.0')
+  expect(pluginApiRange('2.0.0')).toBe('^2.0.0')
+  expect(pluginApiRange('1.0.0-rc.1')).toBe('^1.0.0-rc.1')
+  expect(() => pluginApiRange('1.0')).toThrow()
+  // 用补丁版本构建的插件装得上同一个次版本的核心；预发布版本之间、预发布到正式版都满足
+  expect(satisfies('1.3.0', pluginApiRange('1.3.2'))).toBe(true)
+  expect(satisfies('1.2.9', pluginApiRange('1.3.0'))).toBe(false)
+  expect(satisfies('1.0.0-rc.2', pluginApiRange('1.0.0-rc.1'))).toBe(true)
+  expect(satisfies('1.0.0', pluginApiRange('1.0.0-rc.1'))).toBe(true)
+  expect(satisfies('2.0.0', pluginApiRange('1.0.0'))).toBe(false)
+  expect(satisfies(PLUGIN_API_VERSION, buildManifest(definePlugin({ capabilities: [] }), pkg).api)).toBe(true)
 })

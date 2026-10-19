@@ -84,13 +84,13 @@ export default defineConfig(
 
   {
     // 插件提供的函数按 API 要求一律返回 Promise（可能跨进程调用），未必有 await
-    files: ['packages/plugin-sdk/{examples,type-tests}/**', 'plugins/**'],
+    files: ['packages/plugin-sdk/{examples,type-tests}/**', 'packages/plugin-cli/fixtures/**', 'plugins/**'],
     rules: { '@typescript-eslint/require-await': 'off' },
   },
   {
     // 插件拿到的 Kysely 不直连数据库：核心网关按白名单重建操作树、再用自己的方言编译（ADR-0010），
     // 跨数据库的差异在网关里处理；插件也用不到 packages/db 的辅助函数
-    files: ['packages/plugin-sdk/**', 'plugins/**'],
+    files: ['packages/plugin-sdk/**', 'packages/plugin-cli/fixtures/**', 'plugins/**'],
     rules: { 'nextskin/no-dialect-specific-sql': 'off' },
   },
   {

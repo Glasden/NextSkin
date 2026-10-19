@@ -1,0 +1,75 @@
+# 插件 SDK 和构建命令的发布（ADR-0035）。版本号在本地用 `pnpm changeset version` 改好，提交后推到 main；
+# 两个包的 package.json 变了才运行，npm 上已经有这个版本就什么都不做。
+# 发布用 npm 的可信发布（OIDC），仓库里不放长期令牌；publish 在 environment `npm` 里，要维护者批准才运行，
+# npm 那边的可信发布者也限定这个 environment。
+# 第三方 action 固定到提交 SHA，升级时连同注释里的版本号一起改（同 ci.yml）。
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: ['packages/plugin-sdk/package.json', 'packages/plugin-cli/package.json']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  check:
+    name: 有没有没发布的版本
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      publish: ${{ steps.check.outputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: check
+        run: |
+          publish=false
+          for dir in packages/plugin-sdk packages/plugin-cli; do
+            spec=$(node -p "const p = require('./$dir/package.json'); p.name + '@' + p.version")
+            if [ "${spec##*@}" = "0.0.0" ]; then
+              echo "$spec：还没有用 changeset version 定过版本，不发布"
+            elif npm view "$spec" version > /dev/null 2>&1; then
+              echo "$spec：已经发布过"
+            else
+              echo "$spec：还没有发布"
+              publish=true
+            fi
+          done
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: 发布到 npm
+    needs: check
+    if: needs.check.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: npm
+    permissions:
+      # 推 changeset publish 打的 git 标签
+      contents: write
+      # npm 的可信发布（OIDC）
+      id-token: write
+    steps:
+      # 要推标签，这里保留凭据
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      # 不设 registry-url：它写进 .npmrc 的占位令牌会让发布不走 OIDC
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # 先跑打包冒烟测试，再 changeset publish：只发 npm 上还没有的版本，预发布模式下用 pre.json 里的 dist-tag
+      - run: pnpm release
+      - run: git push origin --tags

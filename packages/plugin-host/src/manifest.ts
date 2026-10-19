@@ -14,11 +14,25 @@ import {
   type PluginManifest,
   type PluginPackageField,
 } from '@nextskin/plugin-sdk'
+import sdkPackage from '@nextskin/plugin-sdk/package.json' with { type: 'json' }
 import { z } from 'zod'
 import { eventNames } from './events.ts'
+import { parseVersion } from './package/semver.ts'
 
-/** 核心实现的插件 API 版本。manifest 的 `api` 范围必须包含它 */
-export const PLUGIN_API_VERSION = '1.0.0'
+/**
+ * 核心实现的插件 API 版本，就是同一个提交里 SDK 的版本号（ADR-0035）。manifest 的 `api` 范围必须包含它
+ */
+export const PLUGIN_API_VERSION: string = sdkPackage.version
+
+/**
+ * 用某个版本的 SDK 构建的插件，manifest 里的 `api` 写什么（ADR-0035）：取到次版本，
+ * 补丁版本不加东西，用 1.3.2 构建的插件在实现 1.3.0 的核心上也能装；预发布版本取完整的版本号
+ */
+export function pluginApiRange(sdkVersion: string): string {
+  const version = parseVersion(sdkVersion)
+  if (!version) throw new Error(`SDK 的版本号不是合法的 semver：${sdkVersion}`)
+  return version.prerelease.length ? `^${sdkVersion}` : `^${version.major}.${version.minor}.0`
+}
 
 // 运行时按形状检查，类型参数取最宽的：具体插件的处理函数参数比这里窄，泛型位置上没有别的写法
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -331,7 +345,7 @@ export function buildManifest(definition: AnyPluginDefinition, pkg: PluginPackag
     manifestVersion: 1,
     id: field.id,
     version: pkg.version,
-    api: `^${PLUGIN_API_VERSION}`,
+    api: pluginApiRange(PLUGIN_API_VERSION),
     requires: { ...(pkg.nextskin.requires ?? {}) },
     conflicts: [...(pkg.nextskin.conflicts ?? [])],
     ...describePlugin(definition),

@@ -48,6 +48,11 @@
       "dependsOn": ["build"],
       "cache": false
     },
+    // 打包冒烟测试（ADR-0035）：要联网安装依赖，不进 pnpm check
+    "test:pack": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
     "dev": {
       "cache": false,
       "persistent": true

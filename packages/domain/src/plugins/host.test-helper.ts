@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { cp, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -50,6 +50,13 @@ export function buildPackage(
           await writeFile(join(dir, 'locales', `${locale}.json`), JSON.stringify(messages))
         }
       }
+      // 构建命令按插件项目里装的 SDK 算 `api`，像插件作者的项目一样把它装进 node_modules
+      await mkdir(join(dir, 'node_modules', '@nextskin'), { recursive: true })
+      await symlink(
+        join(repository, 'packages', 'plugin-sdk'),
+        join(dir, 'node_modules', '@nextskin', 'plugin-sdk'),
+        'junction',
+      )
       await writeFile(
         join(dir, 'package.json'),
         JSON.stringify({

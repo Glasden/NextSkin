@@ -1,0 +1,11 @@
+{
+  "plugin": { "name": "打包冒烟测试", "description": "test:pack 用的插件" },
+  "permission": { "manage": "管理笔记" },
+  "error": { "bot": "昵称不能以 bot 开头" },
+  "nav": { "notes": "笔记" },
+  "column": { "user": "用户", "body": "内容" },
+  "settings": {
+    "token": { "label": "令牌" },
+    "days": { "label": "保留天数" }
+  }
+}

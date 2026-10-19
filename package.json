@@ -18,13 +18,15 @@
     "test:db": "docker compose -f packages/db/compose.yaml up -d --wait && turbo run test:db",
     "test:contract": "turbo run test:contract",
     "test:visual": "turbo run test:visual",
+    "test:pack": "turbo run test:pack --filter=@nextskin/plugin-cli",
     "storybook": "turbo run storybook",
     "e2e": "turbo run e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "design:sync": "pnpm --filter @nextskin/ui design:sync",
     "font:sync": "pnpm --filter @nextskin/ui font:sync",
-    "changeset": "changeset"
+    "changeset": "changeset",
+    "release": "turbo run test:pack --filter=@nextskin/plugin-cli && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.3",

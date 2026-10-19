@@ -1,0 +1,17 @@
+{
+  "name": "nextskin-pack-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "description": "test:pack 用的插件项目：依赖由 scripts/test-pack.ts 换成 pnpm pack 出来的两个包",
+  "type": "module",
+  "nextskin": {
+    "id": "pack-fixture"
+  },
+  "dependencies": {
+    "@nextskin/plugin-sdk": "由 test-pack.ts 填写"
+  },
+  "devDependencies": {
+    "@nextskin/plugin-cli": "由 test-pack.ts 填写",
+    "@types/node": "由 test-pack.ts 填写"
+  }
+}

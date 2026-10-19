@@ -37,6 +37,8 @@ nextskin 启动器（进程监管 + 命令行）
 | `pnpm font:sync` | 重新生成像素字体的分片（DESIGN.md §4），需要联网；只在换字体版本或改切片规则时运行 |
 | `pnpm e2e` | Playwright 端到端测试；也经过 Next standalone 回放全部契约用例 |
 | `pnpm test:visual` | 组件截图回归：给每个 story 拍亮暗两张截图，和基线比较（需要 Docker，浏览器跑在容器里）。外观改动是有意的，就加 `-- --update-snapshots` 更新基线，并检查新截图 |
+| `pnpm test:pack` | 打包冒烟测试：在仓库外用 npm 安装 `pnpm pack` 出来的 SDK 和构建命令，类型检查、构建一个插件（要联网，不进 `pnpm check`，ADR-0035） |
+| `pnpm release` | 发布插件 SDK 和构建命令：先跑 `test:pack`，再 `changeset publish`。平时由 `.github/workflows/release.yml` 运行，版本号先在本地用 `pnpm changeset version` 改好（ADR-0035） |
 | `pnpm format` | Prettier 格式化 |
 | `pnpm import:bs -- <参数>` | 从 BS v6 导入（ADR-0031），参数见 `-- --help`，步骤见 `packages/importer/MIGRATION.md`；读和 `pnpm dev` 相同的环境变量，运行时服务要停着 |
 | `pnpm set-role <邮箱> <角色>` | 设定用户的角色，例如找回超级管理员（ADR-0027）；第一个超级管理员在安装向导 `/setup` 里创建，安装码在数据目录的 `setup-code` 文件（ADR-0031）。读和 `pnpm dev` 相同的环境变量 |
@@ -72,7 +74,7 @@ nextskin 启动器（进程监管 + 命令行）
 | `packages/i18n` | 界面文案（`messages/<语言>.json`）和语言解析，网页和领域层共用（ADR-0019） |
 | `packages/email` | 邮件模板，无依赖的 HTML 模板函数（ADR-0020） |
 | `packages/plugin-sdk`、`plugin-host` | 插件 API（公开面，ADR-0033）；插件侧的运行时：host 进程的入口和帧协议、加载插件定义、构造 `ctx`、插件包的格式和校验。核心侧的注册表、网关、换代和安装在 `packages/domain/src/plugins/` |
-| `packages/plugin-cli` | `nextskin-plugin build`：把插件打成插件包（manifest、单文件的服务端代码、文案），插件作者和测试共用 |
+| `packages/plugin-cli` | `nextskin-plugin build`：把插件打成插件包（manifest、单文件的服务端代码、文案），插件作者和测试共用。和 SDK 一起发布到 npm，版本号相同；发布的是连同 plugin-host、SDK、zod 打成的单文件（ADR-0035） |
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |
 | `packages/importer` | 从 BS v6 只读导入（ADR-0031）：导入引擎、命令行和网页导入服务（`apps/web` 创建、注入 Hono），迁移指南在 `MIGRATION.md`，该目录有自己的 AGENTS.md |
 | `packages/oauth-client` | 几个 OAuth 官方插件共用的代码（拼授权地址、换令牌、读 ID 令牌），不发布，打进各插件的单文件；第三方插件不能依赖它（ADR-0034） |

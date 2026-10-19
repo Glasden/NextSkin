@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -44,6 +44,9 @@ test.beforeAll(({ pluginHost }) => {
     const source = join(repository, 'plugins', id)
     cpSync(join(source, 'src'), join(dir, 'src'), { recursive: true })
     cpSync(join(source, 'locales'), join(dir, 'locales'), { recursive: true })
+    // 构建命令按插件项目里装的 SDK 算 `api`
+    mkdirSync(join(dir, 'node_modules', '@nextskin'), { recursive: true })
+    symlinkSync(join(repository, 'packages/plugin-sdk'), join(dir, 'node_modules/@nextskin/plugin-sdk'), 'junction')
     const { version } = JSON.parse(readFileSync(join(source, 'package.json'), 'utf8')) as { version: string }
     writeFileSync(
       join(dir, 'package.json'),

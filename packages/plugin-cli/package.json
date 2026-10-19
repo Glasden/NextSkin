@@ -1,25 +1,50 @@
 {
   "name": "@nextskin/plugin-cli",
   "version": "0.0.0",
-  "private": true,
-  "description": "插件包构建命令",
+  "description": "nextskin-plugin build：把 NextSkin 插件打成插件包",
+  "keywords": [
+    "nextskin",
+    "blessing-skin",
+    "minecraft",
+    "plugin"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Glasden/NextSkin.git",
+    "directory": "packages/plugin-cli"
+  },
   "type": "module",
-  "scripts": {
-    "lint": "eslint --max-warnings 0 .",
-    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
-    "test": "vitest run"
-  },
-  "dependencies": {
-    "@nextskin/plugin-host": "workspace:*",
-    "@nextskin/plugin-sdk": "workspace:*",
-    "rolldown": "catalog:",
-    "zod": "catalog:"
-  },
-  "devDependencies": {
-    "@types/node": "catalog:",
-    "vitest": "catalog:"
-  },
   "bin": {
     "nextskin-plugin": "./src/cli.ts"
+  },
+  "files": [
+    "dist/cli.mjs"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "publishConfig": {
+    "access": "public",
+    "bin": {
+      "nextskin-plugin": "./dist/cli.mjs"
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build-cli.ts",
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run",
+    "test:pack": "node scripts/test-pack.ts"
+  },
+  "dependencies": {
+    "rolldown": "catalog:"
+  },
+  "devDependencies": {
+    "@nextskin/plugin-host": "workspace:*",
+    "@nextskin/plugin-sdk": "workspace:*",
+    "@types/node": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }

@@ -24,6 +24,15 @@
       "schedule": ["* * * * *"]
     },
     {
+      "description": "插件运行时用的是核心的 zod 和 Kysely，SDK 的依赖锁着和 catalog 相同的次版本（ADR-0035）：升级要在 Dependency Dashboard 里勾选；次版本要同时改 SDK 的依赖范围、附 SDK 的 changeset（packages/plugin-cli/src/release.test.ts 守着）；zod 的大版本、kysely 的次版本是 SDK 的大版本",
+      "matchPackageNames": ["zod", "kysely"],
+      "matchUpdateTypes": ["major", "minor"],
+      "groupName": "zod 和 Kysely",
+      "groupSlug": "plugin-sdk-deps",
+      "dependencyDashboardApproval": true,
+      "schedule": ["* * * * *"]
+    },
+    {
       "description": "Next.js 锁定小版本（ADR-0013）：补丁常带安全修复，单独开 PR、不等每周的批次",
       "matchPackageNames": ["next", "@next/**"],
       "matchUpdateTypes": ["patch"],

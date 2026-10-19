@@ -5,6 +5,7 @@ export {
   describePlugin,
   PluginDefinitionError,
   PLUGIN_API_VERSION,
+  pluginApiRange,
   PLUGIN_ID,
   OBJECT_NAME,
   type AnyPluginDefinition,
