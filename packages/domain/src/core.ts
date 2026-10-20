@@ -26,6 +26,7 @@ import { PLUGIN_KV_CLEANUP_JOB } from './plugins/kv.ts'
 import { pluginReferences } from './plugins/references.ts'
 import type { Kysely } from 'kysely'
 import { createAuthService } from './auth/service.ts'
+import { createCaptcha } from './captcha/service.ts'
 import { createExternalLogin } from './auth/external-login.ts'
 import { createEvents } from './events/emit.ts'
 import { createJobRunner, type JobHandler, type JobRunnerOptions } from './jobs/runner.ts'
@@ -73,6 +74,7 @@ export interface CoreOptions {
   mailTransport?: MailTransport
   /** 任务执行器的参数，测试用来控制时钟和轮询 */
   jobs?: Omit<JobRunnerOptions, 'db' | 'handlers'>
+  captcha?: { fetch?: typeof fetch }
   plugins?: {
     /** 随发行包分发的官方插件，在核心进程内运行（ADR-0009） */
     official?: readonly OfficialPlugin[]
@@ -104,6 +106,7 @@ export function createCore(options: CoreOptions) {
     pool: imagePool,
   })
   const settings = createSettingQueries(options.db, options.secretKey)
+  const captcha = createCaptcha(settings, options.captcha?.fetch)
   // 执行器每次轮询都读这张表，事件订阅和核心任务往里登记处理函数
   const handlers = new Map<string, JobHandler>()
   const now = options.now ?? options.jobs?.now ?? (() => new Date())
@@ -193,6 +196,7 @@ export function createCore(options: CoreOptions) {
     settings,
     production: options.production,
     mail,
+    captcha,
     passwordPlugins,
     onPasswordChanged: async (uid) => {
       // 吊销启动器和 OAuth 凭据单独提交：事件入队失败会回滚它所在的事务，而改密码已经成功了（ADR-0030）
@@ -258,6 +262,7 @@ export function createCore(options: CoreOptions) {
       jobs,
       plugins,
       getSigningKey,
+      captcha,
     }),
     closet,
     reports: createReports(textureOptions),
@@ -278,6 +283,7 @@ export function createCore(options: CoreOptions) {
       ...createTextureManagement(textureOptions),
     },
     settings,
+    captcha,
     auth,
     externalLogin,
     mail,

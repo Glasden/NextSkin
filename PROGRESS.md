@@ -13,6 +13,7 @@
   - Yggdrasil Connect 的授权码流程（ADR-0037 切片二）：授权码流程放开 Yggdrasil scope（组合规则、缺省 scope 按应用登记的补上、去掉 Yggdrasil scope）；`/oauth/consent` 同意页（服务端验签，应用、回调地址的主机、权限，申请 Select 时选角色、经请求头交给 consent 钩子写进同意记录和授权码，换一个账号）；公共客户端和申请 Select 的请求每次都征求同意；登录后续跑（登录页验签后重新打开授权地址，密码、两步验证、通行密钥、第三方登录、注册都经 `next` 回去，已登录、不用重新登录时直接回去），`/oauth2/continue` 关闭，`oauth_query` 只在同意端点上接受；授权错误按登记规则判断回调地址可信时重定向回应用，否则去站内错误页 `/oauth/error`（也是 Better Auth 的 `errorURL`）；被封禁、邮箱没验证时送到同意页说明原因、只能拒绝；不接受只同意一部分 scope；`prompt=create`、`select_account` 当成 login，拒绝 `dpop_jkt` 和 OIDC 的 `claims` 参数；第三方登录出错时把 `next` 带回登录页。
   - Yggdrasil Connect 的应用管理（ADR-0037 切片三）：用户中心的"OAuth 应用"页（网站和启动器两种类型，创建时生成 client_id 和只显示一次的密钥，改名称和回调地址、重置密钥、删除，回调地址照 Better Auth 的规则校验、修改时只校验新加的，页面上给出发现文档的地址）；后台的"OAuth 应用"页和权限 `oauthClients.manage`（查找、按主人筛选，停用、启用、删除，写审计、停用和删除通知主人，没有主人的应用和公用应用只有超级管理员能处理，公用应用不能删）；用户详情页的"已授权的应用"数和名下的应用数。
 - **认证和注册**（ADR-0007、ADR-0018）：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制；注册用例和注册规则，注册接口 `POST /api/register` 是第一个 REST 接口（`packages/api/src/rest/`）；登录、注册和找回密码的页面。
+  - 验证码（ADR-0038）：设置分区"验证码"选 Turnstile、hCaptcha 或 reCAPTCHA v2（复选框和隐形），注册、密码登录、找回密码每次都要，令牌放在 `X-Captcha-Response`；核对在领域层、由入口调用，核对不了一律拒绝；挂件的外框 `CaptchaFrame`；后台的"测试验证码"和配置检查；命令行 `disable-captcha`；导入 BS 的 reCAPTCHA 设置。
 - **邮件**（ADR-0020、ADR-0021）：模板在 `packages/email`，发送是持久的后台任务。
 - **事件、后台任务和积分流水**（ADR-0021）：任务表和执行器；事件在业务事务里按订阅者展开成任务；`adjustScore`。
 - **用户中心**（ADR-0022）：外壳和导航、仪表盘（积分、签到）、角色管理。写接口认会话 Cookie。
@@ -39,7 +40,6 @@
 
 - **插件 SDK 1.0**（ADR-0035）：冻结前的调整、打包和发布流程、作者文档（`packages/plugin-sdk/docs/`）已经做完，两个包的版本是 `1.0.0-rc.0`（预发布模式 `rc`）。还没做：第一个候选版由维护者在本地发（`pnpm release`），之后配好 npm 的可信发布，由 CI 发；候选期在仓库外照迁移指南迁一个 BS 社区插件、收集作者意见；1.0.0 之前仓库公开，退出预发布时去掉 README 和入门里的 `@rc`。
 - **第三方登录的字段核对**：四家的 subject、`emailVerified` 还要用真实账号核对一遍（ADR-0034"首批插件"）。
-- **验证码**（ADR-0038 已采纳）：一次落地，还没做。核心支持 Turnstile、hCaptcha、reCAPTCHA v2，注册、密码登录、找回密码每次都要；设置分区"验证码"和后台的测试；导入 BS 的 reCAPTCHA 设置；命令行 `disable-captcha`。
 - **插件 API 推迟的部分**：写核心数据的能力、其余五个拦截点、运行时组件和插槽等，见 ADR-0033 的"推迟"表。
 - **启动器**（`nextskin` 进程监管和命令行）：现在 plugin host 由核心进程拉起。
 - 通知、站点的 CSP、失败任务的后台页面、后台覆盖翻译、种子数据。

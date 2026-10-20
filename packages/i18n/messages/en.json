@@ -61,6 +61,10 @@
     }
   },
   "errors": {
+    "captcha_required": "Please complete the captcha.",
+    "captcha_failed": "Captcha verification failed. Please try again.",
+    "captcha_unavailable": "Captcha verification is unavailable. Please try again later.",
+    "captcha_not_configured": "Select a captcha provider, enter both keys, and save the settings first.",
     "import_jobs_busy": "Background jobs have not stopped yet. Please try again in a moment.",
     "setup_required": "This site has not finished setup. Registration is temporarily unavailable.",
     "mail_test_failed": "The test email could not be sent: {reason}",
@@ -315,6 +319,12 @@
       "expiredTitle": "This sign-up has expired",
       "expired": "You need to finish signing up within 30 minutes of coming back from the provider. Sign in with the provider again."
     }
+  },
+  "captcha": {
+    "label": "Human verification",
+    "loading": "Loading the captcha",
+    "loadFailed": "The captcha didn't load. This site's captcha is provided by {provider}; check that your network can reach {host}, then reload it.",
+    "retry": "Reload"
   },
   "user": {
     "nav": {
@@ -1151,6 +1161,7 @@
         "siteUrl": "The site URL is not set: nobody can sign in or sign up in production.",
         "mail": "Email is not set up: addresses cannot be verified and passwords cannot be reset.",
         "signingKey": "There is no signing key: external login is unavailable.",
+        "captcha": "Captcha configuration is incomplete: select a provider and enter both the site key and secret key.",
         "fix": "Go to settings"
       }
     },
@@ -1453,6 +1464,7 @@
       "sections": {
         "site": "Site",
         "registration": "Registration",
+        "captcha": "Captcha",
         "score": "Score",
         "content": "Players & textures",
         "mail": "Email",
@@ -1496,7 +1508,48 @@
         "hint": "Sends a test email to your address {email} using the saved settings. Save your changes first.",
         "sent": "Test email sent to {to}. Check the inbox."
       },
+      "testCaptcha": {
+        "button": "Test the captcha",
+        "hint": "Solve the captcha once with the saved settings and verify it the way sign-in does, to check the site key, the secret key and the server’s network. Save your changes first.",
+        "notConfigured": "Choose a provider, fill in both keys and save to test the captcha here.",
+        "title": "Test the captcha",
+        "description": "Solve the captcha below, then select “Verify”.",
+        "close": "Close",
+        "verify": "Verify",
+        "incomplete": "Solve the captcha first, then select “Verify”.",
+        "passed": "Verified",
+        "passedHint": "The captcha is set up correctly. Sign-up, password sign-in and password reset will require it.",
+        "failed": "Not passed",
+        "failedHint": "The provider rejected this attempt. Try again; if it keeps failing, check that this site’s domain is allowed for the site key.",
+        "unavailable": "Couldn't verify",
+        "unavailableHint": "The server couldn't complete the check: the secret key is wrong or the provider is unreachable. Until this is fixed nobody can sign in or sign up, so fix it or set the provider to “Disabled”.",
+        "errorCodes": "Error codes from the provider: {codes}"
+      },
       "fields": {
+        "captcha": {
+          "provider": {
+            "label": "Captcha provider",
+            "help": "Required for every registration, password sign-in, and password reset request. Enabled only when both keys are set. reCAPTCHA uses www.recaptcha.net.",
+            "options": {
+              "none": "Disabled",
+              "turnstile": "Cloudflare Turnstile",
+              "hcaptcha": "hCaptcha",
+              "recaptcha": "Google reCAPTCHA v2"
+            }
+          },
+          "siteKey": {
+            "label": "Site key",
+            "help": "Public key passed to the captcha widget on the page."
+          },
+          "secretKey": {
+            "label": "Secret key",
+            "help": "Used only on the server to verify captcha tokens. Never sent back to the browser."
+          },
+          "recaptchaInvisible": {
+            "label": "Invisible reCAPTCHA",
+            "help": "Applies only to reCAPTCHA and must match the key type: v2 checkbox and invisible widgets use different keys."
+          }
+        },
         "site": {
           "name": {
             "label": "Site name",

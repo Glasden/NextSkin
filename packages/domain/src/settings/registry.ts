@@ -5,7 +5,16 @@ import { isTrustedProxy } from '../network/client-ip.ts'
 
 export const coreSettingsNamespace = 'core'
 
-export const settingSections = ['site', 'registration', 'score', 'content', 'mail', 'yggdrasil', 'advanced'] as const
+export const settingSections = [
+  'site',
+  'registration',
+  'captcha',
+  'score',
+  'content',
+  'mail',
+  'yggdrasil',
+  'advanced',
+] as const
 export type SettingSection = (typeof settingSections)[number]
 
 interface SettingDefinition {
@@ -79,6 +88,15 @@ export const coreSettingsRegistry = {
     secret: false,
   },
   'auth.requireEmailVerification': { schema: z.boolean(), default: false, section: 'registration', secret: false },
+  'captcha.provider': {
+    schema: z.enum(['none', 'turnstile', 'hcaptcha', 'recaptcha']),
+    default: 'none',
+    section: 'captcha',
+    secret: false,
+  },
+  'captcha.siteKey': { schema: z.string(), default: '', section: 'captcha', secret: false },
+  'captcha.secretKey': { schema: z.string(), default: '', section: 'captcha', secret: true },
+  'captcha.recaptchaInvisible': { schema: z.boolean(), default: false, section: 'captcha', secret: false },
   'user.initialScore': { schema: z.int().min(0).max(2147483647), default: 1000, section: 'score', secret: false },
   'score.perPlayer': { schema: z.int().min(0).max(2147483647), default: 100, section: 'score', secret: false },
   'score.perKbPublic': { schema: z.int().min(0).max(2147483647), default: 1, section: 'score', secret: false },

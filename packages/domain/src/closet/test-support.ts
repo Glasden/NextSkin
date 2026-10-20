@@ -14,12 +14,19 @@ import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import type { EventName } from '@nextskin/plugin-sdk'
 import { afterAll, beforeAll, beforeEach, expect, vi } from 'vitest'
 import { pauseNextCommit as pauseCommit } from '../commit-pause.test-helper.ts'
-import { createCore, encodeSettingValue, type Core, type CoreSettingKey, type CoreSettingValue } from '../index.ts'
+import {
+  createCore,
+  encodeSettingValue,
+  type Core,
+  type CoreOptions,
+  type CoreSettingKey,
+  type CoreSettingValue,
+} from '../index.ts'
 import { adjustScore } from '../score/adjust.ts'
 
 const secretKey = 'test-only-secret-key-with-at-least-32-characters'
 export const old = toIsoTimestamp(new Date('2020-01-01T00:00:00Z'))
-export function setup() {
+export function setup(options: Pick<CoreOptions, 'captcha'> = {}) {
   let database: TestDatabase<CoreDatabase>,
     core: Core,
     owner: { uid: number },
@@ -52,6 +59,7 @@ export function setup() {
     await db().deleteFrom('settings').execute()
     clock = Date.parse('2026-10-18T00:00:00Z')
     core = createCore({
+      ...options,
       db: db(),
       secretKey,
       production: false,

@@ -6,17 +6,29 @@ import NextLink from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Key } from 'pixelarticons/react/Key.js'
 import { useCallback, useState } from 'react'
-import { authErrorCode, postJson } from '../../../lib/api-client'
+import { authErrorCode, sendJson } from '../../../lib/api-client'
+import { CAPTCHA_HEADER, isCaptchaError, useCaptcha, type CaptchaConfig } from '../../../lib/captcha'
 import { goToNext } from '../../../lib/navigation'
 import { ExternalLoginButtons, type ExternalProvider } from '../external-login-buttons'
 import { usePasskeySignIn } from './passkey-sign-in'
 
 /**
  * next：登录后去的站内路径，页面已经检查过（lib/session.ts 的 safeNextPath）。
- * providers：能用的第三方登录（ADR-0034），排在通行密钥后面
+ * providers：能用的第三方登录（ADR-0034），排在通行密钥后面。
+ * captcha：启用了验证码时只拦密码登录，通行密钥和第三方登录不要（ADR-0038）
  */
-export function SignInForm({ next, providers }: { next: string; providers: readonly ExternalProvider[] }) {
+export function SignInForm({
+  next,
+  providers,
+  captcha: captchaConfig,
+}: {
+  next: string
+  providers: readonly ExternalProvider[]
+  captcha: CaptchaConfig | null
+}) {
   const t = useTranslations('auth')
+  const errors = useTranslations('errors')
+  const captcha = useCaptcha(captchaConfig)
   const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,13 +37,21 @@ export function SignInForm({ next, providers }: { next: string; providers: reado
   const passkey = usePasskeySignIn(signedIn)
 
   async function submit(values: { email?: string; password?: string }) {
-    setPending(true)
     setError(null)
-    const { status, data } = await postJson('/api/auth/sign-in/email', {
-      email: values.email,
-      password: values.password,
-      rememberMe: remember,
-    })
+    // 隐形 reCAPTCHA 可能弹出挑战、用户也可能关掉它，所以先拿令牌，再把按钮设成提交中
+    const token = await captcha.getToken()
+    if (captchaConfig && !token) {
+      setError(errors('captcha_required'))
+      return
+    }
+    setPending(true)
+    const { status, data } = await sendJson(
+      'POST',
+      '/api/auth/sign-in/email',
+      { email: values.email, password: values.password, rememberMe: remember },
+      { headers: token ? { [CAPTCHA_HEADER]: token } : {} },
+    )
+    captcha.reset()
     if (status === 200) {
       // 开着两步验证时还没有会话，Better Auth 留下挑战 Cookie，到第二步输入验证码（ADR-0023）
       if ((data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect)
@@ -39,12 +59,15 @@ export function SignInForm({ next, providers }: { next: string; providers: reado
       else signedIn()
       return
     }
+    const code = authErrorCode(data)
     setError(
       status === 429
         ? t('signIn.tooManyAttempts')
-        : authErrorCode(data) === 'INVALID_EMAIL_OR_PASSWORD'
+        : code === 'INVALID_EMAIL_OR_PASSWORD'
           ? t('signIn.invalidCredentials')
-          : t('signIn.failed'),
+          : isCaptchaError(code)
+            ? errors(code)
+            : t('signIn.failed'),
     )
     setPending(false)
   }
@@ -68,6 +91,7 @@ export function SignInForm({ next, providers }: { next: string; providers: reado
             <Link render={<NextLink href="/forgot-password" />}>{t('signIn.forgot')}</Link>
           </span>
         </div>
+        {captcha.element}
         <div className="mt-2">
           <Button type="submit" variant="primary" size="lg" fullWidth loading={pending}>
             {t('signIn.submit')}

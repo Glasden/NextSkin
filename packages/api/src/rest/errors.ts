@@ -31,6 +31,10 @@ const statuses = {
   site_name_invalid: 400,
   site_url_invalid: 400,
 
+  captcha_required: 400,
+  captcha_failed: 403,
+  captcha_unavailable: 503,
+  captcha_not_configured: 400,
   mail_not_configured: 400,
   mail_test_failed: 502,
   permission_denied: 403,

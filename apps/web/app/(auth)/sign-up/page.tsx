@@ -23,7 +23,7 @@ export default async function SignUpPage({ searchParams }: PageProps<'/sign-up'>
   const next = safeNextPath((await searchParams).next)
   if (await getSessionUser()) redirect(next)
   const [{ core }, t, locale] = await Promise.all([getServer(), getTranslations('auth.signUp'), getLocale()])
-  const [settings, mailConfigured, initialized, providers] = await Promise.all([
+  const [settings, mailConfigured, initialized, providers, captcha] = await Promise.all([
     core.settings.read([
       'auth.registration.enabled',
       'auth.registration.withPlayerName',
@@ -33,6 +33,7 @@ export default async function SignUpPage({ searchParams }: PageProps<'/sign-up'>
     core.mail.configured(),
     core.setup.isInitialized(),
     externalProviders(),
+    core.captcha.publicConfig(),
   ])
   const heading = (
     <AuthHeading title={t('title')}>
@@ -73,6 +74,7 @@ export default async function SignUpPage({ searchParams }: PageProps<'/sign-up'>
         }
         verificationNotice={mailConfigured}
         next={next}
+        captcha={captcha}
       />
       {/* 第三方登录（ADR-0034）：没有绑定的账号回来以后进"完成注册"页，和这里一样要填注册信息 */}
       {providers.length > 0 && (

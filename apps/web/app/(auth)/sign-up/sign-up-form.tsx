@@ -4,7 +4,8 @@ import { Alert, Button, Field, Form, Input } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { apiError, formErrors, postJson } from '../../../lib/api-client'
+import { apiError, formErrors, sendJson } from '../../../lib/api-client'
+import { CAPTCHA_HEADER, useCaptcha, type CaptchaConfig } from '../../../lib/captcha'
 import { goToNext } from '../../../lib/navigation'
 import { playerNameInputProps, type PlayerNameRules } from '../../../lib/player-name'
 import { initialFieldValue, PluginField, type PluginFieldValue } from '../../_plugins/plugin-field'
@@ -33,6 +34,8 @@ export interface SignUpFormProps {
   /** 注册后去的站内路径（页面检查过）；第三方登录的"完成注册"用 external.next */
   next?: string
   external?: ExternalSignUp
+  /** 启用了验证码时注册要过（ADR-0038）；第三方登录的"完成注册"不要，不传 */
+  captcha?: CaptchaConfig | null
 }
 
 export function SignUpForm({
@@ -42,8 +45,11 @@ export function SignUpForm({
   pluginFields,
   next = '/user',
   external,
+  captcha: captchaConfig = null,
 }: SignUpFormProps) {
   const t = useTranslations('auth')
+  const errorText = useTranslations('errors')
+  const captcha = useCaptcha(captchaConfig)
   const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,19 +71,31 @@ export function SignUpForm({
   }
 
   async function submit(values: Record<string, string | undefined>) {
-    setPending(true)
     setError(null)
     setErrors({})
+    // 隐形 reCAPTCHA 可能弹出挑战、用户也可能关掉它，所以先拿令牌，再把按钮设成提交中
+    const token = await captcha.getToken()
+    if (captchaConfig && !token) {
+      setError(errorText('captcha_required'))
+      return
+    }
+    setPending(true)
     const plugins: Record<string, Record<string, PluginFieldValue>> = {}
     for (const { pluginId, field } of pluginFields)
       (plugins[pluginId] ??= {})[field.name] = extra[`${pluginId}.${field.name}`] ?? ''
-    const { status, data } = await postJson(external ? '/api/external-login/complete' : '/api/register', {
-      email: values.email,
-      ...(external ? {} : { password: values.password }),
-      nickname: values.nickname,
-      playerName: values.playerName,
-      ...(pluginFields.length ? { plugins } : {}),
-    })
+    const { status, data } = await sendJson(
+      'POST',
+      external ? '/api/external-login/complete' : '/api/register',
+      {
+        email: values.email,
+        ...(external ? {} : { password: values.password }),
+        nickname: values.nickname,
+        playerName: values.playerName,
+        ...(pluginFields.length ? { plugins } : {}),
+      },
+      { headers: token ? { [CAPTCHA_HEADER]: token } : {} },
+    )
+    captcha.reset()
     if (status === 201) {
       // 会话没建成（极少见）时去登录页，账号已经注册好了
       const signedIn = (data as { signedIn?: unknown } | null)?.signedIn === true
@@ -134,6 +152,7 @@ export function SignUpForm({
           />
         )
       })}
+      {captcha.element}
       <div className="mt-2">
         <Button type="submit" variant="primary" size="lg" fullWidth loading={pending}>
           {external ? t('complete.submit') : t('signUp.submit')}

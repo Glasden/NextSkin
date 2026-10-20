@@ -61,6 +61,10 @@
     }
   },
   "errors": {
+    "captcha_required": "请先完成验证码。",
+    "captcha_failed": "验证码没有通过，请重试。",
+    "captcha_unavailable": "验证码服务暂时不可用，请稍后重试。",
+    "captcha_not_configured": "请先选择验证码服务商、填好两个密钥并保存。",
     "import_jobs_busy": "后台任务还没停下来，过一会儿再试。",
     "setup_required": "站点还没有完成安装，暂时不能注册。",
     "mail_test_failed": "测试邮件没有发出去：{reason}",
@@ -315,6 +319,12 @@
       "expiredTitle": "这次注册已经过期",
       "expired": "从第三方回来后 30 分钟内要完成注册，请重新用第三方账号登录。"
     }
+  },
+  "captcha": {
+    "label": "人机验证",
+    "loading": "正在加载验证码",
+    "loadFailed": "验证码没有加载出来。本站的验证码由 {provider} 提供，检查网络能不能访问 {host}，然后重新加载。",
+    "retry": "重新加载"
   },
   "user": {
     "nav": {
@@ -1151,6 +1161,7 @@
         "siteUrl": "没有设置站点地址：生产环境下不能登录和注册。",
         "mail": "没有配置邮件：不能验证邮箱和找回密码。",
         "signingKey": "没有签名私钥：外置登录不可用。",
+        "captcha": "验证码没有配置完整：选择服务商后需要填好站点密钥和私密密钥。",
         "fix": "去设置"
       }
     },
@@ -1453,6 +1464,7 @@
       "sections": {
         "site": "站点",
         "registration": "注册",
+        "captcha": "验证码",
         "score": "积分",
         "content": "角色和材质",
         "mail": "邮件",
@@ -1496,7 +1508,48 @@
         "hint": "用已经保存的设置，给你的邮箱 {email} 发一封测试邮件。改了设置要先保存。",
         "sent": "测试邮件已发到 {to}，去收件箱看看"
       },
+      "testCaptcha": {
+        "button": "测试验证码",
+        "hint": "用已经保存的设置过一次验证码，按正式流程核对，看看站点密钥、私密密钥和服务端的网络是不是都没问题。改了设置要先保存。",
+        "notConfigured": "选好服务商、填好两个密钥并保存之后，可以在这里测试。",
+        "title": "测试验证码",
+        "description": "先完成下面的验证码，再点“核对”。",
+        "close": "关闭",
+        "verify": "核对",
+        "incomplete": "先完成验证码，再点“核对”。",
+        "passed": "核对通过",
+        "passedHint": "验证码配置正确，注册、密码登录和找回密码都会要求验证。",
+        "failed": "没有通过",
+        "failedHint": "服务商判定这次验证没有通过。重新完成一次；一直不通过时，检查站点密钥绑定的域名里有没有本站。",
+        "unavailable": "核对不了",
+        "unavailableHint": "服务端没能完成核对：私密密钥不对，或者连不上服务商。用户这时既登录不了也注册不了，先修好或者把服务商改成“不启用”。",
+        "errorCodes": "服务商返回的错误码：{codes}"
+      },
       "fields": {
+        "captcha": {
+          "provider": {
+            "label": "验证码服务商",
+            "help": "注册、密码登录和找回密码每次都要验证。选好服务商并填好两个密钥才会启用；reCAPTCHA 使用 www.recaptcha.net。",
+            "options": {
+              "none": "不启用",
+              "turnstile": "Cloudflare Turnstile",
+              "hcaptcha": "hCaptcha",
+              "recaptcha": "Google reCAPTCHA v2"
+            }
+          },
+          "siteKey": {
+            "label": "站点密钥",
+            "help": "公开密钥，传给页面上的验证码挂件。"
+          },
+          "secretKey": {
+            "label": "私密密钥",
+            "help": "只在服务端核对验证码时使用，不回传浏览器。"
+          },
+          "recaptchaInvisible": {
+            "label": "隐形 reCAPTCHA",
+            "help": "只对 reCAPTCHA 有效，必须和站点密钥类型一致：v2 复选框和隐形验证码使用不同的密钥。"
+          }
+        },
         "site": {
           "name": {
             "label": "站点名称",

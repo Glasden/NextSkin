@@ -50,6 +50,7 @@
 |---|---|
 | 核心协议和基础功能 | yggdrasil-api、usm-api、legacy-api、config-generator、204-for-unexisted-players、insane-profile-cache；协议路径和响应由核心兼容 |
 | 核心认证、设置和导入 | password-algorithm-transition、disable-registration、restricted-email-domains、single-player-limit、texture-description、gravatar、trust-proxies、remote-addr、predis；batch-import 并入导入器。旧插件的每个细节不一定有独立开关，不要再接核心内部类 |
+| 验证码 | 核心内置，在后台设置的验证码分区启用（ADR-0038）；支持 Turnstile、hCaptcha 和 reCAPTCHA v2，没有验证码 Provider |
 | 核心已实现（部分） | yggdrasil-connect：设备码流程、公用应用、进服认 OAuth 令牌和安全页的“已授权的应用”已由核心实现（ADR-0037），导入器把 Janus 标记的应用转成公共客户端；授权码流程的同意页和“OAuth 应用”管理页还没做。没有可替代的插件 API |
 | S3 兼容存储驱动 | textures-aliyun-oss、textures-qcloud-cos、textures-qiniu-storage，站长配置存储，不通过插件提供存储驱动 |
 | 已迁为参考插件 | invitation-codes → invitation-codes；refresh-ali-cdn、refresh-qcloud-cdn、purge-azure-global-cdn → cdn-refresh |
@@ -64,7 +65,6 @@
 |---|---|---|
 | 写核心数据（积分、通知、指定 UUID 建角色等） | 只有只读 DTO 能力，写入必须经过专门的领域用例和审计；相应能力未开放 | 删除这部分自动化，使用核心已有管理流程；需要新能力时向核心提扩展点需求，不能用插件表或核心 HTTP 接口冒充用例权限 |
 | 浏览器执行代码、自定义组件和插槽 | 第一版只有声明式 UI，不提供 ui.script，也不允许 HTML 注入 | 表格、表单、统计、Markdown、注册字段；超出范围等后续 API |
-| 验证码 | 挂件依赖浏览器组件，验证码 Provider 未开放；设计已改为核心配置 Turnstile/hCaptcha/reCAPTCHA | 等核心验证码功能，不把第三方 secret 和脚本塞进注册 extra；当前仍是未完成项 |
 | 外部数据库 | host 没有外部数据库凭据或任意连接能力，ctx.db 只能访问插件自有表 | 先离线迁入自有表，或由独立服务提供受鉴权 HTTPS API；后者只能在允许网络的调用点使用 |
 | 常驻连接（机器人、WebSocket 客户端等） | 没有 setup 生命周期，host 会整代切换，ctx 仅在单次调用有效 | 独立服务，或有期限的 jobs/cron 轮询；不要在顶层偷偷创建常驻连接 |
 | 事务内访问外部系统再决定放行 | user.register 只给本地成员和插件 db，写锁内不能等网络，副作用无法回滚 | 预先同步到插件表；不能接受快照的规则要等待新的事务外拦截点 |

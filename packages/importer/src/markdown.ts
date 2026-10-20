@@ -267,6 +267,11 @@ export function reportToMarkdown(report: ImportReport): string {
     lines.push('', '不导入、但旧站改过的设置：')
     for (const item of settings.notImported) lines.push(`- \`${item.option}\`：${code(item.value)}`)
   }
+  if (settings.notImported.some((item) => ['recaptcha_sitekey', 'recaptcha_secretkey'].includes(item.option)))
+    lines.push(
+      '',
+      '旧站的 reCAPTCHA 两个密钥没有配全，BS 上这种配置本来就过不了；没有导入，请在后台的验证码分区重新配置。',
+    )
   if (settings.notImported.some((item) => item.option === 'copyright_text'))
     lines.push('', '旧站版权文字是原始 HTML，请改写成 Markdown 后填进 site.footer；备案号链接也需要改写。')
   if (settings.otherLocales.length)

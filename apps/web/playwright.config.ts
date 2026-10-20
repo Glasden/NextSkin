@@ -61,6 +61,7 @@ export default defineConfig<{ pluginHost: boolean }>({
         'plugins.spec.ts',
         'external-login.spec.ts',
         'connect.spec.ts',
+        'captcha.spec.ts',
       ],
     },
     {
@@ -72,7 +73,8 @@ export default defineConfig<{ pluginHost: boolean }>({
       name: 'plugins',
       workers: 1,
       use: { ...devices['Desktop Chrome'], baseURL: pluginsSite },
-      testMatch: ['plugins.spec.ts', 'external-login.spec.ts'],
+      // 验证码（captcha.spec.ts）启用后登录和注册都要过挂件，同样不能和别的用例并行
+      testMatch: ['plugins.spec.ts', 'external-login.spec.ts', 'captcha.spec.ts'],
     },
     {
       name: 'plugins-host',

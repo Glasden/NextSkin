@@ -12,6 +12,7 @@ import type { Kysely, Transaction } from 'kysely'
 import { can, type CorePermission } from '../access/permissions.ts'
 import { audit } from '../audit/write.ts'
 import { DomainError } from '../errors.ts'
+import type { CaptchaInput, CaptchaService } from '../captcha/service.ts'
 import type { MailService } from '../mail/service.ts'
 import { decodeSettingValue, encodeSettingValue } from '../settings/codec.ts'
 import { settingControl, settingJsonSchema, type SettingControl } from '../settings/form.ts'
@@ -55,6 +56,7 @@ export function createAdminSettings(options: {
   secretKey: string
   production: boolean
   mail: MailService
+  captcha: CaptchaService
   getSigningKey: () => Promise<SigningKey | null>
   now: () => Date
   authorize: (
@@ -63,7 +65,7 @@ export function createAdminSettings(options: {
     permission: CorePermission,
   ) => Promise<Extract<Actor, { kind: 'user' }>>
 }) {
-  const { db, settings, secretKey, production, mail, getSigningKey, now, authorize } = options
+  const { db, settings, secretKey, production, mail, captcha, getSigningKey, now, authorize } = options
   const keys = Object.keys(coreSettingsRegistry) as CoreSettingKey[]
 
   function deleteSetting(tx: Transaction<CoreDatabase>, key: CoreSettingKey) {
@@ -104,9 +106,9 @@ export function createAdminSettings(options: {
     return { stored: row?.value, placeholder }
   }
 
-  async function update(actor: AdminActor, values: Record<string, unknown>, generated = false) {
+  async function update(actor: AdminActor | null, values: Record<string, unknown>, generated = false) {
     return transactionWithRetry(db, async (tx) => {
-      const eventActor = await authorize(tx, actor, 'settings.manage')
+      const eventActor: Actor = actor ? await authorize(tx, actor, 'settings.manage') : { kind: 'system' }
       if (Object.keys(values).some((key) => !visibleKey(key))) throw new DomainError('invalid_request')
       const parsed = new Map<CoreSettingKey, CoreSettingValue<CoreSettingKey>>()
       const fields: string[] = []
@@ -163,7 +165,7 @@ export function createAdminSettings(options: {
           action: 'setting.update',
           subject: { type: 'setting', id: 0 },
           details,
-          ip: actor.ip,
+          ip: actor?.ip ?? null,
           now: timestamp,
         })
         updated.push(key)
@@ -196,12 +198,27 @@ export function createAdminSettings(options: {
         }
       })
     },
-    async configChecks(): Promise<{ missing: ('siteUrl' | 'mail' | 'signingKey')[] }> {
-      const missing: ('siteUrl' | 'mail' | 'signingKey')[] = []
+    async configChecks(): Promise<{ missing: ('siteUrl' | 'mail' | 'signingKey' | 'captcha')[] }> {
+      const missing: ('siteUrl' | 'mail' | 'signingKey' | 'captcha')[] = []
       if (production && !(await settings.read(['site.url']))['site.url']) missing.push('siteUrl')
       if (!(await mail.configured())) missing.push('mail')
       if (!(await getSigningKey())) missing.push('signingKey')
+      const values = await settings.read(['captcha.provider', 'captcha.siteKey', 'captcha.secretKey'])
+      if (
+        values['captcha.provider'] !== 'none' &&
+        (!values['captcha.siteKey'].trim() || !values['captcha.secretKey'].trim())
+      )
+        missing.push('captcha')
       return { missing }
+    },
+    async disableCaptchaAsSystem(): Promise<{ changed: boolean }> {
+      const { updated } = await update(null, { 'captcha.provider': 'none' })
+      return { changed: updated.length > 0 }
+    },
+    async testCaptcha(actor: AdminActor, input: CaptchaInput) {
+      await transactionWithRetry(db, (tx) => authorize(tx, actor, 'settings.manage'))
+      // 核对在授权事务提交之后，不能占着 SQLite 的写锁等网络。
+      return captcha.test(input)
     },
     updateSettings: (actor: AdminActor, values: Record<string, unknown>) => update(actor, values),
     async generateSetting(actor: AdminActor, key: string): Promise<{ updated: CoreSettingKey[] }> {

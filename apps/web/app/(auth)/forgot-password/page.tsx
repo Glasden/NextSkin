@@ -15,7 +15,8 @@ export default async function ForgotPasswordPage() {
   const [{ core }, t] = await Promise.all([getServer(), getTranslations('auth')])
   const back = <Link render={<NextLink href="/sign-in" />}>{t('backToSignIn')}</Link>
   // 没有配置邮件时不显示表单，说明原因（与 BS 相同，ADR-0018）
-  if (!(await core.mail.configured()))
+  const [mailConfigured, captcha] = await Promise.all([core.mail.configured(), core.captcha.publicConfig()])
+  if (!mailConfigured)
     return (
       <>
         <AuthHeading title={t('forgotPassword.title')} />
@@ -28,7 +29,7 @@ export default async function ForgotPasswordPage() {
   return (
     <>
       <AuthHeading title={t('forgotPassword.title')}>{t('forgotPassword.description')}</AuthHeading>
-      <ForgotPasswordForm back={back} />
+      <ForgotPasswordForm back={back} captcha={captcha} />
     </>
   )
 }

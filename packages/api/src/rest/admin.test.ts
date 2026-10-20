@@ -61,7 +61,7 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(36)
+  expect(routes).toHaveLength(37)
   for (const route of routes) {
     const path = route.path
       .slice('/api'.length)
@@ -329,4 +329,32 @@ test('生成接口不回传私钥；测试邮件返回收件人；邮件失败�
   const missing = await request('POST', '/admin/settings/mail/test')
   expect(missing.status).toBe(400)
   expect(await missing.json()).toMatchObject({ error: { code: 'mail_not_configured' } })
+})
+
+test('后台测试验证码：未配置、缺令牌和三种核对结果；使用解析后的 IP，不写审计', async () => {
+  await env.db().updateTable('users').set({ role: 'superadmin' }).where('id', '=', env.actor.uid).execute()
+  await env.setting('network.trustedProxies', ['192.0.2.10'])
+  const { request } = setup()
+  const path = '/admin/settings/captcha/test'
+  const unconfigured = await request('POST', path)
+  expect(unconfigured.status).toBe(400)
+  expect(await unconfigured.json()).toMatchObject({ error: { code: 'captcha_not_configured' } })
+  await env.setting('captcha.provider', 'turnstile')
+  await env.setting('captcha.siteKey', 'site')
+  await env.setting('captcha.secretKey', 'secret')
+  const required = await request('POST', path)
+  expect(required.status).toBe(400)
+  expect(await required.json()).toMatchObject({ error: { code: 'captcha_required' } })
+  const check = vi.spyOn(env.core.captcha, 'test')
+  for (const result of ['passed', 'failed', 'unavailable'] as const) {
+    check.mockResolvedValueOnce({ result, errorCodes: result === 'passed' ? [] : ['test-error'] })
+    const response = await request('POST', path, undefined, {
+      'x-captcha-response': 'token',
+      'x-forwarded-for': '198.51.100.9',
+    })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ result, errorCodes: result === 'passed' ? [] : ['test-error'] })
+    expect(check).toHaveBeenLastCalledWith({ token: 'token', ip: '198.51.100.9' })
+  }
+  expect(await env.db().selectFrom('audit_logs').selectAll().execute()).toEqual([])
 })

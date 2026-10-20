@@ -8,12 +8,18 @@ function setup(stored: Partial<Record<CoreSettingKey, unknown>> = {}) {
   const read = vi.fn((keys: readonly CoreSettingKey[]) =>
     Promise.resolve(Object.fromEntries(keys.map((key) => [key, stored[key] ?? coreSettingsRegistry[key].default]))),
   )
+  const verify = vi.fn().mockResolvedValue(undefined)
   const register = vi.fn().mockResolvedValue({ uid: 42 })
   const createSession = vi
     .fn()
     .mockResolvedValue(['nextskin.session_token=one; HttpOnly; SameSite=Lax', 'other=two; HttpOnly'])
   const handle = vi.fn().mockResolvedValue(new Response('ok'))
-  const core = { settings: { read }, users: { register }, auth: { createSession, handle } } as unknown as Core
+  const core = {
+    captcha: { verify },
+    settings: { read },
+    users: { register },
+    auth: { createSession, handle },
+  } as unknown as Core
   const app = createApp({ core })
   const body = { email: 'test@example.test', password: 'password', playerName: 'Test' }
   const request = (
@@ -30,7 +36,7 @@ function setup(stored: Partial<Record<CoreSettingKey, unknown>> = {}) {
       },
       { peer },
     )
-  return { app, read, register, createSession, handle, body, request }
+  return { app, read, verify, register, createSession, handle, body, request }
 }
 
 test('注册转交类型化参数、可信 IP 和显式语言，逐个追加 Cookie；OpenAPI 可读取', async () => {
@@ -237,4 +243,34 @@ test('坏 JSON → 400；16 KiB 上限检查 Content-Length 和流', async () =>
     expect(await response.json()).toMatchObject({ error: { code: 'request_too_large' } })
   }
   expect(register).not.toHaveBeenCalled()
+})
+
+test.each([
+  ['captcha_required', 400],
+  ['captcha_failed', 403],
+  ['captcha_unavailable', 503],
+] as const)('注册核对 %s 时不调用注册用例或签发会话', async (code, status) => {
+  const { request, verify, register, createSession } = setup()
+  verify.mockRejectedValue(new DomainError(code))
+  const response = await request(undefined, { 'x-captcha-response': 'token', 'x-forwarded-for': '198.51.100.8' })
+  expect(response.status).toBe(status)
+  expect(await response.json()).toMatchObject({ error: { code } })
+  expect(verify).toHaveBeenCalledWith({ token: 'token', ip: '198.51.100.8' })
+  expect(register).not.toHaveBeenCalled()
+  expect(createSession).not.toHaveBeenCalled()
+})
+
+test('注册核对通过才调用注册；OpenAPI 描述验证码头和三种错误状态', async () => {
+  const { app, request, verify, register } = setup()
+  expect((await request()).status).toBe(201)
+  expect(verify).toHaveBeenCalledWith({ token: null, ip: '127.0.0.1' })
+  expect(verify.mock.invocationCallOrder[0]).toBeLessThan(register.mock.invocationCallOrder[0]!)
+  const doc = (await (await app.request('http://example.test/api/openapi.json')).json()) as {
+    paths: { '/register': { post: { parameters: unknown[]; responses: Record<string, unknown> } } }
+  }
+  const route = doc.paths['/register'].post
+  expect(route.parameters).toContainEqual(
+    expect.objectContaining({ in: 'header', name: 'x-captcha-response', required: false }),
+  )
+  for (const status of ['400', '403', '503']) expect(route.responses).toHaveProperty(status)
 })

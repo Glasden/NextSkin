@@ -1,5 +1,5 @@
 import { createRoute, z, type OpenAPIHono } from '@hono/zod-openapi'
-import type { Core } from '@nextskin/domain'
+import { CAPTCHA_HEADER, type Core } from '@nextskin/domain'
 import { clientIp } from '../client-ip.ts'
 import type { AppEnv } from '../env.ts'
 import { registerAdminTextures } from './admin-textures.ts'
@@ -114,6 +114,22 @@ const testMail = createRoute({
     ...errors,
   },
 })
+const testCaptcha = createRoute({
+  method: 'post',
+  path: '/admin/settings/captcha/test',
+  request: { headers: z.object({ [CAPTCHA_HEADER]: z.string().optional() }) },
+  responses: {
+    200: {
+      description: '验证码核对结果',
+      content: {
+        'application/json': {
+          schema: z.object({ result: z.enum(['passed', 'failed', 'unavailable']), errorCodes: z.array(z.string()) }),
+        },
+      },
+    },
+    ...errors,
+  },
+})
 export function registerAdmin(app: OpenAPIHono<AppEnv>, core: Core) {
   app.use('/admin/*', requireSession(core))
   app.openapi(updateSettings, async (c) =>
@@ -134,6 +150,16 @@ export function registerAdmin(app: OpenAPIHono<AppEnv>, core: Core) {
       200,
     ),
   )
+  app.openapi(testCaptcha, async (c) => {
+    const ip = await clientIp(c, core)
+    return c.json(
+      await core.admin.testCaptcha(
+        { uid: c.get('user')!.uid, ip },
+        { token: c.req.header(CAPTCHA_HEADER) ?? null, ip },
+      ),
+      200,
+    )
+  })
   app.openapi(testMail, async (c) =>
     c.json(await core.admin.sendTestMail({ uid: c.get('user')!.uid, ip: await clientIp(c, core) }), 200),
   )

@@ -177,6 +177,7 @@
 | Button | primary 每个视图最多一个；danger 只用于不可逆操作；提交中用 `loading`，不要换成 `disabled` | 跳转到其他页面用 Link 或 ButtonLink。按钮不接受 className，间距交给父元素 |
 | ButtonLink | 长得像按钮的跳转：首页主视觉的“注册”“上传材质”这类引导去下一个页面的主要入口；primary 和 Button 共用每个视图一个的名额 | 普通的站内跳转用 Link；执行操作用 Button |
 | IconButton | 空间紧凑时的常见操作 | 含义不明显的操作；必须配 `aria-label` 和 Tooltip |
+| CaptchaFrame | 第三方验证码挂件的外框，放在提交按钮上方（ADR-0038）：脚本没到时占住挂件的位置，加载失败时写明要能访问哪家服务商并给出重试。挂件本身由服务商渲染，主题和语言跟随页面 | 没有启用验证码时不放；不自己画图片验证码 |
 | Form | 提交数据的表单：约束校验和服务端按字段名返回的错误显示在对应的 Field 下方 | — |
 | Field | 包裹所有表单控件，统一标签、帮助文字和错误信息的位置 | — |
 | Input | 单行文本，放在 Field 里；和同一行的 Button 取相同尺寸 | 多行文本改用 Textarea |

@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { externalErrorMessage, externalProviders } from '../../../lib/external-login'
+import { getServer } from '../../../lib/server'
 import { getAuthorizationContinuation, getSessionUser, safeNextPath, searchString } from '../../../lib/session'
 import { AuthHeading } from '../auth-heading'
 import { AuthLink } from '../auth-link'
@@ -23,11 +24,12 @@ export default async function SignInPage({ searchParams }: PageProps<'/sign-in'>
   // 已经登录还被送来：第三方网站跨站 POST 发起的授权看不到会话 Cookie（SameSite=Lax），直接回去
   if (continuation?.resume) redirect(continuation.next)
   const next = continuation?.next ?? safeNextPath(query.next)
-  const [t, providers, error, user] = await Promise.all([
+  const [t, providers, error, user, captcha] = await Promise.all([
     getTranslations('auth.signIn'),
     externalProviders(),
     externalErrorMessage(query.error),
     getSessionUser(),
+    getServer().then(({ core }) => core.captcha.publicConfig()),
   ])
   // 应用要求重新登录（prompt=login、max_age）时，已经登录也显示表单。重新登录时用第三方账号出了错，
   // 回来时带着错误和 next，也留在这一页说明原因
@@ -56,7 +58,7 @@ export default async function SignInPage({ searchParams }: PageProps<'/sign-in'>
           <Alert>{t('reauthenticate')}</Alert>
         </div>
       )}
-      <SignInForm next={next} providers={providers} />
+      <SignInForm next={next} providers={providers} captcha={captcha} />
     </>
   )
 }

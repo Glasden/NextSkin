@@ -3,6 +3,7 @@ import type { Actor } from '@nextskin/plugin-sdk'
 import type { Kysely, Selectable, Transaction } from 'kysely'
 import { can, outranks, type CorePermission } from '../access/permissions.ts'
 import { DomainError } from '../errors.ts'
+import type { CaptchaService } from '../captcha/service.ts'
 import type { Events } from '../events/emit.ts'
 import type { JobRunner } from '../jobs/runner.ts'
 import type { PluginSystem } from '../plugins/system.ts'
@@ -34,6 +35,7 @@ export interface AdminOptions {
   secretKey: string
   production: boolean
   mail: MailService
+  captcha: CaptchaService
   jobs: Pick<JobRunner, 'enqueue'>
   /** 第三方登录的 Provider：解绑时判断能不能用、通知邮件里按收件人的语言翻译名称（ADR-0034） */
   plugins: Pick<PluginSystem, 'loginProviders' | 'translate' | 'get'>

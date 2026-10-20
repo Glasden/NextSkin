@@ -1,5 +1,6 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { cx } from '../cx.ts'
+import { LoadingDots } from '../loading-dots.tsx'
 import { focusRing } from '../styles.ts'
 
 export interface ButtonProps extends Omit<
@@ -76,22 +77,11 @@ export function Button({
     >
       {/* 加载时文字只是透明，宽度不变，仍是按钮的可访问名称 */}
       <span className={cx('inline-flex items-center gap-2', loading && 'opacity-0')}>{children}</span>
-      {loading && <LoadingDots />}
+      {loading && (
+        <span aria-hidden className="absolute inset-0 flex items-center justify-center">
+          <LoadingDots />
+        </span>
+      )}
     </BaseButton>
-  )
-}
-
-/** 三个方块依次亮起；减少动态效果时静止 */
-function LoadingDots() {
-  return (
-    <span aria-hidden className="absolute inset-0 flex items-center justify-center gap-1">
-      {['0ms', '-600ms', '-300ms'].map((delay) => (
-        <span
-          key={delay}
-          className="size-1 bg-current animate-loading motion-reduce:animate-none"
-          style={{ animationDelay: delay }}
-        />
-      ))}
-    </span>
   )
 }

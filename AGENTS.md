@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-插件系统第一版（ADR-0033）的三步都已落地，插件 SDK 1.0 进入候选期（ADR-0035，`1.0.0-rc.N`）；后台其余管理操作（ADR-0036）的三个切片都已落地；Yggdrasil Connect（ADR-0037）的三个切片都已落地；验证码（ADR-0038）落地中。各领域已经落地和还没做的部分逐项列在 `PROGRESS.md`；判断某个功能有没有、做到哪一步，先看它。
+插件系统第一版（ADR-0033）的三步都已落地，插件 SDK 1.0 进入候选期（ADR-0035，`1.0.0-rc.N`）；后台其余管理操作（ADR-0036）的三个切片都已落地；Yggdrasil Connect（ADR-0037）的三个切片和验证码（ADR-0038）都已落地。各领域已经落地和还没做的部分逐项列在 `PROGRESS.md`；判断某个功能有没有、做到哪一步，先看它。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
@@ -44,6 +44,7 @@ nextskin 启动器（进程监管 + 命令行）
 | `pnpm set-role <邮箱> <身份>` | 设定用户的身份（`users.role`），例如另指定一个超级管理员（ADR-0027）；第一个超级管理员在安装向导 `/setup` 里创建，安装码在数据目录的 `setup-code` 文件（ADR-0031）。读和 `pnpm dev` 相同的环境变量 |
 | `pnpm set-password <邮箱或 uid> [--remove-other-methods] [--email <新地址>]` | 给用户设新密码，超级管理员丢了密码或账号失控时用（后台动不了超级管理员，ADR-0036）。密码在终端里输入两次、不回显；退出对方全部登录，`--remove-other-methods` 删掉全部通行密钥、解绑全部第三方账号，`--email` 把邮箱立即换成新地址。读和 `pnpm dev` 相同的环境变量 |
 | `pnpm disable-2fa <邮箱或 uid>` | 关掉用户的两步验证，超级管理员丢了验证器和备用码时用（ADR-0036）；不退出登录。读和 `pnpm dev` 相同的环境变量 |
+| `pnpm disable-captcha` | 关掉验证码（`captcha.provider` 设为 `none`），服务商故障、密钥配错、没人登录得了后台时用（ADR-0038）。读和 `pnpm dev` 相同的环境变量 |
 
 单元测试和 story 测试跑在 Chromium 里，第一次运行前要装浏览器：`pnpm --filter @nextskin/web exec playwright install chromium`。
 

@@ -9,7 +9,7 @@ import { AuditTable } from './audit-table'
 import { settingsHref } from './settings/setting-text'
 
 // 概览上的配置检查各自对应的设置分区（ADR-0028）
-const checkSections = { siteUrl: 'site', mail: 'mail', signingKey: 'yggdrasil' } as const
+const checkSections = { siteUrl: 'site', mail: 'mail', signingKey: 'yggdrasil', captcha: 'captcha' } as const
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('admin.overview')

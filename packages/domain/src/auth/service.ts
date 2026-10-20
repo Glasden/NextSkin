@@ -9,6 +9,7 @@ import {
 } from '../oauth/scopes.ts'
 import { readClient, type OAuthClientSummary } from '../oauth/devices.ts'
 import { DomainError } from '../errors.ts'
+import type { CaptchaService } from '../captcha/service.ts'
 import type { Kysely } from 'kysely'
 import type { MailService } from '../mail/service.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
@@ -41,6 +42,7 @@ export interface AuthServiceOptions {
    */
   production: boolean
   mail: MailService
+  captcha?: Pick<CaptchaService, 'verify'>
   /** passwordHasher 插件（ADR-0033） */
   passwordPlugins?: PluginPasswordVerifier
   onPasswordChanged?: (uid: number) => Promise<void>
@@ -98,6 +100,7 @@ export function createAuthService(options: AuthServiceOptions) {
         legacyPasswordSalt: async () => (await settings.read(['auth.legacyPasswordSalt']))['auth.legacyPasswordSalt'],
         passwordPlugins: options.passwordPlugins,
         mail: options.mail,
+        captcha: options.captcha,
         onPasswordChanged: options.onPasswordChanged,
       })
       // 首次并发签名会各建一把密钥；让同一实例的请求等同一个预热 Promise（SJMCL 只读 keys[0]）。

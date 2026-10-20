@@ -99,6 +99,10 @@ export const IMPORTED_SETTING_KEYS = [
   'auth.registration.perIpLimit',
   'auth.requireEmailVerification',
   'auth.legacyPasswordSalt',
+  'captcha.provider',
+  'captcha.siteKey',
+  'captcha.secretKey',
+  'captcha.recaptchaInvisible',
   'user.initialScore',
   'score.perPlayer',
   'score.perKbPublic',
@@ -243,6 +247,20 @@ export function planSettings(input: {
   flag('auth.requireEmailVerification', 'require_verification')
   integer('auth.registration.perIpLimit', 'regs_per_ip', 0, Number.MAX_SAFE_INTEGER)
   if (input.salt) values.set('auth.legacyPasswordSalt', input.salt)
+
+  // reCAPTCHA：只填一个密钥时 BS 的页面和服务端也对不上，不沿用这样的配置（ADR-0038）。
+  const captchaSiteKey = option('recaptcha_sitekey')
+  const captchaSecretKey = option('recaptcha_secretkey')
+  if (captchaSiteKey.trim() && captchaSecretKey.trim()) {
+    values.set('captcha.provider', 'recaptcha')
+    values.set('captcha.siteKey', captchaSiteKey)
+    values.set('captcha.secretKey', captchaSecretKey)
+    flag('captcha.recaptchaInvisible', 'recaptcha_invisible')
+  } else if (captchaSiteKey.trim() || captchaSecretKey.trim()) {
+    for (const name of ['recaptcha_sitekey', 'recaptcha_secretkey'])
+      if (option(name).trim())
+        report.notImported.push({ option: name, value: '（密钥没有配全：BS 上这种配置本来就过不了）' })
+  }
 
   // 积分
   integer('user.initialScore', 'user_initial_score', 0, MAX_INT)

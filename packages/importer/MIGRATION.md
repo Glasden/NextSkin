@@ -114,6 +114,7 @@ OIDC 的 issuer 换成了 `https://新站/api/auth`。用 OIDC 登录本站的�
 - **页脚的版权文字要重新填**：BS 的版权文字是原始 HTML，没有导入。报告里列出了原文，把它改写成 Markdown 填进后台“站点”里的“页脚文字”，备案号写成 `[京ICP备12345678号](https://beian.miit.gov.cn/)`（ADR-0032）。
 - **首页换成了领奖台**：首页背景图、站点图标、导航栏颜色、自定义 CSS 和 JavaScript、`meta_extras` 都没有对应的设置，报告里列出了旧站改过的这些项。站点描述和 meta keywords 照常导入；meta description 就用站点描述。
 - **在皮肤和披风之间标错类型的材质只能删除重传**：BS 的后台能把皮肤改成披风；NextSkin 上传者和后台都只能在 Steve 和 Alex 之间改模型（ADR-0025、ADR-0036）。
+- **验证码**：旧站的 `recaptcha_sitekey` 和 `recaptcha_secretkey` 都填了时导入成 reCAPTCHA，两个密钥原样保留，`recaptcha_invisible` 照旧；只填了一个的不导入，报告里列出（BS 上这种配置本来就过不了）。reCAPTCHA 的站点密钥绑定域名，换了域名先去 Google 的 reCAPTCHA 控制台加上新域名，再在后台"验证码"里点"测试验证码"。BS 没配 reCAPTCHA 时用的图片验证码不迁移，导入后没有验证码，需要时在后台选 Turnstile、hCaptcha 或 reCAPTCHA（ADR-0038）。
 - **上传奖励、被收藏奖励不再发放**，私有材质的状态码、自动删除无效材质等设置没有对应的功能，报告里列出了旧站改过的这些设置。
 - **其他插件的数据**（例如 mojang-verification）没有迁移，报告的"认不出的表"列出了它们和行数。texture-description 的材质描述照常导入。
 - 回滚：切回旧站即可，旧库没有被写过。但切换之后在新站产生的数据不会回到旧站，回滚只在切换后很短的时间内是无损的。

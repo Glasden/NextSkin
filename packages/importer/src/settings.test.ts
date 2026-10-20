@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { convertPcre, planSettings } from './settings.ts'
+import { convertPcre, IMPORTED_SETTING_KEYS, planSettings } from './settings.ts'
 
 test('PCRE 的正则转成 JS 的写法', () => {
   expect(convertPcre('')).toBe('')
@@ -210,4 +210,38 @@ test('首页外观设置仅报告非默认值，描述不同的 meta_description
     { option: 'meta_description', value: long },
   ])
   expect(plan({ site_description: long, meta_description: long.slice(0, 200) }).report.notImported).toEqual([])
+})
+
+test.each([
+  ['', '', false],
+  ['site', '', false],
+  ['', 'SECRET_CANARY', false],
+  [' site ', ' SECRET_CANARY ', true],
+] as const)('reCAPTCHA 两个密钥的组合，是否导入：%s / %s', (siteKey, secretKey, imported) => {
+  const result = plan({ recaptcha_sitekey: siteKey, recaptcha_secretkey: secretKey, recaptcha_invisible: 'true' })
+  const keys = ['captcha.provider', 'captcha.siteKey', 'captcha.secretKey', 'captcha.recaptchaInvisible'] as const
+  expect(IMPORTED_SETTING_KEYS).toEqual(expect.arrayContaining([...keys]))
+  if (imported) {
+    expect(Object.fromEntries(result.values)).toMatchObject({
+      'captcha.provider': 'recaptcha',
+      'captcha.siteKey': siteKey,
+      'captcha.secretKey': secretKey,
+      'captcha.recaptchaInvisible': true,
+    })
+    expect(result.report.imported).toEqual(expect.arrayContaining([...keys]))
+    expect(result.report.notImported).toEqual([])
+  } else {
+    for (const key of keys) expect(result.values.has(key)).toBe(false)
+    expect(result.report.notImported.map((item) => item.option)).toEqual([
+      ...(siteKey ? ['recaptcha_sitekey'] : []),
+      ...(secretKey ? ['recaptcha_secretkey'] : []),
+    ])
+    for (const item of result.report.notImported) expect(item.value).toContain('BS 上这种配置本来就过不了')
+  }
+  expect(JSON.stringify(result.report)).not.toContain('SECRET_CANARY')
+})
+
+test.each(['', '0', 'false', 'true', '1', 'anything'])('reCAPTCHA invisible 按 PHP 真值转换：%s', (invisible) => {
+  const result = plan({ recaptcha_sitekey: 'site', recaptcha_secretkey: 'secret', recaptcha_invisible: invisible })
+  expect(result.values.get('captcha.recaptchaInvisible')).toBe(!['', '0', 'false'].includes(invisible))
 })

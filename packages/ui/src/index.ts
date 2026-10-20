@@ -1,6 +1,7 @@
 export { Alert, type AlertProps } from './alert/alert.tsx'
 export { Badge, type BadgeProps } from './badge/badge.tsx'
 export { Button, type ButtonProps } from './button/button.tsx'
+export { CaptchaFrame, type CaptchaFrameProps } from './captcha-frame/captcha-frame.tsx'
 export { ButtonLink, type ButtonLinkProps } from './button-link/button-link.tsx'
 export { Checkbox, type CheckboxProps } from './checkbox/checkbox.tsx'
 export { cx } from './cx.ts'

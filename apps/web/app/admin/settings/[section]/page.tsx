@@ -7,6 +7,7 @@ import { requireAdmin } from '../../../../lib/session'
 import { settingText, type SettingItem } from '../setting-text'
 import { SettingsForm } from '../settings-form'
 import { SettingsTabs } from '../settings-tabs'
+import { TestCaptcha } from '../test-captcha'
 import { TestMail } from '../test-mail'
 
 function isSection(value: string): value is SettingSection {
@@ -27,10 +28,12 @@ export default async function SettingsPage({ params }: { params: Promise<{ secti
   const user = await requireAdmin(`/admin/settings/${section}`, 'settings.manage')
   if (!isSection(section)) notFound()
   const { core } = await getServer()
-  const [views, t, messages] = await Promise.all([
+  const [views, t, messages, captcha] = await Promise.all([
     core.admin.settingsSection(section),
     getTranslations('admin.settings'),
     getMessages(),
+    // 测试验证码用已经保存的设置（ADR-0038"后台"）
+    section === 'captcha' ? core.captcha.publicConfig() : null,
   ])
   const fields = messages.admin.settings.fields
   const items: SettingItem[] = views.map((view) => ({
@@ -53,6 +56,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ secti
         <div className="flex max-w-3xl flex-col gap-6">
           <SettingsForm items={items} label={t(`sections.${section}`)} />
           {section === 'mail' && <TestMail email={user.email} />}
+          {section === 'captcha' && <TestCaptcha config={captcha} />}
         </div>
       </SettingsTabs>
     </div>
