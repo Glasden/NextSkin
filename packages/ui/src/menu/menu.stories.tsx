@@ -61,8 +61,8 @@ export const UserMenu: Story = {
     await waitFor(() => expect(screen.getByRole('menuitem', { name: '用户中心' })).toHaveFocus())
     await userEvent.keyboard('{End}{Enter}')
     await expect(onSignOut).toHaveBeenCalledOnce()
-    // 等退场的菜单卸载再点：不然下面的 findByRole 找到的是正在关闭的那个，截图时菜单已经关了
-    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+    // 等退场的菜单卸载再点：不然截图时菜单可能已经关了。带上 hidden，连不在无障碍树里的也算上
+    await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).toBeNull())
     await userEvent.click(trigger)
     await screen.findByRole('menu')
   },
@@ -115,7 +115,8 @@ export const IconTrigger: Story = {
     await screen.findByRole('menu')
     await userEvent.click(screen.getByRole('menuitem', { name: '移出衣柜' }))
     await expect(onRemove).toHaveBeenCalledOnce()
-    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+    // 等卸载，见 User menu
+    await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).toBeNull())
     await userEvent.click(trigger)
     await screen.findByRole('menu')
   },
@@ -176,7 +177,8 @@ export const RadioGroup: Story = {
     await expect(screen.getByRole('menuitemradio', { name: '跟随系统' })).toHaveAttribute('aria-checked', 'true')
     await userEvent.click(screen.getByRole('menuitemradio', { name: '暗色' }))
     await expect(onColorModeChange).toHaveBeenLastCalledWith('dark')
-    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+    // 等卸载，见 User menu
+    await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).toBeNull())
     await expect(trigger).toHaveFocus()
     // 键盘也能选：打开后方向键移到“亮色”，回车
     await userEvent.keyboard('{ArrowDown}')
@@ -186,7 +188,8 @@ export const RadioGroup: Story = {
     await waitFor(() => expect(screen.getByRole('menuitemradio', { name: '跟随系统' })).toHaveFocus())
     await userEvent.keyboard('{ArrowDown}{Enter}')
     await expect(onColorModeChange).toHaveBeenLastCalledWith('light')
-    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+    // 等卸载，见 User menu
+    await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).toBeNull())
     await userEvent.click(trigger)
     await screen.findByRole('menu')
   },

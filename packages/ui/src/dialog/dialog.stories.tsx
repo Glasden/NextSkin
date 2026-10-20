@@ -89,6 +89,8 @@ export const Confirm: Story = {
     await expect(trigger).toHaveFocus()
     await userEvent.click(trigger)
     await screen.findByRole('alertdialog')
+    // 初始焦点下一帧才落到“取消”上：等它落下再移开，否则移开的可能是触发按钮，截图里留着焦点框
+    await waitFor(() => expect(screen.getByRole('button', { name: '取消' })).toHaveFocus())
     blur()
   },
 }
