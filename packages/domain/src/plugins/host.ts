@@ -50,6 +50,25 @@ export class HostStartError extends Error {
  */
 export const hostNetworkRestricted = process.allowedNodeEnvironmentFlags.has('--allow-net')
 
+/** 环境自检只起一个空的 host，完成同样的权限模型和帧协议握手后立即退出。 */
+export async function probePluginHost(
+  entry: PluginHostEntry,
+  options: { readyTimeoutMs?: number } = {},
+): Promise<void> {
+  const generation = await startHostGeneration({
+    entry,
+    dialect: 'sqlite',
+    fallbackLocale: 'zh-CN',
+    plugins: [],
+    sequence: 0,
+    onRequest: () => Promise.reject(new Error('空的 plugin host 不应请求核心')),
+    onExit: () => {},
+    log: () => {},
+    readyTimeoutMs: options.readyTimeoutMs ?? 10_000,
+  })
+  await generation.kill()
+}
+
 const READY_TIMEOUT_MS = 30_000
 /** 让一代退出时，关掉 stdin 之后最多等这么久，然后强杀 */
 const EXIT_GRACE_MS = 5_000

@@ -36,13 +36,12 @@
   2. 上传的插件在 plugin host 进程里运行：核心进程拉起；stdin/stdout 上带长度前缀的帧；`--permission`，环境变量为空，Node 26 起不能直接连网；整代切换，新一代报告的定义要和 manifest 一致；崩溃后退避重启，连续崩溃就停下、等管理员在后台重启。`nextskin-plugin build` 打插件包（`packages/plugin-cli`）；后台上传安装、升级（列出新增的能力）、卸载，都写审计；多实例按 `plugins.package_hash` 从存储接口取包。
   3. passwordHasher：核心认不出的哈希按插件的 `detect` 认领、调用插件，网页登录和启动器登录通过后换成当前算法；导入器保留插件格式的哈希；官方插件"AuthMe 密码"；第三方登录见下一条。
 - **第三方登录**（ADR-0034）：一家一个官方插件（`oauth-github`、`oauth-microsoft`、`oauth-google`、`oauth-littleskin`，共用 `packages/oauth-client`）；绑定存在 `accounts`，两个唯一索引；登录页和注册页的按钮、首次登录的"完成注册"页（经过注册用例）、邮箱撞上已有账号时只绑定没有任何登录方式的账号；第三方登录后照样过两步验证；安全页的"第三方账号"（绑定要求刚登录过、解绑保留最后一种登录方式）和"设置密码"，要核对密码的操作提示先设置密码；后台插件详情页的回调地址，卸载时删除绑定。
-- **启动器**（ADR-0039 切片一）：`packages/launcher`，源码里 `pnpm nextskin <命令>`，发行目录里 `node nextskin.mjs <命令>`。`start` 只监管核心进程（plugin host 仍由核心拉起）：崩溃后退避重启，停止时先收任务再关 HTTP（核心一侧在 `apps/web/lib/launcher-channel.ts`，启动器被强制结束时核心自己退出），数据目录加锁防止重复启动，相对路径按根目录解析，缺密钥且没有 `.env` 时生成；`migrate`、`set-role`、`set-password`、`disable-2fa`、`disable-captcha`、`import blessing-skin`（服务运行时拒绝）。命令行连同领域层用 rolldown 打包，`pnpm build` 组装发行目录 `dist/nextskin/` 并检查产物里没有开发数据和 `.env`；官方插件清单挪进 `packages/official-plugins`；e2e 改为从发行目录经启动器启动。
+- **启动器**（ADR-0039）：`packages/launcher`，源码里 `pnpm nextskin <命令>`，发行目录里 `node nextskin.mjs <命令>`。`start` 只监管核心进程（plugin host 仍由核心拉起）：崩溃后退避重启，停止时先收任务再关 HTTP（核心一侧在 `apps/web/lib/launcher-channel.ts`，启动器被强制结束时核心自己退出），数据目录加锁防止重复启动，相对路径按根目录解析，缺密钥且没有 `.env` 时生成；`migrate`、`set-role`、`set-password`、`disable-2fa`、`disable-captcha`、`import blessing-skin`（服务运行时拒绝）。命令行连同领域层用 rolldown 打包，`pnpm build` 组装发行目录 `dist/nextskin/` 并检查产物里没有开发数据和 `.env`；官方插件清单挪进 `packages/official-plugins`；e2e 改为从发行目录经启动器启动。`doctor` 只读地逐项检查：Node 和插件能否直接连网、`.env` 和密钥（POSIX 上别人可读时警告）、数据目录可写和剩余空间、数据库连接和迁移状态（库比程序新时失败，MySQL、PostgreSQL 10 秒超时）、plugin host 带 `--permission` 起来并握手、服务是否在运行和健康检查；有失败时退出码 1，`pnpm build` 的冒烟也跑它。
 
 ## 还没做
 
 - **插件 SDK 1.0**（ADR-0035）：冻结前的调整、打包和发布流程、作者文档（`packages/plugin-sdk/docs/`）已经做完，两个包的版本是 `1.0.0-rc.0`（预发布模式 `rc`）。还没做：第一个候选版由维护者在本地发（`pnpm release`），之后配好 npm 的可信发布，由 CI 发；候选期在仓库外照迁移指南迁一个 BS 社区插件、收集作者意见；1.0.0 之前仓库公开，退出预发布时去掉 README 和入门里的 `@rc`。
 - **第三方登录的字段核对**：四家的 subject、`emailVerified` 还要用真实账号核对一遍（ADR-0034"首批插件"）。
 - **插件 API 推迟的部分**：写核心数据的能力、其余五个拦截点、运行时组件和插槽等，见 ADR-0033 的"推迟"表。
-- **启动器的 `doctor`**（ADR-0039 切片二）：环境自检。
 - **发布流程**（ADR-0039 留给另一份 ADR）：版本号、CI 打 ZIP 包和镜像、校验和；standalone 里有 pnpm 的相对符号链接，ZIP 在 Windows 上解压要先处理；镜像的基础镜像、PID 1 和 `stop_grace_period`。宝塔、1Panel 怎么选启动命令要实测。
 - 通知、站点的 CSP（根布局里亮暗模式的内联脚本要带 nonce 或 hash）、失败任务的后台页面、后台覆盖翻译、种子数据。

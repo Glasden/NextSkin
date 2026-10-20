@@ -160,7 +160,7 @@ await run(process.execPath, [join(release, 'nextskin.mjs'), 'version'])
 const smoke = await mkdtemp(join(tmpdir(), 'nextskin-release-'))
 try {
   // 避开构建环境的数据库和 .env，只对全新的临时 SQLite 数据目录做冒烟。
-  await run(process.execPath, [join(release, 'nextskin.mjs'), 'migrate'], {
+  const options = {
     cwd: dirname(smoke),
     env: {
       ...process.env,
@@ -169,11 +169,13 @@ try {
       NEXTSKIN_DATABASE_URL: `sqlite:${join(smoke, 'nextskin.sqlite')}`,
       NEXTSKIN_SECRET: 'nextskin-build-smoke-secret-32-characters',
     },
-  })
+  }
+  await run(process.execPath, [join(release, 'nextskin.mjs'), 'migrate'], options)
+  await run(process.execPath, [join(release, 'nextskin.mjs'), 'doctor'], options)
 } catch {
-  throw new Error('发行目录的 migrate 冒烟失败；临时 SQLite 数据目录已清理')
+  throw new Error('发行目录的 migrate 或 doctor 冒烟失败；临时 SQLite 数据目录已清理')
 } finally {
   await rm(smoke, { recursive: true, force: true })
 }
-console.log('发行目录产物检查、version 和 SQLite migrate 冒烟通过')
+console.log('发行目录产物检查、version、SQLite migrate 和 doctor 冒烟通过')
 console.log(`已生成 ${release}`)

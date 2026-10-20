@@ -7,23 +7,42 @@ import type { CommandContext, LauncherContext } from './context.ts'
 
 export class ConfigError extends Error {}
 
+export function envFilePath(context: LauncherContext, env: NodeJS.ProcessEnv): string {
+  return resolve(context.root, env.NEXTSKIN_ENV_FILE ?? '.env')
+}
+
+/** 不存在和读不了要分开：只有前者可以在首次启动时生成。 */
+export async function readEnvFile(file: string): Promise<{ exists: boolean; values: NodeJS.ProcessEnv }> {
+  try {
+    return { exists: true, values: parseEnv(await readFile(file, 'utf8')) }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw new ConfigError(`读不了配置文件 ${file}`)
+    return { exists: false, values: {} }
+  }
+}
+
+export function mergeEnv(env: NodeJS.ProcessEnv, values: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  for (const [key, value] of Object.entries(values)) if (env[key] === undefined) env[key] = value
+  return env
+}
+
+export function listenAddress(env: NodeJS.ProcessEnv): { host: string; port: number } {
+  const rawPort = env.NEXTSKIN_PORT ?? env.PORT ?? '3000'
+  const port = Number(rawPort)
+  if (!/^\d+$/.test(rawPort) || !Number.isInteger(port) || port < 1 || port > 65535)
+    throw new ConfigError('NEXTSKIN_PORT（或 PORT）必须是 1–65535 的整数')
+  return { host: env.NEXTSKIN_HOST ?? '0.0.0.0', port }
+}
+
 /** 环境变量优先；写回同一个对象，让命令及其依赖读到同一份配置。 */
 export async function readConfig(
   context: LauncherContext,
   env: NodeJS.ProcessEnv = process.env,
   warn: (message: string) => void = console.error,
 ): Promise<CommandContext> {
-  const file = resolve(context.root, env.NEXTSKIN_ENV_FILE ?? '.env')
-  let exists = true
-  let values: NodeJS.ProcessEnv
-  try {
-    values = parseEnv(await readFile(file, 'utf8'))
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw new ConfigError(`读不了配置文件 ${file}`)
-    exists = false
-    values = {}
-  }
-  for (const [key, value] of Object.entries(values)) if (env[key] === undefined) env[key] = value
+  const file = envFilePath(context, env)
+  const { exists, values } = await readEnvFile(file)
+  mergeEnv(env, values)
   const production = !context.source || env.NODE_ENV === 'production'
   if (!context.source && !env.NEXTSKIN_SECRET) {
     if (exists)
@@ -53,11 +72,7 @@ export async function readConfig(
     // 共享解析器只返回固定的诊断，不含变量的原值。
     throw new ConfigError((error as Error).message)
   }
-  const rawPort = env.NEXTSKIN_PORT ?? env.PORT ?? '3000'
-  const port = Number(rawPort)
-  if (!/^\d+$/.test(rawPort) || !Number.isInteger(port) || port < 1 || port > 65535)
-    throw new ConfigError('NEXTSKIN_PORT（或 PORT）必须是 1–65535 的整数')
-  const host = env.NEXTSKIN_HOST ?? '0.0.0.0'
+  const { host, port } = listenAddress(env)
   const childEnv = {
     ...env,
     NODE_ENV: 'production',

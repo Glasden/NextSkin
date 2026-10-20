@@ -5,6 +5,7 @@ export function run(_argv: string[], context: LauncherContext): number {
 
   start                    启动并监管核心进程
   migrate                  执行核心数据库迁移
+  doctor                   检查运行环境
   set-role                 设定用户身份
   set-password             重设用户密码、收回账号
   disable-2fa              关闭用户的两步验证

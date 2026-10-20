@@ -26,6 +26,7 @@ async function main(): Promise<number> {
   if (command === 'version') {
     return (await import('./commands/version.ts')).run(argv, context)
   }
+  if (command === 'doctor') return (await import('./commands/doctor.ts')).run(argv, context)
   if (command === 'start') return (await import('./commands/start.ts')).run(argv, context)
   if (command === 'import' && argv.shift() !== 'blessing-skin') {
     console.error('用法：nextskin import blessing-skin [参数]')

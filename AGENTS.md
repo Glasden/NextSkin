@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-插件系统第一版（ADR-0033）的三步都已落地，插件 SDK 1.0 进入候选期（ADR-0035，`1.0.0-rc.N`）；后台其余管理操作（ADR-0036）的三个切片都已落地；Yggdrasil Connect（ADR-0037）的三个切片和验证码（ADR-0038）都已落地；启动器（ADR-0039）的切片一已落地。各领域已经落地和还没做的部分逐项列在 `PROGRESS.md`；判断某个功能有没有、做到哪一步，先看它。
+插件系统第一版（ADR-0033）的三步都已落地，插件 SDK 1.0 进入候选期（ADR-0035，`1.0.0-rc.N`）；后台其余管理操作（ADR-0036）的三个切片都已落地；Yggdrasil Connect（ADR-0037）的三个切片和验证码（ADR-0038）都已落地；启动器（ADR-0039）的两个切片都已落地。各领域已经落地和还没做的部分逐项列在 `PROGRESS.md`；判断某个功能有没有、做到哪一步，先看它。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
@@ -40,7 +40,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 | `pnpm test:pack` | 打包冒烟测试：在仓库外用 npm 安装 `pnpm pack` 出来的 SDK 和构建命令，类型检查、构建一个插件（要联网，不进 `pnpm check`，ADR-0035） |
 | `pnpm release` | 发布插件 SDK 和构建命令：先跑 `test:pack`，再 `changeset publish`。平时由 `.github/workflows/release.yml` 运行，版本号先在本地用 `pnpm changeset version` 改好（ADR-0035） |
 | `pnpm format` | Prettier 格式化 |
-| `pnpm nextskin <命令>` | 启动器的命令行（ADR-0039），发行目录里是 `node nextskin.mjs <命令>`，`help` 列出全部命令。源码里读 `apps/web/.env` 和环境变量，数据目录同 `pnpm dev`。`set-role <邮箱> <身份>` 另指定超级管理员（第一个在 `/setup` 创建，安装码在数据目录的 `setup-code`）；`set-password <邮箱或 uid>`、`disable-2fa <邮箱或 uid>` 找回超级管理员（后台动不了它，ADR-0036）；`disable-captcha` 关掉验证码（ADR-0038）；`import blessing-skin` 从 BS v6 导入（ADR-0031，服务要停着，步骤见 `packages/importer/MIGRATION.md`）；`migrate` 只跑迁移。`start` 只在发行目录里运行 |
+| `pnpm nextskin <命令>` | 启动器的命令行（ADR-0039），发行目录里是 `node nextskin.mjs <命令>`，`help` 列出全部命令。源码里读 `apps/web/.env` 和环境变量，数据目录同 `pnpm dev`。`set-role <邮箱> <身份>` 另指定超级管理员（第一个在 `/setup` 创建，安装码在数据目录的 `setup-code`）；`set-password <邮箱或 uid>`、`disable-2fa <邮箱或 uid>` 找回超级管理员（后台动不了它，ADR-0036）；`disable-captcha` 关掉验证码（ADR-0038）；`import blessing-skin` 从 BS v6 导入（ADR-0031，服务要停着，步骤见 `packages/importer/MIGRATION.md`）；`migrate` 只跑迁移；`doctor` 只读地检查运行环境（Node、密钥、数据目录、数据库和迁移状态、plugin host、服务在不在运行），有失败时退出码 1。`start` 只在发行目录里运行 |
 
 单元测试和 story 测试跑在 Chromium 里，第一次运行前要装浏览器：`pnpm --filter @nextskin/web exec playwright install chromium`。
 

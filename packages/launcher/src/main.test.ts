@@ -74,3 +74,15 @@ test('发行入口在旧 Node 上先报版本错误，退出 78', async () => {
   expect(process.exitCode).toBe(78)
   expect(errors.join()).toContain('需要 Node 24 或更新版本，推荐 Node 26；当前版本 18.20.0')
 })
+
+test('doctor 先处理帮助和参数，不读取配置', async () => {
+  const env = { NEXTSKIN_ENV_FILE: fileURLToPath(new URL('.', import.meta.url)) }
+  for (const flag of ['--help', '-h']) {
+    const result = await runWith(env, 'doctor', flag)
+    expect(result.code).toBe(0)
+    expect(result.output).toContain('用法：nextskin doctor')
+  }
+  const result = await runWith(env, 'doctor', 'extra')
+  expect(result.code).toBe(1)
+  expect(result.output).toContain('用法：nextskin doctor')
+})
