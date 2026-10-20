@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { apiError, formErrors, postJson } from '../../../lib/api-client'
+import { goToNext } from '../../../lib/navigation'
 import { playerNameInputProps, type PlayerNameRules } from '../../../lib/player-name'
 import { initialFieldValue, PluginField, type PluginFieldValue } from '../../_plugins/plugin-field'
 import type { PluginFieldText } from '../../_plugins/types'
@@ -81,8 +82,7 @@ export function SignUpForm({
       // 会话没建成（极少见）时去登录页，账号已经注册好了
       const signedIn = (data as { signedIn?: unknown } | null)?.signedIn === true
       const target = external?.next ?? next
-      router.replace(signedIn ? target : `/sign-in?next=${encodeURIComponent(target)}`)
-      router.refresh()
+      goToNext(router, signedIn ? target : `/sign-in?next=${encodeURIComponent(target)}`)
       return
     }
     const failure = apiError(data)

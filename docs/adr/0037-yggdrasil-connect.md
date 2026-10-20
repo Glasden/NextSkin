@@ -113,6 +113,8 @@ Better Auth 1.7.10 里和这里相关的行为：
 
 切片一里还没有同意页，选不了角色：授权码流程申请 Yggdrasil scope 时返回 `invalid_scope`；不带 `scope` 时按应用登记的 scope（没登记时是全部）补上，去掉其中的 Yggdrasil scope。授权码流程的端点在切片一已经开着，直接调用也能走通，所以"授权的前提""每次都征求同意"、不接受部分 scope、换授权码时检查会话，都在切片一生效；只是公共客户端带 `prompt=none` 时的 `consent_required` 先以 JSON 返回，切片二随 scope 错误一起改成重定向回去。注册页传递 `next`（见"登录后续跑"）在切片一就做：`/device` 没登录时也要经过登录或注册再回来。
 
+切片二放开授权码流程里的 Yggdrasil scope，加上同意页、站内错误页 `/oauth/error` 和登录后续跑；scope 错误、`consent_required` 改成按可信的回调地址重定向回去；被封禁、邮箱没验证的用户带着会话打开授权地址时，送到同意页说明原因，不再返回 JSON 403；`/oauth2/continue` 关掉。
+
 ### 端点
 
 都在 `/api/auth` 下，由 Better Auth 处理，经过现有的客户端认证改写（`client-authentication.ts`）和 serial 下的能力限制：
@@ -122,18 +124,19 @@ Better Auth 1.7.10 里和这里相关的行为：
 | `GET /.well-known/openid-configuration` | 发现文档，`service.ts` 手动提供，见"发现文档" |
 | `GET /jwks` | 签名公钥 |
 | `GET`、`POST /oauth2/authorize` | 授权码流程的入口 |
-| `POST /oauth2/consent`、`POST /oauth2/continue` | 同意页提交、登录或注册之后续跑 |
+| `POST /oauth2/consent` | 同意页提交 |
 | `POST /oauth2/token` | 授权码、刷新、设备码三种授权方式 |
 | `GET`、`POST /oauth2/userinfo` | |
 | `POST /oauth2/revoke`、`POST /oauth2/introspect` | RFC 7009、RFC 7662，要求客户端认证 |
 | `POST /device/code` | 设备授权请求 |
 
-只开这九组。oauth-provider 和设备授权插件的其余端点放进 `disabledPaths`：`/oauth2/register`、`/oauth2/create-client`、`/admin/oauth2/create-client`、`/oauth2/update-client`、`/admin/oauth2/update-client`、`/oauth2/delete-client`、`/oauth2/get-client`、`/oauth2/get-clients`、`/oauth2/client/rotate-secret`、`/oauth2/client/rotate-keys`、`/oauth2/public-client`、`/oauth2/public-client-prelogin`、`/oauth2/get-consent`、`/oauth2/get-consents`、`/oauth2/update-consent`、`/oauth2/delete-consent`、`/oauth2/end-session` 及其确认页、`/.well-known/oauth-authorization-server`（发现文档只按 OIDC 的位置提供），以及设备授权插件的 `/device/token`、`/device`、`/device/approve`、`/device/deny`。资源管理的端点只能在服务端调用。`connect.db.test.ts` 逐个请求这两个插件的全部端点，不在上表里的必须是 404，升级 Better Auth 多出端点时测试会失败。
+只开这八组。oauth-provider 和设备授权插件的其余端点放进 `disabledPaths`：`/oauth2/continue`、`/oauth2/register`、`/oauth2/create-client`、`/admin/oauth2/create-client`、`/oauth2/update-client`、`/admin/oauth2/update-client`、`/oauth2/delete-client`、`/oauth2/get-client`、`/oauth2/get-clients`、`/oauth2/client/rotate-secret`、`/oauth2/client/rotate-keys`、`/oauth2/public-client`、`/oauth2/public-client-prelogin`、`/oauth2/get-consent`、`/oauth2/get-consents`、`/oauth2/update-consent`、`/oauth2/delete-consent`、`/oauth2/end-session` 及其确认页、`/.well-known/oauth-authorization-server`（发现文档只按 OIDC 的位置提供），以及设备授权插件的 `/device/token`、`/device`、`/device/approve`、`/device/deny`。资源管理的端点只能在服务端调用。`connect.db.test.ts` 逐个请求这两个插件的全部端点，不在上表里的必须是 404，升级 Better Auth 多出端点时测试会失败。
 
 - 客户端的增删改要求邮箱验证、写审计、生成只显示一次的密钥，取消授权要连同令牌一起删，这些都由领域用例和 REST 完成（不变量 4），同 ADR-0034 关掉账号端点的理由。同意页和批准页在服务端经领域查询取应用信息，用不到 `public-client`。
 - `/device/token` 现在会拒绝 OAuth 设备码，关掉是多一道保险：它签发的是网页会话，哪天它的判断变了，设备码钓鱼就能拿到整个账号。
 - `GET /device`（认领）、`/device/approve`、`/device/deny` 关掉，批准页的认领、批准、拒绝改由领域用例和 REST 完成（见"页面"）：Better Auth 1.7.10 的批准和拒绝按 id 无条件更新状态，没有"还在待批准、由认领者处理"的守卫，角色选择也没法和批准写进同一个事务。
 - `/device/code` 不接受 `user_id`，返回 `invalid_request`：设备码只能由打开批准页的人认领。
+- `/oauth2/continue` 关掉（切片二）：登录后续跑改成重新打开授权地址（见"登录后续跑"），用不上它；它是一个"带着会话、按签名参数接着跑 authorize"的通用入口，处理不了 `prompt=login`，还能绕开同意请求走到 `consentReferenceId`。
 - Content-Type 含 `application/x-www-form-urlencoded`、主类型却不是它时，返回 `invalid_request`：better-call 按主类型解析请求体，设备授权端点却在 Content-Type"包含"它时把原始请求体按表单重读，两边读到的参数不同，钩子对 `resource`、`user_id` 的检查会落空。这条检查在 Better Auth 的所有路径上做，不按路径区分：路由忽略末尾的斜杠，`/device/code/` 也会进设备授权端点。
 - 请求体是 JSON、却不是对象（字符串、数组、`null`）时，返回 `invalid_request`。钩子早于端点的 schema 校验，按对象读这类请求体会抛出带着请求体原文的异常，原文可能是令牌，会进日志（不变量 11）。钩子判断 `grant_type` 前和端点一样去掉两端空白。
 - `clientPrivileges` 和 `resourcePrivileges` 改成恒为 `false`（不写的话 Better Auth 放行任何登录的用户），`auth.ts` 的 `isAdmin` 随之去掉（ADR-0027 列出的"领域层对管理员的判断"少了一处）。客户端和资源只经领域用例管理。
@@ -151,9 +154,20 @@ Better Auth 1.7.10 里和这里相关的行为：
 
 不满足时返回 `invalid_scope`。没有 Yggdrasil scope 的请求按普通的 OAuth/OIDC 处理，`openid` 不是必需的。
 
+授权码流程不带 `scope` 时，按应用登记的 scope（没登记时是全部）补上，去掉其中的 Yggdrasil scope：全部 scope 里 Select 和 Read 互斥，补全了反而不合法；启动器都显式申请 Yggdrasil scope。
+
 **不支持只同意一部分 scope**：同意页和批准页只有"同意"和"拒绝"，最终接受的 scope 必须等于申请的。S1 审核发现 2 就出在部分同意上；启动器也不处理拿到的 scope 比申请的少的情况。
 
-**scope 错误的重定向**（ADR-0007 留到实现阶段的）：授权码流程里，`client_id` 对应一个没停用的应用、`redirect_uri` 和登记的某一条逐字相同时，按 RFC 6749 §4.1.2.1 重定向回去，带 `error=invalid_scope`、原样的 `state` 和 `iss`；否则显示站内的错误页，不重定向（不能把用户送到没登记过的地址）。设备码流程和令牌端点返回 JSON 400。
+**scope 错误的重定向**（ADR-0007 留到实现阶段的）：授权码流程里，`client_id` 逐字对应一个没停用、允许授权码的应用，`redirect_uri` 按 Better Auth 的规则匹配登记的某一条（逐字相同；http 的环回地址允许端口不同，RFC 8252）时，按 RFC 6749 §4.1.2.1 重定向回去，带 `error=invalid_scope`、原样的 `state`（空的不带）和 `iss`，参数放在查询串里；否则显示站内的错误页，不重定向（不能把用户送到没登记过的地址）。设备码流程和令牌端点返回 JSON 400。
+
+- 钩子里的其他授权错误按同一条规则处理：`consent_required`、被封禁或邮箱没验证时带 `prompt=none` 的 `access_denied`、`prompt` 重复或带 `dpop_jkt` 的 `invalid_request`。`resource` 照旧返回 JSON `invalid_target`。
+- 规则写"按 Better Auth 的规则"而不是"逐字相同"：启动器用环回地址加随机端口回调，Better Auth 自己的错误（PKCE、`claims` 等）照样会重定向回去，两边要一致。
+- 查到了应用、`client_id` 却不逐字相同（MySQL 的排序规则忽略末尾空格）时，按应用不存在处理，显示站内错误页：Better Auth 查客户端时不逐字核对，这样的请求在它那里能走通，却会被钩子当成"没有这个应用"，跳过强制同意。
+- 站内错误页是 `/oauth/error`，设成 Better Auth 的 `onAPIError.errorURL`，它自己的"应用不存在、已停用、回调地址没登记"等错误也去这里。不设的话，生产环境里这些错误落到站点首页 `/?error=…`，页面上什么提示都没有。错误页按 `error` 显示一句说明，不显示 `error_description`：那是请求方能左右的英文原文。
+- `prompt=create`、`prompt=select_account` 当成 `login`：没有单独的注册入口和选账号页，登录页上能去注册、能换一个账号登录。Better Auth 对前者会在登录后续跑时又送回登录页，对后者直接报错。
+- 带 `dpop_jkt` 的请求返回 `invalid_request`：授权码会绑定 DPoP，而我们不接受 DPoP（ADR-0015），这个码永远换不出令牌。
+- 带 OIDC 的 `claims` 参数时返回 `invalid_request`，发现文档的 `claims_parameter_supported` 改成 `false`：Better Auth 按 `claims` 单独给出邮箱、昵称这些声明，不看 scope，只申请 `openid` 的应用也能拿到，同意页上却只按 scope 列权限（切片二审核发现）。
+- `prompt` 按 Better Auth 的规则拆分（按空格拆、去掉每一项两端的空白）：`login` 后面跟一个制表符时，Better Auth 认得、钩子和登录页不认得，会在登录页和授权地址之间来回跳。
 
 ### 声明
 
@@ -173,14 +187,17 @@ Better Auth 1.7.10 里和这里相关的行为：
 
 照 ADR-0007 和 S1：所选角色编码成 `reference_id = player:<pid>`，存在同意记录、访问令牌和刷新令牌上，刷新时沿用。
 
-- **授权码流程**：申请 Select 时同意页上选角色，同意请求在请求头里带上 pid。consent 的 before 钩子在同一个请求里校验最终接受的 scope、校验角色属于当前用户，再把角色交给 `consentReferenceId`。不把选择存进会话：同一用户并行的两个授权流程会串用（S1 审核发现 1）。
+- **授权码流程**：申请 Select 时同意页上选角色，同意请求在请求头 `X-NextSkin-Player` 里带上 pid。consent 的 before 钩子在同一个请求里校验最终接受的 scope（组合规则、和申请的相等）、应用逐字存在且没停用、角色属于当前用户，再经请求级的状态把角色交给 `postLogin.consentReferenceId`（它的参数里没有请求头）。不把选择存进会话：同一用户并行的两个授权流程会串用（S1 审核发现 1）。
+  - `consentReferenceId` 在申请了 Select、请求里却没有选好的角色时抛 `invalid_request`（Better Auth 的注释要求由它报错），不签出不带角色的授权码。
+  - `postLogin` 只为了 `consentReferenceId` 才配置：`shouldRedirect` 恒为 `false`，没有选组织之类的额外步骤。
+  - 同意记录按（应用、用户、角色）分开：换一个角色同意是新的一条，同一个角色再同意时更新原来那条。
 - **设备码流程**：批准页上选角色，**选好的 pid 随批准请求一起提交**（`POST /api/user/device/approve`，请求体 `{ userCode, pid }`）。领域用例在一个事务里：锁住用户行，检查设备码待批准、认领者是当前用户、角色属于当前用户，带着这些条件把状态改成 `approved`，再写进 `device_code_selections`（按 `device_code` 字符串，ADR-0007）。兑换时包装内置的设备码授权，读出选择、补上 `referenceId`，不论签发成功与否都删掉这一行；被拒绝时也删掉。S1 的选择是单独一个请求，合进批准请求以后，选择和批准之间没有可以插进来的窗口，也少一个端点；ADR-0007 的约束（只在待批准状态、由认领者选择）照样成立。
 - 申请 Select 时必须选角色：用户没有角色时不能同意，页面链接到用户中心的角色页；只有一个角色时默认选中，仍要用户点同意。
 - 没有 Select 的授权不绑定角色，`reference_id` 为空。
 
 ### 每次都征求同意
 
-申请 Select 时，或者客户端是公共客户端（认证方式是 `none`，包括公用应用）时，外部发起的每次授权都强制 `prompt=consent`；客户端带 `prompt=none` 时返回 `consent_required`（ADR-0007）。设备码流程本来就每次都要在批准页上确认。其他情况沿用 Better Auth 的行为：同意过的机密客户端，scope 没有变多就不再询问。
+申请 Select 时，或者客户端是公共客户端（认证方式是 `none`，包括公用应用）时，外部发起的每次授权都强制 `prompt=consent`；客户端带 `prompt=none` 时，有会话就返回 `consent_required`（ADR-0007），没有会话时由 Better Auth 返回 `login_required`。设备码流程本来就每次都要在批准页上确认。其他情况沿用 Better Auth 的行为：同意过的机密客户端，scope 没有变多就不再询问。
 
 ### 授权的前提
 
@@ -193,6 +210,7 @@ Better Auth 1.7.10 里和这里相关的行为：
 检查的地方和时机：
 
 - 同意（`/oauth2/consent`）、带着会话的 `/oauth2/authorize`（同意过的机密客户端不经过同意页就发码）和批准页都检查。拒绝不要求这些。
+- 带着会话的 `/oauth2/authorize` 不满足时（切片二）：加上 `prompt=consent`，送到同意页；同意页说明原因（封禁，或者先去验证邮箱），只给"拒绝"，拒绝后带 `access_denied` 回到应用。直接返回错误的话，用户看不到原因，应用那边也收不到结果。带 `prompt=none` 时按"scope 错误的重定向"的规则返回 `access_denied`。同意请求本身照旧返回 JSON 403，页面上不会发出这种请求。
 - 刷新令牌、换授权码、兑换设备码、调用 userinfo 时同样检查封禁：被封禁的用户的令牌照样留着、解封后能用，同 authserver（ADR-0030）。令牌端点签发之后，在锁住用户行时再查一次（见"吊销"的签发途中一条）。userinfo 按 Better Auth 同样的顺序取令牌：先用 `parseAccessTokenAuthorization` 解析请求头，解析不出时用请求体，写法不同不能绕过检查。
 - 邮箱验证只在同意、批准时要求，刷新、兑换和使用令牌时不再复查，同 authserver 令牌（ADR-0030）。
 
@@ -292,7 +310,22 @@ OAuth 令牌**能进服**要同时满足：
 
 **`/oauth/consent`**（授权码流程）：显示应用名称、创建者、回调地址的主机名、申请的权限和角色选择，"同意"和"拒绝"。拒绝时 Better Auth 带着 `access_denied` 重定向回去。
 
-**登录后续跑**：Better Auth 把没登录的授权请求带着签过名的参数（`sig`、`exp`）跳到 `/sign-in`。登录页认出这些参数时，把回到授权流程的地址放进 `next`，密码、两步验证、通行密钥、第三方登录完成后都经同一个 `next` 回去；从登录页进去注册的也一样。签名不对或过期的参数不续跑，当普通登录处理。具体用 Better Auth 的 `oauth_query` 还是重新打开 authorize 地址，实现时定，测试覆盖每一种登录方式。
+- 服务端渲染时先验签名（`verifyOAuthQueryParams`，用 Better Auth 实例的 secret）：伪造的地址能把任意应用名和回调主机显示在本站页面上，提交时才会被拒绝。签名不对、过期、应用不存在或停用、回调地址没登记时，显示"授权请求已失效"，让用户回到应用重新发起。
+- 没登录时带着同一份签名参数去 `/sign-in`，登录后经续跑回到这里。
+- 同意和拒绝都用 fetch 发 JSON（这两个端点只收 JSON），`oauth_query` 是页面地址上原样的签名参数；拒绝不带 `scope`（Better Auth 先比较 scope 再看是否同意）。响应是 `{ redirect, url }`，页面整页跳过去。
+- 申请 Select 时：没有角色就不能同意，链接到角色页；只有一个时默认选中。被封禁、邮箱没验证时说明原因，只给"拒绝"，同批准页。
+
+**登录后续跑**：Better Auth 把没登录的授权请求带着签过名的参数（`sig`、`exp`）跳到 `/sign-in`。登录页认出这些参数时，把回到授权流程的地址放进 `next`，密码、两步验证、通行密钥、第三方登录完成后都经同一个 `next` 回去；从登录页进去注册的也一样。签名不对或过期的参数不续跑，当普通登录处理。测试覆盖每一种登录方式。
+
+- **重新打开授权地址**，不用 Better Auth 的 `oauth_query`：登录页在服务端验过签名，把参数还原成 `/api/auth/oauth2/authorize?…`（去掉 `sig`、`exp`、`ba_*`，从 `prompt` 里去掉 `login`，去掉 `max_age`）放进 `next`。重新打开的是一次新的外部请求，强制同意、组合规则、封禁检查照样执行，签名也重新生成。
+  - `oauth_query` 只在 Better Auth 自己的登录端点上起作用：第三方登录和注册后的登录都是服务端调用，没有请求对象，接不上；开了两步验证时它会在第一步的会话上先跑一遍授权。`/oauth2/continue` 不去掉 `login`，`prompt=login` 会循环。
+  - 所以 `oauth_query` 只在 `/oauth2/consent` 上接受，其他端点的请求体带它时返回 `invalid_request`：Better Auth 对任何带它、写了会话 Cookie 的请求都会在内部续跑授权，密码登录带上它，就能在两步验证之前拿第一步的会话跑一遍。
+  - `next` 里不带签名，所以登录、注册、第三方登录用多长时间都行（签名参数 10 分钟过期）；`next` 本来就能指向任何站内地址，指向授权地址不比直接打开它多给什么。
+  - 去掉 `login` 和 `max_age` 是因为跟着 `next` 回去之前一定刚登录过：`max_age=0` 在 Better Auth 里永远不满足，留着会循环。
+- 已经登录时：`prompt` 带 `login`，或者会话早于 `max_age` 的要求，照样显示登录表单；否则直接跳回授权地址。后一种是第三方网站用表单 POST 发起授权的情况：跨站 POST 不带 `SameSite=Lax` 的会话 Cookie，Better Auth 以为没登录。
+- 跳往 `/api/` 下的地址一律整页导航（`location.replace`，服务端是 HTTP 重定向）：Next 的客户端路由会先发一次 RSC 的 fetch，Better Auth 对 fetch 返回 JSON，授权会跑两遍。用 replace 不留下登录页：从同意页按后退时，登录页上还没过期的签名参数会让授权再跑一次。认证页之间带着这种 `next` 的链接（登录、注册、重新登录）也用普通链接：对方页面已经登录时会 `redirect(next)`，在客户端路由下同样先 fetch。
+- 要求重新登录时登录页对已登录的人开放，跟着改三处：不显示注册链接（已经登录的人打开注册页会直接回到 `next`，不用再登录一次）；第三方登录出错时回到登录页，带着 `next` 和错误留在这一页，不因为已经登录就跳走；用没绑定的第三方账号登录，补全注册页照常显示表单（以前已经登录就跳到用户中心），但不显示"先用原来的方式登录"的链接，理由和注册链接相同。
+- 第三方登录出错时，回调把 `next` 带回登录页（`/sign-in?error=…&next=…`）。以前只带错误，授权流程和 `/device` 的 `next` 都会丢掉，改用密码登录以后去了用户中心。
 
 **用户中心的"OAuth 应用"**（`/user/oauth-clients`）：
 
@@ -357,7 +390,7 @@ OAuth 令牌**能进服**要同时满足：
 ## 后果
 
 - 新迁移：插入公用应用；按查询补索引（按 `reference_id` 删令牌和同意记录，按用户和应用数令牌），实现时对照现有索引决定；`users.oauth_version`（见"吊销"）。
-- Better Auth 的配置：三个有效期选项来自设置、进缓存键；设备码 10 分钟；新的 `disabledPaths`；`clientPrivileges`、`resourcePrivileges` 恒为 `false`；钩子覆盖 scope 规则、强制同意、授权前提、角色绑定、数量上限、刷新后删旧访问令牌、换授权码时检查会话、吊销时补上配对的令牌。设备码兑换的包装照旧依赖未公开的结构（ADR-0007），升级 Better Auth 时由下面的测试兜底。
+- Better Auth 的配置：三个有效期选项来自设置、进缓存键；设备码 10 分钟；新的 `disabledPaths`；`postLogin`（只用 `consentReferenceId`）和 `onAPIError.errorURL`（切片二）；`clientPrivileges`、`resourcePrivileges` 恒为 `false`；钩子覆盖 scope 规则、强制同意、授权前提、角色绑定、数量上限、刷新后删旧访问令牌、换授权码时检查会话、吊销时补上配对的令牌。设备码兑换的包装照旧依赖未公开的结构（ADR-0007），升级 Better Auth 时由下面的测试兜底。
 - 领域层：
   - 进服、`validate`、`invalidate`、启动器上传和删除材质加上 OAuth 分支（`yggdrasil/tokens.ts`、`join.ts`）；
   - `revokeLogins`、改密码之后的回调、角色的转让和删除、取消授权，加上删 OAuth 令牌的函数，都在调用方的事务里；

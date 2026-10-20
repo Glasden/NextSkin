@@ -9,6 +9,7 @@ import { registerFormFields } from '../../../lib/plugins'
 import { getServer } from '../../../lib/server'
 import { getSessionUser, safeNextPath } from '../../../lib/session'
 import { AuthHeading } from '../auth-heading'
+import { AuthLink } from '../auth-link'
 import { ExternalLoginButtons } from '../external-login-buttons'
 import { SignUpForm } from './sign-up-form'
 
@@ -36,7 +37,9 @@ export default async function SignUpPage({ searchParams }: PageProps<'/sign-up'>
   const heading = (
     <AuthHeading title={t('title')}>
       {t('hasAccount')}{' '}
-      <Link render={<NextLink href={`/sign-in?next=${encodeURIComponent(next)}`} />}>{t('signIn')}</Link>
+      <AuthLink href={`/sign-in?next=${encodeURIComponent(next)}`} next={next}>
+        {t('signIn')}
+      </AuthLink>
     </AuthHeading>
   )
   // 安装之前不开放注册（ADR-0031）：先注册的人会让安装向导关闭，站点就没有超级管理员了

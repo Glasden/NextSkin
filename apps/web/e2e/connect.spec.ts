@@ -1,10 +1,12 @@
 import { createPublicKey, verify, type JsonWebKey } from 'node:crypto'
 import { createTranslator } from '@nextskin/i18n'
 import { expect, test, type APIRequestContext } from '@playwright/test'
+import { authorization, clickHydrated, createLauncherClient, listenCallback, waitForCallback } from './oauth-client'
 
-// Yggdrasil Connect 的设备码流程（ADR-0037 切片一）经过 standalone 产物：启动器取代码、用户在 /device 登录并授权、
-// 启动器换出令牌进服、在安全页取消授权。跑在 account 项目上：页面登录要求站点地址等于浏览器的 Origin。
-// 用自己的 TEST-NET 地址注册，不占别的用例的注册名额
+// Yggdrasil Connect 经过 standalone 产物。设备码流程（ADR-0037 切片一）：启动器取代码、用户在 /device 登录并授权、
+// 启动器换出令牌进服、在安全页取消授权。授权码流程（切片二）：没登录时登录或注册以后回到授权流程、在同意页选角色、
+// 带着授权码回到应用，以及几种错误的去向。跑在 account 项目上：页面登录要求站点地址等于浏览器的 Origin。
+// 每个用例用自己的 TEST-NET 地址注册，不占别的用例的注册名额
 const t = createTranslator('zh-CN')
 const password = 'correct horse battery staple'
 const DEVICE_CODE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code'
@@ -75,7 +77,7 @@ test('设备码授权：登录后回到批准页、换出令牌进服，取消�
   await expect(page.getByText(t('oauth.sharedHint'))).toBeVisible()
   await expect(page.getByText(`${code.user_code.slice(0, 4)}-${code.user_code.slice(4)}`)).toBeVisible()
   await expect(page.getByRole('radio', { name })).toBeChecked()
-  await page.getByRole('button', { name: t('device.approve'), exact: true }).click()
+  await clickHydrated(page.getByRole('button', { name: t('oauth.approve'), exact: true }))
   await expect(page.getByRole('heading', { level: 1, name: t('device.approvedTitle') })).toBeVisible()
 
   // 启动器按 5 秒的间隔轮询，太快会收到 slow_down
@@ -153,4 +155,217 @@ test('批准页不许嵌进别的网站：带 X-Frame-Options 和 frame-ancestor
   await expect(page).toHaveURL('/device?user_code=wrong-code')
   await expect(page.getByText(t('device.invalid'))).toBeVisible()
   await expect(page.getByLabel(t('device.code'))).toHaveValue('wrong-code')
+})
+
+// —— 授权码流程（切片二）——
+
+async function register(request: APIRequestContext, ip: string, email: string, playerName: string) {
+  const registered = await request.post('/api/register', {
+    headers: { 'x-forwarded-for': ip },
+    data: { email, password, playerName },
+  })
+  expect(registered.status()).toBe(201)
+}
+
+test('授权码：没登录时登录、回到同意页选角色，带着授权码回到应用，换出令牌进服', async ({
+  page,
+  playwright,
+  baseURL,
+}) => {
+  const suffix = String(Date.now()).slice(-6)
+  const name = `Ac${suffix}`
+  const email = `code-${suffix}@example.test`
+  // 注册会登录；应用那一侧另用一个不带 Cookie 的上下文：Better Auth 拒绝带 Cookie、不带 Origin 的 POST
+  const registrar = await playwright.request.newContext({ baseURL })
+  await register(registrar, '203.0.113.182', email, name)
+  await registrar.dispose()
+  const request = await playwright.request.newContext({ baseURL })
+  const clientId = `e2e-launcher-${suffix}`
+  createLauncherClient(email, clientId)
+  const port = await listenCallback(page)
+  // 登录按 IP 限流，和别的用例错开
+  await page.context().setExtraHTTPHeaders({ 'x-forwarded-for': '203.0.113.182' })
+  const flow = authorization(clientId, port)
+
+  // 注册时拿到的 Cookie 在另一个上下文里，浏览器这边还没登录：去登录页，地址上是签过名的参数
+  await page.goto(flow.url)
+  await expect(page).toHaveURL(/\/sign-in\?.*sig=/)
+  await page.getByLabel(t('auth.email')).fill(email)
+  await page.getByLabel(t('auth.password')).fill(password)
+  await page.getByRole('button', { name: t('auth.signIn.submit'), exact: true }).click()
+
+  // 登录以后重新打开授权地址，公共客户端每次都要同意
+  await expect(page).toHaveURL(/\/oauth\/consent\?/)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t('oauth.consent.title'))
+  await expect(page.getByText('E2E Launcher')).toBeVisible()
+  await expect(page.getByText(`127.0.0.1:${port}`)).toBeVisible()
+  await expect(page.getByText(t('oauth.consent.loopback'))).toBeVisible()
+  await expect(page.getByText(t('oauth.scopes.serverJoin'))).toBeVisible()
+  // 只有一个角色时默认选中，仍要点"授权"
+  await expect(page.getByRole('radio', { name })).toBeChecked()
+  await clickHydrated(page.getByRole('button', { name: t('oauth.approve'), exact: true }))
+
+  const callback = await waitForCallback(page, port)
+  expect(callback.get('state')).toBe(flow.state)
+  expect(callback.get('iss')).toBe(`${baseURL}/api/auth`)
+  const code = callback.get('code')
+  expect(code).toEqual(expect.any(String))
+
+  // 应用那一侧不带 Cookie 换令牌
+  const exchanged = await request.post('/api/auth/oauth2/token', {
+    form: {
+      grant_type: 'authorization_code',
+      code: code!,
+      redirect_uri: flow.redirectUri,
+      client_id: clientId,
+      code_verifier: flow.verifier,
+    },
+  })
+  expect(exchanged.status()).toBe(200)
+  const tokens = (await exchanged.json()) as { access_token: string; refresh_token: string; id_token: string }
+  const claims = await verifyIdToken(request, tokens.id_token)
+  expect(claims).toMatchObject({ aud: clientId, selectedProfile: { name } })
+  expect(tokens.refresh_token).toEqual(expect.any(String))
+
+  const profileId = (claims.selectedProfile as { id: string }).id
+  const serverId = `code-server-${suffix}`
+  const joined = await request.post('/api/yggdrasil/sessionserver/session/minecraft/join', {
+    data: { accessToken: tokens.access_token, selectedProfile: profileId, serverId },
+  })
+  expect(joined.status()).toBe(204)
+
+  // 授权码只能用一次
+  const replayed = await request.post('/api/auth/oauth2/token', {
+    form: {
+      grant_type: 'authorization_code',
+      code: code!,
+      redirect_uri: flow.redirectUri,
+      client_id: clientId,
+      code_verifier: flow.verifier,
+    },
+  })
+  expect(await replayed.json()).toMatchObject({ error: 'invalid_grant' })
+  await request.dispose()
+})
+
+test('授权码：从登录页去注册，注册以后回到授权流程；拒绝时带着 access_denied 回到应用', async ({
+  page,
+  playwright,
+  baseURL,
+}) => {
+  const suffix = String(Date.now()).slice(-6)
+  const ownerEmail = `owner-${suffix}@example.test`
+  const request = await playwright.request.newContext({ baseURL })
+  await register(request, '203.0.113.183', ownerEmail, `Ow${suffix}`)
+  await request.dispose()
+  const clientId = `e2e-signup-${suffix}`
+  createLauncherClient(ownerEmail, clientId)
+  const port = await listenCallback(page)
+  // 页面上的注册也按 IP 计名额
+  await page.context().setExtraHTTPHeaders({ 'x-forwarded-for': '203.0.113.184' })
+  const flow = authorization(clientId, port)
+
+  await page.goto(flow.url)
+  await expect(page).toHaveURL(/\/sign-in\?.*sig=/)
+  await page.getByRole('link', { name: t('auth.signIn.signUp') }).click()
+  await expect(page).toHaveURL(/\/sign-up\?next=%2Fapi%2Fauth%2Foauth2%2Fauthorize/)
+  await page.getByLabel(t('auth.email')).fill(`signup-${suffix}@example.test`)
+  await page.getByLabel(t('auth.password')).fill(password)
+  await page.getByLabel(t('auth.signUp.playerName')).fill(`Su${suffix}`)
+  await page.getByRole('button', { name: t('auth.signUp.submit') }).click()
+
+  await expect(page).toHaveURL(/\/oauth\/consent\?/)
+  await expect(page.getByText(t('oauth.owner', { nickname: `Ow${suffix}` }))).toBeVisible()
+  await clickHydrated(page.getByRole('button', { name: t('oauth.deny'), exact: true }))
+  const callback = await waitForCallback(page, port)
+  expect(callback.get('error')).toBe('access_denied')
+  expect(callback.get('state')).toBe(flow.state)
+  expect(callback.get('code')).toBeNull()
+})
+
+test('授权码的错误：scope 组合不对时回到应用，回调地址没登记时去站内错误页', async ({ page, playwright, baseURL }) => {
+  const suffix = String(Date.now()).slice(-6)
+  const email = `errors-${suffix}@example.test`
+  const request = await playwright.request.newContext({ baseURL })
+  await register(request, '203.0.113.185', email, `Er${suffix}`)
+  await request.dispose()
+  const clientId = `e2e-errors-${suffix}`
+  createLauncherClient(email, clientId)
+  const port = await listenCallback(page)
+  await page.context().setExtraHTTPHeaders({ 'x-forwarded-for': '203.0.113.185' })
+
+  // Select 和 Read 不能同时申请：回调地址可信，带着 invalid_scope、state 和 iss 回去
+  const scopeFlow = authorization(
+    clientId,
+    port,
+    'openid Yggdrasil.PlayerProfiles.Select Yggdrasil.PlayerProfiles.Read',
+  )
+  await page.goto(scopeFlow.url)
+  const callback = await waitForCallback(page, port)
+  expect(callback.get('error')).toBe('invalid_scope')
+  expect(callback.get('state')).toBe(scopeFlow.state)
+  expect(callback.get('iss')).toBe(`${baseURL}/api/auth`)
+
+  // 没登记的回调地址：不跳过去，站内错误页只显示说明，不许嵌进别的网站
+  const evil = authorization(clientId, port)
+  evil.params.set('redirect_uri', 'https://evil.example/callback')
+  const response = await page.goto(`/api/auth/oauth2/authorize?${evil.params}`)
+  await expect(page).toHaveURL(/\/oauth\/error\?error=invalid_redirect/)
+  expect(response?.headers()['x-frame-options']).toBe('DENY')
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t('oauth.error.title'))
+  await expect(page.getByText(t('oauth.error.invalidRedirect'))).toBeVisible()
+
+  // 不存在的应用
+  const missing = authorization(`missing-${suffix}`, port)
+  await page.goto(missing.url)
+  await expect(page).toHaveURL(/\/oauth\/error\?error=invalid_client/)
+  await expect(page.getByText(t('oauth.error.invalidClient'))).toBeVisible()
+
+  // 改过的同意页地址：拿一份真的签名参数，把回调地址换掉，验不过签名，显示"已失效"，不显示应用和回调主机
+  const signedIn = await page.request.post('/api/auth/sign-in/email', { data: { email, password } })
+  expect(signedIn.status()).toBe(200)
+  const consentFlow = authorization(clientId, port)
+  await page.goto(consentFlow.url)
+  await expect(page).toHaveURL(/\/oauth\/consent\?.*sig=/)
+  await expect(page.getByText('E2E Launcher')).toBeVisible()
+  const tampered = new URL(page.url())
+  tampered.searchParams.set('redirect_uri', `http://127.0.0.1:${port + 1}/callback`)
+  await page.goto(tampered.pathname + tampered.search)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(t('oauth.consent.invalidTitle'))
+  await expect(page.getByText('E2E Launcher')).toHaveCount(0)
+  await expect(page.getByText(`127.0.0.1:${port + 1}`)).toHaveCount(0)
+})
+
+test('已登录时第三方网站跨站 POST 发起授权：看不到会话 Cookie，登录页直接回到授权流程', async ({ page, baseURL }) => {
+  const suffix = String(Date.now()).slice(-6)
+  const name = `Xs${suffix}`
+  const email = `cross-${suffix}@example.test`
+  // 注册顺带登录，会话 Cookie 留在页面的上下文里
+  await page.context().setExtraHTTPHeaders({ 'x-forwarded-for': '203.0.113.186' })
+  await register(page.request, '203.0.113.186', email, name)
+  const clientId = `e2e-cross-${suffix}`
+  createLauncherClient(email, clientId)
+  const port = await listenCallback(page)
+  const flow = authorization(clientId, port)
+
+  // 应用的网页在 127.0.0.1 上，和站点（localhost）不同站：表单 POST 不带 SameSite=Lax 的 Cookie
+  const fields = [...flow.params]
+    .map(([key, value]) => `<input type="hidden" name="${key}" value="${value.replaceAll('"', '&quot;')}">`)
+    .join('')
+  await page.route(`http://127.0.0.1:${port}/start`, (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: `<!doctype html><form method="post" action="${baseURL}/api/auth/oauth2/authorize">${fields}<button>go</button></form>`,
+    }),
+  )
+  await page.goto(`http://127.0.0.1:${port}/start`)
+  await page.getByRole('button', { name: 'go' }).click()
+
+  // Better Auth 以为没登录、跳到登录页；登录页看得到会话，直接回到授权地址，再到同意页
+  await expect(page).toHaveURL(/\/oauth\/consent\?/)
+  await expect(page.getByRole('radio', { name })).toBeChecked()
+  await clickHydrated(page.getByRole('button', { name: t('oauth.approve'), exact: true }))
+  const callback = await waitForCallback(page, port)
+  expect(callback.get('code')).toEqual(expect.any(String))
+  expect(callback.get('state')).toBe(flow.state)
 })

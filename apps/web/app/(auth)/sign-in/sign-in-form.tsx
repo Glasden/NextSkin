@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Key } from 'pixelarticons/react/Key.js'
 import { useCallback, useState } from 'react'
 import { authErrorCode, postJson } from '../../../lib/api-client'
+import { goToNext } from '../../../lib/navigation'
 import { ExternalLoginButtons, type ExternalProvider } from '../external-login-buttons'
 import { usePasskeySignIn } from './passkey-sign-in'
 
@@ -20,10 +21,7 @@ export function SignInForm({ next, providers }: { next: string; providers: reado
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [remember, setRemember] = useState(true)
-  const signedIn = useCallback(() => {
-    router.replace(next)
-    router.refresh()
-  }, [router, next])
+  const signedIn = useCallback(() => goToNext(router, next), [router, next])
   const passkey = usePasskeySignIn(signedIn)
 
   async function submit(values: { email?: string; password?: string }) {

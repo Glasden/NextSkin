@@ -15,7 +15,7 @@ const HONO_PATHS = [
 ]
 
 // 授权页不许别的网站嵌进 iframe，防点击劫持（ADR-0037"页面"）；全站的 CSP 还没做，这里只给它们加
-const NO_FRAME_PAGES = [/^\/device\/?$/]
+const NO_FRAME_PAGES = [/^\/device\/?$/, /^\/oauth\/(?:consent|error)\/?$/]
 
 // 维护期间仍然能打开的页面：安装向导（从向导发起的导入在这里看进度）和维护页本身
 const MAINTENANCE_PAGES = [/^\/setup(?:\/.*)?$/, /^\/maintenance$/]

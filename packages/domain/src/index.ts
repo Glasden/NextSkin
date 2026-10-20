@@ -23,7 +23,7 @@ export {
 } from './settings/registry.ts'
 export type { SigningKey } from './yggdrasil/signing-key.ts'
 
-export type { SessionUser } from './auth/service.ts'
+export type { SessionUser, ConsentRequestView } from './auth/service.ts'
 export {
   EXTERNAL_PENDING_TTL_SECONDS,
   EXTERNAL_STATE_TTL_SECONDS,

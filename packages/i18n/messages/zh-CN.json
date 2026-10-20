@@ -208,7 +208,8 @@
       "or": "或者",
       "passkey": "用通行密钥登录",
       "passkeyFailed": "没能用通行密钥登录，请重试，或者改用密码。",
-      "passkeyExpired": "等待的时间太长了，请再试一次。"
+      "passkeyExpired": "等待的时间太长了，请再试一次。",
+      "reauthenticate": "应用要求你再登录一次，确认是你本人。"
     },
     "signUp": {
       "title": "注册",
@@ -2620,6 +2621,18 @@
     "owner": "由 {nickname} 创建",
     "noOwner": "创建者的账号已经不在了",
     "sharedHint": "本站内置的应用，任何启动器都能以它的名义发起登录。",
+    "permissions": "授权以后，它可以：",
+    "player": "选择角色",
+    "playerHint": "它只能看到和使用这一个角色。换角色要重新授权。",
+    "noSkin": "还没有皮肤",
+    "noPlayers": "它需要使用一个角色，你还没有角色。",
+    "createPlayer": "去创建角色",
+    "banned": "你的账号已被封禁，不能授权。",
+    "approve": "授权",
+    "deny": "拒绝",
+    "failed": "没有成功，请重试。",
+    "figure": "{name} 的皮肤",
+    "figureEmpty": "{name} 还没有皮肤",
     "scopes": {
       "openid": "确认你在本站的账号",
       "profile": "读取你的昵称和头像",
@@ -2628,6 +2641,27 @@
       "playerSelect": "读取你选择的一个角色",
       "playerRead": "读取你的全部角色",
       "serverJoin": "用选择的角色进服，更换它的皮肤和披风"
+    },
+    "consent": {
+      "title": "确认授权",
+      "signedInAs": "你正以 {nickname} 的身份授权。",
+      "switchAccount": "换一个账号",
+      "redirectLabel": "授权以后回到",
+      "loopback": "这台电脑上的程序",
+      "expired": "授权请求已经过期。回到应用，重新发起登录。",
+      "sessionExpired": "登录已经失效。刷新页面，重新登录。",
+      "invalidTitle": "授权请求已失效",
+      "invalid": "这个授权链接已经过期或者不完整。"
+    },
+    "error": {
+      "title": "无法授权",
+      "invalidClient": "没有找到发起登录的应用，它可能已经被删除了。",
+      "clientDisabled": "发起登录的应用已经停用。",
+      "unauthorizedClient": "这个应用不能用这种方式登录。",
+      "invalidRedirect": "应用给出的回调地址没有登记过。为了你的账号安全，不会跳转过去。",
+      "invalidRequest": "授权请求有误。",
+      "hint": "回到应用，重新发起登录。一直这样的话，联系应用的开发者。",
+      "home": "回到首页"
     }
   },
   "device": {
@@ -2644,21 +2678,9 @@
     "codeLabel": "启动器上显示的代码",
     "expiresAt": "{time} 前有效",
     "warning": "只有在你自己刚刚在启动器或设备上发起登录时才继续。别人发给你的代码，不要输入。",
-    "permissions": "授权以后，它可以：",
-    "player": "选择角色",
-    "playerHint": "它只能看到和使用这一个角色。换角色要重新授权。",
-    "noSkin": "还没有皮肤",
-    "noPlayers": "它需要使用一个角色，你还没有角色。",
-    "createPlayer": "去创建角色",
-    "banned": "你的账号已被封禁，不能授权。",
-    "approve": "授权",
-    "deny": "拒绝",
-    "failed": "没有成功，请重试。",
     "approvedTitle": "已授权",
     "approved": "回到启动器，登录会自动完成。可以关掉这个页面了。",
     "deniedTitle": "已拒绝",
-    "denied": "{name} 没有拿到任何权限。可以关掉这个页面了。",
-    "figure": "{name} 的皮肤",
-    "figureEmpty": "{name} 还没有皮肤"
+    "denied": "{name} 没有拿到任何权限。可以关掉这个页面了。"
   }
 }

@@ -369,7 +369,7 @@ test('state 必须和 Cookie 一致、未过期且只能用一次；取消授权
       sessionId: null,
       siteUrl,
     }),
-  ).rejects.toMatchObject({ code: 'external_login_expired' })
+  ).rejects.toMatchObject({ code: 'external_login_expired', params: undefined })
   expect(exchange).not.toHaveBeenCalled()
   await callback(state)
   await expect(callback(state)).rejects.toMatchObject({ code: 'external_login_expired' })
@@ -384,6 +384,7 @@ test('state 必须和 Cookie 一致、未过期且只能用一次；取消授权
   const cancelled = (await start()).state
   await expect(callback(cancelled, null, 'login', { state: cancelled, error: 'access_denied' })).rejects.toMatchObject({
     code: 'external_login_cancelled',
+    params: { intent: 'signIn', next: '/user/players' },
   })
   expect(exchange).not.toHaveBeenCalled()
 })
@@ -391,7 +392,10 @@ test('state 必须和 Cookie 一致、未过期且只能用一次；取消授权
 // GitHub 会先校验数字 id；这里绕过它，直接守住核心对不受信插件返回值的检查。
 test.each(['invalid subject', '', 's'.repeat(256)])('核心拒绝插件返回的非法 subject：%j', async (subject) => {
   identity.subject = subject
-  await expect(callback((await start()).state)).rejects.toMatchObject({ code: 'external_login_failed' })
+  await expect(callback((await start()).state)).rejects.toMatchObject({
+    code: 'external_login_failed',
+    params: { intent: 'signIn', next: '/user/players' },
+  })
   expect(await bindings()).toEqual([])
   expect(env.lines.join('\n')).toContain('login_failed')
   expect(env.lines.join('\n')).not.toContain(identity.email)

@@ -489,7 +489,7 @@ test('发现文档过滤不支持的能力，公用应用停用后不公布 clie
   expect((await info(issued)).status).toBe(200)
 })
 
-test('核对两个插件的全部 HTTP 端点，只开放切片一需要的路径', async () => {
+test('核对两个插件的全部 HTTP 端点，只开放 ADR-0037 的八组路径', async () => {
   const options = authOptions({
     db: database.db,
     secretKey,
@@ -500,7 +500,6 @@ test('核对两个插件的全部 HTTP 端点，只开放切片一需要的路�
   const allowed = new Set([
     '/oauth2/authorize',
     '/oauth2/consent',
-    '/oauth2/continue',
     '/oauth2/token',
     '/oauth2/userinfo',
     '/oauth2/revoke',
@@ -540,7 +539,7 @@ test('核对两个插件的全部 HTTP 端点，只开放切片一需要的路�
   ).toEqual(expect.any(Function))
 })
 
-test('授权码拒绝 Yggdrasil scope，省略 scope 时过滤默认的 Yggdrasil scope', async () => {
+test('授权码放行 Yggdrasil scope，省略 scope 时仍过滤默认的 Yggdrasil scope', async () => {
   const clientId = await importedClient()
   await database.db
     .updateTable('oauth_clients')
@@ -557,9 +556,11 @@ test('授权码拒绝 Yggdrasil scope，省略 scope 时过滤默认的 Yggdrasi
     code_challenge: randomBytes(32).toString('base64url'),
     code_challenge_method: 'S256',
   })
-  const invalid = await request(`/oauth2/authorize?${params.toString()}&scope=${encodeURIComponent(SCOPE)}`)
-  expect(invalid.status).toBe(400)
-  expect(await json(invalid)).toMatchObject({ error: 'invalid_scope' })
+  const selected = await request(`/oauth2/authorize?${params.toString()}&scope=${encodeURIComponent(SCOPE)}`)
+  expect(selected.status).toBe(302)
+  const login = new URL(selected.headers.get('location')!, ROOT)
+  expect(login.pathname).toBe('/sign-in')
+  expect(login.searchParams.get('scope')).toBe(SCOPE)
   const response = await request(`/oauth2/authorize?${params.toString()}`)
   expect(response.status).toBe(302)
   const location = new URL(response.headers.get('location')!, ROOT)
@@ -758,14 +759,14 @@ test('冷启动并发请求先共用一次 JWKS 预热，首把密钥能验证�
   }
 })
 
-test.each(['GET', 'POST'])('授权码的 %s 请求都拒绝 Yggdrasil scope', async (method) => {
+test.each(['GET', 'POST'])('公用应用的 %s 授权码请求去错误页 unauthorized_client', async (method) => {
   const params = { client_id: 'shared', scope: SCOPE, response_type: 'code' }
   const response =
     method === 'POST'
       ? await request('/oauth2/authorize', params)
       : await request(`/oauth2/authorize?${new URLSearchParams(params).toString()}`)
-  expect(response.status).toBe(400)
-  expect(await json(response)).toMatchObject({ error: 'invalid_scope' })
+  expect(response.status).toBe(302)
+  expect(new URL(response.headers.get('location')!, ROOT).searchParams.get('error')).toBe('unauthorized_client')
 })
 
 test('userinfo 的 POST access_token 和 Bearer 一样检查封禁、声明和响应头', async () => {
@@ -829,12 +830,11 @@ test('POST 内部续跑按 authorizeSettings 读取 query，不被 consent 的 b
     context: (await auth.$context) as unknown as DispatchContext['context'],
     method: 'POST',
     body: { accept: true },
-    query: { client_id: 'shared', scope: SCOPE },
+    query: { client_id: 'shared', scope: 'openid Yggdrasil.Server.Join' },
     authorizeSettings: {},
   }
   await expect(dispatchAuthEndpoint(provider.endpoints.oauth2Authorize, input)).rejects.toMatchObject({
-    status: 'BAD_REQUEST',
-    body: { error: 'invalid_scope' },
+    status: 'FOUND',
   })
 })
 

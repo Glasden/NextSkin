@@ -1,39 +1,21 @@
-import { DomainError, JOIN_SCOPE, READ_SCOPE, SELECT_SCOPE } from '@nextskin/domain'
+import { DomainError, SELECT_SCOPE } from '@nextskin/domain'
 import { Alert, Button, Field, Input } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
-import { AvatarSquare } from 'pixelarticons/react/AvatarSquare.js'
-import { Gamepad } from 'pixelarticons/react/Gamepad.js'
-import { Human } from 'pixelarticons/react/Human.js'
-import { Mail } from 'pixelarticons/react/Mail.js'
 import { Monitor } from 'pixelarticons/react/Monitor.js'
-import { Refresh } from 'pixelarticons/react/Refresh.js'
-import { User } from 'pixelarticons/react/User.js'
-import { Users } from 'pixelarticons/react/Users.js'
-import type { ComponentType, ReactNode, SVGProps } from 'react'
-import { clientLabel, describeScopes } from '../../lib/oauth'
+import { clientLabel } from '../../lib/oauth'
 import { getServer } from '../../lib/server'
 import { requireUser } from '../../lib/session'
 import { AuthHeading } from '../(auth)/auth-heading'
 import { AuthShell, DefaultIllustration } from '../(auth)/auth-shell'
-import { VerifyEmailAlert } from '../user/verify-email-alert'
+import { authorizationBlock, authorizationPlayers, ClientCard, PermissionList } from '../_oauth/authorization-parts'
+import { PlayerSelectionProvider, PlayerStage } from '../_oauth/player-selection'
 import { DeviceRequest } from './device-request'
 import { DeviceResult } from './device-result'
-import { DeviceSelectionProvider, DeviceStage, type DevicePlayer } from './device-selection'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('device')
   return { title: t('title') }
-}
-
-const SCOPE_ICONS: Readonly<Record<string, ComponentType<SVGProps<SVGSVGElement>>>> = {
-  openid: User,
-  profile: AvatarSquare,
-  email: Mail,
-  offline_access: Refresh,
-  [SELECT_SCOPE]: Human,
-  [READ_SCOPE]: Users,
-  [JOIN_SCOPE]: Gamepad,
 }
 
 /** 用户代码是 Better Auth 生成的 8 位，中间加一道连字符好核对；不是 8 位的原样显示 */
@@ -86,7 +68,7 @@ export default async function DevicePage({ searchParams }: PageProps<'/device'>)
       </AuthShell>
     )
 
-  const settings = await core.settings.read(['site.name', 'auth.requireEmailVerification'])
+  const settings = await core.settings.read(['site.name'])
   const client = await clientLabel(view.client, settings['site.name'])
   // 本人已经处理过、启动器还没来兑换
   if (view.status !== 'pending')
@@ -97,33 +79,19 @@ export default async function DevicePage({ searchParams }: PageProps<'/device'>)
     )
 
   const choosePlayer = view.scopes.includes(SELECT_SCOPE)
-  const [owned, overview, mailConfigured, scopes, format] = await Promise.all([
-    choosePlayer ? core.players.listOwned(user.uid) : Promise.resolve([]),
-    core.users.overview(user.uid),
-    core.mail.configured(),
-    describeScopes(view.scopes),
+  const [players, blocked, format] = await Promise.all([
+    choosePlayer ? authorizationPlayers(user.uid) : Promise.resolve([]),
+    authorizationBlock(user),
     getFormatter(),
   ])
-  const players: DevicePlayer[] = owned.map((player) => ({
-    pid: player.pid,
-    name: player.name,
-    skin: player.skin && { hash: player.skin.hash, type: player.skin.type, scale: player.skin.scale },
-  }))
   // 申请 Select 时必须选角色；只有一个角色时默认选中，仍要用户点"授权"（ADR-0037"角色绑定"）
   const initial = players.length === 1 ? players[0]!.pid : null
-  const unverified = settings['auth.requireEmailVerification'] && overview !== null && !overview.emailVerified
-  const blocked =
-    user.role === 'banned' ? (
-      <Alert tone="danger">{t('banned')}</Alert>
-    ) : unverified ? (
-      <VerifyEmailAlert email={overview.email} mailConfigured={mailConfigured} />
-    ) : null
   const illustration = (scale: 4 | 8) => (
-    <DeviceStage players={players} scale={scale} fallback={<DefaultIllustration scale={scale} />} />
+    <PlayerStage players={players} scale={scale} fallback={<DefaultIllustration scale={scale} />} />
   )
 
   return (
-    <DeviceSelectionProvider initial={initial}>
+    <PlayerSelectionProvider initial={initial}>
       <AuthShell illustration={illustration}>
         <DeviceRequest
           userCode={view.userCode}
@@ -133,52 +101,20 @@ export default async function DevicePage({ searchParams }: PageProps<'/device'>)
           blocked={blocked}
         >
           <AuthHeading title={t('requestTitle')} />
-          <div className="-mt-2 flex flex-col overflow-hidden rounded-md border border-border bg-surface">
-            <div className="flex items-center gap-3 p-4">
-              <span className="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-sunken text-text-muted">
-                <Monitor aria-hidden />
-              </span>
-              <div className="flex min-w-0 flex-col">
-                {/* 应用名是创建者填的，用正文字体（DESIGN.md §4） */}
-                <span className="truncate text-lg font-medium text-text">{client.name}</span>
-                <span className="text-sm text-pretty text-text-muted">{client.byline}</span>
-              </div>
+          <ClientCard icon={Monitor} name={client.name} byline={client.byline}>
+            <div className="flex flex-col gap-1">
+              <dt className="text-xs text-text-muted">{t('codeLabel')}</dt>
+              <dd className="font-mono text-xl tracking-widest text-text">{formatUserCode(view.userCode)}</dd>
             </div>
-            <dl className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 border-t border-border bg-surface-sunken px-4 py-3">
-              <div className="flex flex-col gap-1">
-                <dt className="text-xs text-text-muted">{t('codeLabel')}</dt>
-                <dd className="font-mono text-xl tracking-widest text-text">{formatUserCode(view.userCode)}</dd>
-              </div>
-              <dd className="text-xs text-text-muted">
-                {t('expiresAt', { time: format.dateTime(new Date(view.expiresAt), { timeStyle: 'short' }) })}
-              </dd>
-            </dl>
-          </div>
+            <dd className="text-xs text-text-muted">
+              {t('expiresAt', { time: format.dateTime(new Date(view.expiresAt), { timeStyle: 'short' }) })}
+            </dd>
+          </ClientCard>
           <Alert tone="warning">{t('warning')}</Alert>
-          <section aria-labelledby="device-permissions" className="flex flex-col gap-3">
-            <h2 id="device-permissions" className="text-base font-medium text-text">
-              {t('permissions')}
-            </h2>
-            <ul className="flex flex-col gap-2">
-              {scopes.map(({ scope, label }) => (
-                <Permission key={scope} icon={SCOPE_ICONS[scope] ?? User}>
-                  {label}
-                </Permission>
-              ))}
-            </ul>
-          </section>
+          <PermissionList scopes={view.scopes} />
         </DeviceRequest>
       </AuthShell>
-    </DeviceSelectionProvider>
-  )
-}
-
-function Permission({ icon: Icon, children }: { icon: ComponentType<SVGProps<SVGSVGElement>>; children: ReactNode }) {
-  return (
-    <li className="flex items-start gap-3 text-base text-text">
-      <Icon aria-hidden className="shrink-0 text-text-muted" />
-      <span className="pt-0.5 text-sm">{children}</span>
-    </li>
+    </PlayerSelectionProvider>
   )
 }
 

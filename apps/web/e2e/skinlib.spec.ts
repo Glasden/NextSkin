@@ -84,13 +84,14 @@ test('上传皮肤、在皮肤库和详情页里看到它，改成私有后别�
 
 test('同一张图已经公开过，再上传会被拒绝，并指出已有的材质', async ({ page, baseURL }) => {
   await register(page, '203.0.113.71', `Dup${suffix}`)
+  // 用其他用例没有公开上传过的图：同一个站点上的用例并行跑，closet.spec.ts 公开的 haka 会让第一次上传就被拒绝
   const upload = () =>
     page.request.post('/api/textures', {
       // multipart 是浏览器跨站也能发的表单请求，接口按站点地址检查 Origin；页面里的 fetch 会自动带上
       headers: { Origin: new URL(baseURL!).origin },
       multipart: {
-        file: { name: 'haka.png', mimeType: 'image/png', buffer: readFileSync(fixture('haka')) },
-        name: 'Haka',
+        file: { name: 'sethbling.png', mimeType: 'image/png', buffer: readFileSync(fixture('sethbling')) },
+        name: 'SethBling',
         type: 'steve',
         public: 'true',
       },

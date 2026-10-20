@@ -208,7 +208,8 @@
       "or": "or",
       "passkey": "Sign in with a passkey",
       "passkeyFailed": "Could not sign in with a passkey. Try again, or use your password.",
-      "passkeyExpired": "That took too long. Please try again."
+      "passkeyExpired": "That took too long. Please try again.",
+      "reauthenticate": "The app asks you to sign in again to confirm it’s you."
     },
     "signUp": {
       "title": "Sign up",
@@ -2620,6 +2621,18 @@
     "owner": "Created by {nickname}",
     "noOwner": "The creator’s account no longer exists",
     "sharedHint": "Built into this site. Any launcher can start a sign-in in its name.",
+    "permissions": "Once authorized, it can:",
+    "player": "Choose a player",
+    "playerHint": "It can only see and use this one player. Authorize again to switch players.",
+    "noSkin": "No skin yet",
+    "noPlayers": "It needs a player, and you don’t have one yet.",
+    "createPlayer": "Create a player",
+    "banned": "Your account is banned and can’t authorize apps.",
+    "approve": "Authorize",
+    "deny": "Deny",
+    "failed": "That didn’t work. Try again.",
+    "figure": "{name}’s skin",
+    "figureEmpty": "{name} has no skin yet",
     "scopes": {
       "openid": "Confirm your account on this site",
       "profile": "See your nickname and avatar",
@@ -2628,6 +2641,27 @@
       "playerSelect": "See the player you choose",
       "playerRead": "See all your players",
       "serverJoin": "Join servers as the chosen player and change its skin and cape"
+    },
+    "consent": {
+      "title": "Confirm authorization",
+      "signedInAs": "You’re authorizing as {nickname}.",
+      "switchAccount": "Use another account",
+      "redirectLabel": "After authorizing, you’ll return to",
+      "loopback": "A program on this computer",
+      "expired": "This request has expired. Go back to the app and sign in again.",
+      "sessionExpired": "You’ve been signed out. Refresh the page to sign in again.",
+      "invalidTitle": "This request is no longer valid",
+      "invalid": "This authorization link has expired or is incomplete."
+    },
+    "error": {
+      "title": "Can’t authorize",
+      "invalidClient": "The app that started this sign-in wasn’t found. It may have been deleted.",
+      "clientDisabled": "The app that started this sign-in has been disabled.",
+      "unauthorizedClient": "This app can’t sign in this way.",
+      "invalidRedirect": "The app’s return address isn’t registered. To keep your account safe, you won’t be sent there.",
+      "invalidRequest": "The authorization request is invalid.",
+      "hint": "Go back to the app and sign in again. If this keeps happening, contact the app’s developer.",
+      "home": "Back to home"
     }
   },
   "device": {
@@ -2644,21 +2678,9 @@
     "codeLabel": "Code shown in your launcher",
     "expiresAt": "Valid until {time}",
     "warning": "Only continue if you just started signing in on your own launcher or device. Never enter a code someone sent you.",
-    "permissions": "Once authorized, it can:",
-    "player": "Choose a player",
-    "playerHint": "It can only see and use this one player. Authorize again to switch players.",
-    "noSkin": "No skin yet",
-    "noPlayers": "It needs a player, and you don’t have one yet.",
-    "createPlayer": "Create a player",
-    "banned": "Your account is banned and can’t authorize apps.",
-    "approve": "Authorize",
-    "deny": "Deny",
-    "failed": "That didn’t work. Try again.",
     "approvedTitle": "Authorized",
     "approved": "Go back to your launcher; it will finish signing in. You can close this page.",
     "deniedTitle": "Denied",
-    "denied": "{name} didn’t get any access. You can close this page.",
-    "figure": "{name}’s skin",
-    "figureEmpty": "{name} has no skin yet"
+    "denied": "{name} didn’t get any access. You can close this page."
   }
 }

@@ -23,12 +23,12 @@ export async function sendJson(
   method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
-  options: { redirect?: RequestRedirect } = {},
+  options: { redirect?: RequestRedirect; headers?: Record<string, string> } = {},
 ): Promise<{ status: number; data: unknown }> {
   try {
     const response = await fetch(path, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...options.headers, 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
       redirect: options.redirect,
     })

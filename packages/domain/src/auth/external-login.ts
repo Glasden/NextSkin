@@ -375,7 +375,7 @@ export function createExternalLogin(options: {
 
     /**
      * 回调。`cookieState` 是发起时写进 Cookie 的 state，`sessionUid`、`sessionId` 是当前会话的用户和会话。
-     * 出错时抛 DomainError，params 里的 intent 告诉调用方该跳回登录页还是安全页
+     * 出错时抛 DomainError，params 里的 intent 决定错误页，next 保留登录后的授权或设备流程
      */
     async callback(input: {
       pluginId: string
@@ -393,7 +393,7 @@ export function createExternalLogin(options: {
       const record = await consumeState(state)
       if (!record || record.pluginId !== input.pluginId || record.providerId !== input.providerId)
         throw new DomainError('external_login_expired')
-      const fail = (code: string) => new DomainError(code, { intent: record.intent })
+      const fail = (code: string) => new DomainError(code, { intent: record.intent, next: record.next })
       // RFC 6749 §4.1.2.1：用户在第三方点了取消，或者第三方拒绝了这次授权
       if (input.query.error !== undefined) throw fail('external_login_cancelled')
       const entry = await available(record.pluginId, record.providerId)

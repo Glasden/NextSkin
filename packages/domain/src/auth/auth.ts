@@ -9,7 +9,7 @@ import { hashPassword } from 'better-auth/crypto'
 import { jwt, twoFactor } from 'better-auth/plugins'
 import type { Kysely } from 'kysely'
 import { isValidScopeSet, OAUTH_SCOPES, splitScopes } from '../oauth/scopes.ts'
-import { bindDeviceSelection, yggdrasilConnect } from './connect.ts'
+import { bindDeviceSelection, consentReferenceId, oauthQueryGuard, yggdrasilConnect } from './connect.ts'
 import { connectClaims } from './connect-claims.ts'
 import type { MailService } from '../mail/service.ts'
 import {
@@ -227,6 +227,7 @@ export function authOptions(config: AuthConfig) {
     // /change-email、/delete-user：由领域用例代替，确认链接和删除事件必须在业务事务里（ADR-0023）
     // 账号端点：第三方账号的绑定、解绑由领域用例处理（ADR-0034）。不关的话 /unlink-account 能删掉自己的密码，
     // 绕过"解绑之后要还有能用的登录方式"；核心不存第三方的令牌，取令牌的几个端点也用不到
+    // /oauth2/continue：登录后重新打开授权地址，避免绕过同意请求的角色选择（ADR-0037）。
     disabledPaths: [
       '/token',
       '/update-user',
@@ -238,6 +239,7 @@ export function authOptions(config: AuthConfig) {
       '/account-info',
       '/get-access-token',
       '/refresh-token',
+      '/oauth2/continue',
       '/oauth2/register',
       '/oauth2/create-client',
       '/admin/oauth2/create-client',
@@ -273,12 +275,15 @@ export function authOptions(config: AuthConfig) {
     // 默认的错误处理用 Better Auth 模块级的 logger 打印错误消息，绕过上面的 logger。客户端错误已经在响应里，
     // 不再记录；服务端错误只记录类型，消息可能带着请求里的值或 SQL 参数（不变量 11）
     onAPIError: {
+      // 不设时生产环境的默认错误页会落到首页 /?error=，丢失授权流程的错误说明。
+      errorURL: '/oauth/error',
       onError: (error) => {
         if (isAPIError(error) && error.status !== 'INTERNAL_SERVER_ERROR') return
         console.error(`[auth] unhandled ${error instanceof Error ? error.name : typeof error}`)
       },
     },
     plugins: [
+      oauthQueryGuard(),
       // ID 令牌用 RS256（ADR-0007）；Yggdrasil Connect 规范要求至少有一把 RSA 密钥
       withNamingConvention(
         jwt({ jwks: { keyPairConfig: { alg: 'RS256', modulusLength: 2048 } }, disableSettingJwtHeader: true }),
@@ -287,6 +292,8 @@ export function authOptions(config: AuthConfig) {
         oauthProvider({
           loginPage: '/sign-in',
           consentPage: '/oauth/consent',
+          // 只为了 consentReferenceId 配置 postLogin，角色在同意请求里选择，没有额外的登录后步骤。
+          postLogin: { page: '/oauth/consent', shouldRedirect: () => false, consentReferenceId },
           scopes: OAUTH_SCOPES,
           grantTypes: ['authorization_code', 'refresh_token'],
           accessTokenExpiresIn: tokenValidSeconds,

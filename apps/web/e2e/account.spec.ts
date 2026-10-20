@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto'
 import { createTranslator } from '@nextskin/i18n'
 import { expect, test, type Page } from '@playwright/test'
+import { authorization, clickHydrated, createLauncherClient, listenCallback, waitForCallback } from './oauth-client'
 
 // 个人资料、两步验证、通行密钥和删除账号经过 standalone 产物的主流程（ADR-0023）。跑在 account 项目上：
 // 这个服务的站点地址就是浏览器的 Origin（playwright.config.ts），Better Auth 才接受页面发来的请求。
@@ -128,7 +129,27 @@ test('两步验证：开启后用密码登录要过第二步，备用码也能�
   await expect(page).toHaveURL('/user/security')
   await expect(page.getByText(t('user.security.twoFactor.remaining', { count: 9 }))).toBeVisible()
 
+  // 从授权流程进来：密码、第二步以后回到授权流程，到同意页（ADR-0037"登录后续跑"）
+  const clientId = `e2e-two-factor-${suffix}`
+  createLauncherClient(email, clientId)
+  const port = await listenCallback(page)
+  await signOut(page, name)
+  const flow = authorization(clientId, port)
+  await page.goto(flow.url)
+  await expect(page).toHaveURL(/\/sign-in\?.*sig=/)
+  await page.getByLabel(t('auth.email')).fill(email)
+  await page.getByLabel(t('auth.password')).fill(password)
+  await page.getByRole('button', { name: t('auth.signIn.submit'), exact: true }).click()
+  await expect(page).toHaveURL(/\/sign-in\/two-factor\?next=%2Fapi%2Fauth%2Foauth2%2Fauthorize/)
+  await page.getByRole('button', { name: t('auth.twoFactor.useBackup') }).click()
+  await page.getByLabel(t('auth.twoFactor.backupCode')).fill(codes[1]!)
+  await page.getByRole('button', { name: t('auth.twoFactor.submit'), exact: true }).click()
+  await expect(page).toHaveURL(/\/oauth\/consent\?/)
+  await clickHydrated(page.getByRole('button', { name: t('oauth.approve'), exact: true }))
+  expect((await waitForCallback(page, port)).get('state')).toBe(flow.state)
+
   // 关闭两步验证要输入密码
+  await page.goto('/user/security')
   await page.getByRole('button', { name: t('user.security.twoFactor.disable') }).click()
   const disable = page.getByRole('alertdialog', { name: t('user.security.twoFactor.disableTitle') })
   await disable.getByLabel(t('user.security.password.current')).fill(password)
@@ -187,6 +208,24 @@ test('通行密钥：添加、改名，用它登录，删除', async ({ page }) 
     user: { email: string }
   }
   expect(session.user.email).toBe(email)
+
+  // 从授权流程进来：用通行密钥登录以后回到授权流程，到同意页（ADR-0037"登录后续跑"）
+  const clientId = `e2e-passkey-${suffix}`
+  createLauncherClient(email, clientId)
+  const port = await listenCallback(page)
+  await page.context().clearCookies()
+  const flow = authorization(clientId, port)
+  const signedOptions = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === '/api/auth/passkey/generate-authenticate-options',
+  )
+  await page.goto(flow.url)
+  await expect(page).toHaveURL(/\/sign-in\?.*sig=/)
+  await signedOptions
+  await page.getByRole('button', { name: t('auth.signIn.passkey') }).click()
+  await expect(page).toHaveURL(/\/oauth\/consent\?/)
+  await clickHydrated(page.getByRole('button', { name: t('oauth.deny'), exact: true }))
+  expect((await waitForCallback(page, port)).get('error')).toBe('access_denied')
+  await page.goto('/user/security')
 
   await section.getByRole('button', { name: t('user.security.passkeys.delete') }).click()
   const remove = page.getByRole('alertdialog', { name: t('user.security.passkeys.deleteTitle', { name: '工作电脑' }) })

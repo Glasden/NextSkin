@@ -1,11 +1,12 @@
 'use client'
 
-import { Alert, Button, Checkbox, Field, Form, Input, Link } from '@nextskin/ui'
+import { Alert, Button, Checkbox, Field, Form, Input } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
-import NextLink from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { authErrorCode, postJson } from '../../../../lib/api-client'
+import { goToNext } from '../../../../lib/navigation'
+import { AuthLink } from '../../auth-link'
 
 type Method = 'totp' | 'backup'
 
@@ -28,8 +29,7 @@ export function TwoFactorForm({ next }: { next: string }) {
     const path = method === 'totp' ? '/api/auth/two-factor/verify-totp' : '/api/auth/two-factor/verify-backup-code'
     const { status, data } = await postJson(path, { code: values.code?.trim(), trustDevice: trust })
     if (status === 200) {
-      router.replace(next)
-      router.refresh()
+      goToNext(router, next)
       return
     }
     setPending(false)
@@ -60,7 +60,9 @@ export function TwoFactorForm({ next }: { next: string }) {
             <div className="flex flex-col items-start gap-2">
               <p>{error.message}</p>
               {error.restart && (
-                <Link render={<NextLink href={`/sign-in?next=${encodeURIComponent(next)}`} />}>{t('signInAgain')}</Link>
+                <AuthLink href={`/sign-in?next=${encodeURIComponent(next)}`} next={next}>
+                  {t('signInAgain')}
+                </AuthLink>
               )}
             </div>
           </Alert>

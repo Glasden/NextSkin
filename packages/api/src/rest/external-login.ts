@@ -123,10 +123,15 @@ function requestLocale(c: Context<AppEnv>) {
 }
 
 /** 回调出错时显示文案的页面：发起绑定的回到安全页，其余回到登录页 */
-function errorLocation(code: string, intent: unknown, signedIn: boolean): string {
-  // state 对不上时不知道是在登录还是在绑定；登录页不对已登录的用户开放，已登录的多半是在绑定
+function errorLocation(code: string, intent: unknown, signedIn: boolean, next?: unknown): string {
+  // state 对不上时不知道是在登录还是在绑定；登录页只在应用要求重新登录时对已登录的用户开放，已登录的多半是在绑定。
+  // 这时 next 也丢了，回登录页也回不到授权流程（ADR-0034、ADR-0037"登录后续跑"）
   const link = intent === 'link' || (intent === undefined && signedIn)
-  return `${link ? '/user/security' : '/sign-in'}?error=${encodeURIComponent(code)}`
+  const location = `${link ? '/user/security' : '/sign-in'}?error=${encodeURIComponent(code)}`
+  // 换一种方式登录后还要回到原来的授权或设备流程；只接受消费 state 后恢复出的安全站内地址。
+  return !link && typeof next === 'string' && next !== '/user' && safeNextPath(next) === next
+    ? `${location}&next=${encodeURIComponent(next)}`
+    : location
 }
 
 export function registerExternalLogin(app: OpenAPIHono<AppEnv>, core: Core) {
@@ -184,10 +189,8 @@ export function registerExternalLogin(app: OpenAPIHono<AppEnv>, core: Core) {
     } catch (error) {
       if (!(error instanceof DomainError)) logError(error)
       const code = error instanceof DomainError ? error.code : 'external_login_failed'
-      return c.redirect(
-        errorLocation(code, error instanceof DomainError ? error.params?.intent : undefined, !!sessionUser),
-        303,
-      )
+      const params = error instanceof DomainError ? error.params : undefined
+      return c.redirect(errorLocation(code, params?.intent, !!sessionUser, params?.next), 303)
     }
     if (result.kind === 'linked') return c.redirect(`${result.next}?linked=1`, 303)
     if (result.kind === 'register') {
@@ -206,7 +209,7 @@ export function registerExternalLogin(app: OpenAPIHono<AppEnv>, core: Core) {
       })
     } catch (error) {
       if (!(error instanceof DomainError)) logError(error)
-      return c.redirect(errorLocation('external_login_failed', 'signIn', false), 303)
+      return c.redirect(errorLocation('external_login_failed', 'signIn', false, result.next), 303)
     }
     for (const cookie of signedIn.cookies) c.header('Set-Cookie', cookie, { append: true })
     return c.redirect(

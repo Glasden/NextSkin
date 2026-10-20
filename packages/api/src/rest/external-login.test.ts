@@ -15,6 +15,8 @@ const password = 'correct horse battery staple'
 const authorizationCode = 'private-authorization-code'
 const accessToken = 'private-access-token'
 const privateMessage = 'private-plugin-message'
+const authorizationNext =
+  '/api/auth/oauth2/authorize?response_type=code&client_id=example&scope=openid&state=connect-state'
 
 // 同一份 GitHub 源码经过两条加载路径；白名单和 RPC 都保留，只替换最终出站请求。
 describe.each(['official', 'host'] as const)('GitHub 第三方登录（%s）', (loading) => {
@@ -292,7 +294,7 @@ describe.each(['official', 'host'] as const)('GitHub 第三方登录（%s）', (
       expect(await browser.session()).toMatchObject({ uid })
       expect(await bindings(uid)).toHaveLength(1)
     } else {
-      expectRedirect(response, '/sign-in?error=external_email_taken')
+      expectRedirect(response, '/sign-in?error=external_email_taken&next=%2Fuser%2Fplayers')
       expect((await bindings(uid)).filter((r) => r.provider_id.startsWith('plugin:'))).toEqual([])
       expect(await browser.session()).toBeNull()
     }
@@ -339,8 +341,72 @@ describe.each(['official', 'host'] as const)('GitHub 第三方登录（%s）', (
       state,
       kind === 'cancelled' ? { error: 'access_denied' } : { code: authorizationCode },
     )
-    expectRedirect(response, `/sign-in?error=external_login_${kind === 'cancelled' ? 'cancelled' : 'expired'}`)
+    expectRedirect(
+      response,
+      kind === 'cancelled'
+        ? '/sign-in?error=external_login_cancelled&next=%2Fuser%2Fplayers'
+        : '/sign-in?error=external_login_expired',
+    )
     expect(outbound).not.toHaveBeenCalled()
+  })
+
+  test.each([authorizationNext, '/device?user_code=ABCD-EFGH'])(
+    '第三方登录成功或取消都保留原流程 next=%s',
+    async (next) => {
+      await configure()
+      const { uid } = await bound()
+      const browser = new Browser()
+      expectRedirect(await browser.callback((await start(browser, 'signIn', next)).state), next)
+      expect(await browser.session()).toMatchObject({ uid })
+      const cancelled = new Browser()
+      const { state } = await start(cancelled, 'signIn', next)
+      outbound.mockClear()
+      expectRedirect(
+        await cancelled.callback(state, { error: 'access_denied' }),
+        `/sign-in?error=external_login_cancelled&next=${encodeURIComponent(next)}`,
+      )
+      expect(outbound).not.toHaveBeenCalled()
+      expect(await cancelled.session()).toBeNull()
+      expect(env.lines.join('\n')).not.toContain(next)
+    },
+  )
+
+  test.each(['/user', '//evil.test', '/\\evil.test', '/\t/evil.test'])(
+    '第三方取消时默认地址或不安全的 next=%j 不写入登录页',
+    async (next) => {
+      await configure()
+      const browser = new Browser()
+      // 直接调用领域入口，证明即使绕过发起接口的 safeNextPath，错误重定向仍有独立检查。
+      const { state } = await env.core.externalLogin.start({
+        pluginId: id,
+        providerId: 'github',
+        intent: 'signIn',
+        uid: null,
+        sessionId: null,
+        next,
+        siteUrl: origin,
+      })
+      browser.jar.set('nextskin-external-state', state)
+      expectRedirect(
+        await browser.callback(state, { error: 'access_denied' }),
+        '/sign-in?error=external_login_cancelled',
+      )
+    },
+  )
+
+  test('身份交换成功但签发会话失败时保留授权 next，logError 只记录错误类型', async () => {
+    await configure()
+    await bound()
+    const browser = new Browser()
+    const { state } = await start(browser, 'signIn', authorizationNext)
+    vi.spyOn(env.core.auth, 'createExternalSession').mockRejectedValueOnce(new Error('Session creation failed'))
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expectRedirect(
+      await browser.callback(state),
+      `/sign-in?error=external_login_failed&next=${encodeURIComponent(authorizationNext)}`,
+    )
+    expect(logged).toHaveBeenCalledExactlyOnceWith('[rest] unhandled Error')
+    expect(await browser.session()).toBeNull()
   })
 
   test.each(['throw', 'token-error', 'invalid-subject', 'timeout'] as const)(
@@ -363,7 +429,7 @@ describe.each(['official', 'host'] as const)('GitHub 第三方登录（%s）', (
         response = await responsePromise
         vi.useRealTimers()
       } else response = await browser.callback(state)
-      expectRedirect(response, '/sign-in?error=external_login_failed')
+      expectRedirect(response, '/sign-in?error=external_login_failed&next=%2Fuser%2Fplayers')
       expect(await browser.session()).toBeNull()
       const logs = env.lines.join('\n')
       expect(logs).toContain('login_failed')

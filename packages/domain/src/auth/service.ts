@@ -1,6 +1,13 @@
 import { readAuthBoolean, readAuthDate, type IsoTimestamp, type CoreDatabase, type UserRole } from '@nextskin/db'
 import { isAPIError } from 'better-auth/api'
-import { DEVICE_CODE_GRANT_TYPE, OAUTH_SCOPES, SHARED_OAUTH_CLIENT_ID } from '../oauth/scopes.ts'
+import {
+  DEVICE_CODE_GRANT_TYPE,
+  isValidScopeSet,
+  OAUTH_SCOPES,
+  SHARED_OAUTH_CLIENT_ID,
+  splitScopes,
+} from '../oauth/scopes.ts'
+import { readClient, type OAuthClientSummary } from '../oauth/devices.ts'
 import { DomainError } from '../errors.ts'
 import type { Kysely } from 'kysely'
 import type { MailService } from '../mail/service.ts'
@@ -10,6 +17,19 @@ import { normalizeClientAuthentication } from './client-authentication.ts'
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './password-policy.ts'
 import type { PluginPasswordVerifier } from './password.ts'
 import { withoutSerialUnsafeMetadata } from './serial-safety.ts'
+import { authorizationClient, authorizationTrustError, signedAuthorizationQuery, splitPrompt } from './authorization.ts'
+
+export type ConsentRequestView =
+  | { status: 'invalid' }
+  | {
+      status: 'ready'
+      /** 提交给 /oauth2/consent 的 oauth_query：只含签过名的参数。 */
+      oauthQuery: string
+      client: OAuthClientSummary
+      /** 回调地址的主机（含端口）；没有主机的自定义协议地址给协议名。 */
+      redirectHost: string
+      scopes: string[]
+    }
 
 export interface AuthServiceOptions {
   db: Kysely<CoreDatabase>
@@ -104,6 +124,62 @@ export function createAuthService(options: AuthServiceOptions) {
   }
 
   return {
+    /** 登录页：还原 Better Auth 签过名的授权参数，登录后重新打开授权流程（ADR-0037）。 */
+    async authorizationContinuation(
+      search: string,
+      headers: Headers,
+      requestRoot: string,
+    ): Promise<{ next: string; resume: boolean } | null> {
+      const auth = await instance(requestRoot)
+      if (!auth) return null
+      const query = await signedAuthorizationQuery(search, (await auth.$context).secret)
+      if (!query) return null
+      headers = new Headers(headers)
+      headers.delete(CLIENT_IP_HEADER)
+      const session = await auth.api.getSession({ headers })
+      const loginPrompts = ['login', 'create', 'select_account']
+      const prompt = splitPrompt(query.get('prompt'))
+      const maxAge = query.get('max_age')
+      const maxAgeSeconds = maxAge?.trim() ? Number(maxAge) : NaN
+      // 与 Better Auth 的 isWithinMaxAge 相同：0 永远要求重新登录，时间从会话创建时算。
+      const fresh =
+        maxAge === null ||
+        (Number.isInteger(maxAgeSeconds) &&
+          maxAgeSeconds > 0 &&
+          session !== null &&
+          Date.now() - new Date(session.session.createdAt).getTime() <= maxAgeSeconds * 1000)
+      const resume = !!session && !prompt.some((value) => loginPrompts.includes(value)) && fresh
+      for (const key of ['sig', 'exp', 'ba_iat', 'ba_pl', 'ba_param', 'max_age']) query.delete(key)
+      const remaining = prompt.filter((value) => !loginPrompts.includes(value))
+      if (remaining.length) query.set('prompt', remaining.join(' '))
+      else query.delete('prompt')
+      return { next: `${AUTH_BASE_PATH}/oauth2/authorize?${query.toString()}`, resume }
+    },
+
+    /** 同意页：先验签再显示应用和回调地址，不能让伪造链接借本站为任意应用背书。 */
+    async consentRequest(search: string, requestRoot: string): Promise<ConsentRequestView> {
+      const auth = await instance(requestRoot)
+      if (!auth) return { status: 'invalid' }
+      const query = await signedAuthorizationQuery(search, (await auth.$context).secret)
+      if (!query) return { status: 'invalid' }
+      const clientId = query.get('client_id')
+      const redirectUri = query.get('redirect_uri')
+      const client = await authorizationClient(db, clientId)
+      const scopes = splitScopes(query.get('scope'))
+      if (authorizationTrustError(client, clientId, redirectUri) || !isValidScopeSet(scopes))
+        return { status: 'invalid' }
+      const summary = await readClient(db, clientId)
+      if (!summary || summary.disabled) return { status: 'invalid' }
+      const redirect = new URL(redirectUri!)
+      return {
+        status: 'ready',
+        oauthQuery: query.toString(),
+        client: summary.client,
+        redirectHost: redirect.host || redirect.protocol,
+        scopes,
+      }
+    },
+
     async openIdConfigurationUrl(requestRoot: string): Promise<string | null> {
       const values = await settings.read(['site.url'])
       const siteUrl = resolveSiteUrl(values['site.url'], requestRoot)
@@ -204,6 +280,7 @@ export function createAuthService(options: AuthServiceOptions) {
             (value) => value !== 'select_account' && value !== 'create',
           )
         filtered.scopes_supported = OAUTH_SCOPES
+        filtered.claims_parameter_supported = false
         filtered.claims_supported = [
           ...new Set([...((filtered.claims_supported as string[]) ?? []), 'selectedProfile', 'availableProfiles']),
         ]

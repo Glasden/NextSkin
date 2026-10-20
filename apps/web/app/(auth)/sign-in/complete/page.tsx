@@ -11,6 +11,7 @@ import { registerFormFields } from '../../../../lib/plugins'
 import { getServer } from '../../../../lib/server'
 import { getSessionUser } from '../../../../lib/session'
 import { AuthHeading } from '../../auth-heading'
+import { AuthLink } from '../../auth-link'
 import { SignUpForm } from '../../sign-up/sign-up-form'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -29,18 +30,21 @@ function playerNamePrefill(name: string | null, rules: PlayerNameRules): string 
 
 /**
  * 第三方登录的"完成注册"（ADR-0034）：第三方账号还没有绑定本站的账号时，回调把身份暂存起来、跳到这里。
- * 表单和注册页相同，只是没有密码；提交后经过注册用例，邀请码、角色名这些都照常检查。总是显示这一页，不静默建号
+ * 表单和注册页相同，只是没有密码；提交后经过注册用例，邀请码、角色名这些都照常检查。总是显示这一页，不静默建号。
+ * 已经登录也照常显示：授权流程要求重新登录时（ADR-0037"登录后续跑"），登录页对已登录的人开放，
+ * 在那里用没绑定的第三方账号登录也会来到这里
  */
 export default async function CompleteSignUpPage() {
-  if (await getSessionUser()) redirect('/user')
-  const [{ core }, t, auth, locale, cookieStore] = await Promise.all([
+  const [{ core }, t, auth, locale, cookieStore, user] = await Promise.all([
     getServer(),
     getTranslations('auth.complete'),
     getTranslations('auth'),
     getLocale(),
     cookies(),
+    getSessionUser(),
   ])
   const pending = await core.externalLogin.pending(cookieStore.get(EXTERNAL_PENDING_COOKIE)?.value ?? null)
+  if (!pending && user) redirect('/user')
   if (!pending)
     return (
       <>
@@ -90,14 +94,20 @@ export default async function CompleteSignUpPage() {
           next: pending.next,
         }}
       />
-      <p className="mt-6 text-sm text-pretty text-text-muted">
-        {t.rich('hasAccount', {
-          provider,
-          link: (chunks) => (
-            <Link render={<NextLink href={`/sign-in?next=${encodeURIComponent(pending.next)}`} />}>{chunks}</Link>
-          ),
-        })}
-      </p>
+      {/* 重新登录时不给"先登录"：这里只有去掉了 login、max_age 的授权地址，已经登录的人从登录页会直接回去，
+          不用再登录一次。和登录页上的注册链接一样（ADR-0037"登录后续跑"） */}
+      {!user && (
+        <p className="mt-6 text-sm text-pretty text-text-muted">
+          {t.rich('hasAccount', {
+            provider,
+            link: (chunks) => (
+              <AuthLink href={`/sign-in?next=${encodeURIComponent(pending.next)}`} next={pending.next}>
+                {chunks}
+              </AuthLink>
+            ),
+          })}
+        </p>
+      )}
     </>
   )
 }

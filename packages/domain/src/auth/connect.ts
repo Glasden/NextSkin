@@ -1,6 +1,10 @@
 import { defineRequestState } from '@better-auth/core/context'
 import { parseAccessTokenAuthorization, stripAccessTokenAuthorizationScheme } from '@better-auth/core/oauth2'
-import type { OAuthExtensionGrantHandler, oauthDeviceAuthorization } from '@better-auth/oauth-provider'
+import {
+  getOAuthProviderState,
+  type OAuthExtensionGrantHandler,
+  type oauthDeviceAuthorization,
+} from '@better-auth/oauth-provider'
 import { readAuthBoolean, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
 import type { BetterAuthPlugin } from 'better-auth'
 import { APIError, createAuthMiddleware, getSessionFromCtx, isAPIError } from 'better-auth/api'
@@ -18,10 +22,20 @@ import {
 } from '../oauth/scopes.ts'
 import { sha256 } from './auth.ts'
 import { connectClaims } from './connect-claims.ts'
+import { authorizationClient, authorizationError, splitPrompt } from './authorization.ts'
 
 const grantOwner = defineRequestState<{ uid: number; version: number } | null>(() => null)
 const userInfoScopes = defineRequestState<string[]>(() => [])
 const revokingAccessToken = defineRequestState<{ id: number; refresh_id: number | null } | null>(() => null)
+const selectedPlayer = defineRequestState<number | null>(() => null)
+
+/** 选择只活在同意请求里，避免同一用户并行授权时串用角色。 */
+export async function consentReferenceId({ scopes }: { scopes: string[] }) {
+  if (!scopes.includes(SELECT_SCOPE)) return undefined
+  const pid = await selectedPlayer.get()
+  if (pid === null) invalidRequest('A player must be selected')
+  return playerReference(pid)
+}
 
 function invalidTarget(): never {
   throw new APIError('BAD_REQUEST', {
@@ -36,6 +50,33 @@ function invalidRequest(description: string): never {
 
 function invalidGrant(): never {
   throw new APIError('BAD_REQUEST', { error: 'invalid_grant', error_description: 'Invalid authorization grant' })
+}
+
+/** 在 oauth-provider 前拒绝不支持的入口，即使 oauth_query 的签名不对也统一返回 invalid_request。 */
+export function oauthQueryGuard() {
+  return {
+    id: 'nextskin-oauth-query-guard',
+    hooks: {
+      before: [
+        {
+          // oauth-provider 会在写会话后续跑授权，早于两步验证。只有同意端点能使用 oauth_query。
+          matcher: (ctx) => {
+            const settings = (ctx as { authorizeSettings?: { isAuthorize?: boolean } }).authorizeSettings
+            // consent 的内部 authorize 仍带着原请求体，它不是另一个接受 oauth_query 的 HTTP 入口。
+            if (ctx.path === '/oauth2/authorize' && settings !== undefined && settings.isAuthorize !== true)
+              return false
+            return (
+              ctx.path !== '/oauth2/consent' &&
+              ctx.body !== null &&
+              typeof ctx.body === 'object' &&
+              'oauth_query' in ctx.body
+            )
+          },
+          handler: createAuthMiddleware(() => invalidRequest('oauth_query is not accepted')),
+        },
+      ],
+    },
+  } satisfies BetterAuthPlugin
 }
 
 /** 消费设备码之后才能读选择，避免批准请求和兑换请求之间串用或遗留选择。 */
@@ -129,7 +170,7 @@ export function yggdrasilConnect(
             const body = ctx.body as Record<string, unknown> | undefined
             // 端点的 schema 会去掉 grant_type 两端的空白，这里按同样的值判断
             const grantType = typeof body?.grant_type === 'string' ? body.grant_type.trim() : undefined
-            if (ctx.path === '/oauth2/authorize' || (ctx.path === '/oauth2/consent' && body?.accept !== false)) {
+            if (ctx.path === '/oauth2/consent' && body?.accept !== false) {
               const session = await getSessionFromCtx(ctx)
               if (session) {
                 const user = await db
@@ -148,19 +189,51 @@ export function yggdrasilConnect(
                   })
               }
             }
-            if (ctx.path === '/oauth2/consent' && body && 'scope' in body) {
-              const requested = new Set(
-                splitScopes(
-                  new URLSearchParams(typeof body.oauth_query === 'string' ? body.oauth_query : '').get('scope') ??
-                    undefined,
-                ),
+            if (ctx.path === '/oauth2/consent' && body?.accept !== false) {
+              // oauth-provider 在插件数组里排在前面，已验签后才写这个状态；不从原始请求体信任申请内容。
+              const state = await getOAuthProviderState()
+              if (!state?.query) invalidRequest('Missing OAuth query')
+              const query = new URLSearchParams(state.query)
+              const clientId = query.get('client_id')
+              const client = await authorizationClient(db, clientId)
+              if (!client || client.client_id !== clientId || readAuthBoolean(client.disabled ?? false))
+                throw new APIError('BAD_REQUEST', { error: 'invalid_client', error_description: 'Invalid client' })
+              const requested = new Set(splitScopes(query.get('scope')))
+              const scopes = splitScopes(typeof body?.scope === 'string' ? body.scope : query.get('scope'))
+              const accepted = new Set(scopes)
+              if (
+                body &&
+                'scope' in body &&
+                (typeof body.scope !== 'string' ||
+                  requested.size !== accepted.size ||
+                  [...requested].some((scope) => !accepted.has(scope)))
               )
-              const accepted = new Set(splitScopes(typeof body.scope === 'string' ? body.scope : undefined))
-              if (requested.size !== accepted.size || [...requested].some((scope) => !accepted.has(scope)))
                 throw new APIError('BAD_REQUEST', {
                   error: 'invalid_scope',
                   error_description: 'Partial consent is not supported',
                 })
+              if (!isValidScopeSet(scopes))
+                throw new APIError('BAD_REQUEST', {
+                  error: 'invalid_scope',
+                  error_description: 'Invalid scope combination',
+                })
+              const selected = ctx.headers?.get('X-NextSkin-Player')
+              if (scopes.includes(SELECT_SCOPE)) {
+                if (!selected || !/^[1-9]\d{0,15}$/.test(selected) || !Number.isSafeInteger(Number(selected)))
+                  invalidRequest('Invalid player selection')
+                const session = await getSessionFromCtx(ctx)
+                if (!session) invalidRequest('Invalid player selection')
+                // 合法的安全整数也可能超出 PostgreSQL integer 的范围。按用户查，再逐字找 pid，
+                // 避免数据库在判断角色不存在之前先抛范围错误，导致请求变成 500。
+                const players = await db
+                  .selectFrom('players')
+                  .select(['id', 'user_id'])
+                  .where('user_id', '=', Number(session.user.id))
+                  .execute()
+                const player = players.find((row) => String(row.id) === selected)
+                if (!player || String(player.user_id) !== session.user.id) invalidRequest('Invalid player selection')
+                await selectedPlayer.set(player.id)
+              } else if (selected !== null && selected !== undefined) invalidRequest('A player was not requested')
             }
             // Better Auth 即使没有登记资源，也接受 userinfo 这个隐式 resource，并签发 JWT 访问令牌。
             // 核心只认数据库里的不透明令牌，所以按键是否存在拒绝，重复参数的最后一个空值也不能绕过。
@@ -168,51 +241,89 @@ export function yggdrasilConnect(
               invalidTarget()
             if (ctx.path === '/device/code' && body && 'user_id' in body) invalidRequest('user_id is not accepted')
             if (ctx.path === '/oauth2/authorize') {
-              // 同意、continue 和登录后的内部续跑带 authorizeSettings={}，POST 也从 query 读。
+              // 同意后的内部续跑带 authorizeSettings={}，POST 也从 query 读。
               const settings = (ctx as { authorizeSettings?: { isAuthorize?: boolean } }).authorizeSettings
-              const source =
-                ctx.method === 'POST' && (settings === undefined || settings.isAuthorize === true) ? 'body' : 'query'
-              const params = (ctx[source] ?? {}) as Record<string, string>
+              const external = settings === undefined || settings.isAuthorize === true
+              const source = ctx.method === 'POST' && external ? 'body' : 'query'
+              const params = (ctx[source] ?? {}) as Record<string, unknown>
+              const client = await authorizationClient(db, params.client_id)
+              for (const key of [
+                'client_id',
+                'redirect_uri',
+                'scope',
+                'prompt',
+                'state',
+                'response_type',
+                'max_age',
+                'nonce',
+              ])
+                if (key in params && typeof params[key] !== 'string')
+                  return authorizationError(ctx, params, client, 'invalid_request', 'Parameters must be strings')
               if ('resource' in params) invalidTarget()
-              if (
-                splitScopes(typeof params.scope === 'string' ? params.scope : undefined).some((scope) =>
-                  YGGDRASIL_SCOPES.includes(scope),
+              if ('dpop_jkt' in params)
+                return authorizationError(ctx, params, client, 'invalid_request', 'DPoP is not supported')
+              // 同意页只按 scope 展示权限，不能让 claims 绕过它额外申请邮箱、昵称等声明。
+              if ('claims' in params)
+                return authorizationError(
+                  ctx,
+                  params,
+                  client,
+                  'invalid_request',
+                  'The claims parameter is not supported',
                 )
-              )
-                throw new APIError('BAD_REQUEST', {
-                  error: 'invalid_scope',
-                  error_description: 'Yggdrasil scopes are not supported by authorization code grants yet',
-                })
-              const client =
-                typeof params.client_id === 'string'
-                  ? await db
-                      .selectFrom('oauth_clients')
-                      .select(['client_id', 'scopes', 'token_endpoint_auth_method'])
-                      .where('client_id', '=', params.client_id)
-                      .executeTakeFirst()
-                  : undefined
+              // MySQL 比较会忽略末尾空格，不能让 Better Auth 把查到的另一个标识当成这个应用。
+              if (client && client.client_id !== params.client_id)
+                return authorizationError(ctx, params, client, 'invalid_client', 'Invalid client')
               const updated = { ...params }
-              if (params.scope === undefined) {
-                const scopes =
-                  client?.client_id === params.client_id && client?.scopes != null
-                    ? readScopes(client.scopes)
-                    : OAUTH_SCOPES
-                updated.scope = scopes.filter((scope) => !YGGDRASIL_SCOPES.includes(scope)).join(' ')
+              const prompt = new Set(
+                splitPrompt(params.prompt as string | undefined).map((value) =>
+                  value === 'create' || value === 'select_account' ? 'login' : value,
+                ),
+              )
+              if ('prompt' in params) updated.prompt = [...prompt].join(' ')
+              let effectiveScopes = splitScopes(params.scope as string | undefined)
+              if (!effectiveScopes.length) {
+                const scopes = client?.scopes != null ? readScopes(client.scopes) : OAUTH_SCOPES
+                effectiveScopes = scopes.filter((scope) => !YGGDRASIL_SCOPES.includes(scope))
+                updated.scope = effectiveScopes.join(' ')
+              }
+              if (!isValidScopeSet(effectiveScopes))
+                return authorizationError(ctx, params, client, 'invalid_scope', 'Invalid scope combination')
+              const session = await getSessionFromCtx(ctx)
+              if (session) {
+                const user = await db
+                  .selectFrom('users')
+                  .select(['role', 'email_verified'])
+                  .where('id', '=', Number(session.user.id))
+                  .executeTakeFirst()
+                if (
+                  !user ||
+                  user.role === 'banned' ||
+                  ((await requireEmailVerification()) && !readAuthBoolean(user.email_verified))
+                ) {
+                  if (!external)
+                    throw new APIError('FORBIDDEN', {
+                      error: 'access_denied',
+                      error_description: 'Authorization is not allowed',
+                    })
+                  if (prompt.has('none'))
+                    return authorizationError(ctx, params, client, 'access_denied', 'Authorization is not allowed')
+                  prompt.add('consent')
+                  updated.prompt = [...prompt].join(' ')
+                }
               }
               // 内部续跑已经处理过同意，不能再次加入 consent。
               if (
-                (settings === undefined || settings.isAuthorize === true) &&
-                client?.client_id === params.client_id &&
-                client?.token_endpoint_auth_method === 'none'
+                external &&
+                (client?.token_endpoint_auth_method === 'none' || effectiveScopes.includes(SELECT_SCOPE))
               ) {
-                const prompt = new Set(splitScopes(params.prompt))
-                if (prompt.has('none'))
-                  throw new APIError('BAD_REQUEST', {
-                    error: 'consent_required',
-                    error_description: 'End-User consent is required',
-                  })
-                prompt.add('consent')
-                updated.prompt = [...prompt].join(' ')
+                if (prompt.has('none')) {
+                  if (session)
+                    return authorizationError(ctx, params, client, 'consent_required', 'End-User consent is required')
+                } else {
+                  prompt.add('consent')
+                  updated.prompt = [...prompt].join(' ')
+                }
               }
               return { context: { [source]: updated } }
             }

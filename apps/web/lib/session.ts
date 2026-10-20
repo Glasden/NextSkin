@@ -33,4 +33,21 @@ export async function requireAdmin(path: string, permission?: CorePermission) {
   return user
 }
 
+/** 页面的 searchParams 还原成查询串。Better Auth 签名参数里的 `ba_param` 是重复的，Next 给的是数组 */
+export function searchString(query: Record<string, string | string[] | undefined>): string {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query))
+    for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) params.append(key, item)
+  return params.toString()
+}
+
+/**
+ * 登录页上 Better Auth 签过名的授权参数（ADR-0037"登录后续跑"）：还原成回到授权流程的地址；
+ * resume 表示已经登录、不用重新登录，可以直接回去。没有签名参数或者验不过时返回 null，按普通登录处理
+ */
+export async function getAuthorizationContinuation(search: string) {
+  const [headerList, { core }, root] = await Promise.all([headers(), getServer(), getRequestRoot()])
+  return core.auth.authorizationContinuation(search, headerList, root)
+}
+
 export { safeNextPath } from '@nextskin/api'
