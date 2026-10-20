@@ -77,6 +77,17 @@ Next 产物里还有一些 `/ROOT/node_modules/.pnpm/next@…` 的字符串，�
   - 导入要先停服务，用 `docker compose run --rm nextskin import blessing-skin …`，旧站的 `.env` 和材质目录挂进去。
 - **标签**：每个版本推 `X.Y.Z`；正式版（不是预发布）发布以后再加 `X.Y`、`X`、`latest`。
 - **落地时验证**：`/app` 只读时核心能不能运行（Next 运行时会不会往 `.next/cache` 写东西）。不能的话，把那个目录指到 `/data` 下或者用 tmpfs，写进这份 ADR 的落地补充。
+- （落地时补充，2026-10-20，在 arm64 的服务器上实测，amd64 由 CI 的冒烟测试覆盖：
+  - **只读**：根文件系统整个只读（`--read-only`）、只挂 `/data` 时，建站、上传材质、出图、启用官方插件、上传插件包并在 plugin host 里运行、各页面都正常，日志里没有写入失败。Next 运行时不往 `.next/cache` 写东西（没有 ISR，图片优化关着），不需要 tmpfs。运行时写的都在 `/data` 下：库、材质、出图缓存、插件包和解压出来的插件。
+  - **停止**：`docker stop` 经 tini 转给启动器，0.2 秒内按顺序停下，退出码 0。在容器里强杀核心，启动器重新拉起它，旧的 plugin host 过继给 tini 后被回收，没有僵尸进程。
+  - **健康检查**加了 `--start-interval=2s`，启动 4 秒后就是 healthy。容器里的 `nextskin doctor` 全部通过。
+  - **数据目录**：绑定挂载一个 root 的目录时以 78 退出，报错里带当前的 uid（1000），部署文档写 `chown 1000:1000`。用命名卷没有这个问题：卷第一次挂载时继承镜像里 `/data` 的属主。
+  - **反向代理和客户端 IP**：宿主机上的反向代理经发布的端口连进来，容器看到的对端地址是这个网络的网关（默认网桥是 `172.17.0.1`，compose 项目各有自己的网段），不是回环地址；外部客户端直接连进来时 Docker 做 DNAT，保留真实的来源地址。所以只把网关地址加进 `network.trustedProxies` 是安全的；不加的话所有访客的 IP 都是网关，按 IP 的注册限制和限流对所有人一起生效。compose 示例和部署文档都写明这一步。`X-Forwarded-Proto` 不受影响。
+  - **构建**：Dockerfile（`packages/launcher/docker/`）不用 heredoc、`COPY --chmod` 这类 BuildKit 专有的写法，没有 buildx 的机器也能构建。只逐项复制发行目录的六个顶层条目，本地运行过的发行目录里的 `.env`、`data/` 不会进镜像。镜像解压后 449 MB，其中基础镜像 378 MB。
+  - **CI**：冒烟测试写成 `packages/launcher/docker/smoke.sh`（构建；没给密钥退出 78；只读的根文件系统下启动到 healthy；`doctor`；`docker stop` 后退出码 0）。CI 的 e2e 任务和发布工作流的构建任务都跑它，基础镜像的升级在 CI 里先验一遍。
+  - **推送和标签**：发布任务在批准后用 buildx 构建两种架构、推 `X.Y.Z`，再建草稿。`release-image-tags.yml` 在草稿发布后加 `X.Y`、`X`、`latest`，只在这个版本是对应范围里最新的正式版时才移动那个标签，给旧的次版本发修订版不会把 `latest` 指回去。两个发布工作流的并发组都加了 `queue: max`：默认只留一个排队中的运行，接连发布几个版本时后来的会顶掉排队的那个，它的标签就加不上（Codex 审核发现）。actionlint 1.7.12 还不认识这个键，GitHub 文档里有。
+  - **GHCR**：第一次推送时建出 `nextskin` 包，私有仓库下它也是私有的；仓库公开时要在包的设置里一并改成公开。
+  - compose 示例在 `docs/deploy/compose.yaml`：密钥从同目录的 `.env` 取，缺了 compose 直接报错；端口只绑 `127.0.0.1`；命名卷；`stop_grace_period: 40s`。实测起停正常。）
 
 ### 发布流程
 
@@ -141,7 +152,7 @@ Next 产物里还有一些 `/ROOT/node_modules/.pnpm/next@…` 的字符串，�
     - 每次启动前把项目目录 `chown` 给运行用户（默认 `www`），启动器以 `www` 生成 `.env`（600）、建数据目录，没有权限问题。
     - 项目设置里的"环境变量"不会导出给进程（启动脚本里那一段是空的），"端口"只用于 nginx 反向代理和放行防火墙，也不传给进程。端口、监听地址只能写进 `.env`，和宝塔里填的端口一致。
     - 停止：给 pid 文件里的进程和全部子孙各发一次 SIGTERM，不等、不发 SIGKILL，0.5 秒后再给工作目录是项目目录的 node 进程发一次。重启是停止后立即启动。于是核心接管了 Next 的信号处理、plugin host 忽略 SIGTERM、`start` 拿不到锁时最多等 40 秒（ADR-0039"停止""启动前检查"）。实测核心先收任务、再退出；用一条发了一半请求头的连接拖住旧核心再重启，新的启动器等了约 30 秒（旧启动器到时强杀了核心）后正常启动。
-    - 反向代理模板写的是 `proxy_set_header Host $host:$server_port`，不带 `X-Forwarded-Proto`。协议端点按 BS 的规则从 `Host` 和 `X-Forwarded-Proto` 算站点地址（`requestRoot`），HTTPS 站点会算成 `http://域名:443`。部署文档要写明把这两行改成 `Host $host` 并加上 `X-Forwarded-Proto $scheme`，再把 `127.0.0.1` 加进 `network.trustedProxies`。这台测试机的 80、443 被别的服务占着，宝塔没有装 nginx，这一条只读了模板、模拟了请求头，没有经过真实的 nginx。
+    - 反向代理模板写的是 `proxy_set_header Host $host:$server_port`，不带 `X-Forwarded-Proto`。协议端点按 BS 的规则从 `Host` 和 `X-Forwarded-Proto` 算站点地址（`requestRoot`），HTTPS 站点会算成 `http://域名:443`。部署文档要写明把这两行改成 `Host $host` 并加上 `X-Forwarded-Proto $scheme`。`X-Forwarded-Proto` 不看受信任的代理；`network.trustedProxies` 默认就信任回环地址，同机的 nginx 不用另配。这台测试机的 80、443 被别的服务占着，宝塔没有装 nginx，这一条只读了模板、模拟了请求头，没有经过真实的 nginx。
   - **1Panel**：
     - 应用商店里的 Node 只到 25.9.0，没有 26；24.15.0 能运行（迁移、建站页、健康检查都正常），启动时提示 24、25 拦不住插件直接连网。
     - 运行环境是一个 `1panel/node` 容器：代码目录挂到 `/app`，"环境变量"写进 compose 的 `environment`，能传到进程；`.env` 和数据目录在代码目录里，删掉、重建容器后都还在。

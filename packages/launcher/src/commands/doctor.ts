@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { coreMigrations, createDatabase, type DatabaseConfig } from '@nextskin/db'
 import { HostStartError, hostNetworkRestricted, pluginHostEntry, probePluginHost } from '@nextskin/domain'
 import { coreConfigFromEnv, type CoreConfig } from '@nextskin/domain/config'
-import { ConfigError, envFilePath, listenAddress, mergeEnv, readEnvFile } from '../config.ts'
+import { ConfigError, currentUser, envFilePath, listenAddress, mergeEnv, readEnvFile } from '../config.ts'
 import type { LauncherContext } from '../context.ts'
 import { acquireDataLock } from '../lock.ts'
 import { assertRelease } from '../release.ts'
@@ -135,7 +135,7 @@ export async function checkDataDirectory(directory: string): Promise<CheckResult
       `${directory}；可写，剩余 ${gb.toFixed(1)} GB${gb < 1 ? '，少于 1 GB' : ''}`,
     )
   } catch {
-    return result('数据目录', 'fail', `${directory}；无法写入或检查剩余空间，请检查目录权限`)
+    return result('数据目录', 'fail', `${directory}；无法写入或检查剩余空间，请检查目录权限${currentUser()}`)
   }
 }
 

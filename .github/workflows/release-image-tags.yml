@@ -1,0 +1,60 @@
+# 维护者发布草稿 Release 以后，给镜像加上 X.Y、X、latest（ADR-0040）：latest 不早于发布说明出现，预发布不加。
+# 只在这个版本是对应范围里最新的正式版时才移动那个标签：给旧的次版本发修订版，不会把 latest 指回旧版本。
+# 第三方 action 固定到提交 SHA，升级时连同注释里的版本号一起改（同 ci.yml）。
+name: Release image tags
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+# 默认只留一个排队中的运行，后来的会顶掉它：接连发布几个版本时，排队的每一个都要跑
+concurrency:
+  group: release-image-tags
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  tags:
+    # 插件 SDK 的标签是 @nextskin/plugin-sdk@…，不走这里
+    if: ${{ startsWith(github.event.release.tag_name, 'v') && !github.event.release.prerelease }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version=${TAG#v}
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$TAG 不是正式版的标签"
+            exit 1
+          fi
+          # 已发布的正式版（不含草稿和预发布），再加上这一个：列表可能还没反映刚发布的这次
+          published=$(
+            gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 1000 \
+              --json tagName --jq '.[].tagName' | sed -n 's/^v\([0-9]*\.[0-9]*\.[0-9]*\)$/\1/p'
+          )
+          published=$(printf '%s\n%s\n' "$published" "$version")
+          newest() { printf '%s\n' "$published" | grep -E "^$1" | sort -V | tail -n 1; }
+          IFS=. read -r major minor _ <<< "$version"
+          tags=()
+          if [ "$(newest "$major\.$minor\.")" = "$version" ]; then tags+=("$major.$minor"); fi
+          if [ "$(newest "$major\.")" = "$version" ]; then tags+=("$major"); fi
+          if [ "$(newest '')" = "$version" ]; then tags+=(latest); fi
+          if [ ${#tags[@]} -eq 0 ]; then
+            echo "$version 不是任何范围里最新的正式版，不移动标签"
+            exit 0
+          fi
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/nextskin"
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          args=()
+          for tag in "${tags[@]}"; do args+=(-t "$image:$tag"); done
+          docker buildx imagetools create "${args[@]}" "$image:$version"
+          echo "已把 ${tags[*]} 指向 $image:$version"

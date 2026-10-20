@@ -67,6 +67,11 @@
       "allowedVersions": "<25"
     },
     {
+      "description": "部署文档里的 compose 示例用的是本项目自己发布的镜像（ADR-0040），标签随发布移动，不由 Renovate 升级",
+      "matchDepNames": ["ghcr.io/glasden/nextskin"],
+      "enabled": false
+    },
+    {
       "description": "测试矩阵的数据库版本是支持范围的下限（packages/db/AGENTS.md），升级等于改支持范围，手动决定",
       "matchFileNames": ["packages/db/compose.yaml"],
       "enabled": false

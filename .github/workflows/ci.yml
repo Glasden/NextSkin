@@ -84,6 +84,8 @@ jobs:
       - run: pnpm --filter @nextskin/web exec playwright install --with-deps --only-shell chromium
       # e2e 依赖 build，build 又依赖构建涉及的每个包的 typecheck（turbo.json）：Next 关了构建期类型检查
       - run: pnpm e2e
+      # 用刚组装的发行目录构建镜像，只读的根文件系统下启动、doctor、停止（ADR-0040）：基础镜像的升级在这里先验一遍
+      - run: bash packages/launcher/docker/smoke.sh dist/nextskin
 
   visual:
     # 组件截图回归：浏览器跑在与 @playwright/test 同版本的官方镜像里（packages/ui/playwright.config.ts），

@@ -1,0 +1,32 @@
+# NextSkin 的 Docker Compose 示例（ADR-0040）。
+#
+# 1. 在这个文件旁边建 .env，写入加密机密设置的密钥，例如：
+#      echo "NEXTSKIN_SECRET=$(openssl rand -hex 32)" > .env
+#    备份这个文件：丢了它，后台里保存的机密设置都要重新填写。它不在数据卷里，备份数据卷时要另外备份它。
+# 2. docker compose up -d
+# 3. 经反向代理打开站点的 /setup 建站；安装码用 docker compose exec nextskin cat /data/setup-code 查看。
+#
+# 命令行：服务运行时 docker compose exec nextskin nextskin <命令>（例如 set-role、doctor）；
+# 从 Blessing Skin 导入要先 docker compose stop，再 docker compose run --rm nextskin import blessing-skin …
+services:
+  nextskin:
+    # 升级前先读发布说明：带迁移的版本升级后回不去。想固定版本就写成具体的版本号，例如 :0.1.0
+    image: ghcr.io/glasden/nextskin:latest
+    restart: unless-stopped
+    environment:
+      NEXTSKIN_SECRET: ${NEXTSKIN_SECRET:?在 .env 里设置 NEXTSKIN_SECRET}
+      # 默认用数据卷里的 SQLite；也可以用 MySQL、MariaDB、PostgreSQL：
+      # NEXTSKIN_DATABASE_URL: mysql://用户:密码@主机:3306/库名
+    # 只绑本机，前面放反向代理（nginx、Caddy、宝塔或 1Panel 的网站）。要直接对外就去掉 127.0.0.1:，
+    # 注意 Docker 发布的端口不受 ufw、firewalld 的限制。
+    # 宿主机上的反向代理连进来，容器看到的地址是这个网络的网关（docker network inspect <项目名>_default 里的 Gateway）。
+    # 建站后把它加进后台"设置 → 高级 → 受信任的反向代理"，否则所有访客的 IP 都是网关，按 IP 的注册限制和限流对所有人一起生效
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - data:/data
+    # 启动器停止时最多等核心 30 秒（ADR-0039），Docker 默认等 10 秒就强杀
+    stop_grace_period: 40s
+
+volumes:
+  data:

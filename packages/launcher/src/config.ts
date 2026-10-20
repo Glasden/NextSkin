@@ -7,6 +7,11 @@ import type { CommandContext, LauncherContext } from './context.ts'
 
 export class ConfigError extends Error {}
 
+/** 目录权限出错时附上当前用户：镜像里以 uid 1000 运行，宝塔以 www 运行，管理员据此 chown（Windows 上为空） */
+export function currentUser(): string {
+  return process.getuid ? `，当前用户 uid ${process.getuid()}` : ''
+}
+
 export function envFilePath(context: LauncherContext, env: NodeJS.ProcessEnv): string {
   return resolve(context.root, env.NEXTSKIN_ENV_FILE ?? '.env')
 }
@@ -54,9 +59,7 @@ export async function readConfig(
         flag: 'wx',
       })
     } catch {
-      throw new ConfigError(
-        `没法在 ${context.root} 生成 .env；请用环境变量 NEXTSKIN_SECRET 给出至少 32 个字符的随机字符串`,
-      )
+      throw new ConfigError(`没法生成 ${file}；请用环境变量 NEXTSKIN_SECRET 给出至少 32 个字符的随机字符串`)
     }
     env.NEXTSKIN_SECRET = secret
     warn(

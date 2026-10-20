@@ -1,6 +1,6 @@
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { ConfigError, readConfig } from '../config.ts'
+import { ConfigError, currentUser, readConfig } from '../config.ts'
 import type { LauncherContext } from '../context.ts'
 import { acquireDataLock } from '../lock.ts'
 import { assertRelease } from '../release.ts'
@@ -31,7 +31,7 @@ async function prepareAndSupervise(context: LauncherContext, stop: StopListener)
     probe = await mkdtemp(join(config.dataDirectory, '.write-check-'))
     await writeFile(join(probe, 'probe'), '')
   } catch {
-    throw new ConfigError(`数据目录 ${config.dataDirectory} 无法创建或写入；请检查目录权限`)
+    throw new ConfigError(`数据目录 ${config.dataDirectory} 无法创建或写入；请检查目录权限${currentUser()}`)
   } finally {
     if (probe) await rm(probe, { recursive: true, force: true })
   }
