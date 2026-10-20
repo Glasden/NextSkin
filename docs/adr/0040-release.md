@@ -167,6 +167,14 @@ Next 产物里还有一些 `/ROOT/node_modules/.pnpm/next@…` 的字符串，�
     - 容器的 PID 1 是 `bash /run.sh`，它再执行 `npm run <脚本>`。停止（`docker compose down`）只给 PID 1 发 SIGTERM，bash 不转发，10 秒后整个容器被 SIGKILL，NextSkin 没有机会停。启动命令要选"自定义"，填 `exec node nextskin.mjs start`：`run.sh` 用 `eval` 执行它，启动器替换掉 bash 成为 PID 1，停止时 1 秒内按顺序退出、退出码 0。"安装依赖"关掉，否则每次启动都跑一遍 `npm install`。
     - 端口映射默认绑 `0.0.0.0`，Docker 发布的端口绕过 ufw。前面有 1Panel 的 OpenResty 反向代理时，部署文档建议改绑 `127.0.0.1`。
     - 安装 1Panel 会在 ufw 里放行面板端口；启动后 ufw 最前面还出现了带 `1panel-rule` 注释、对所有来源放行 80、443 的规则，卸载时都不删。这和 NextSkin 无关，但部署文档里要提醒已有防火墙规则的服主检查。）
+- （落地时补充，切片四：
+  - 部署文档写给服主和替服主操作的 agent，只写事实、命令和已知的坑，没实测的条目标"未实测"；面向用户的文档站另建。
+  - **nginx**（2026-10-20 用宿主机网络的 nginx 容器、自签证书实测）：`Host $http_host` 加 `X-Forwarded-Proto $scheme`，在 8443 端口上得到 `https://skin.example.com:8443/api/yggdrasil`；照宝塔模板的写法得到 `http://skin.example.com:8444/…`。文档用 `$http_host`，不用上面写的 `$host`：`$host` 不带端口，站点不在标准端口上时端口会丢。nginx 默认的 `client_max_body_size 1m` 让 3 MB 的上传返回 413，`12m` 通过（插件包上限 10 MB）。
+  - **宝塔会重写反向代理配置**：读面板源码，添加项目、修改项目设置、添加或删除域名、开关外网映射时都按模板重新生成 `node_<项目名>.conf`，手改的内容会丢。文档写明这些操作之后重新改；申请证书会不会重写没有核对。
+  - **systemd**：用户级临时单元带上示例里的 `KillMode=mixed`、`TimeoutStopSec=40`、`Restart=on-failure`、`RestartPreventExitStatus=78`。正常停止 46 毫秒、退出码 0；强杀启动器后 systemd 清掉剩下的核心再重启，3 秒恢复；退出码 78 停在 failed、不重启。单元文件的 `User=`、开机自启没有实测。
+  - **Docker 文档里的命令**：目录挂载属于 root 时退出 78、报 uid 1000；用 `debian` 镜像打包数据卷、用镜像里的 `sh` 在卷里换回备份都可行。顺带发现正常停止后 `nextskin.sqlite-wal` 还在：核心退出时不关数据库，SQLite 下次打开时重放。文档写明手工备份要停服务、拷整个数据目录。
+  - **受信任的反向代理**：网关地址随部署方式变（默认网桥、Compose 网络、`1panel-network`），文档不让服主猜，改为看审计日志里自己登录的 IP，是内网地址就把它加进去。
+  - **Windows**：Ctrl+C 的停止顺序没有在真实控制台里实测（发布工作流的 Windows 冒烟最后用 `taskkill /F`）；NSSM 的配置照它的文档写，标了未实测。）
 
 ### 下载渠道
 
