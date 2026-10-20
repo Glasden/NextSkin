@@ -6,9 +6,10 @@ import { DatabaseSync } from 'node:sqlite'
 import { coreMigrations, createDatabase, type DatabaseConfig } from '@nextskin/db'
 import { HostStartError, hostNetworkRestricted, pluginHostEntry, probePluginHost } from '@nextskin/domain'
 import { coreConfigFromEnv, type CoreConfig } from '@nextskin/domain/config'
-import { envFilePath, listenAddress, mergeEnv, readEnvFile } from '../config.ts'
+import { ConfigError, envFilePath, listenAddress, mergeEnv, readEnvFile } from '../config.ts'
 import type { LauncherContext } from '../context.ts'
 import { acquireDataLock } from '../lock.ts'
+import { assertRelease } from '../release.ts'
 
 export interface CheckResult {
   item: string
@@ -219,6 +220,15 @@ export async function checkDatabase(config: DatabaseConfig, timeoutMs = 10_000):
   }
 }
 
+export async function checkRelease(context: LauncherContext): Promise<CheckResult> {
+  try {
+    await assertRelease(context)
+    return result('发行目录', 'pass', context.source ? '源码模式' : context.version)
+  } catch (error) {
+    return result('发行目录', 'fail', error instanceof ConfigError ? error.message : '无法检查发行目录')
+  }
+}
+
 export async function checkPluginHost(
   context: LauncherContext,
   probe: typeof probePluginHost = probePluginHost,
@@ -302,7 +312,7 @@ export async function run(
   } else {
     results.push(skipped('数据目录'), skipped('数据库'))
   }
-  results.push(await checkPluginHost(context, options.probeHost))
+  results.push(await checkRelease(context), await checkPluginHost(context, options.probeHost))
   results.push(
     parsed.config && parsed.host !== undefined && parsed.port !== undefined
       ? await checkService(parsed.config.dataDirectory, parsed.host, parsed.port)

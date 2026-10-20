@@ -1,5 +1,5 @@
-// 由启动器拉起时，和它之间的控制通道（ADR-0039）：打开核心之后发 ready；收到 shutdown 或者通道断开（启动器被强制结束）时，
-// 先停定时任务和执行器、等执行中的任务结束，再照 Next 收到 SIGTERM 的流程关掉 HTTP 服务、退出。
+// 由启动器拉起时，和它之间的控制通道（ADR-0039）：打开核心之后发 ready；收到 shutdown、通道断开（启动器被强制结束）
+// 或者直接收到 SIGTERM、SIGINT 时，先停定时任务和执行器、等执行中的任务结束，再照 Next 收到信号的流程关掉 HTTP 服务、退出。
 // 只传这两种消息；Next 自己在私有的环境变量下也用 IPC，不认识的消息一律不管
 import type { Server } from './server'
 
@@ -19,8 +19,9 @@ export function connectLauncher(opening: Promise<Server>, current: () => Promise
   }
   opening.then(ready, ready)
 
+  const nextHandlers = new Map<NodeJS.Signals, NodeJS.SignalsListener[]>()
   let stopping = false
-  const shutdown = async () => {
+  const shutdown = async (signal: NodeJS.Signals = 'SIGTERM') => {
     if (stopping) return
     stopping = true
     // 启动器在时，它 30 秒后强杀；通道断开时启动器已经不在了，自己兜底：核心卡在打开里（数据库不回握手）、
@@ -32,15 +33,24 @@ export function connectLauncher(opening: Promise<Server>, current: () => Promise
       await server.core.schedules.stop().catch(() => undefined)
       await server.core.jobs.stop().catch(() => undefined)
     }
-    // Next 的处理函数关掉 HTTP 服务、等在途请求结束后自己退出。在进程内触发它：Windows 没有信号可发
-    if (process.listenerCount('SIGTERM') > 0) process.emit('SIGTERM', 'SIGTERM')
-    else process.exit(0)
+    // Next 的处理函数关掉 HTTP 服务、等在途请求结束后自己退出。在进程内调用它：Windows 没有信号可发
+    const handlers = nextHandlers.get(signal) ?? []
+    if (handlers.length === 0) process.exit(0)
+    for (const handler of handlers) handler(signal)
   }
   process.on('message', (message: unknown) => {
     if (typeof message === 'object' && message !== null && (message as { nextskin?: unknown }).nextskin === 'shutdown')
       void shutdown()
   })
   process.on('disconnect', () => void shutdown())
+  // Next 在执行 instrumentation 之前就注册了 SIGINT、SIGTERM 的处理函数（next/dist/server/lib/start-server.js），
+  // 收到就关 HTTP 服务、退出。宝塔停止项目、systemd 默认的 KillMode 会把信号同时发给启动器和核心，
+  // 不接管的话核心不等任务就退出了：换成先收任务、再交给 Next 的处理函数
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    nextHandlers.set(signal, process.listeners(signal))
+    process.removeAllListeners(signal)
+    process.on(signal, () => void shutdown(signal))
+  }
   // 注册之前启动器就可能已经退出（Next 先监听端口、后执行 instrumentation），那时的 disconnect 没有人收到
   if (!process.connected) void shutdown()
 }

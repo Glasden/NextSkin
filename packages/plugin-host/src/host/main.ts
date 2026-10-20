@@ -34,8 +34,10 @@ globalThis.console = new Console({ stdout: process.stderr, stderr: process.stder
 Object.defineProperty(process, 'stdout', { value: process.stderr, configurable: true, enumerable: true })
 Object.defineProperty(process, 'stdin', { value: Readable.from([]), configurable: true, enumerable: true })
 
-// 终端的 Ctrl+C 会发给整个进程组：host 等核心关掉 stdin 再退出，不抢在核心前面
+// 终端的 Ctrl+C 会发给整个进程组，宝塔停止项目、systemd 默认的 KillMode 会给整棵进程树发 SIGTERM：
+// host 等核心收完任务、关掉 stdin 再退出，不抢在核心前面。核心要强行结束它时发 SIGKILL
 process.on('SIGINT', () => {})
+process.on('SIGTERM', () => {})
 // 插件忘了 await 的 Promise 失败了不该带走同一个 host 里的其他插件
 process.on('unhandledRejection', (reason) => console.error(`[plugin-host] unhandled_rejection ${describe(reason)}`))
 process.on('uncaughtException', (error) => {

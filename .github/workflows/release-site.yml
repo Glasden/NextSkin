@@ -1,0 +1,183 @@
+# 产品 ZIP 发布（ADR-0040）：核对标签、构建和 e2e、Windows 解压冒烟，再经 release 环境批准创建草稿。
+# 第三方 action 固定到提交 SHA，升级时连同注释里的版本号一起改（同 ci.yml、release.yml）。
+name: Release site
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-site
+  cancel-in-progress: false
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.verify.outputs.version }}
+      prerelease: ${{ steps.verify.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: verify
+        run: |
+          version=$(node -p "require('./packages/launcher/package.json').version")
+          if [ "$version" = '0.0.0' ] || [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo '::error::标签必须等于 v + launcher 版本号，且版本号不能是 0.0.0'
+            exit 1
+          fi
+          git merge-base --is-ancestor "$GITHUB_SHA^{commit}" origin/main
+          prerelease=false
+          if [[ "$version" == *-* ]]; then prerelease=true; fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      version: ${{ needs.verify.outputs.version }}
+      next-version: ${{ steps.pack.outputs.next-version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @nextskin/web exec playwright install --with-deps --only-shell chromium
+      # 和 CI 相同：e2e 经 turbo 先构建，测试的就是要打包的发行目录。
+      - run: pnpm e2e
+      - id: pack
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readdirSync } from 'node:fs'
+          import assert from 'node:assert/strict'
+          assert.deepEqual(readdirSync('dist/nextskin').sort(), [
+            'nextskin.mjs', 'cli', 'server', 'package.json', '.env.example', 'README.md',
+          ].sort(), '发行目录顶层含有未预期的文件或缺少发行文件')
+          NODE
+          # apps/web/package.json 用 catalog 声明 next，读取它安装后的实际版本。
+          echo "next-version=$(node -p "require('./apps/web/node_modules/next/package.json').version")" >> "$GITHUB_OUTPUT"
+          cd dist
+          zip -qrX "nextskin-$VERSION.zip" nextskin/
+          sha256sum "nextskin-$VERSION.zip" > SHA256SUMS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site-release
+          path: |
+            dist/nextskin-${{ needs.verify.outputs.version }}.zip
+            dist/SHA256SUMS
+          if-no-files-found: error
+
+  windows-smoke:
+    needs: build
+    runs-on: windows-2025
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site-release
+      - name: 校验、解压、doctor 和启动冒烟
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = "nextskin-$env:VERSION.zip"
+          $hash = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ((Get-Content SHA256SUMS -Raw).Trim() -cne "$hash  $archive") {
+            throw 'SHA256SUMS 不匹配'
+          }
+          $unpack = Join-Path $env:RUNNER_TEMP 'site-release'
+          Expand-Archive -LiteralPath $archive -DestinationPath $unpack
+          $release = Join-Path $unpack 'nextskin'
+          $env:NEXTSKIN_SECRET = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+          $env:NEXTSKIN_DATA_DIR = Join-Path $env:RUNNER_TEMP 'nextskin-data'
+          $env:NEXTSKIN_HOST = '127.0.0.1'
+          $env:NEXTSKIN_PORT = '3000'
+          Set-Location $release
+          node nextskin.mjs doctor
+          if ($LASTEXITCODE -ne 0) { throw "doctor 退出 $LASTEXITCODE" }
+          $launcher = Start-Process -FilePath (Get-Command node).Source -ArgumentList @('nextskin.mjs', 'start') -WorkingDirectory $release -NoNewWindow -PassThru
+          try {
+            $deadline = [DateTime]::UtcNow.AddSeconds(60)
+            $healthy = $false
+            while ([DateTime]::UtcNow -lt $deadline) {
+              if ($launcher.HasExited) { throw '启动器提前退出' }
+              try {
+                $response = Invoke-WebRequest 'http://127.0.0.1:3000/api/health' -TimeoutSec 2
+                if ($response.StatusCode -eq 200) { $healthy = $true; break }
+              } catch {
+                # 核心可能还在启动，下次继续请求。
+              }
+              Start-Sleep -Milliseconds 500
+            }
+            if (!$healthy) { throw '60 秒内健康检查未返回 200' }
+          } finally {
+            # Windows 不能发送启动器能处理的信号；这里只验证能启动，最后强制结束整个进程树。
+            taskkill /PID $launcher.Id /T /F
+            if ($LASTEXITCODE -ne 0) { throw '无法结束启动器进程树' }
+          }
+
+  publish:
+    needs: [verify, build, windows-smoke]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site-release
+      - name: 创建草稿 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+          NEXT_VERSION: ${{ needs.build.outputs.next-version }}
+        run: |
+          cat > "$RUNNER_TEMP/release-notes.md" <<EOF
+          ## 运行环境
+          Node ≥ 24，推荐 Node 26；Next $NEXT_VERSION。
+
+          ## 安全修复
+          <!-- 请填写有没有安全修复及其影响。 -->
+
+          ## 迁移
+          <!-- 请填写有没有迁移；有迁移时提醒：先备份，升级后不能回到旧版本，回退须恢复备份的数据库。 -->
+
+          ## 不兼容的部署变化
+          <!-- 请填写环境变量、Node 下限、部署步骤等变化；没有就写无。 -->
+
+          ## 变化
+          <!-- 请填写本次发布的变化。 -->
+          EOF
+          flags=()
+          if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" "nextskin-$VERSION.zip" SHA256SUMS \
+            --draft --verify-tag --title "NextSkin $VERSION" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" "${flags[@]}"

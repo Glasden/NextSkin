@@ -12,6 +12,10 @@ export interface SupervisorOptions {
   log?: (message: string) => void
 }
 
+/** 启动器当作"停止"的信号：Windows 上关闭控制台是 SIGHUP。 */
+export const stopSignals: readonly NodeJS.Signals[] =
+  process.platform === 'win32' ? ['SIGINT', 'SIGTERM', 'SIGHUP'] : ['SIGINT', 'SIGTERM']
+
 /** 只监管核心，host 的退出由核心关闭 stdin 保证。 */
 export function supervise(options: SupervisorOptions): Promise<number> {
   const initialDelay = options.initialDelay ?? 1000
@@ -27,8 +31,7 @@ export function supervise(options: SupervisorOptions): Promise<number> {
     let readyAt: number | undefined
     let restart: NodeJS.Timeout | undefined
     let deadline: NodeJS.Timeout | undefined
-    const signals: NodeJS.Signals[] =
-      process.platform === 'win32' ? ['SIGINT', 'SIGTERM', 'SIGHUP'] : ['SIGINT', 'SIGTERM']
+    const signals = stopSignals
     const finish = () => {
       if (finished) return
       finished = true

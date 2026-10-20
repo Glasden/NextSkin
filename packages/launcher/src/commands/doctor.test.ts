@@ -15,6 +15,7 @@ import {
   checkDatabase,
   checkEnvFile,
   checkPluginHost,
+  checkRelease,
   checkSecret,
   checkService,
   run,
@@ -36,6 +37,7 @@ async function context(): Promise<LauncherContext> {
     await mkdir(join(root, file, '..'), { recursive: true })
     await writeFile(join(root, file), '')
   }
+  await writeFile(join(root, 'server/VERSION'), '0.0.0\n')
   return { root, cwd: join(root, 'elsewhere'), source: false, production: true, version: '0.0.0' }
 }
 async function diagnose(ctx: LauncherContext, env: NodeJS.ProcessEnv = {}) {
@@ -60,6 +62,34 @@ test('发行模式没有 .env 和密钥时都警告，退出 0，不创建配置
   expect(checked.output).toContain('还没有数据库文件，第一次 start 时创建')
   expect(await readdir(ctx.root)).toEqual(before)
   expect(probeHost).toHaveBeenCalledOnce()
+  expect(checked.lines).toContain('[通过] 发行目录：0.0.0')
+  expect(checked.output.indexOf('发行目录：')).toBeLessThan(checked.output.indexOf('plugin host：'))
+})
+
+test.each(['different', 'missing'] as const)('发行目录版本标记 %s 时失败', async (state) => {
+  const ctx = await context()
+  const file = join(ctx.root, 'server/VERSION')
+  if (state === 'missing') await rm(file)
+  else await writeFile(file, '9.9.9\n')
+  const checked = await diagnose(ctx)
+  expect(checked.code).toBe(1)
+  expect(checked.output).toContain('[失败] 发行目录：程序版本 0.0.0，server/ ')
+  expect(checked.output).toContain(state === 'missing' ? '缺少版本标记' : '版本 9.9.9')
+  expect(checked.output).toContain('请停掉服务、删掉 server/ 和 cli/、重新解压完整的发行包')
+})
+
+test('发行目录缺少 server.js 时失败，源码模式无需版本标记或 server.js', async () => {
+  const ctx = await context()
+  await rm(join(ctx.root, 'server/apps/web/server.js'))
+  const checked = await checkRelease(ctx)
+  expect(checked.status).toBe('fail')
+  expect(checked.message).toContain('缺少 server/')
+  await rm(join(ctx.root, 'server/VERSION'))
+  expect(await checkRelease({ ...ctx, source: true })).toEqual({
+    item: '发行目录',
+    status: 'pass',
+    message: '源码模式',
+  })
 })
 
 test('已有 .env 但没密钥时失败，保留文件', async () => {

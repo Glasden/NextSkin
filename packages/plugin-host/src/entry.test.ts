@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { once } from 'node:events'
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -78,7 +78,11 @@ test('遍历依赖、可选依赖和 peer，跳过未安装的可选项和开发
   }
 })
 
-async function startHost(plugins: HostPluginSpec[] = [], env: NodeJS.ProcessEnv = {}) {
+async function startHost(
+  plugins: HostPluginSpec[] = [],
+  env: NodeJS.ProcessEnv = {},
+  afterReady?: (child: ChildProcessWithoutNullStreams) => Promise<void>,
+) {
   const entry = pluginHostEntry({ root: repository, bundled: false })
   const child = spawn(
     process.execPath,
@@ -96,7 +100,7 @@ async function startHost(plugins: HostPluginSpec[] = [], env: NodeJS.ProcessEnv 
   const exited = once(child, 'exit')
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
-    return await new Promise<HostToCore>((resolve, reject) => {
+    const ready = await new Promise<HostToCore>((resolve, reject) => {
       timer = setTimeout(() => reject(new Error(`host 未就绪：${stderr}`)), 10_000)
       child.once('error', reject)
       child.once('exit', () => reject(new Error(`host 提前退出：${stderr}`)))
@@ -110,9 +114,12 @@ async function startHost(plugins: HostPluginSpec[] = [], env: NodeJS.ProcessEnv 
       })
       channel.send({ type: 'init', dialect: 'sqlite', fallbackLocale: 'zh-CN', plugins })
     })
+    await afterReady?.(child)
+    return ready
   } finally {
     clearTimeout(timer)
-    child.kill()
+    // 和核心一样关掉 stdin 让它退出；卡住时由测试超时暴露，不在这里强杀掩盖
+    child.stdin.end()
     await exited
   }
 }
@@ -120,6 +127,21 @@ async function startHost(plugins: HostPluginSpec[] = [], env: NodeJS.ProcessEnv 
 test('真实权限子进程在缩小的可读路径下能加载源码并响应空 init', async () => {
   expect(await startHost()).toEqual({ type: 'ready', plugins: [] })
 }, 15_000)
+
+// Windows 上 kill(信号) 一律直接结束进程，测不了
+test.skipIf(process.platform === 'win32')(
+  '收到 SIGINT、SIGTERM 不退出，等核心关掉 stdin',
+  async () => {
+    await startHost([], {}, async (child) => {
+      child.kill('SIGINT')
+      child.kill('SIGTERM')
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      expect(child.exitCode).toBeNull()
+      expect(child.signalCode).toBeNull()
+    })
+  },
+  15_000,
+)
 
 test('host 加载插件前清空环境，包括 Windows 可能补入的变量；Windows 上留着 SYSTEMROOT，插件照样能取随机数', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'nextskin-host-env-'))

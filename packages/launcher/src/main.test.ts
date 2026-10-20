@@ -56,7 +56,8 @@ test('命令先检查参数、处理 --help，再读配置', async () => {
   const configured = await runWith(env, 'migrate')
   expect(configured.code).toBe(78)
   expect(configured.output).toContain('读不了配置文件')
-})
+  // 依次起 7 个 Node 进程，Linux 上就要 8 秒，Windows 有负载时超过默认的 10 秒
+}, 30_000)
 
 test('源码模式 start 是配置错误，退出 78', async () => {
   const result = await run('start')
@@ -85,4 +86,4 @@ test('doctor 先处理帮助和参数，不读取配置', async () => {
   const result = await runWith(env, 'doctor', 'extra')
   expect(result.code).toBe(1)
   expect(result.output).toContain('用法：nextskin doctor')
-})
+}, 30_000)

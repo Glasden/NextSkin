@@ -126,7 +126,7 @@ Next 产物里还有一些 `/ROOT/node_modules/.pnpm/next@…` 的字符串，�
 - 部署文档放在 `docs/deploy/`，每种方式一页：宝塔、1Panel、Docker、systemd、Windows。ZIP 里的 README 指向它。
 - **systemd 单元示例**：
   - `ExecStart=/usr/bin/node /opt/nextskin/nextskin.mjs start`
-  - `KillMode=mixed`：默认的 `control-group` 会把 SIGTERM 同时发给启动器、核心和 plugin host，核心会跳过"先收任务"直接关 HTTP；`mixed` 只把 SIGTERM 发给启动器，到时才强杀其余进程。
+  - `KillMode=mixed`：默认的 `control-group` 会把 SIGTERM 同时发给启动器、核心和 plugin host，核心会跳过"先收任务"直接关 HTTP；`mixed` 只把 SIGTERM 发给启动器，到时才强杀其余进程。（落地时补充：核心和 plugin host 已经能应付整棵进程树一起收到 SIGTERM（ADR-0039"停止"），默认的 `control-group` 也会先收任务；示例里仍写 `mixed`，停止的过程只有启动器一个入口。）
   - `TimeoutStopSec=40`
   - `Restart=on-failure`、`RestartPreventExitStatus=78`
 - **Windows**：在控制台里运行 `node nextskin.mjs start`，Ctrl+C 停止（ADR-0039）。做成服务时用会发 Ctrl+C 的包装工具（例如 NSSM），在文档里写配置。
@@ -135,6 +135,19 @@ Next 产物里还有一些 `/ROOT/node_modules/.pnpm/next@…` 的字符串，�
   - 端口从哪个环境变量给，工作目录是哪里；
   - 停止时发什么信号、等多久。宝塔的 Node 项目如果经过 pm2，pm2 默认只等 1.6 秒（`kill_timeout`）就强杀，文档里要写怎么调长；
   - 实测结果写进部署文档和这份 ADR 的落地补充。
+- （落地时补充，2026-10-20 实测宝塔 13.0 的"Node 项目"和 1Panel v2.4.0 的"运行环境 → Node.js"，都用 Node 24：
+  - **宝塔**：
+    - 启动选项列出 `package.json` 里的脚本，选 `start` 就是 `npm run start`，不经过 pm2。发行目录的 `package.json` 没有 `dependencies`，宝塔不要求 `node_modules`。
+    - 每次启动前把项目目录 `chown` 给运行用户（默认 `www`），启动器以 `www` 生成 `.env`（600）、建数据目录，没有权限问题。
+    - 项目设置里的"环境变量"不会导出给进程（启动脚本里那一段是空的），"端口"只用于 nginx 反向代理和放行防火墙，也不传给进程。端口、监听地址只能写进 `.env`，和宝塔里填的端口一致。
+    - 停止：给 pid 文件里的进程和全部子孙各发一次 SIGTERM，不等、不发 SIGKILL，0.5 秒后再给工作目录是项目目录的 node 进程发一次。重启是停止后立即启动。于是核心接管了 Next 的信号处理、plugin host 忽略 SIGTERM、`start` 拿不到锁时最多等 40 秒（ADR-0039"停止""启动前检查"）。实测核心先收任务、再退出；用一条发了一半请求头的连接拖住旧核心再重启，新的启动器等了约 30 秒（旧启动器到时强杀了核心）后正常启动。
+    - 反向代理模板写的是 `proxy_set_header Host $host:$server_port`，不带 `X-Forwarded-Proto`。协议端点按 BS 的规则从 `Host` 和 `X-Forwarded-Proto` 算站点地址（`requestRoot`），HTTPS 站点会算成 `http://域名:443`。部署文档要写明把这两行改成 `Host $host` 并加上 `X-Forwarded-Proto $scheme`，再把 `127.0.0.1` 加进 `network.trustedProxies`。这台测试机的 80、443 被别的服务占着，宝塔没有装 nginx，这一条只读了模板、模拟了请求头，没有经过真实的 nginx。
+  - **1Panel**：
+    - 应用商店里的 Node 只到 25.9.0，没有 26；24.15.0 能运行（迁移、建站页、健康检查都正常），启动时提示 24、25 拦不住插件直接连网。
+    - 运行环境是一个 `1panel/node` 容器：代码目录挂到 `/app`，"环境变量"写进 compose 的 `environment`，能传到进程；`.env` 和数据目录在代码目录里，删掉、重建容器后都还在。
+    - 容器的 PID 1 是 `bash /run.sh`，它再执行 `npm run <脚本>`。停止（`docker compose down`）只给 PID 1 发 SIGTERM，bash 不转发，10 秒后整个容器被 SIGKILL，NextSkin 没有机会停。启动命令要选"自定义"，填 `exec node nextskin.mjs start`：`run.sh` 用 `eval` 执行它，启动器替换掉 bash 成为 PID 1，停止时 1 秒内按顺序退出、退出码 0。"安装依赖"关掉，否则每次启动都跑一遍 `npm install`。
+    - 端口映射默认绑 `0.0.0.0`，Docker 发布的端口绕过 ufw。前面有 1Panel 的 OpenResty 反向代理时，部署文档建议改绑 `127.0.0.1`。
+    - 安装 1Panel 会在 ufw 里放行面板端口；启动后 ufw 最前面还出现了带 `1panel-rule` 注释、对所有来源放行 80、443 的规则，卸载时都不删。这和 NextSkin 无关，但部署文档里要提醒已有防火墙规则的服主检查。）
 
 ### 下载渠道
 

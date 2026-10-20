@@ -1,9 +1,9 @@
 /** 依赖打进 cli，standalone 和静态文件一起组装，发行机器不需要安装依赖（ADR-0039）。 */
 import { execFile } from 'node:child_process'
-import { cp, lstat, mkdir, mkdtemp, readdir, readFile, readlink, rm, stat, symlink } from 'node:fs/promises'
+import { cp, lstat, mkdir, mkdtemp, readdir, readFile, rename, rm, rmdir, writeFile } from 'node:fs/promises'
 import { isBuiltin } from 'node:module'
 import { tmpdir } from 'node:os'
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { rolldown } from 'rolldown'
@@ -12,6 +12,8 @@ const root = fileURLToPath(new URL('../../..', import.meta.url))
 const packageRoot = join(root, 'packages/launcher')
 const cli = join(packageRoot, 'dist/cli')
 const release = join(root, 'dist/nextskin')
+const run = promisify(execFile)
+const { version } = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8')) as { version: string }
 const workers = ['plugin-read-worker', 'image-worker']
 const replacements = new Map(workers.map((name) => [name, 0]))
 await rm(cli, { recursive: true, force: true })
@@ -106,25 +108,74 @@ const web = join(root, 'apps/web')
 // - apps/web/.env、.env.production：Next 构建时读到就原样复制进 standalone。
 const standalone = join(web, '.next/standalone')
 const skipped = new Set([join(standalone, 'apps/web/data')])
-// Windows 上 standalone 里 pnpm 和 Next 建的链接是 junction（只存绝对路径，指回构建目录），普通符号链接又要管理员权限：
-// 先跳过，复制完再在发行目录里重建成指向对应位置的 junction。这样的发行目录不能挪走，只供本机 e2e；发行包在 CI 的 Linux 上构建
-const links: string[] = []
+// 链接全部丢弃；只记录 Turbopack 外部包别名，稍后生成支持 ESM 和 CJS 的转发包。
+const aliases = new Map<string, string>()
 await cp(standalone, join(release, 'server'), {
   recursive: true,
-  verbatimSymlinks: true,
   filter: async (source) => {
     if (skipped.has(source) || basename(source).startsWith('.env')) return false
-    if (process.platform !== 'win32' || !(await lstat(source)).isSymbolicLink()) return true
-    links.push(source)
+    if (!(await lstat(source)).isSymbolicLink()) return true
+    if (relative(standalone, dirname(source)).replaceAll('\\', '/') === 'apps/web/.next/node_modules') {
+      const { name } = JSON.parse(await readFile(join(source, 'package.json'), 'utf8')) as { name: string }
+      aliases.set(basename(source), name)
+    }
     return false
   },
 })
-for (const link of links) {
-  const target = relative(standalone, resolve(dirname(link), await readlink(link)))
-  if (target.startsWith('..') || isAbsolute(target)) throw new Error(`standalone 里的链接指到了外面：${link}`)
-  const destination = join(release, 'server', relative(standalone, link))
-  if ((await stat(link)).isDirectory()) await symlink(join(release, 'server', target), destination, 'junction')
-  else await cp(link, destination)
+const modules = join(release, 'server/node_modules')
+const store = join(modules, '.pnpm')
+// scope 目录本身不是包；只收集其中真实存在的包目录。
+async function packages(directory: string): Promise<string[]> {
+  const paths: string[] = []
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name.startsWith('.')) continue
+    const path = join(directory, entry.name)
+    if (entry.name.startsWith('@')) {
+      for (const child of await readdir(path, { withFileTypes: true }))
+        if (child.isDirectory()) paths.push(join(path, child.name))
+    } else paths.push(path)
+  }
+  return paths
+}
+const origins = new Map<string, string>()
+async function movePackage(source: string, name: string) {
+  const previous = origins.get(name)
+  if (previous) throw new Error(`发行依赖包名冲突：${name}；来源：${previous} 和 ${source}`)
+  origins.set(name, source)
+  const destination = join(modules, name)
+  if (source !== destination) {
+    await mkdir(dirname(destination), { recursive: true })
+    await rename(source, destination)
+  }
+}
+for (const source of await packages(modules)) await movePackage(source, relative(modules, source).replaceAll('\\', '/'))
+for (const entry of await readdir(store, { withFileTypes: true })) {
+  // .pnpm/node_modules 是 pnpm 的公共链接目录，不是一个 <id>。
+  if (!entry.isDirectory() || entry.name === 'node_modules') continue
+  const directory = join(store, entry.name, 'node_modules')
+  for (const source of await packages(directory))
+    await movePackage(source, relative(directory, source).replaceAll('\\', '/'))
+}
+await rm(store, { recursive: true })
+async function removeEmptyDirectories(directory: string): Promise<void> {
+  for (const entry of await readdir(directory, { withFileTypes: true }))
+    if (entry.isDirectory()) await removeEmptyDirectories(join(directory, entry.name))
+  if ((await readdir(directory)).length === 0) await rmdir(directory)
+}
+await removeEmptyDirectories(join(release, 'server'))
+const aliasDirectory = join(release, 'server/apps/web/.next/node_modules')
+for (const [alias, name] of aliases) {
+  const directory = join(aliasDirectory, alias)
+  await mkdir(directory, { recursive: true })
+  await writeFile(
+    join(directory, 'package.json'),
+    JSON.stringify({ name: alias, private: true, exports: { '.': { import: './index.mjs', require: './index.cjs' } } }),
+  )
+  await writeFile(join(directory, 'index.mjs'), `export * from '${name}'\nexport { default } from '${name}'\n`)
+  await writeFile(join(directory, 'index.cjs'), `module.exports = require('${name}')\n`)
+  // 在发行目录里按包名解析，分别检查 exports 的两条路径；缺默认导出等问题在构建时失败。
+  for (const code of [`import(${JSON.stringify(alias)})`, `require(${JSON.stringify(alias)})`])
+    await run(process.execPath, ['-e', code], { cwd: dirname(aliasDirectory) })
 }
 await cp(join(web, '.next/static'), join(release, 'server/apps/web/.next/static'), { recursive: true })
 try {
@@ -134,8 +185,15 @@ try {
   if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
 }
 await cp(cli, join(release, 'cli'), { recursive: true })
-for (const file of ['nextskin.mjs', 'package.json', '.env.example'])
-  await cp(join(packageRoot, 'release', file), join(release, file))
+for (const file of ['nextskin.mjs', '.env.example']) await cp(join(packageRoot, 'release', file), join(release, file))
+
+const manifest = JSON.parse(await readFile(join(packageRoot, 'release/package.json'), 'utf8')) as object
+await writeFile(join(release, 'package.json'), JSON.stringify({ ...manifest, version }, null, 2) + '\n')
+await writeFile(join(release, 'server/VERSION'), version + '\n')
+await writeFile(
+  join(release, 'README.md'),
+  (await readFile(join(packageRoot, 'release/README.md'), 'utf8')).replaceAll('{{version}}', version),
+)
 
 for (const file of [
   'server/apps/web/server.js',
@@ -144,18 +202,19 @@ for (const file of [
   'cli/main.mjs',
 ])
   if (!(await lstat(join(release, file))).isFile()) throw new Error(`发行目录缺少 ${file}`)
-// 不跟随 pnpm 符号链接；真实文件都在发行目录的 .pnpm 里，重复遍历还可能形成环。
+// 发行包必须不含链接和原生模块，才能跨平台解压运行（ADR-0040）。
 async function checkDirectory(directory: string): Promise<void> {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name)
     if (entry.name.startsWith('.env') && path !== join(release, '.env.example'))
       throw new Error(`发行目录带入了构建机配置：${relative(release, path)}`)
     if (path === join(release, 'server/apps/web/data')) throw new Error('发行目录带入了开发数据目录')
+    if (entry.isSymbolicLink()) throw new Error(`发行目录含有符号链接：${relative(release, path)}`)
+    if (entry.name.endsWith('.node')) throw new Error(`发行目录含有原生模块：${relative(release, path)}`)
     if (entry.isDirectory()) await checkDirectory(path)
   }
 }
 await checkDirectory(release)
-const run = promisify(execFile)
 await run(process.execPath, [join(release, 'nextskin.mjs'), 'version'])
 const smoke = await mkdtemp(join(tmpdir(), 'nextskin-release-'))
 try {

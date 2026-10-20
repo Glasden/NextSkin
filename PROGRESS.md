@@ -43,5 +43,5 @@
 - **插件 SDK 1.0**（ADR-0035）：冻结前的调整、打包和发布流程、作者文档（`packages/plugin-sdk/docs/`）已经做完，两个包的版本是 `1.0.0-rc.0`（预发布模式 `rc`）。还没做：第一个候选版由维护者在本地发（`pnpm release`），之后配好 npm 的可信发布，由 CI 发；候选期在仓库外照迁移指南迁一个 BS 社区插件、收集作者意见；1.0.0 之前仓库公开，退出预发布时去掉 README 和入门里的 `@rc`。
 - **第三方登录的字段核对**：四家的 subject、`emailVerified` 还要用真实账号核对一遍（ADR-0034"首批插件"）。
 - **插件 API 推迟的部分**：写核心数据的能力、其余五个拦截点、运行时组件和插槽等，见 ADR-0033 的"推迟"表。
-- **发布**（ADR-0040 已采纳）：四个切片都还没做。切片一：组装时摊平 `node_modules`、版本号写进发行目录和 `server/` 并由 `start`、`doctor` 核对、发布工作流（构建、e2e、ZIP、`SHA256SUMS`、Windows 冒烟、草稿 Release）；切片二：镜像；切片三：SQLite 升级前自动备份；切片四：部署文档，宝塔、1Panel 实测。
+- **发布**（ADR-0040 已采纳）：切片一已落地：组装时摊平 `node_modules`（发行目录里没有链接、没有 `.node`），版本号写进发行目录和 `server/VERSION` 并由 `start`、`doctor` 核对，ZIP 里的 README，发布工作流 `.github/workflows/release-site.yml`（推 `v*` 标签：核对、构建、e2e、ZIP、`SHA256SUMS`、Windows 解压冒烟、经 `release` 环境建草稿 Release；还没有真正跑过一次）。宝塔、1Panel 已实测（结果在 ADR-0040"部署文档和面板"），据此核心接管了 Next 的信号处理、plugin host 忽略 SIGTERM、`start` 拿不到数据目录锁时最多等 40 秒。还没做：切片二，镜像；切片三，SQLite 升级前自动备份；切片四，部署文档 `docs/deploy/`（宝塔、1Panel、Docker、systemd、Windows）。
 - 通知、站点的 CSP（根布局里亮暗模式的内联脚本要带 nonce 或 hash）、失败任务的后台页面、后台覆盖翻译、种子数据。
