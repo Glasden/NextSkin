@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/turbo/schema.json",
-  "globalDependencies": ["tsconfig.base.json"],
+  "globalDependencies": ["tsconfig.base.json", "vitest.shared.ts"],
   "tasks": {
     "transit": {
       "dependsOn": ["^transit"]

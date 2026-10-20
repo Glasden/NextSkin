@@ -126,7 +126,7 @@ async function startHost(
 
 test('真实权限子进程在缩小的可读路径下能加载源码并响应空 init', async () => {
   expect(await startHost()).toEqual({ type: 'ready', plugins: [] })
-}, 15_000)
+})
 
 // Windows 上 kill(信号) 一律直接结束进程，测不了
 test.skipIf(process.platform === 'win32')(
@@ -165,4 +165,4 @@ test('host 加载插件前清空环境，包括 Windows 可能补入的变量；
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
-}, 15_000)
+})

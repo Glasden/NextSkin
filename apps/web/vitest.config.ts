@@ -1,6 +1,7 @@
 import { defineProject } from 'vitest/config'
+import { timeouts } from '../../vitest.shared.ts'
 
 // 只跑页面层的纯函数测试；e2e/*.spec.ts 归 Playwright
 export default defineProject({
-  test: { name: 'web', include: ['{app,lib}/**/*.test.ts'] },
+  test: { name: 'web', include: ['{app,lib}/**/*.test.ts'], ...timeouts },
 })

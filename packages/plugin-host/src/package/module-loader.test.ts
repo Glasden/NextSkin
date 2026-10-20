@@ -11,6 +11,4 @@ test.each([[], ['--permission', '--allow-fs-read=*', '--allow-fs-write=*']])(
     const result = await exec(process.execPath, [...flags, script], { timeout: 10_000 })
     expect(result.stdout).toBe('')
   },
-  // 比子进程的 10 秒长，超时时报的是子进程的错误
-  20_000,
 )

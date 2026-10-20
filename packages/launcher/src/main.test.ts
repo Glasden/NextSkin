@@ -86,7 +86,7 @@ test('读不了配置是配置错误，退出 78', async () => {
   const result = await runWith(env, 'migrate')
   expect(result.code).toBe(78)
   expect(result.output).toContain('读不了配置文件')
-}, 30_000)
+})
 
 test('源码模式 start 是配置错误，退出 78', async () => {
   const result = await run('start')
