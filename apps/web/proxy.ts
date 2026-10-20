@@ -14,6 +14,9 @@ const HONO_PATHS = [
   /^\/plugins\/[^/]+(?:\/.*)?$/,
 ]
 
+// 授权页不许别的网站嵌进 iframe，防点击劫持（ADR-0037"页面"）；全站的 CSP 还没做，这里只给它们加
+const NO_FRAME_PAGES = [/^\/device\/?$/]
+
 // 维护期间仍然能打开的页面：安装向导（从向导发起的导入在这里看进度）和维护页本身
 const MAINTENANCE_PAGES = [/^\/setup(?:\/.*)?$/, /^\/maintenance$/]
 
@@ -26,6 +29,10 @@ export async function proxy(request: NextRequest) {
   const response = NextResponse.next()
   const path = request.nextUrl.pathname
   if (HONO_PATHS.some((pattern) => pattern.test(path))) return response
+  if (NO_FRAME_PAGES.some((pattern) => pattern.test(path))) {
+    response.headers.set('X-Frame-Options', 'DENY')
+    response.headers.set('Content-Security-Policy', "frame-ancestors 'none'")
+  }
   try {
     const { core, importer } = await getServer()
     if (importer.maintenance()) {

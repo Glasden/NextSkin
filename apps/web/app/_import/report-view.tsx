@@ -323,6 +323,7 @@ const reasonKeys = [
   'reporter_missing',
   'invalid_report_at',
   'unsupported_client',
+  'janus_public_client',
 ] as const
 
 function isReason(value: string): value is (typeof reasonKeys)[number] {
@@ -349,30 +350,80 @@ function TablesSection({ report }: { report: ImportReport }) {
   const t = useTranslations('import.report.tables')
   const format = useFormatter()
   return (
-    <Table
-      label={t('label')}
-      empty=""
-      columns={[
-        { key: 'table', header: t('columns.table') },
-        { key: 'source', header: t('columns.source'), align: 'end', shrink: true },
-        { key: 'imported', header: t('columns.imported'), align: 'end', shrink: true },
-        { key: 'skipped', header: t('columns.skipped') },
-        { key: 'adjusted', header: t('columns.adjusted') },
-      ]}
-      rows={tableKeys.map((key) => {
-        const stats = report.tables[key]
-        return {
-          key,
+    <div className="flex flex-col gap-6">
+      <Table
+        label={t('label')}
+        empty=""
+        columns={[
+          { key: 'table', header: t('columns.table') },
+          { key: 'source', header: t('columns.source'), align: 'end', shrink: true },
+          { key: 'imported', header: t('columns.imported'), align: 'end', shrink: true },
+          { key: 'skipped', header: t('columns.skipped') },
+          { key: 'adjusted', header: t('columns.adjusted') },
+        ]}
+        rows={tableKeys.map((key) => {
+          const stats = report.tables[key]
+          return {
+            key,
+            cells: {
+              table: t(`names.${key}`),
+              source: <span className="tabular-nums">{format.number(stats.source)}</span>,
+              imported: <span className="tabular-nums">{format.number(stats.imported)}</span>,
+              skipped: <Reasons counts={stats.skipped} />,
+              adjusted: <Reasons counts={stats.adjusted} />,
+            },
+          }
+        })}
+      />
+      <PublicClients list={report.oauthPublicClients} />
+    </div>
+  )
+}
+
+/** Janus 标记的公共客户端（ADR-0037）：转成公共客户端以后，用旧密钥接入的网站要改接法。旧报告没有这一项 */
+function PublicClients({ list }: { list: ImportReport['oauthPublicClients'] }) {
+  const t = useTranslations('import.report')
+  if (!list?.total) return null
+  return (
+    <Subsection title={t('publicClients.title')} description={t('publicClients.description')}>
+      <Table
+        label={t('publicClients.title')}
+        empty={t('none')}
+        columns={[
+          { key: 'client', header: t('publicClients.columns.client') },
+          { key: 'secret', header: t('publicClients.columns.secret'), shrink: true },
+          { key: 'redirects', header: t('publicClients.columns.redirects') },
+        ]}
+        rows={list.items.map((row) => ({
+          key: row.clientId,
           cells: {
-            table: t(`names.${key}`),
-            source: <span className="tabular-nums">{format.number(stats.source)}</span>,
-            imported: <span className="tabular-nums">{format.number(stats.imported)}</span>,
-            skipped: <Reasons counts={stats.skipped} />,
-            adjusted: <Reasons counts={stats.adjusted} />,
+            client: (
+              <span className="flex flex-col">
+                <span>{row.name ?? t('publicClients.unnamed')}</span>
+                <span className="font-mono text-xs text-text-muted">{row.clientId}</span>
+              </span>
+            ),
+            secret: row.hadSecret ? (
+              <Badge tone="warning">{t('publicClients.hadSecret')}</Badge>
+            ) : (
+              t('publicClients.noSecret')
+            ),
+            redirects: row.authorizationCode ? (
+              <ul className="flex flex-col gap-0.5">
+                {row.redirectUris.map((uri) => (
+                  <li key={uri} className="font-mono break-all">
+                    {uri}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span className="text-text-muted">{t('publicClients.deviceOnly')}</span>
+            ),
           },
-        }
-      })}
-    />
+        }))}
+      />
+      <Truncated shown={list.items.length} total={list.total} />
+    </Subsection>
   )
 }
 

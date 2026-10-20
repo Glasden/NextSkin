@@ -1,3 +1,6 @@
+import { createDevices } from './oauth/devices.ts'
+import { createAuthorizations } from './oauth/authorizations.ts'
+import { deleteOAuthTokensForUser, deleteClaimedDeviceCodes } from './oauth/revoke.ts'
 import { createSetup } from './setup/service.ts'
 import { createTokens } from './yggdrasil/tokens.ts'
 import { createSessions } from './yggdrasil/join.ts'
@@ -191,8 +194,17 @@ export function createCore(options: CoreOptions) {
     mail,
     passwordPlugins,
     onPasswordChanged: async (uid) => {
-      // 吊销启动器令牌单独提交：事件入队失败会回滚它所在的事务，而改密码已经成功了（ADR-0030）
-      await transactionWithRetry(options.db, (tx) => deleteLauncherTokens(tx, uid))
+      // 吊销启动器和 OAuth 凭据单独提交：事件入队失败会回滚它所在的事务，而改密码已经成功了（ADR-0030）
+      await transactionWithRetry(options.db, async (tx) => {
+        await tx
+          .updateTable('users')
+          .set((eb) => ({ role: eb.ref('role') }))
+          .where('id', '=', uid)
+          .execute()
+        await deleteLauncherTokens(tx, uid)
+        await deleteOAuthTokensForUser(tx, uid)
+        await deleteClaimedDeviceCodes(tx, uid)
+      })
       await transactionWithRetry(options.db, async (tx) => {
         const user = await tx.selectFrom('users').select('role').where('id', '=', uid).executeTakeFirst()
         if (user)
@@ -278,6 +290,7 @@ export function createCore(options: CoreOptions) {
       ...createUserManagement(options, settings, mail, jobs, events, removal, now, passwordPlugins),
     },
     score: createScoreQueries(options.db),
+    oauth: { ...createDevices({ db: options.db, settings, now }), ...createAuthorizations({ db: options.db, now }) },
     yggdrasil,
   }
 }

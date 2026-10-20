@@ -120,6 +120,12 @@ const statuses = {
   session_not_fresh: 403,
   score_out_of_range: 400,
   email_changed: 409,
+  device_code_invalid: 400,
+  device_code_expired: 400,
+  device_code_claimed: 403,
+  device_code_processed: 409,
+  device_player_required: 400,
+  oauth_scope_invalid: 400,
 } as const satisfies Partial<Record<ErrorCode, number>>
 type ResponseCode = keyof typeof statuses
 const fieldNames: Partial<Record<ResponseCode, string>> = {

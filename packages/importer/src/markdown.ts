@@ -30,6 +30,7 @@ const REASONS: Record<string, string> = {
   reporter_missing: '举报人不存在，置空',
   invalid_report_at: '举报时间无效，取导入时刻',
   unsupported_client: '个人访问令牌或密码授权的客户端，不再支持',
+  janus_public_client: 'Janus 标记的公共客户端，转成公共客户端并加上设备码流程',
 }
 
 const TABLE_NAMES: Record<keyof ImportReport['tables'], string> = {
@@ -203,6 +204,25 @@ export function reportToMarkdown(report: ImportReport): string {
   } else if (!report.error) lines.push('', '全部一致。')
 
   lines.push('', '## 各表', '', ...tableRows(report.tables))
+
+  const publicClients = report.oauthPublicClients
+  if (publicClients) {
+    lines.push('', `## Janus 公共客户端（${publicClients.total}）`, '')
+    if (!publicClients.total) lines.push('没有。')
+    else {
+      lines.push(
+        '原来有密钥的应用：用旧密钥接入的网站会收到 invalid_client，需要改成公共客户端的接法。',
+        '',
+        '| client_id | 名称 | 原来有密钥 | 剩下的回调地址 | 保留授权码 |',
+        '|---|---|---|---|---|',
+      )
+      for (const item of publicClients.items)
+        lines.push(
+          `| ${cell(item.clientId)} | ${cell(item.name ?? '—')} | ${item.hadSecret ? '是' : '否'} | ${cell(item.redirectUris.join('、') || '—')} | ${item.authorizationCode ? '是' : '否'} |`,
+        )
+      lines.push(more(publicClients))
+    }
+  }
 
   const files = report.files
   lines.push(

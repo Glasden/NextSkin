@@ -1,3 +1,4 @@
+import { seedOAuth } from '../oauth/oauth.test-helper.ts'
 import {
   coreMigrations,
   countRows,
@@ -42,6 +43,7 @@ beforeAll(async () => {
 })
 afterAll(async () => database?.cleanup())
 beforeEach(async () => {
+  await db().deleteFrom('device_codes').execute()
   await db().deleteFrom('users').execute()
   await db().deleteFrom('jobs').execute()
   await db().deleteFrom('settings').execute()
@@ -444,8 +446,17 @@ test('删除级联清会话、密码、两步验证、通行密钥、OAuth 和�
   }
   core.events.subscribe('player.deleted', 'test:player-deleted', { run: () => Promise.resolve() })
   core.events.subscribe('user.deleted', 'test:user-deleted', { run: () => Promise.resolve() })
+  await seedOAuth(db(), actor.uid, players[0]!.pid)
+  await seedOAuth(db(), other.uid)
   await core.users.deleteAccount(actor, { password })
   expect(await profile()).toBeNull()
+  expect(await db().selectFrom('device_codes').select('user_id').execute()).toEqual([
+    { user_id: String(other.uid) },
+    { user_id: String(other.uid) },
+  ])
+  expect(
+    await db().selectFrom('device_code_selections').selectAll().where('user_id', '=', actor.uid).execute(),
+  ).toEqual([])
   for (const table of [
     'players',
     'sessions',

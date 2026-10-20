@@ -7,7 +7,7 @@
 // Better Auth 认证客户端时会重新读取原始请求体和 Authorization 头，钩子里改 ctx.body 不起作用，
 // 只能在请求进入 Better Auth 之前改写 Request 本身。
 
-const PATHS = ['/oauth2/token', '/oauth2/introspect', '/oauth2/revoke']
+const PATHS = ['/oauth2/token', '/oauth2/introspect', '/oauth2/revoke', '/device/code']
 
 /** 查客户端登记的认证方式；客户端不存在时返回 undefined。没有登记时 Better Auth 按 client_secret_basic 处理 */
 export type RegisteredAuthMethod = (clientId: string) => Promise<string | null | undefined>

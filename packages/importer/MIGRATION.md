@@ -97,9 +97,17 @@ BS 的 oauth 插件（oauth-github、oauth-google、oauth-microsoft-live、oauth
 3. 没有密码的用户第一次用 GitHub、Google、LittleSkin 登录时，第三方确认过这个邮箱，就直接绑定到导入的账号上。原来用 Microsoft 登录的不行：Microsoft 不保证个人账号的邮箱验证过，这些用户用找回密码登录，再到“登录与安全”绑定 Microsoft。
 4. 有密码的用户第三方登录时不会自动绑定，提示先用密码登录，再到“登录与安全”里绑定。
 
+### 用过 Yggdrasil Connect 或 Janus 的旧站
+
+OIDC 的 issuer 换成了 `https://新站/api/auth`。用 OIDC 登录本站的第三方网站要改发现地址为 `https://新站/api/auth/.well-known/openid-configuration`，用户重新授权；旧令牌全部作废，启动器需要重新登录一次。
+
+回调地址里带 Janus 公共客户端标记的应用，导入时会去掉标记和密钥，转成公共客户端并加上设备码流程；去掉标记后没有其他回调地址的，只保留设备码和刷新。报告的“Janus 公共客户端”逐个列出转换结果。原来用这些应用密钥接入的网站需要改成公共客户端的接法（授权码流程必须带 PKCE），继续传旧密钥会收到 `invalid_client`。
+
+旧站的个人访问客户端不导入。启动器可以从新站的发现文档读取 `shared_client_id`，使用内置的公用应用；整库替换导入会保留它的编号和停用状态，但仍会清掉它名下的令牌、同意记录和设备码。
+
 ## 迁移之后有什么不同
 
-- **启动器要重新登录**：BS 的 Yggdrasil 令牌存在缓存里，没法导入。旧的 OAuth 令牌也全部作废，第三方应用的 `client_id` 和密钥不变，用户重新授权一次即可。
+- **启动器要重新登录**：BS 的 Yggdrasil 令牌存在缓存里，没法导入。旧的 OAuth 令牌也全部作废。第三方应用的 `client_id` 不变，没有 Janus 公共客户端标记的应用密钥不变，用户重新授权一次即可。
 - **改名不再换 UUID**：BS 在离线算法下角色改名会换成新名字的离线 UUID，NextSkin 创建角色时分配 UUID，之后永远不变。
 - **按名字查角色只忽略大小写**，不再像 BS 在 MySQL 上那样忽略重音（`Rene` 查不到 `René`）。BS 跑在 SQLite 上时区分大小写，迁移后不再区分。
 - **公告和内容政策里的原始 HTML 不再显示**，只渲染 Markdown。报告里列出了含 HTML 的设置。

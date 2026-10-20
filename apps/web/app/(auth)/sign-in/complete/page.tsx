@@ -93,7 +93,9 @@ export default async function CompleteSignUpPage() {
       <p className="mt-6 text-sm text-pretty text-text-muted">
         {t.rich('hasAccount', {
           provider,
-          link: (chunks) => <Link render={<NextLink href="/sign-in" />}>{chunks}</Link>,
+          link: (chunks) => (
+            <Link render={<NextLink href={`/sign-in?next=${encodeURIComponent(pending.next)}`} />}>{chunks}</Link>
+          ),
         })}
       </p>
     </>

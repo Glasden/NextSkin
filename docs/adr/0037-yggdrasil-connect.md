@@ -2,7 +2,7 @@
 
 - 状态：已采纳
 - 日期：2026-10-20
-- 补充 ADR-0007：落地 Connect 的端点、页面、声明和 scope 规则；scope 错误在能确认回调地址时重定向回去；设备流程的角色随批准请求一起提交；取代"创建 OAuth 客户端需要管理员会话"一句：用户在用户中心自己创建，Better Auth 管理客户端的端点全部关闭
+- 补充 ADR-0007：落地 Connect 的端点、页面、声明和 scope 规则；scope 错误在能确认回调地址时重定向回去；设备流程的认领、批准和拒绝由领域用例完成，角色随批准一起写入；取代"创建 OAuth 客户端需要管理员会话"一句：用户在用户中心自己创建，Better Auth 管理客户端的端点全部关闭
 - 补充 ADR-0018：开着 `auth.requireEmailVerification` 时，授权任何 OAuth 应用也要先验证邮箱，同启动器登录
 - 补充 ADR-0022：删除角色时连带删掉绑定它的 OAuth 令牌和同意记录
 - 补充 ADR-0023：用户改密码、重设密码时，和启动器令牌一起删掉全部 OAuth 令牌；安全页新增"已授权的应用"
@@ -111,6 +111,8 @@ Better Auth 1.7.10 里和这里相关的行为：
 2. **授权码流程**：`/oauth/consent` 页、登录后续跑、scope 错误的重定向。
 3. **应用管理**：用户中心的"OAuth 应用"页、后台的"OAuth 应用"页、权限和审计。在这之前，只有导入的应用和公用应用。
 
+切片一里还没有同意页，选不了角色：授权码流程申请 Yggdrasil scope 时返回 `invalid_scope`；不带 `scope` 时按应用登记的 scope（没登记时是全部）补上，去掉其中的 Yggdrasil scope。授权码流程的端点在切片一已经开着，直接调用也能走通，所以"授权的前提""每次都征求同意"、不接受部分 scope、换授权码时检查会话，都在切片一生效；只是公共客户端带 `prompt=none` 时的 `consent_required` 先以 JSON 返回，切片二随 scope 错误一起改成重定向回去。注册页传递 `next`（见"登录后续跑"）在切片一就做：`/device` 没登录时也要经过登录或注册再回来。
+
 ### 端点
 
 都在 `/api/auth` 下，由 Better Auth 处理，经过现有的客户端认证改写（`client-authentication.ts`）和 serial 下的能力限制：
@@ -125,14 +127,16 @@ Better Auth 1.7.10 里和这里相关的行为：
 | `GET`、`POST /oauth2/userinfo` | |
 | `POST /oauth2/revoke`、`POST /oauth2/introspect` | RFC 7009、RFC 7662，要求客户端认证 |
 | `POST /device/code` | 设备授权请求 |
-| `GET /device`、`POST /device/approve`、`POST /device/deny` | 批准页调用 |
 
-oauth-provider 的其余端点放进 `disabledPaths`：`/oauth2/register`、`/oauth2/create-client`、`/oauth2/update-client`、`/oauth2/delete-client`、`/oauth2/get-client`、`/oauth2/get-clients`、`/oauth2/client/rotate-secret`、`/oauth2/public-client`、`/oauth2/public-client-prelogin`、`/oauth2/get-consent`、`/oauth2/get-consents`、`/oauth2/update-consent`、`/oauth2/delete-consent`、`/oauth2/end-session` 及其确认页，以及设备授权插件的 `/device/token`。
+只开这九组。oauth-provider 和设备授权插件的其余端点放进 `disabledPaths`：`/oauth2/register`、`/oauth2/create-client`、`/admin/oauth2/create-client`、`/oauth2/update-client`、`/admin/oauth2/update-client`、`/oauth2/delete-client`、`/oauth2/get-client`、`/oauth2/get-clients`、`/oauth2/client/rotate-secret`、`/oauth2/client/rotate-keys`、`/oauth2/public-client`、`/oauth2/public-client-prelogin`、`/oauth2/get-consent`、`/oauth2/get-consents`、`/oauth2/update-consent`、`/oauth2/delete-consent`、`/oauth2/end-session` 及其确认页、`/.well-known/oauth-authorization-server`（发现文档只按 OIDC 的位置提供），以及设备授权插件的 `/device/token`、`/device`、`/device/approve`、`/device/deny`。资源管理的端点只能在服务端调用。`connect.db.test.ts` 逐个请求这两个插件的全部端点，不在上表里的必须是 404，升级 Better Auth 多出端点时测试会失败。
 
 - 客户端的增删改要求邮箱验证、写审计、生成只显示一次的密钥，取消授权要连同令牌一起删，这些都由领域用例和 REST 完成（不变量 4），同 ADR-0034 关掉账号端点的理由。同意页和批准页在服务端经领域查询取应用信息，用不到 `public-client`。
 - `/device/token` 现在会拒绝 OAuth 设备码，关掉是多一道保险：它签发的是网页会话，哪天它的判断变了，设备码钓鱼就能拿到整个账号。
+- `GET /device`（认领）、`/device/approve`、`/device/deny` 关掉，批准页的认领、批准、拒绝改由领域用例和 REST 完成（见"页面"）：Better Auth 1.7.10 的批准和拒绝按 id 无条件更新状态，没有"还在待批准、由认领者处理"的守卫，角色选择也没法和批准写进同一个事务。
 - `/device/code` 不接受 `user_id`，返回 `invalid_request`：设备码只能由打开批准页的人认领。
-- `clientPrivileges` 不再需要，删掉，`auth.ts` 的 `isAdmin` 随之去掉（ADR-0027 列出的"领域层对管理员的判断"少了一处）。
+- Content-Type 含 `application/x-www-form-urlencoded`、主类型却不是它时，返回 `invalid_request`：better-call 按主类型解析请求体，设备授权端点却在 Content-Type"包含"它时把原始请求体按表单重读，两边读到的参数不同，钩子对 `resource`、`user_id` 的检查会落空。这条检查在 Better Auth 的所有路径上做，不按路径区分：路由忽略末尾的斜杠，`/device/code/` 也会进设备授权端点。
+- 请求体是 JSON、却不是对象（字符串、数组、`null`）时，返回 `invalid_request`。钩子早于端点的 schema 校验，按对象读这类请求体会抛出带着请求体原文的异常，原文可能是令牌，会进日志（不变量 11）。钩子判断 `grant_type` 前和端点一样去掉两端空白。
+- `clientPrivileges` 和 `resourcePrivileges` 改成恒为 `false`（不写的话 Better Auth 放行任何登录的用户），`auth.ts` 的 `isAdmin` 随之去掉（ADR-0027 列出的"领域层对管理员的判断"少了一处）。客户端和资源只经领域用例管理。
 
 ### scope
 
@@ -156,7 +160,7 @@ oauth-provider 的其余端点放进 `disabledPaths`：`/oauth2/register`、`/oa
 | scope | ID 令牌和 userinfo 里的声明 |
 |---|---|
 | `openid` | `sub`：uid 的字符串。`subject_types_supported` 只有 `public` |
-| `profile` | `name`：昵称；`picture`：头像的出图地址，没设头像时没有这一项 |
+| `profile` | `name`：昵称；`picture`：头像的出图地址（`/render/v{N}/head/{s}/{hash}.png`，按材质原本的分辨率：出图只缩小不放大），没设头像时没有这一项 |
 | `email` | `email`、`email_verified` |
 | Select | `selectedProfile`：`{ id, name }`，`id` 是角色的 UUID（`players.uuid`，无连字符） |
 | Read | `availableProfiles`：用户的全部角色，格式同上，按 `id` 排序，同 authserver 的 `availableProfiles`（ADR-0030） |
@@ -170,7 +174,7 @@ oauth-provider 的其余端点放进 `disabledPaths`：`/oauth2/register`、`/oa
 照 ADR-0007 和 S1：所选角色编码成 `reference_id = player:<pid>`，存在同意记录、访问令牌和刷新令牌上，刷新时沿用。
 
 - **授权码流程**：申请 Select 时同意页上选角色，同意请求在请求头里带上 pid。consent 的 before 钩子在同一个请求里校验最终接受的 scope、校验角色属于当前用户，再把角色交给 `consentReferenceId`。不把选择存进会话：同一用户并行的两个授权流程会串用（S1 审核发现 1）。
-- **设备码流程**：批准页上选角色，**选好的 pid 随 `/device/approve` 的请求一起提交**（请求头），before 钩子在同一个请求里检查：设备码待批准、认领者是当前用户、角色属于当前用户，然后写进 `device_code_selections`（按 `device_code` 字符串，ADR-0007）。兑换时包装内置的设备码授权，读出选择、补上 `referenceId`，删掉这一行；被拒绝时也删掉。S1 的选择是单独一个请求，合进批准请求以后，选择和批准之间没有可以插进来的窗口，也少一个端点；ADR-0007 的约束（只在待批准状态、由认领者选择）照样成立。
+- **设备码流程**：批准页上选角色，**选好的 pid 随批准请求一起提交**（`POST /api/user/device/approve`，请求体 `{ userCode, pid }`）。领域用例在一个事务里：锁住用户行，检查设备码待批准、认领者是当前用户、角色属于当前用户，带着这些条件把状态改成 `approved`，再写进 `device_code_selections`（按 `device_code` 字符串，ADR-0007）。兑换时包装内置的设备码授权，读出选择、补上 `referenceId`，不论签发成功与否都删掉这一行；被拒绝时也删掉。S1 的选择是单独一个请求，合进批准请求以后，选择和批准之间没有可以插进来的窗口，也少一个端点；ADR-0007 的约束（只在待批准状态、由认领者选择）照样成立。
 - 申请 Select 时必须选角色：用户没有角色时不能同意，页面链接到用户中心的角色页；只有一个角色时默认选中，仍要用户点同意。
 - 没有 Select 的授权不绑定角色，`reference_id` 为空。
 
@@ -186,7 +190,11 @@ oauth-provider 的其余端点放进 `disabledPaths`：`/oauth2/register`、`/oa
 - 没有被封禁；
 - 开着 `auth.requireEmailVerification` 时邮箱已经验证（补充 ADR-0018）。范围是全部 OAuth 应用，不只 Connect：启动器登录就有同样的要求（ADR-0030），给第三方网站的 `email` 也该是核实过的。
 
-刷新令牌、调用 userinfo 时同样检查封禁：被封禁的用户的令牌照样留着、解封后能用，同 authserver（ADR-0030）。
+检查的地方和时机：
+
+- 同意（`/oauth2/consent`）、带着会话的 `/oauth2/authorize`（同意过的机密客户端不经过同意页就发码）和批准页都检查。拒绝不要求这些。
+- 刷新令牌、换授权码、兑换设备码、调用 userinfo 时同样检查封禁：被封禁的用户的令牌照样留着、解封后能用，同 authserver（ADR-0030）。令牌端点签发之后，在锁住用户行时再查一次（见"吊销"的签发途中一条）。userinfo 按 Better Auth 同样的顺序取令牌：先用 `parseAccessTokenAuthorization` 解析请求头，解析不出时用请求体，写法不同不能绕过检查。
+- 邮箱验证只在同意、批准时要求，刷新、兑换和使用令牌时不再复查，同 authserver 令牌（ADR-0030）。
 
 ### 公用应用
 
@@ -222,8 +230,8 @@ issuer 是 https 时（也就是站点地址是 https），`meta` 加上 `featur
   - Minecraft 客户端在启动时拿到访问令牌，之后每次进服都用它，一局游戏可以玩好几个小时，中途不会刷新。Better Auth 默认的 1 小时，开局一小时后就进不了服。authserver 的令牌、Janus 的令牌都是 3 天。
   - 授权码 10 分钟（默认）；设备码 10 分钟、轮询间隔 5 秒，同 Janus 的 600 秒。
 - **数量上限**：每个用户在每个应用上最多保留 `yggdrasil.tokensPerUser`（默认 10）个访问令牌。签发之后（授权码、设备码、刷新三种都算），按签发时间倒序保留前 N 个，其余连同它们的刷新令牌删掉。两个请求同时签发可能短暂多出一个，下一次签发时裁掉，同 ADR-0030。BS 导入的 `ygg_tokens_limit` 就是 Janus 按应用计数用的那个值。
-- **刷新**：刷新成功后，删掉旧刷新令牌关联的访问令牌（规范要求，Better Auth 不做）。旧刷新令牌的行照 Better Auth 的方式保留，靠它发现重放，`core:auth-cleanup` 在过期之后删除（ADR-0029）。
-- 吊销访问令牌时，它的刷新令牌一起吊销（规范要求一对一）。Better Auth 的 `/oauth2/revoke` 只标记传进来的那一个时，由钩子补上另一个。
+- **刷新**：刷新成功后，删掉旧刷新令牌关联的访问令牌（规范要求，Better Auth 不做）。旧刷新令牌的行照 Better Auth 的方式保留，靠它发现重放，`core:auth-cleanup` 在过期之后删除（ADR-0029）。带 `scope` 刷新时必须留着 `offline_access`，否则 `invalid_scope`：Better Auth 只在 scope 含它时轮换刷新令牌，去掉之后拿到的刷新令牌不再轮换、可以无限重放。
+- 吊销访问令牌时，它的刷新令牌一起吊销（规范要求一对一）。Better Auth 的 `/oauth2/revoke` 只标记传进来的那一个时，由钩子补上另一个；钩子按 Better Auth 同样的方式规范化 `token` 参数（`stripAccessTokenAuthorizationScheme`：去掉空白和 `Bearer `），否则两边找到的不是同一个令牌。
 - 我们自己的吊销一律删除行；Better Auth 自己的吊销是标记 `revoked`。下面的校验两种都认。
 
 ### 进服和 authserver
@@ -245,9 +253,9 @@ OAuth 令牌**能进服**要同时满足：
 | `invalidate` | 删掉这个访问令牌和它的刷新令牌，204 |
 | `refresh` | 403，和令牌不存在相同 |
 | `signout` | 不变，只删 authserver 的令牌 |
-| 上传、删除材质 | 能进服，并且绑定的角色就是路径里的角色，否则 403；之后同 ADR-0030（上传用例照样检查封禁、邮箱验证和积分） |
+| 上传、删除材质 | 能进服，否则 401（和无效的 authserver 令牌相同）；绑定的角色不是路径里的角色时 403 `ForbiddenOperationException`（`profile_mismatch`），排在"不是自己的角色"之后；之后同 ADR-0030（上传用例照样检查封禁、邮箱验证和积分） |
 
-- 不满足条件时的响应和无效的 authserver 令牌完全相同，不透露令牌是哪一种、差在哪一条。
+- 不满足条件时的响应和无效的 authserver 令牌完全相同，不透露令牌是哪一种、差在哪一条。封禁例外：同 authserver 令牌的用户被封禁时，返回 `user_banned`（上传、删除材质时是上传用例的 403），也看不出令牌是哪一种。
 - `validate`、`invalidate` 认 OAuth 令牌，同 yggdrasil-connect：启动器里的通用 Yggdrasil 代码会在启动前 `validate`、退出时 `invalidate`。`validate` 要求"能进服"而不是"有效"：说令牌有效、进服却被拒，比直接说无效更难排查。
 - 上传材质要求 Join，不只是绑定了角色：只申请 Select 的网站拿 Select 来认出玩家是谁，不该因此能改他的皮肤。同意页上 Join 的说明写成"以所选角色进入多人游戏服务器，在启动器里更换它的皮肤和披风"。
 - `refresh` 不认：authserver 的刷新要沿用 clientToken、按 `selectedProfile` 绑定角色，OAuth 令牌没有这些；启动器刷新 OAuth 令牌走令牌端点。
@@ -256,7 +264,7 @@ OAuth 令牌**能进服**要同时满足：
 
 | 发生什么 | OAuth 令牌 | 其他 |
 |---|---|---|
-| 用户改密码、重设密码（Better Auth 的路径） | 删掉这个用户的全部访问令牌和刷新令牌，和启动器令牌在同一个事务里（`onPasswordChanged`） | 同意记录保留 |
+| 用户改密码、重设密码（Better Auth 的路径） | 删掉这个用户的全部访问令牌和刷新令牌，和启动器令牌在同一个事务里（`onPasswordChanged`），事务先锁用户行，和批准设备码串行 | 删掉这个用户认领了的、还没兑换的设备码和 `device_code_selections`：盗号的人在改密码之前批准的设备码，不能在之后的 10 分钟里照样换出令牌；同意记录保留 |
 | 作废在途的登录（`revokeLogins`：后台改密码、收回账号、删通行密钥、解绑、退出全部登录、命令行 `set-password`） | 同上，在调用方的事务里 | 删掉这个用户认领了的、还没兑换的设备码（待批准和已批准的）和 `device_code_selections`；同意记录保留 |
 | 角色转让、删除 | 删掉 `reference_id = player:<pid>` 的访问令牌和刷新令牌 | 删掉同样 `reference_id` 的同意记录；`device_code_selections` 已经处理（ADR-0036、外键） |
 | 用户在安全页取消对某个应用的授权 | 删掉这个用户在这个应用上的全部令牌 | 删掉同意记录、这个用户在这个应用上还没兑换的设备码 |
@@ -268,6 +276,7 @@ OAuth 令牌**能进服**要同时满足：
 - 回答 ADR-0036 留下的问题：改密码和作废在途的登录都吊销 OAuth 令牌。改密码删掉启动器令牌，是因为账号可能失控（ADR-0030）；OAuth 令牌留着的话，盗号的人在这之前用设备码授权一个启动器，就留下了进服的能力，等于绕过了改密码。
 - 授权码 10 分钟有效，存在 `verifications` 里，值是 JSON，标识是授权码的哈希，按用户删不了。所以换授权码时检查发起授权的网页会话还在；作废在途的登录删掉了会话，这些授权码随之失效。
 - 同意记录不删：它只记"同意过哪些 scope"，没有会话就用不上；绑定角色的同意记录随角色一起删。
+- **签发途中的吊销**：令牌端点上 Better Auth 先消费设备码、授权码或旧刷新令牌，再插入新令牌，两步不在一个事务里。吊销恰好在两步之间提交时，删不到之后插入的令牌。所以每次删这个用户的 OAuth 令牌（上表的改密码、作废在途的登录、取消授权）都把 `users.oauth_version` 加一；令牌端点开始时按授权码、设备码或刷新令牌找出用户、记下版本，签发之后锁住用户行再核对：版本变了、用户被封禁了，就撤回刚签发的令牌，返回 `invalid_grant`。同 authserver 签发时钉住密码哈希（ADR-0030）。这一步失败时返回 `server_error`，不把令牌发出去。只吊销一个令牌（`/oauth2/revoke`、`invalidate`）不加版本：和它并发的刷新等同于先刷新、再吊销旧令牌，按这个顺序新令牌本来就留着。
 
 ### 页面
 
@@ -275,10 +284,11 @@ OAuth 令牌**能进服**要同时满足：
 
 **`/device`**（设备码流程）：
 
-- 带 `?user_code=` 时直接进入确认；没有就先输入用户代码，按 Better Auth 相同的规则规范化（大小写、连字符，S1 审核发现 6）。没登录时去 `/sign-in?next=…`，登录后回来。
+- 带 `?user_code=` 时直接进入确认；没有就先输入用户代码，按 Better Auth 相同的规则规范化（大小写、连字符，S1 审核发现 6）。没登录时去 `/sign-in?next=…`，登录后回来；从登录页去注册的也带着 `next`。
+- 服务端渲染页面时调用领域用例认领（打开就认领，ADR-0007）：只认领待批准、还没人认领的设备码。批准、拒绝走 REST（`POST /api/user/device/approve`、`/deny`），领域用例带着"待批准、认领者是自己"的条件更新状态，并发的两次处理只有一次成功；拒绝不要求没被封禁、邮箱已验证。处理完就地显示结果，不刷新页面：启动器几秒内就来兑换，设备码随之删掉，刷新会显示成"代码不存在"。
 - 确认时显示：应用名称；创建者的昵称（"由 {昵称} 创建"），公用应用改成上面的说明；申请的权限，按 scope 写成人话；申请 Select 时的角色选择；一行警告："只有在你自己刚刚在启动器或设备上发起登录时才继续。别人发给你的代码，不要输入。"
 - 同意、拒绝之后显示结果，告诉用户回到启动器。代码过期、已经用过、被别人认领了，各有一句说明。
-- 限流：`/device/code` 按 IP，`GET /device` 和 `/device/approve` 按用户，用 Better Auth 的限流规则（`customRules`）。用户代码是 8 位（Better Auth 默认），配合限流猜不中。
+- 限流：`/device/code` 按 IP（Better Auth 的 `customRules`，60 秒 30 次；令牌端点 60 秒 300 次）。批准页按用户限制**猜错代码**的次数：认领、批准、拒绝时查不到代码都计一次，10 分钟内满 10 次就返回 `too_many_requests`，计数在进程内存里（Better Auth 的 `customRules` 只能按 IP）。用户代码是 8 位、32 个字符（Better Auth 默认），配合这个限制猜不中。
 
 **`/oauth/consent`**（授权码流程）：显示应用名称、创建者、回调地址的主机名、申请的权限和角色选择，"同意"和"拒绝"。拒绝时 Better Auth 带着 `access_denied` 重定向回去。
 
@@ -326,6 +336,7 @@ OAuth 令牌**能进服**要同时满足：
 | `PATCH /api/oauth-clients/{id}`、`DELETE …` | 改名称和回调地址、删除 |
 | `POST /api/oauth-clients/{id}/secret` | 重置密钥 |
 | `GET /api/user/authorizations`、`DELETE /api/user/authorizations/{id}` | 已授权的应用：列表、取消授权 |
+| `POST /api/user/device/approve`、`POST /api/user/device/deny` | 批准页：批准（带所选角色的 pid，不申请 Select 时为 `null`）、拒绝 |
 | `GET /api/admin/oauth-clients` | 后台列表 |
 | `POST /api/admin/oauth-clients/{id}/disable`、`…/enable`、`DELETE …` | 后台操作 |
 
@@ -345,19 +356,19 @@ OAuth 令牌**能进服**要同时满足：
 
 ## 后果
 
-- 新迁移：插入公用应用；按查询补索引（按 `reference_id` 删令牌和同意记录，按用户和应用数令牌），实现时对照现有索引决定。
-- Better Auth 的配置：三个有效期选项来自设置、进缓存键；设备码 10 分钟；新的 `disabledPaths`；去掉 `clientPrivileges`；钩子覆盖 scope 规则、强制同意、授权前提、角色绑定、数量上限、刷新后删旧访问令牌、换授权码时检查会话、吊销时补上配对的令牌。设备码兑换的包装照旧依赖未公开的结构（ADR-0007），升级 Better Auth 时由下面的测试兜底。
+- 新迁移：插入公用应用；按查询补索引（按 `reference_id` 删令牌和同意记录，按用户和应用数令牌），实现时对照现有索引决定；`users.oauth_version`（见"吊销"）。
+- Better Auth 的配置：三个有效期选项来自设置、进缓存键；设备码 10 分钟；新的 `disabledPaths`；`clientPrivileges`、`resourcePrivileges` 恒为 `false`；钩子覆盖 scope 规则、强制同意、授权前提、角色绑定、数量上限、刷新后删旧访问令牌、换授权码时检查会话、吊销时补上配对的令牌。设备码兑换的包装照旧依赖未公开的结构（ADR-0007），升级 Better Auth 时由下面的测试兜底。
 - 领域层：
   - 进服、`validate`、`invalidate`、启动器上传和删除材质加上 OAuth 分支（`yggdrasil/tokens.ts`、`join.ts`）；
   - `revokeLogins`、改密码之后的回调、角色的转让和删除、取消授权，加上删 OAuth 令牌的函数，都在调用方的事务里；
   - 应用管理的用例和查询。
 - 设置项：`tokenValidSeconds`、`tokenRefreshableSeconds`、`tokensPerUser` 的说明改成同时作用于 Yggdrasil Connect，`tokensPerUser` 写明 OAuth 按每个应用分别计数。
-- `docs/schema.md`：`oauth_clients` 一行写公用应用、Janus 标记的导入规则；`oauth_access_tokens`、`oauth_refresh_tokens`、`oauth_consents` 的 `reference_id` 和删除时机；`device_code_selections` 的写入方式（随批准请求）和删除时机加上作废在途的登录；`verifications` 一行补上授权码；导入对照表的 oauth_clients 一节。
+- `docs/schema.md`：`oauth_clients` 一行写公用应用、Janus 标记的导入规则；`oauth_access_tokens`、`oauth_refresh_tokens`、`oauth_consents` 的 `reference_id` 和删除时机；`device_code_selections` 的写入方式（批准的领域用例）和删除时机加上作废在途的登录；`verifications` 一行补上授权码；导入对照表的 oauth_clients 一节。
 - i18n：两个授权页面、scope 的说明、用户中心和后台的两个应用页、安全页的新区块、错误码、审计动作、公用应用的名称和说明、设置项的说明。
 - `PROGRESS.md`：每个切片落地时更新"Yggdrasil"和"认证和注册"两条，"还没做"里的 Connect 一条挪过去。
 - 规范只是锁定了的 issue 里的草案。以后有变化，或者有新启动器要接，先照它的请求补兼容用例。
 - 测试：
-  - 不从 BS 录制契约用例：BS 的录制环境没有 Janus，要另外搭，Connect 的响应又几乎全是动态的（令牌、签名、时间）。改为照 PCL-CE、SJMCL、FluentCore 的请求形状写**启动器兼容用例**：设备码请求用 `shared_client_id` 和写死的导入 client_id、不带密钥；轮询到令牌；用 JWKS 的 `keys[0]` 和按 `kid` 两种方式验签；`aud` 等于 client_id；首次和刷新都有 `id_token` 和 `refresh_token`；userinfo 里有 `selectedProfile`；FluentCore 那样漏了 client_id 的刷新返回 `invalid_client`（不迁就）。
+  - 不从 BS 录制契约用例：BS 的录制环境没有 Janus，要另外搭，Connect 的响应又几乎全是动态的（令牌、签名、时间）。改为照 PCL-CE、SJMCL、FluentCore 的请求形状写**启动器兼容用例**：设备码请求用 `shared_client_id` 和写死的导入 client_id、不带密钥；轮询到令牌；用 JWKS 的 `keys[0]` 和按 `kid` 两种方式验签；`aud` 等于 client_id；首次和刷新都有 `id_token` 和 `refresh_token`；userinfo 里有 `selectedProfile`；FluentCore 那样漏了 client_id 的刷新返回错误（不迁就；Better Auth 对公共客户端缺 client_id 返回 `invalid_request`）。
   - 四种数据库上的领域测试：scope 规则在每个入口；部分同意被拒；Select 时必须选角色、别人的角色被拒；设备码只能由认领者在待批准时批准，批准后不能换角色，过期或已兑换的不能批准；`user_id` 被拒；有效期跟着设置；超出上限删最早的；刷新后旧访问令牌失效、旧刷新令牌重放作废整组；进服的每一个条件；`validate`、`invalidate`、`refresh` 对 OAuth 令牌的结果；上传材质要 Join 和对应的角色；每一种吊销；停用应用后令牌失效、启用后恢复；公用应用不能申请 `email`、不能走授权码；发现文档和元数据字段（http 和 https）。
   - e2e：设备码 → 打开 `/device` → 登录 → 选角色 → 同意 → 轮询拿到令牌 → 验 ID 令牌 → `join` → `hasJoined`；授权码加 PKCE，从没登录开始，经两步验证续跑；改密码之后令牌失效。
   - 从 S1 移植过来的胶水代码修复后没有复审过，落地时连同新的钩子做一次独立审核。
@@ -379,6 +390,8 @@ OAuth 令牌**能进服**要同时满足：
 - **`refresh` 接受 OAuth 令牌**：clientToken 和按名字选角色在 OAuth 令牌上都没有对应；启动器刷新 OAuth 令牌走令牌端点。
 - **元数据字段总是给出**：http 站点上启动器会在明文连接上传令牌；`ygg/meta` 契约用例会失败。
 - **设备码流程的角色选择单独一个请求**（S1 的做法）：多一个端点，选择和批准之间有窗口，还要专门处理批准后改选（S1 审核发现 5）。合进批准请求，这些都不存在。
+- **批准页用 Better Auth 的 `/device`、`/device/approve`、`/device/deny`，角色经请求头交给 before 钩子**（这份 ADR 起初的写法）：批准和拒绝按 id 无条件更新状态，钩子的检查和更新之间有窗口，选择也写不进同一个事务。
+- **批准页按用户限流用 Better Auth 的 `customRules`**：它只能按 IP 计数。
 - **允许只同意一部分 scope**：S1 审核发现 2 就出在这里；启动器拿到少于申请的 scope 时不会处理。
 - **只有管理员能创建 OAuth 应用**（ADR-0007 原来的一句）：BS 里普通用户都能建，导入的应用很多属于普通用户，他们要能重置密钥、改回调地址；第三方网站接入本站也不该要找管理员。
 - **用 Better Auth 管理客户端的端点**：它们不检查邮箱验证、不写审计，`delete-consent` 不删令牌；`create-client` 能设 `skip_consent`、任意 scope 和授权方式。

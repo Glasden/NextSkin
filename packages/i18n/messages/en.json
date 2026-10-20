@@ -163,7 +163,13 @@
     "score_out_of_range": "The adjusted balance is out of range: the current balance is {balance}, and it can't go below 0 or above 2147483647.",
     "email_changed": "This user's email address has just changed. Refresh the page and check the new address before trying again.",
     "admin_own_texture": "You uploaded this texture yourself. Edit it from its page as the uploader.",
-    "texture_uploader_gone": "The uploader has deleted their account, so this texture cannot be unpublished. Delete it instead."
+    "texture_uploader_gone": "The uploader has deleted their account, so this texture cannot be unpublished. Delete it instead.",
+    "device_code_invalid": "This code is wrong or has already been used. Start signing in again in your launcher to get a new code.",
+    "device_code_expired": "This code has expired. Start signing in again in your launcher to get a new code.",
+    "device_code_claimed": "This code has already been opened by another account. If that wasn't you on another account, start signing in again in your launcher.",
+    "device_code_processed": "This sign-in has already been handled. Check the result in your launcher.",
+    "device_player_required": "This app signs in with one of your players. Choose a player first.",
+    "oauth_scope_invalid": "This app asked for a combination of permissions that can't be granted. Contact the app's developer."
   },
   "score": {
     "reasons": {
@@ -513,7 +519,8 @@
         "passkeyCount": "{count, plural, other {#}}",
         "launcherCount": "{count, plural, other {#}}",
         "passwordNotSet": "Not set",
-        "externalCount": "{count, plural, other {# linked}}"
+        "externalCount": "{count, plural, other {# linked}}",
+        "authorizationCount": "{count, plural, one {# app} other {# apps}}"
       },
       "password": {
         "title": "Password",
@@ -609,7 +616,7 @@
       },
       "launchers": {
         "title": "Launcher logins",
-        "description": "When you sign in to a game launcher with this account, the launcher keeps a credential for joining servers and uploading skins, and renews it on its next start once it expires. If you lost a phone or signed in on someone else’s computer, sign it out here. Changing your password signs out every launcher.",
+        "description": "When you sign in to a game launcher with this account, the launcher keeps a credential for joining servers and uploading skins, and renews it on its next start once it expires. If you lost a phone or signed in on someone else’s computer, sign it out here. Changing your password signs out every launcher, and the authorized apps below must be authorized again.",
         "empty": "No launcher logins yet. See your <link>dashboard</link> for how to set up a launcher.",
         "player": "Player {name}",
         "noPlayer": "No player selected",
@@ -620,7 +627,7 @@
         "revoked": "Launcher signed out",
         "revokeAll": "Sign out all",
         "revokeAllTitle": "Sign out all {count, plural, one {# launcher} other {# launchers}}?",
-        "revokeAllDescription": "Every launcher will need your password again. Games already on a server and your website sign-in are not affected.",
+        "revokeAllDescription": "Launchers that signed in with your password will need it again. Games already on a server, your website sign-in and the authorized apps below are not affected.",
         "revokeAllConfirm": "Sign out all",
         "revokedAll": "All launchers signed out",
         "failed": "That didn’t work. Try again later."
@@ -644,6 +651,20 @@
         "reauthDescription": "For your security, you need to have signed in within the last 10 minutes to link an account. You’ll come back to this page after signing in.",
         "reauth": "Sign in again",
         "failed": "That didn’t work. Please try again later."
+      },
+      "authorizations": {
+        "title": "Authorized apps",
+        "description": "Apps you approved on the launcher authorization page. Revoking an app signs out everything it holds; it must be authorized again next time. Changing your password signs them out too.",
+        "empty": "You haven’t authorized any apps yet.",
+        "players": "Player {names}",
+        "noPlayers": "No player bound",
+        "authorizedAt": "Authorized {time}",
+        "revoke": "Revoke",
+        "revokeTitle": "Revoke {name}?",
+        "revokeDescription": "Everything it signed in with stops working, and launchers using it must be authorized again. Games already on a server are not affected.",
+        "revokeConfirm": "Revoke",
+        "revoked": "Revoked {name}",
+        "failed": "That didn’t work. Try again later."
       }
     },
     "closet": {
@@ -1635,15 +1656,15 @@
           },
           "tokenValidSeconds": {
             "label": "Token validity",
-            "help": "Seconds. Tokens can join servers, validate and change textures during this period."
+            "help": "Seconds. Tokens can join servers, validate and change textures during this period. Applies to launcher logins and authorized apps."
           },
           "tokenRefreshableSeconds": {
             "label": "Token refresh period",
-            "help": "Seconds. Sign in again after this period. Uses the validity period if it is longer."
+            "help": "Seconds. Sign in or authorize again after this period. Uses the validity period if it is longer."
           },
           "tokensPerUser": {
             "label": "Tokens per user",
-            "help": "Tokens. Issuing a token removes the oldest launcher logins above this limit."
+            "help": "Tokens. Issuing a token removes the oldest launcher logins above this limit; each authorized app counts against its own limit."
           },
           "loginIntervalMs": {
             "label": "Login request interval",
@@ -1970,7 +1991,7 @@
         "copied": "Password copied",
         "copyFailed": "Couldn’t copy. Select the text and copy it manually.",
         "generateHint": "A random password is shown only this once and is gone when the dialog closes. Copy it first.",
-        "passwordRevokes": "Signs out all {sessions, plural, one {# web session} other {# web sessions}} and {tokens, plural, one {# launcher sign-in} other {# launcher sign-ins}}",
+        "passwordRevokes": "Signs out all {sessions, plural, one {# web session} other {# web sessions}} and {tokens, plural, one {# launcher sign-in} other {# launcher sign-ins}}, and revokes tokens held by authorized apps",
         "passwordRevokesPending": "Voids unfinished two-factor sign-ins, password reset links and unconfirmed email change links",
         "passwordKeeps": "{passkeys, plural, one {# passkey} other {# passkeys}} and {bindings, plural, one {# linked account} other {# linked accounts}} stay, so anyone holding them can sign right back in. If the account has been taken over, choose account recovery.",
         "takeover": "Recover account",
@@ -2003,7 +2024,7 @@
         "unlinked": "Unlinked {name}. Signed out {sessions, plural, one {# web session} other {# web sessions}} and {tokens, plural, one {# launcher sign-in} other {# launcher sign-ins}}",
         "revokeSessions": "Sign out everywhere",
         "revokeSessionsTitle": "Sign {nickname} out everywhere?",
-        "revokeSessionsHint": "Signs out all {sessions, plural, one {# web session} other {# web sessions}} and {tokens, plural, one {# launcher sign-in} other {# launcher sign-ins}}, and voids unfinished two-factor sign-ins, password reset links and unconfirmed email change links.",
+        "revokeSessionsHint": "Signs out all {sessions, plural, one {# web session} other {# web sessions}} and {tokens, plural, one {# launcher sign-in} other {# launcher sign-ins}}, revokes tokens held by authorized apps, and voids unfinished two-factor sign-ins, password reset links and unconfirmed email change links.",
         "revokeSessionsKeeps": "The password, {passkeys, plural, one {# passkey} other {# passkeys}} and {bindings, plural, one {# linked account} other {# linked accounts}} stay, so anyone who knows or holds them can sign right back in. If the account has been taken over, use account recovery under “Set password”.",
         "sessionsRevoked": "Signed out {sessions, plural, one {# web session} other {# web sessions}} and {tokens, plural, one {# launcher sign-in} other {# launcher sign-ins}}"
       },
@@ -2499,7 +2520,21 @@
         "invalid_status": "Unknown status",
         "reporter_missing": "Reporter missing, cleared",
         "invalid_report_at": "Invalid report time, set to the import time",
-        "unsupported_client": "Personal access or password grant client, no longer supported"
+        "unsupported_client": "Personal access or password grant client, no longer supported",
+        "janus_public_client": "Janus public client, converted to a public client"
+      },
+      "publicClients": {
+        "title": "Janus public clients",
+        "description": "These applications had the Janus public client marker among their redirect URIs. The marker and secret were removed, and they were converted to public clients with device code sign-in. Sites that connected with the secret must switch to the public client flow (authorization code with PKCE); the old secret is now rejected.",
+        "columns": {
+          "client": "Application",
+          "secret": "Old secret",
+          "redirects": "Remaining redirect URIs"
+        },
+        "unnamed": "(No name)",
+        "hadSecret": "Yes, revoked",
+        "noSecret": "None",
+        "deviceOnly": "None left, device code sign-in only"
       },
       "files": {
         "total": "Files",
@@ -2578,5 +2613,52 @@
     "failedPlain": "Couldn't complete this, and the plugin didn't say why.",
     "invalid": "Some fields aren't filled in correctly. Fix them and submit again.",
     "count": "{count, number} in total"
+  },
+  "oauth": {
+    "sharedClient": "{site} shared app",
+    "unnamedClient": "Unnamed app",
+    "owner": "Created by {nickname}",
+    "noOwner": "The creator’s account no longer exists",
+    "sharedHint": "Built into this site. Any launcher can start a sign-in in its name.",
+    "scopes": {
+      "openid": "Confirm your account on this site",
+      "profile": "See your nickname and avatar",
+      "email": "See your email address",
+      "offlineAccess": "Stay signed in without asking you again",
+      "playerSelect": "See the player you choose",
+      "playerRead": "See all your players",
+      "serverJoin": "Join servers as the chosen player and change its skin and cape"
+    }
+  },
+  "device": {
+    "title": "Authorize a launcher",
+    "enterDescription": "Enter the code shown in your launcher or on your device to let it use your account.",
+    "code": "Code",
+    "codeHint": "8 letters and digits, not case-sensitive.",
+    "continue": "Continue",
+    "invalid": "That code wasn’t found, or it has already been used. Check the code in your launcher and enter it again.",
+    "expired": "This code has expired. Go back to your launcher and sign in again.",
+    "claimed": "This code was already opened by another account. Go back to your launcher and sign in again.",
+    "tooManyAttempts": "Too many wrong codes. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+    "requestTitle": "Confirm authorization",
+    "codeLabel": "Code shown in your launcher",
+    "expiresAt": "Valid until {time}",
+    "warning": "Only continue if you just started signing in on your own launcher or device. Never enter a code someone sent you.",
+    "permissions": "Once authorized, it can:",
+    "player": "Choose a player",
+    "playerHint": "It can only see and use this one player. Authorize again to switch players.",
+    "noSkin": "No skin yet",
+    "noPlayers": "It needs a player, and you don’t have one yet.",
+    "createPlayer": "Create a player",
+    "banned": "Your account is banned and can’t authorize apps.",
+    "approve": "Authorize",
+    "deny": "Deny",
+    "failed": "That didn’t work. Try again.",
+    "approvedTitle": "Authorized",
+    "approved": "Go back to your launcher; it will finish signing in. You can close this page.",
+    "deniedTitle": "Denied",
+    "denied": "{name} didn’t get any access. You can close this page.",
+    "figure": "{name}’s skin",
+    "figureEmpty": "{name} has no skin yet"
   }
 }

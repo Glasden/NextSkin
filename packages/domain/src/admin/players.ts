@@ -3,6 +3,7 @@
  * 检查 players.manage；主人在加锁之前读出，锁住主人之后按 user_id = 主人重读角色，读不到（这期间被转让或删除了）
  * 返回 player_not_found。设置、邮件是否配置在事务外读好：读它们用的是 db，SQLite 只有一个连接，在事务里读会死锁
  */
+import { deletePlayerAuthorizations } from '../oauth/revoke.ts'
 import { isUniqueViolation, toIsoTimestamp, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
 import type { Player } from '@nextskin/plugin-sdk'
 import type { Transaction } from 'kysely'
@@ -142,6 +143,7 @@ export function createAdminPlayers(options: AdminOptions) {
       await tx.updateTable('players').set(patch).where('id', '=', pid).where('user_id', '=', owner.id).execute()
       await tx.deleteFrom('yggdrasil_tokens').where('player_id', '=', pid).execute()
       await tx.deleteFrom('device_code_selections').where('player_id', '=', pid).execute()
+      await deletePlayerAuthorizations(tx, pid)
 
       // 两个事件用同一个转让之后的 Player：先发清掉材质的 texturesChanged，再发 transferred
       const player = toPlayer({ ...row, ...patch })
@@ -201,6 +203,7 @@ export function createAdminPlayers(options: AdminOptions) {
     await transactionWithRetry(db, async (tx) => {
       const { eventActor, owner, row } = await managedPlayer(tx, actor, pid)
       const timestamp = toIsoTimestamp(now())
+      await deletePlayerAuthorizations(tx, pid)
       await tx.deleteFrom('players').where('id', '=', pid).where('user_id', '=', owner.id).execute()
       await events.emit(
         tx,

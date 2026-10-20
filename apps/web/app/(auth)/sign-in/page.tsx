@@ -26,7 +26,8 @@ export default async function SignInPage({ searchParams }: PageProps<'/sign-in'>
   return (
     <>
       <AuthHeading title={t('title')}>
-        {t('noAccount')} <Link render={<NextLink href="/sign-up" />}>{t('signUp')}</Link>
+        {t('noAccount')}{' '}
+        <Link render={<NextLink href={`/sign-up?next=${encodeURIComponent(next)}`} />}>{t('signUp')}</Link>
       </AuthHeading>
       {error && (
         <div className="mb-6">

@@ -29,3 +29,4 @@ export { coreConfigFromEnv, type CoreConfig } from './bootstrap.ts'
 export { isLocale, matchLocale, type Locale } from '@nextskin/i18n'
 
 export { isSiteInitialized } from './setup/initialized.ts'
+export { SHARED_OAUTH_CLIENT_ID, DEVICE_CODE_GRANT_TYPE } from './oauth/scopes.ts'

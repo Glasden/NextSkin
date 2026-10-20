@@ -1,3 +1,5 @@
+import { registerDevices } from './devices.ts'
+import { registerUserAuthorizations } from './user-authorizations.ts'
 import type { ImportGateway } from '../import-gateway.ts'
 import { registerSetup } from './setup.ts'
 import { registerImport } from './import.ts'
@@ -162,6 +164,8 @@ export function createRestApp(
   registerCheckIn(app, core)
   registerUser(app, core, rateLimiter)
   registerYggdrasilTokens(app, core)
+  registerDevices(app, core)
+  registerUserAuthorizations(app, core)
   app.doc('/openapi.json', {
     openapi: '3.0.0',
     info: { title: 'NextSkin REST API', version: '1.0.0' },

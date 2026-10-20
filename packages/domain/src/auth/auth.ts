@@ -8,6 +8,9 @@ import { APIError, createAuthMiddleware, isAPIError } from 'better-auth/api'
 import { hashPassword } from 'better-auth/crypto'
 import { jwt, twoFactor } from 'better-auth/plugins'
 import type { Kysely } from 'kysely'
+import { isValidScopeSet, OAUTH_SCOPES, splitScopes } from '../oauth/scopes.ts'
+import { bindDeviceSelection, yggdrasilConnect } from './connect.ts'
+import { connectClaims } from './connect-claims.ts'
 import type { MailService } from '../mail/service.ts'
 import {
   EMAIL_VERIFICATION_TTL_SECONDS,
@@ -30,9 +33,11 @@ import { serialSafety } from './serial-safety.ts'
 export const AUTH_BASE_PATH = '/api/auth'
 export const CLIENT_IP_HEADER = 'x-nextskin-client-ip'
 
-export const OAUTH_SCOPES = ['openid', 'profile', 'email', 'offline_access']
-
 export interface AuthConfig {
+  tokenValidSeconds?: number
+  tokenRefreshableSeconds?: number
+  tokensPerUser?: () => Promise<number>
+  requireEmailVerification?: () => Promise<boolean>
   db: Kysely<CoreDatabase>
   /** .env 里的 NEXTSKIN_SECRET；Better Auth 的密钥由它派生 */
   secretKey: string
@@ -78,16 +83,11 @@ const logger: BetterAuthOptions['logger'] = {
   },
 }
 
-async function isAdmin(db: Kysely<CoreDatabase>, userId: string | number): Promise<boolean> {
-  const id = Number(userId)
-  if (!Number.isSafeInteger(id)) return false
-  const row = await db.selectFrom('users').select('role').where('id', '=', id).executeTakeFirst()
-  return row?.role === 'admin' || row?.role === 'superadmin'
-}
-
 /** Better Auth 的完整配置。schema 比对测试直接用它，不创建实例（创建实例会在后台连库做 schema 检查） */
 export function authOptions(config: AuthConfig) {
   const { db } = config
+  const tokenValidSeconds = config.tokenValidSeconds ?? 259200
+  const { providerOptions } = connectClaims(db, config.siteUrl)
   const site = new URL(config.siteUrl)
   const passwords: StoredPasswordCheck = { legacySalt: config.legacyPasswordSalt, plugins: config.passwordPlugins }
   async function passwordChanged(uid: string) {
@@ -238,12 +238,36 @@ export function authOptions(config: AuthConfig) {
       '/account-info',
       '/get-access-token',
       '/refresh-token',
+      '/oauth2/register',
+      '/oauth2/create-client',
+      '/admin/oauth2/create-client',
+      '/oauth2/update-client',
+      '/admin/oauth2/update-client',
+      '/oauth2/delete-client',
+      '/oauth2/get-client',
+      '/oauth2/get-clients',
+      '/oauth2/client/rotate-secret',
+      '/oauth2/client/rotate-keys',
+      '/oauth2/public-client',
+      '/oauth2/public-client-prelogin',
+      '/oauth2/get-consent',
+      '/oauth2/get-consents',
+      '/oauth2/update-consent',
+      '/oauth2/delete-consent',
+      '/oauth2/end-session',
+      '/oauth2/end-session/confirm',
+      '/device/token',
+      '/device',
+      '/device/approve',
+      '/device/deny',
+      '/.well-known/oauth-authorization-server',
     ],
     advanced: {
       ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
       database: { generateId: 'serial' },
       cookiePrefix: 'nextskin',
     },
+    rateLimit: { customRules: { '/oauth2/token': { window: 60, max: 300 }, '/device/code': { window: 60, max: 30 } } },
     telemetry: { enabled: false },
     logger,
     // 默认的错误处理用 Better Auth 模块级的 logger 打印错误消息，绕过上面的 logger。客户端错误已经在响应里，
@@ -264,16 +288,45 @@ export function authOptions(config: AuthConfig) {
           loginPage: '/sign-in',
           consentPage: '/oauth/consent',
           scopes: OAUTH_SCOPES,
+          grantTypes: ['authorization_code', 'refresh_token'],
+          accessTokenExpiresIn: tokenValidSeconds,
+          idTokenExpiresIn: tokenValidSeconds,
+          refreshTokenExpiresIn: Math.max(tokenValidSeconds, config.tokenRefreshableSeconds ?? 604800),
+          ...providerOptions,
           storeTokens: { hash: (token) => Promise.resolve(sha256(token)) },
           storeClientSecret: { hash: (secret) => Promise.resolve(sha256(secret)) },
           // 不接受 DPoP（ADR-0015：serial 下它的防重放不起作用）
           dpop: { signingAlgorithms: [] },
-          // 管理 OAuth 客户端和资源需要管理员（ADR-0007）。资源的管理端点只能在服务端调用，同样限制，免得以后误用
-          clientPrivileges: async ({ user }) => (user ? isAdmin(db, user.id) : false),
-          resourcePrivileges: async ({ user }) => (user ? isAdmin(db, user.id) : false),
+          // 客户端管理经过领域用例；资源管理不开放（ADR-0037）。
+          clientPrivileges: () => false,
+          resourcePrivileges: () => false,
         }),
       ),
-      withNamingConvention(oauthDeviceAuthorization({ verificationUri: '/device' })),
+      withNamingConvention(
+        bindDeviceSelection(
+          oauthDeviceAuthorization({
+            verificationUri: '/device',
+            expiresIn: '10m',
+            interval: '5s',
+            onDeviceAuthRequest: (_clientId, scope) => {
+              const scopes = splitScopes(scope)
+              if (!scopes.length || !isValidScopeSet(scopes))
+                throw new APIError('BAD_REQUEST', {
+                  error: 'invalid_scope',
+                  error_description: 'Invalid scope combination',
+                })
+              return Promise.resolve()
+            },
+          }),
+          db,
+        ),
+      ),
+      yggdrasilConnect(
+        db,
+        config.tokensPerUser ?? (() => Promise.resolve(10)),
+        config.siteUrl,
+        config.requireEmailVerification ?? (() => Promise.resolve(false)),
+      ),
       withNamingConvention(twoFactor({ issuer: config.siteName })),
       withNamingConvention(passkey({ rpID: site.hostname, rpName: config.siteName, origin: site.origin })),
       serialSafety(),

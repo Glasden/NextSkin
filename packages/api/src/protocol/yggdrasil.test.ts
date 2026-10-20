@@ -45,6 +45,7 @@ function setup(settings: Partial<Record<CoreSettingKey, unknown>> = {}) {
     }),
   }
   const upload = vi.fn().mockResolvedValue({ texture: {}, charged: 0 })
+  const openIdConfigurationUrl = vi.fn().mockResolvedValue(null)
   const core = {
     settings: {
       read: (keys: CoreSettingKey[]) =>
@@ -54,7 +55,7 @@ function setup(settings: Partial<Record<CoreSettingKey, unknown>> = {}) {
     },
     yggdrasil: methods,
     players: { findByUuid: vi.fn().mockResolvedValue(player) },
-    auth: { getSessionUser: vi.fn().mockResolvedValue({ uid: 42 }) },
+    auth: { openIdConfigurationUrl, getSessionUser: vi.fn().mockResolvedValue({ uid: 42 }) },
     textures: { upload },
   } as unknown as Core
   const app = createApp({ core })
@@ -70,7 +71,7 @@ function setup(settings: Partial<Record<CoreSettingKey, unknown>> = {}) {
     body.set('model', ' slim ')
     return body
   }
-  return { app, request, methods, form, upload }
+  return { app, request, methods, form, upload, openIdConfigurationUrl }
 }
 
 test('authserver 递归 trim，保留原密码；异常字符串参数交给领域层为 null', async () => {
@@ -371,3 +372,17 @@ test('上传路径 OPTIONS 和 405 返回两种方法；不读取文件也不调
   expect(methods.uploadTexture).not.toHaveBeenCalled()
   expect(methods.resetTexture).not.toHaveBeenCalled()
 })
+
+test.each([null, 'https://skin.example.test/api/auth/.well-known/openid-configuration'])(
+  '元数据的发现地址取自认证服务：%s',
+  async (url) => {
+    const { app, openIdConfigurationUrl } = setup()
+    openIdConfigurationUrl.mockResolvedValue(url)
+    const response = await app.request('http://example.test/api/yggdrasil', {
+      headers: { 'x-forwarded-proto': 'https' },
+    })
+    const body = (await response.json()) as { meta: Record<string, unknown> }
+    if (url) expect(body.meta['feature.openid_configuration_url']).toBe(url)
+    else expect(body.meta).not.toHaveProperty('feature.openid_configuration_url')
+  },
+)

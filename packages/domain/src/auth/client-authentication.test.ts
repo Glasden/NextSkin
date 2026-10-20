@@ -33,16 +33,19 @@ async function normalize(input: Request) {
   }
 }
 
-test.each(['token', 'introspect', 'revoke'])('%s：登记为 post 的客户端用 Basic 时，改写成请求体', async (endpoint) => {
-  const result = await normalize(
-    request(`/api/auth/oauth2/${endpoint}`, { token: 't' }, { authorization: basic('post', 'secret') }),
-  )
-  expect(result).toEqual({
-    same: false,
-    authorization: null,
-    form: { token: 't', client_id: 'post', client_secret: 'secret' },
-  })
-})
+test.each(['/oauth2/token', '/oauth2/introspect', '/oauth2/revoke', '/device/code'])(
+  '%s：登记为 post 的客户端用 Basic 时，改写成请求体',
+  async (endpoint) => {
+    const result = await normalize(
+      request(`/api/auth${endpoint}`, { token: 't' }, { authorization: basic('post', 'secret') }),
+    )
+    expect(result).toEqual({
+      same: false,
+      authorization: null,
+      form: { token: 't', client_id: 'post', client_secret: 'secret' },
+    })
+  },
+)
 
 test.each(['basic', 'unset'])('登记为 %s 的客户端在请求体里传密钥时，改写成 Basic', async (clientId) => {
   const result = await normalize(request('/api/auth/oauth2/token', { client_id: clientId, client_secret: 's' }))

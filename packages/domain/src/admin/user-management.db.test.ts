@@ -196,6 +196,11 @@ async function snapshot() {
     closet: await db.selectFrom('closet_items').selectAll().orderBy('user_id').orderBy('texture_id').execute(),
     score: await db.selectFrom('score_transactions').selectAll().orderBy('id').execute(),
     oauthClients: await db.selectFrom('oauth_clients').select(['id', 'user_id']).orderBy('id').execute(),
+    oauthAccess: await db.selectFrom('oauth_access_tokens').selectAll().orderBy('id').execute(),
+    oauthRefresh: await db.selectFrom('oauth_refresh_tokens').selectAll().orderBy('id').execute(),
+    oauthConsents: await db.selectFrom('oauth_consents').selectAll().orderBy('id').execute(),
+    deviceCodes: await db.selectFrom('device_codes').selectAll().orderBy('id').execute(),
+    deviceSelections: await db.selectFrom('device_code_selections').selectAll().orderBy('device_code').execute(),
     audit: await db.selectFrom('audit_logs').selectAll().orderBy('id').execute(),
     jobs: await db.selectFrom('jobs').selectAll().orderBy('id').execute(),
   }

@@ -121,3 +121,7 @@ export type {
 export type { DeadLetter } from './jobs/store.ts'
 export { pluginFieldKey } from './plugins/form-fields.ts'
 export { canPlugin } from './access/permissions.ts'
+
+export type { OAuthClientSummary, DeviceCodeView } from './oauth/devices.ts'
+export type { OAuthAuthorization } from './oauth/authorizations.ts'
+export { OAUTH_SCOPES, SELECT_SCOPE, READ_SCOPE, JOIN_SCOPE, SHARED_OAUTH_CLIENT_ID } from './oauth/scopes.ts'

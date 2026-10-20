@@ -1,5 +1,6 @@
 // 目标库：能不能写、清空业务数据（ADR-0031"每次运行整库替换"）
 import { countRows, toIsoTimestamp, type CoreDatabase, type IsoTimestamp } from '@nextskin/db'
+import { SHARED_OAUTH_CLIENT_ID } from '@nextskin/domain/importer'
 import { sql, type Kysely } from 'kysely'
 import type { BlockingIssue, ImportWatermark, NewSiteData, TargetCounts } from './report.ts'
 
@@ -86,7 +87,7 @@ export interface TargetState {
 
 /** 提交之前记下这次导入写进去的范围（ImportWatermark） */
 export async function importWatermark(db: Kysely<CoreDatabase>): Promise<ImportWatermark> {
-  const max = async (table: 'users' | 'players' | 'textures' | 'reports' | 'oauth_clients') =>
+  const max = async (table: 'users' | 'players' | 'textures' | 'reports') =>
     Number(
       (
         await db
@@ -107,7 +108,16 @@ export async function importWatermark(db: Kysely<CoreDatabase>): Promise<ImportW
     maxPlayerId: await max('players'),
     maxTextureId: await max('textures'),
     maxReportId: await max('reports'),
-    maxOAuthClientId: await max('oauth_clients'),
+    // 公用应用由迁移插入，升级时 id 可能比旧水位大；不属于导入或新站操作
+    maxOAuthClientId: Number(
+      (
+        await db
+          .selectFrom('oauth_clients')
+          .select((eb) => eb.fn.max('id').as('max'))
+          .where('client_id', '!=', SHARED_OAUTH_CLIENT_ID)
+          .executeTakeFirst()
+      )?.max ?? 0,
+    ),
     playersUpdatedAt: await latest('players'),
     texturesUpdatedAt: await latest('textures'),
   }
@@ -121,7 +131,9 @@ export async function inspectTarget(db: Kysely<CoreDatabase>): Promise<TargetSta
   }
   let hasData = false
   for (const table of [...BUSINESS_TABLES, 'texture_files'] as const) {
-    if ((await sql`select 1 from ${sql.table(table)} limit 1`.execute(db)).rows.length) {
+    // 刚迁移的空库也有公用应用，它本身不需要服主确认删除新站数据
+    const where = table === 'oauth_clients' ? sql`where client_id <> ${SHARED_OAUTH_CLIENT_ID}` : sql``
+    if ((await sql`select 1 from ${sql.table(table)} ${where} limit 1`.execute(db)).rows.length) {
       hasData = true
       break
     }
@@ -179,7 +191,12 @@ export async function inspectTarget(db: Kysely<CoreDatabase>): Promise<TargetSta
     reports: await countRows(
       db.selectFrom('reports').where((eb) => eb.or([eb('id', '>', mark.maxReportId), eb('resolved_at', '>', since)])),
     ),
-    oauthClients: await countRows(db.selectFrom('oauth_clients').where('id', '>', mark.maxOAuthClientId)),
+    oauthClients: await countRows(
+      db
+        .selectFrom('oauth_clients')
+        .where('id', '>', mark.maxOAuthClientId)
+        .where('client_id', '!=', SHARED_OAUTH_CLIENT_ID),
+    ),
     auditLogs: await countRows(db.selectFrom('audit_logs')),
     other:
       (await countRows(db.selectFrom('verifications'))) +
@@ -213,5 +230,9 @@ export function targetIssue(state: TargetState, flags: { replace: boolean; force
  * texture_files 留到最后：上一次导入的行要用来沿用像素 hash（textures.ts）
  */
 export async function clearBusinessData(db: Kysely<CoreDatabase>): Promise<void> {
-  for (const table of BUSINESS_TABLES) await db.deleteFrom(table).execute()
+  for (const table of BUSINESS_TABLES) {
+    // 保留公用应用的 id 和停用状态；令牌、同意记录和设备码仍在前面清空
+    if (table === 'oauth_clients') await db.deleteFrom(table).where('client_id', '!=', SHARED_OAUTH_CLIENT_ID).execute()
+    else await db.deleteFrom(table).execute()
+  }
 }

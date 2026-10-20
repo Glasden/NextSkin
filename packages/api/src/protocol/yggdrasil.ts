@@ -99,6 +99,7 @@ export function registerYggdrasil(app: Hono<AppEnv>, core: Core, uploadRateLimit
     const key = await core.yggdrasil.getSigningKey()
     if (!key) throw signingKeyUnavailable()
     const root = c.get('requestRoot')
+    const openIdConfigurationUrl = await core.auth.openIdConfigurationUrl(root)
     return c.json({
       meta: {
         serverName: settings['site.name'],
@@ -106,6 +107,7 @@ export function registerYggdrasil(app: Hono<AppEnv>, core: Core, uploadRateLimit
         implementationVersion: '0.0.0',
         links: { homepage: root, register: `${root}/auth/register` },
         'feature.non_email_login': true,
+        ...(openIdConfigurationUrl ? { 'feature.openid_configuration_url': openIdConfigurationUrl } : {}),
       },
       skinDomains: skinDomains(settings['yggdrasil.skinDomains'], settings['site.url'], root),
       signaturePublickey: key.publicKey,

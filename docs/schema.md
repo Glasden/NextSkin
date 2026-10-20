@@ -44,6 +44,7 @@ Better Auth 的 user 模型加上我们的领域字段。领域字段都有默�
 | registration_ip | varchar(45) | 可空 | 用于"同一 IP 注册数"限制 |
 | last_check_in_at | 时间 | 可空 | 上次签到时间。签到用一条带条件的 UPDATE 同时改它和积分，保证一天只能签到一次 |
 | email_version | integer | 非空，默认 0 | 邮箱每改一次加一；后台发起改邮箱、作废在途的登录时也加一（ADR-0036）。改邮箱的确认链接带着签发时的版本，版本对不上就作废（ADR-0024） |
+| oauth_version | integer | 非空，默认 0 | 每删一次这个用户的 OAuth 令牌（改密码、作废在途的登录、取消对某个应用的授权）加一。令牌端点开始时记下它，签发之后锁住用户行再核对，对不上就撤回刚签发的令牌：吊销恰好提交在 Better Auth 消费设备码或旧刷新令牌、插入新令牌这两步之间时，删不到新令牌（ADR-0037"吊销"） |
 
 `users` 和 `textures` 互相引用，所以 `avatar_texture_id` 在建完 `textures` 之后再加。
 
@@ -61,11 +62,11 @@ Better Auth 的 user 模型加上我们的领域字段。领域字段都有默�
 | accounts | 核心 | 密码存在这里：`provider_id = 'credential'` 的那一行。第三方登录的绑定也在这里：`provider_id` 是 `plugin:<插件 id>:<Provider id>`，`account_id` 是第三方的 subject，令牌各列留空；`account_id`、`provider_id` 是 ascii 的 `authStringType(255)`，`(provider_id, account_id)` 和 `(user_id, provider_id)` 各有唯一索引（ADR-0034） |
 | verifications | 核心 | 一次性令牌：找回密码 `reset-password:<令牌>`（值是 uid）；两步验证的挑战 `2fa-<随机>`（值是 uid）和它的尝试计数 `2fa-attempts-2fa-<随机>`（值是次数）；"信任这台设备" `trust-device-<随机>`（值是 uid）；通行密钥的 WebAuthn 挑战（标识是不带前缀的随机串）；第三方登录的暂存 `external-login:state:…`、`external-login:pending:…`（`…` 是 Cookie 里随机值的 sha256，ADR-0034）。Better Auth 写的标识按明文存储（`verification.storeIdentifier` 保持默认），后台按格式和值（uid）删除：作废在途的登录删掉找回密码链接和两步验证的挑战（连同尝试计数），关两步验证删掉两步验证的挑战和"信任这台设备"，邮箱改动生效时删掉找回密码链接（ADR-0036）。邮箱验证用的是 JWT，不经过这张表 |
 | jwks | jwt | ID 令牌的签名密钥 |
-| oauth_clients、oauth_resources、oauth_client_resources | oauth-provider | |
-| oauth_access_tokens、oauth_refresh_tokens | oauth-provider | 令牌按我们指定的 sha256 存储（ADR-0007） |
-| oauth_consents | oauth-provider | Yggdrasil Connect 选择的角色存在 `reference_id`（`player:<pid>`） |
+| oauth_clients、oauth_resources、oauth_client_resources | oauth-provider | `client_id = 'shared'` 的一行是公用应用（ADR-0037），由迁移插入：没有主人和密钥，认证方式 `none`，授权方式只有设备码和刷新，scope 里没有 `email`。不能删除；导入器整库替换时保留这一行（id、停用状态不变） |
+| oauth_access_tokens、oauth_refresh_tokens | oauth-provider | 令牌按我们指定的 sha256 存储（ADR-0007），和 `yggdrasil_tokens.access_token_hash` 同一种编码：进服和 authserver 先查启动器令牌、查不到再按同一个哈希查这里（ADR-0037）。Yggdrasil Connect 绑定的角色存在 `reference_id`（`player:<pid>`，刷新时沿用）；`reference_id` 是 ascii 的 `varchar(255)`，有索引（`<表>_reference_id_idx`），角色转让和删除时按它吊销 |
+| oauth_consents | oauth-provider | Yggdrasil Connect 选择的角色存在 `reference_id`（`player:<pid>`，类型和索引同上）。改密码、作废在途的登录时保留，角色转让和删除时随角色删除（ADR-0037"吊销"） |
 | oauth_client_assertions | oauth-provider | 只给 `private_key_jwt` 用，serial 下它的防重放不起作用，这种认证方式已关闭（ADR-0015）。表照建，Better Auth 的 schema 比对要求它存在 |
-| device_codes | 设备授权 | |
+| device_codes | 设备授权 | `user_id` 是 text（uid 的字符串，没有外键）：打开批准页时认领（ADR-0007），删除账号、作废在途的登录时显式删掉这个用户认领了的、还没兑换的行 |
 | two_factors | 两步验证 | |
 | passkeys | 通行密钥 | 来自单独的 `@better-auth/passkey` 包 |
 
@@ -73,7 +74,7 @@ Better Auth 的 user 模型加上我们的领域字段。领域字段都有默�
 
 ### device_code_selections
 
-Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007、S1）。随认证切片落地。
+Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007、S1、ADR-0037）。批准页的领域用例在批准设备码的同一个事务里写入（`oauth/devices.ts`），不经过 Better Auth 的 `/device/approve`。
 
 | 列 | 类型 | 约束 | 说明 |
 |---|---|---|---|
@@ -82,7 +83,7 @@ Yggdrasil Connect 设备流里，用户在批准页上选择的角色（ADR-0007
 | player_id | integer | 非空；外键 → players，cascade | |
 | created_at | 时间 | 非空 | |
 
-令牌兑换、请求被拒绝，或者角色被后台转让（ADR-0036）后删除这一行。设备码过期后没人处理的，由 `core:auth-cleanup` 删除（ADR-0029）。
+令牌兑换（成功或失败都删，`auth/connect.ts`）、请求被拒绝、用户取消对这个应用的授权、作废在途的登录，或者角色被后台转让（ADR-0036）后删除这一行。设备码过期后没人处理的，由 `core:auth-cleanup` 删除（ADR-0029）。
 
 ## 角色
 
@@ -401,11 +402,11 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 
 每次运行都从旧库重新导入全部数据，在一个目标库事务里先清空、再写入；有停止类问题、出错或被取消就整体回滚（ADR-0031）。
 
-- **清空的范围**：所有业务数据，即用户（连同级联删除的账号、会话、角色、衣柜、令牌等）、材质、材质文件、举报、OAuth 客户端、积分流水、审计日志、任务。保留 `settings` 里导入器不写的键、Better Auth 的 `jwks` 和 `oauth_resources`、`job_schedules`、`import_runs`、迁移记录。`texture_files` 最后处理：这次运行用到的行沿用或改写，用不到的删掉。
+- **清空的范围**：所有业务数据，即用户（连同级联删除的账号、会话、角色、衣柜、令牌等）、材质、材质文件、举报、OAuth 客户端（公用应用这一行除外，它名下的令牌、同意记录和设备码照样清掉）、积分流水、审计日志、任务。保留 `settings` 里导入器不写的键、Better Auth 的 `jwks` 和 `oauth_resources`、`job_schedules`、`import_runs`、迁移记录。`texture_files` 最后处理：这次运行用到的行沿用或改写，用不到的删掉。
 - **能不能写**：
   - 目标库没有业务数据（会被清空的表里一行都没有）：直接导入；
   - 有数据，并且来自上一次导入：命令行要加 `--replace`，网页上要勾选确认；
-  - 上一次导入之后新站产生了数据，或者有数据却从没导入过：停止并列出，命令行再加 `--force`、网页上再勾选一次才继续。新站的数据指：会话、OAuth 令牌和授权、启动器令牌、不是"导入"的积分流水、审计记录；id 大于上一次导入范围的用户、角色、材质、举报、OAuth 客户端；导入之后改过的角色和材质（`updated_at` 晚于导入范围）、加入的衣柜、处理过的举报；找回密码、两步验证、通行密钥、设备码，以及不是定时触发的后台任务。
+  - 上一次导入之后新站产生了数据，或者有数据却从没导入过：停止并列出，命令行再加 `--force`、网页上再勾选一次才继续。新站的数据指：会话、OAuth 令牌和授权、启动器令牌、不是"导入"的积分流水、审计记录；id 大于上一次导入范围的用户、角色、材质、举报、OAuth 客户端（公用应用由迁移插入，不算）；导入之后改过的角色和材质（`updated_at` 晚于导入范围）、加入的衣柜、处理过的举报；找回密码、两步验证、通行密钥、设备码，以及不是定时触发的后台任务。
 - **指定 UUID**（`--uuid-overrides`，网页上在试跑报告的冲突旁边选择）：JSON 对象，键是 pid 的字符串，值是 UUID，带不带连字符、大小写都可以，导入时统一成 32 位小写十六进制。指定的值同样要通过"两个角色得到同一个 UUID"的检查。
 - **像素 hash**：按上传的规则解码、规范化后计算（`@nextskin/skin`），文件不重新编码。规范化按引用这个文件的 `tid` 最小的材质的类型。能解码、但尺寸不合 NextSkin 规则的文件按解码出的原图计算，照样导入，在报告里列出。重跑时，上一次导入的 `texture_files` 里有同一 hash、同样大小的行，沿用它的像素 hash 和宽高。
 - 材质文件在事务之外按 hash 复制进材质存储，存储里已经有、大小相同的不再复制。回滚后多出来的文件由 `core:texture-sweep` 回收（ADR-0029）。
@@ -428,6 +429,7 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 | ip | registration_ip | |
 | last_sign_at | last_check_in_at | |
 | — | email_version | 0：BS 的邮箱修改立即生效，没有待确认的链接（ADR-0024） |
+| — | oauth_version | 0 |
 | register_at | created_at、updated_at | |
 | verified | email_verified | |
 | password | accounts 里 `provider_id = 'credential'` 的一行 | `account_id` 写 uid 的字符串（Better Auth 按它找密码）。哈希登录成功后换成当前算法（ADR-0007）。BS 的算法和盐取决于旧站 `.env` 的 `PWD_METHOD` 和 `SALT`，导入命令要拿到这两项：bcrypt、argon2（`BCRYPT`、`ARGON2I`、`PHP_PASSWORD_HASH`）原样保存；十六进制摘要（`MD5`、`SALTED2SHA256` 等六种）存成 `$bs$<算法>$<小写摘要>`（`auth/legacy-passwords.ts` 的 `formatLegacyDigest`）。authme-integration 在 `SALTED2MD5`、`SALTED2SHA512` 下加的 `users.salt` 列非空时，盐和摘要拼成 `$authme$<算法>$<盐>$<小写摘要>`（`formatAuthmeSalted`），由官方插件"AuthMe 密码"核对。别的看起来像哈希的值（8 到 255 个可打印的 ASCII 字符，例如 AuthMe 的 `$SHA$…`）原样保存，留给 passwordHasher 插件认领（ADR-0033）；`$bs$`、`$authme$` 开头的不会来自 BS，不保存。认不出的哈希（空、长度与算法不符、带空白）不建这一行，用户可以找回密码；没有提供 `.env` 却遇到十六进制摘要时停止。`SALT` 是全站的 pepper，不进哈希，存进机密设置 `auth.legacyPasswordSalt` |
@@ -492,15 +494,16 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 | BS | NextSkin | 规则 |
 |---|---|---|
 | id | client_id | 转成字符串。第三方应用配置的 client_id 不用改 |
-| secret | client_secret、token_endpoint_auth_method | Passport 按 secret 是否为空区分客户端：为空的是公共客户端，认证方式设为 `none`，换令牌时必须带 PKCE，与 Passport 相同。其他客户端的 secret 是明文，存成 sha256 的 base64url（与 `auth/auth.ts` 的 `storeClientSecret` 相同），认证方式设为 `client_secret_basic` |
+| secret | client_secret、token_endpoint_auth_method | Passport 按 secret 是否为空区分客户端：为空的是公共客户端，认证方式设为 `none`，换令牌时必须带 PKCE，与 Passport 相同。其他客户端的 secret 是明文，存成 sha256 的 base64url（与 `auth/auth.ts` 的 `storeClientSecret` 相同），认证方式设为 `client_secret_basic`。带 Janus 标记的应用不论有没有 secret 都转成公共客户端，见下 |
 | name | name | |
-| redirect | redirect_uris | 逗号分隔转成数组 |
+| redirect | redirect_uris | 逗号分隔转成数组；去掉 Janus 标记 |
 | user_id | user_id | |
 | revoked | disabled | |
 | created_at | created_at | |
 
 - `personal_access_client` 或 `password_client` 为 1 的客户端不导入，这两种授权方式不再支持。
 - 授权类型设为授权码和刷新令牌，与 Passport 对第三方应用开放的一致。
+- **Janus 标记的公共客户端**（ADR-0037"导入器"）：BS 的 yggdrasil-connect 插件加外挂的 Janus 时，在回调地址里加一条路径以 `/yggc/client/public` 结尾的地址（只看路径，不看主机；末尾的 `/` 不算），这样的应用是给启动器用的公共客户端。导入时去掉标记地址和密钥，认证方式 `none`、`require_pkce`、`application_type: native`，授权方式加上设备码；去掉标记后没有回调地址的，授权方式只有刷新和设备码，`response_types` 为空。报告的 `oauthPublicClients` 逐个列出，原因码 `janus_public_client`。原来用密钥接入的网站要改成公共客户端的接法。
 - Passport 的保密客户端在令牌端点既可以用 HTTP Basic 传 secret，也可以放在请求体里；Better Auth 只接受客户端登记的那一种。核心在请求进入 Better Auth 之前，把另一种方式改写成登记的方式（`auth/client-authentication.ts`），对所有保密客户端生效，所以导入时不用猜第三方应用用的是哪一种。
 
 **options → settings**：只导入有对应设置项的键，对照表随设置注册表定。旧库里没有的选项按 BS 6.0.2 的默认值（`config/options.php`）算。值不合法的不导入、用 NextSkin 的默认值，超出设置项范围的取边界值，都在报告里列出。导入器写的键先全部删掉，再写入和默认值不同的（`packages/importer/src/settings.ts` 的 `IMPORTED_SETTING_KEYS`）。已经有的项：
@@ -596,6 +599,7 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 | 导入器 | import_runs |
 | 首页 | closet_items 的 created_at 索引 |
 | 插件 | plugins、plugin_kv、plugin_migrations |
+| Yggdrasil Connect 设备码流程 | oauth_clients 的公用应用（插入数据）、reference_id 的索引、users.oauth_version（加列） |
 | 通知 | notifications |
 
 在第一个切片之前，`packages/db` 先补上 ADR-0015"后果"一节列出的辅助函数。

@@ -29,10 +29,19 @@ export interface SignUpFormProps {
   verificationNotice: boolean
   /** 插件加的字段（ADR-0033）：值按插件 id 分组提交，出错的字段名是 `<插件 id>.<字段名>` */
   pluginFields: readonly { pluginId: string; field: PluginFieldText }[]
+  /** 注册后去的站内路径（页面检查过）；第三方登录的"完成注册"用 external.next */
+  next?: string
   external?: ExternalSignUp
 }
 
-export function SignUpForm({ password, playerName, verificationNotice, pluginFields, external }: SignUpFormProps) {
+export function SignUpForm({
+  password,
+  playerName,
+  verificationNotice,
+  pluginFields,
+  next = '/user',
+  external,
+}: SignUpFormProps) {
   const t = useTranslations('auth')
   const router = useRouter()
   const [pending, setPending] = useState(false)
@@ -71,7 +80,8 @@ export function SignUpForm({ password, playerName, verificationNotice, pluginFie
     if (status === 201) {
       // 会话没建成（极少见）时去登录页，账号已经注册好了
       const signedIn = (data as { signedIn?: unknown } | null)?.signedIn === true
-      router.replace(signedIn ? (external?.next ?? '/user') : '/sign-in')
+      const target = external?.next ?? next
+      router.replace(signedIn ? target : `/sign-in?next=${encodeURIComponent(target)}`)
       router.refresh()
       return
     }

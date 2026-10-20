@@ -180,6 +180,7 @@ function emptyReport(options: ImportOptions, startedAt: string): ImportReport {
       reports: tableStats(),
       oauthClients: tableStats(),
     },
+    oauthPublicClients: cappedList(),
     files: {
       total: 0,
       decoded: 0,

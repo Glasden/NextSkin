@@ -19,6 +19,7 @@ import { createTestDatabase, type TestDatabase } from './testing.ts'
 
 interface Schema {
   auth_keys: { id: number; provider: string; subject: string }
+  auth_references: { id: number; reference: string | null }
   auth_values: {
     date: ColumnType<string | Date, string | Date>
     flag: ColumnType<boolean | 0 | 1, boolean | 0 | 1>
@@ -148,4 +149,26 @@ test('text 列改成 authStringType 之后能建唯一索引，原有的值和 N
   await expect(
     sql`insert into auth_keys (id, provider, subject) values (5, ${'x'}, null)`.execute(db),
   ).rejects.toThrow()
+})
+
+test('可空的 text 列改成 authStringType 之后能建索引，NULL 和原有的值都保留', async () => {
+  await createTable(db, 'auth_references')
+    .addColumn('id', 'integer', (c) => c.primaryKey())
+    .addColumn('reference', 'text')
+    .execute()
+  await db
+    .insertInto('auth_references')
+    .values([
+      { id: 1, reference: 'player:1' },
+      { id: 2, reference: null },
+    ])
+    .execute()
+  await alterToAuthStringColumn(db, 'auth_references', 'reference', 255, { ascii: true, nullable: true })
+  await db.schema.createIndex('auth_references_reference_idx').on('auth_references').column('reference').execute()
+  await db.insertInto('auth_references').values({ id: 3, reference: null }).execute()
+  expect(await db.selectFrom('auth_references').selectAll().orderBy('id').execute()).toEqual([
+    { id: 1, reference: 'player:1' },
+    { id: 2, reference: null },
+    { id: 3, reference: null },
+  ])
 })

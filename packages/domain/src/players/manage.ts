@@ -1,3 +1,4 @@
+import { deletePlayerAuthorizations } from '../oauth/revoke.ts'
 import {
   isUniqueViolation,
   toIsoTimestamp,
@@ -219,6 +220,7 @@ export function createPlayerManagement(
         .where('user_id', '=', actor.uid)
         .executeTakeFirst()
       if (!row) throw new DomainError('player_not_found')
+      await deletePlayerAuthorizations(tx, pid)
       const result = await tx
         .deleteFrom('players')
         .where('id', '=', pid)

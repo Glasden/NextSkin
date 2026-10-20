@@ -254,7 +254,8 @@ test('吊销只作用于自己的令牌，单个和全部吊销均幂等；角�
 test('核对密码之后、签发之前密码被改了，不签发令牌', async () => {
   const browser = new Browser(s.core)
   expect((await browser.request('/api/auth/sign-in/email', { email, password })).status).toBe(200)
-  // 停在核对之后、签发事务之前：签发前会读令牌的设置
+  // 停在核对之后、签发事务之前：签发前会读令牌的设置。Better Auth 每个请求也读这几项（有效期进实例的缓存键，
+  // ADR-0037），和站点地址一起读，那一次放行，否则改密码的请求也停在这里
   const read = s.core.settings.read.bind(s.core.settings)
   let release!: () => void
   const paused = new Promise<void>((resolve) => (release = resolve))
@@ -262,7 +263,7 @@ test('核对密码之后、签发之前密码被改了，不签发令牌', async
   const atGate = new Promise<void>((resolve) => (reached = resolve))
   const spy = vi.spyOn(s.core.settings, 'read').mockImplementation(async (keys) => {
     const values = await read(keys)
-    if (keys.includes('yggdrasil.tokenValidSeconds')) {
+    if (keys.includes('yggdrasil.tokenValidSeconds') && !keys.includes('site.url')) {
       reached()
       await paused
     }

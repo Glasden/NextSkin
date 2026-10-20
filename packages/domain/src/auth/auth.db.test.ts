@@ -1,12 +1,21 @@
 import { markSiteInitialized } from '../setup/initialized.test-helper.ts'
 import { createHash, randomBytes } from 'node:crypto'
-import { coreMigrations, migrateToLatest, toIsoTimestamp, type CoreDatabase } from '@nextskin/db'
+import {
+  coreMigrations,
+  migrateToLatest,
+  transactionWithRetry,
+  toIsoTimestamp,
+  writeAuthDate,
+  type CoreDatabase,
+} from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import { hashPassword, verifyPassword } from 'better-auth/crypto'
 import { bcrypt } from 'hash-wasm'
 import { createLocalJWKSet, decodeProtectedHeader, jwtVerify } from 'jose'
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest'
 import { createCore, encodeSettingValue, type Core, type CoreSettingKey, type CoreSettingValue } from '../index.ts'
+import { revokeLogins } from './revoke.ts'
+import { sha256 } from './auth.ts'
 import { isLegacyPasswordHash } from './legacy-passwords.ts'
 import { checkUserPassword } from './password.ts'
 
@@ -43,7 +52,8 @@ beforeAll(async () => {
 afterAll(async () => database?.cleanup())
 beforeEach(async () => {
   // 外键会级联删掉会话、账号、客户端和令牌
-  await database.db.deleteFrom('oauth_clients').execute()
+  await database.db.deleteFrom('oauth_clients').where('client_id', '!=', 'shared').execute()
+  await database.db.updateTable('oauth_clients').set({ disabled: false }).where('client_id', '=', 'shared').execute()
   await database.db.deleteFrom('users').execute()
   await database.db.deleteFrom('settings').execute()
 })
@@ -143,12 +153,29 @@ interface CreatedClient {
   client_secret: string
 }
 
-async function createClient(admin: Browser, body: Record<string, unknown>): Promise<CreatedClient> {
-  const response = await admin.request('/api/auth/oauth2/create-client', {
-    json: { client_name: 'Example App', redirect_uris: [CALLBACK], ...body },
-  })
-  expect(response.status).toBe(201)
-  return (await response.json()) as CreatedClient
+async function createClient(
+  admin: Browser,
+  body: { token_endpoint_auth_method?: string; grant_types?: string[]; scope?: string },
+): Promise<CreatedClient> {
+  const client = { client_id: randomBytes(12).toString('hex'), client_secret: randomBytes(24).toString('hex') }
+  const user = await core.auth.getSessionUser(new Headers({ cookie: admin.cookieHeader() }), ROOT)
+  const now = writeAuthDate(database.db, toIsoTimestamp(new Date()))
+  await database.db
+    .insertInto('oauth_clients')
+    .values({
+      ...client,
+      client_secret: sha256(client.client_secret),
+      name: 'Example App',
+      user_id: user!.uid,
+      redirect_uris: JSON.stringify([CALLBACK]),
+      token_endpoint_auth_method: body.token_endpoint_auth_method ?? 'client_secret_post',
+      grant_types: JSON.stringify(body.grant_types ?? ['authorization_code', 'refresh_token']),
+      scopes: body.scope ? JSON.stringify(body.scope.split(' ')) : null,
+      created_at: now,
+      updated_at: now,
+    })
+    .execute()
+  return client
 }
 
 function basic(clientId: string, secret: string) {
@@ -270,19 +297,20 @@ test.each([
   expect(account.password).toBe(hash)
 })
 
-test('只有管理员能管理 OAuth 客户端', async () => {
+test('Better Auth 客户端管理端点关闭，写操作由领域用例处理', async () => {
   const { browser } = await signUp('user@example.test')
   const response = await browser.request('/api/auth/oauth2/create-client', {
     json: { client_name: 'Example App', redirect_uris: [CALLBACK] },
   })
-  expect(response.status).toBeGreaterThanOrEqual(400)
-  expect(response.status).toBeLessThan(500)
-  expect(await database.db.selectFrom('oauth_clients').select('id').execute()).toEqual([])
+  expect(response.status).toBe(404)
+  expect(
+    await database.db.selectFrom('oauth_clients').select('id').where('client_id', '!=', 'shared').execute(),
+  ).toEqual([])
 })
 
 // Better Auth 会先 trim 再校验认证方式，前后带空白的值同样会被存成 private_key_jwt（独立审核发现）
 test.each(['private_key_jwt', ' private_key_jwt ', 'private_key_jwt\n', 'PRIVATE_KEY_JWT', 'tls_client_auth'])(
-  '创建和修改客户端时只接受白名单里的认证方式，拒绝 %j（ADR-0015：serial 下 private_key_jwt 的防重放不起作用）',
+  '创建和修改客户端端点均已关闭（%j）',
   async (method) => {
     const admin = await signUpAdmin()
     const create = await admin.request('/api/auth/oauth2/create-client', {
@@ -293,15 +321,18 @@ test.each(['private_key_jwt', ' private_key_jwt ', 'private_key_jwt\n', 'PRIVATE
         jwks_uri: 'https://app.example.test/jwks',
       },
     })
-    expect(create.status).toBe(400)
-    expect((await json(create)).error).toBe('invalid_client_metadata')
+    expect(create.status).toBe(404)
 
     const client = await createClient(admin, { token_endpoint_auth_method: 'client_secret_post' })
     const update = await admin.request('/api/auth/oauth2/update-client', {
       json: { client_id: client.client_id, update: { token_endpoint_auth_method: method } },
     })
-    expect(update.status).toBe(400)
-    const rows = await database.db.selectFrom('oauth_clients').select('token_endpoint_auth_method').execute()
+    expect(update.status).toBe(404)
+    const rows = await database.db
+      .selectFrom('oauth_clients')
+      .select('token_endpoint_auth_method')
+      .where('client_id', '=', client.client_id)
+      .execute()
     expect(rows).toEqual([{ token_endpoint_auth_method: 'client_secret_post' }])
   },
 )
@@ -349,19 +380,25 @@ function pkce() {
   return { verifier, challenge: createHash('sha256').update(verifier).digest('base64url') }
 }
 
-/** 授权码流走到拿到授权码为止：authorize → 同意页 → 回调 */
-async function authorize(browser: Browser, client: CreatedClient, scope: string) {
+function authorizationQuery(client: CreatedClient, scope?: string, prompt?: string) {
   const proof = pkce()
   const state = randomBytes(8).toString('hex')
   const query = new URLSearchParams({
     response_type: 'code',
     client_id: client.client_id,
     redirect_uri: CALLBACK,
-    scope,
+    ...(scope === undefined ? {} : { scope }),
+    ...(prompt === undefined ? {} : { prompt }),
     state,
     code_challenge: proof.challenge,
     code_challenge_method: 'S256',
   })
+  return { proof, state, query }
+}
+
+/** 授权码流走到拿到授权码为止：authorize → 同意页 → 回调 */
+async function authorize(browser: Browser, client: CreatedClient, scope?: string) {
+  const { proof, state, query } = authorizationQuery(client, scope)
   const consentPage = await redirectTarget(await browser.request(`/api/auth/oauth2/authorize?${query.toString()}`))
   expect(consentPage.pathname).toBe('/oauth/consent')
   const callback = await redirectTarget(
@@ -495,6 +532,7 @@ test('生产环境没有设置站点地址时拒绝处理认证请求，不信�
     json: { email: 'steve@example.test', password, name: 'Steve' },
   })
   expect(response.status).toBe(503)
+  expect(await production.auth.openIdConfigurationUrl('https://request.example.test')).toBeNull()
   expect(await json(response)).toMatchObject({ error: 'site_url_required' })
   expect(await database.db.selectFrom('users').select('id').execute()).toEqual([])
 })
@@ -593,4 +631,134 @@ test('createSession 复用登录 Cookie，记 IP 与 User-Agent，站点 URL 未
       requestRoot: ROOT,
     }),
   ).rejects.toThrow('site_url_required')
+})
+
+test('授权码缺省 scope 经同意页内部续跑后仍不包含 Yggdrasil scope', async () => {
+  const admin = await signUpAdmin()
+  const client = await createClient(admin, {})
+  const { browser } = await signUp('default-scopes@example.test')
+  const response = await new Browser().request('/api/auth/oauth2/token', { form: await authorize(browser, client) })
+  expect(response.status).toBe(200)
+  const body = await json(response)
+  expect(body.scope).toBe('openid profile email offline_access')
+})
+
+test.each(['banned', 'unverified'] as const)(
+  'authorize 和 consent 拒绝 %s 的现有会话，拒绝同意仍可完成',
+  async (condition) => {
+    const { browser, uid } = await signUp('authorization@example.test', 'Steve')
+    const client = await createClient(browser, {})
+    const { query } = authorizationQuery(client, 'openid profile')
+    const consentPage = await redirectTarget(await browser.request(`/api/auth/oauth2/authorize?${query.toString()}`))
+    expect(consentPage.pathname).toBe('/oauth/consent')
+    if (condition === 'banned')
+      await database.db.updateTable('users').set({ role: 'banned' }).where('id', '=', uid).execute()
+    else await storeSetting('auth.requireEmailVerification', true)
+    for (const method of ['GET', 'POST']) {
+      const response =
+        method === 'GET'
+          ? await browser.request(`/api/auth/oauth2/authorize?${query.toString()}`)
+          : await browser.request('/api/auth/oauth2/authorize', { form: Object.fromEntries(query) })
+      expect(response.status).toBe(403)
+      expect(await json(response)).toMatchObject({ error: 'access_denied' })
+    }
+    const consent = await browser.request('/api/auth/oauth2/consent', {
+      json: { accept: true, oauth_query: consentPage.search.slice(1) },
+    })
+    expect(consent.status).toBe(403)
+    expect(await json(consent)).toMatchObject({ error: 'access_denied' })
+    const denied = await redirectTarget(
+      await browser.request('/api/auth/oauth2/consent', {
+        json: { accept: false, oauth_query: consentPage.search.slice(1) },
+      }),
+    )
+    expect(denied.searchParams.get('error')).toBe('access_denied')
+    expect(await database.db.selectFrom('oauth_consents').select('id').execute()).toEqual([])
+  },
+)
+
+test('consent 拒绝部分 scope，同集合的重排和重复 scope 可以同意', async () => {
+  const { browser } = await signUp('consent@example.test', 'Steve')
+  const client = await createClient(browser, {})
+  const { query } = authorizationQuery(client, 'openid profile')
+  const page = await redirectTarget(await browser.request(`/api/auth/oauth2/authorize?${query.toString()}`))
+  const oauth_query = page.search.slice(1)
+  const response = await browser.request('/api/auth/oauth2/consent', {
+    json: { accept: true, scope: 'openid', oauth_query },
+  })
+  expect(response.status).toBe(400)
+  expect(await json(response)).toMatchObject({ error: 'invalid_scope' })
+  expect(await database.db.selectFrom('oauth_consents').select('id').execute()).toEqual([])
+  const callback = await redirectTarget(
+    await browser.request('/api/auth/oauth2/consent', {
+      json: { accept: true, scope: 'profile openid openid', oauth_query },
+    }),
+  )
+  expect(callback.searchParams.has('code')).toBe(true)
+})
+
+test('公共客户端每次 authorize 都要求同意，内部续跑拿到 code 并可兑换令牌', async () => {
+  const { browser } = await signUp('public@example.test', 'Steve')
+  const client = await createClient(browser, {
+    token_endpoint_auth_method: 'none',
+    scope: 'openid profile offline_access',
+  })
+  // 第一次不带 scope，同时覆盖默认 scope 和 prompt 的合并改写。
+  const grant = await authorize(browser, client)
+  const response = await new Browser().request('/api/auth/oauth2/token', {
+    form: {
+      grant_type: grant.grant_type,
+      client_id: grant.client_id,
+      code: grant.code,
+      code_verifier: grant.code_verifier,
+      redirect_uri: grant.redirect_uri,
+    },
+  })
+  expect(response.status).toBe(200)
+  expect(await json(response)).toMatchObject({
+    access_token: expect.any(String) as unknown,
+    refresh_token: expect.any(String) as unknown,
+    id_token: expect.any(String) as unknown,
+  })
+  const { query } = authorizationQuery(client, 'openid profile')
+  const page = await redirectTarget(await browser.request(`/api/auth/oauth2/authorize?${query.toString()}`))
+  expect(page.pathname).toBe('/oauth/consent')
+  expect(page.searchParams.get('prompt')?.split(' ')).toContain('consent')
+  // POST 的外部授权同样强制同意。
+  const posted = await redirectTarget(
+    await browser.request('/api/auth/oauth2/authorize', { form: Object.fromEntries(query) }),
+  )
+  expect(posted.pathname).toBe('/oauth/consent')
+})
+
+test('公共客户端已有同意时 prompt=none 仍返回 consent_required', async () => {
+  const { browser } = await signUp('silent@example.test', 'Steve')
+  const client = await createClient(browser, { token_endpoint_auth_method: 'none' })
+  await authorize(browser, client, 'openid profile')
+  const { query } = authorizationQuery(client, 'openid profile', 'none')
+  const response = await browser.request(`/api/auth/oauth2/authorize?${query.toString()}`)
+  expect(response.status).toBe(400)
+  expect(await json(response)).toMatchObject({ error: 'consent_required' })
+})
+
+test.each(['banned', 'revokeLogins'] as const)('同意之后 %s 再换授权码返回 invalid_grant，不留令牌', async (action) => {
+  const { browser, uid } = await signUp('code@example.test', 'Steve')
+  const client = await createClient(browser, {})
+  const grant = await authorize(browser, client, 'openid offline_access')
+  if (action === 'banned')
+    await database.db.updateTable('users').set({ role: 'banned' }).where('id', '=', uid).execute()
+  else
+    await transactionWithRetry(database.db, async (tx) => {
+      await tx
+        .updateTable('users')
+        .set((eb) => ({ role: eb.ref('role') }))
+        .where('id', '=', uid)
+        .execute()
+      await revokeLogins(tx, uid)
+    })
+  const response = await new Browser().request('/api/auth/oauth2/token', { form: grant })
+  expect(response.status).toBe(400)
+  expect(await json(response)).toMatchObject({ error: 'invalid_grant' })
+  expect(await database.db.selectFrom('oauth_access_tokens').select('id').execute()).toEqual([])
+  expect(await database.db.selectFrom('oauth_refresh_tokens').select('id').execute()).toEqual([])
 })

@@ -62,17 +62,16 @@ async function signUp(email: string, role: 'user' | 'admin') {
   return new Headers({ cookie })
 }
 
-test('OAuth 资源的管理端点只对管理员开放', async () => {
+test('OAuth 资源的管理端点对所有身份关闭', async () => {
   const user = await signUp('resource-user@example.test', 'user')
   const admin = await signUp('resource-admin@example.test', 'admin')
   const body = { identifier: 'https://api.example.test/', name: 'Example API' }
   await expect(auth.api.adminCreateOAuthResource({ headers: user, body })).rejects.toThrow()
   await expect(auth.api.adminListOAuthResources({ headers: user })).rejects.toThrow()
   expect(await database.db.selectFrom('oauth_resources').select('id').execute()).toEqual([])
-  await auth.api.adminCreateOAuthResource({ headers: admin, body })
-  expect(await database.db.selectFrom('oauth_resources').select('identifier').execute()).toEqual([
-    { identifier: body.identifier },
-  ])
+  await expect(auth.api.adminCreateOAuthResource({ headers: admin, body })).rejects.toThrow()
+  await expect(auth.api.adminListOAuthResources({ headers: admin })).rejects.toThrow()
+  expect(await database.db.selectFrom('oauth_resources').select('id').execute()).toEqual([])
 })
 
 test('日志里的 URL 去掉查询串和片段', () => {

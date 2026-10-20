@@ -160,6 +160,17 @@ export interface ImportReport {
     reports: TableStats
     oauthClients: TableStats
   }
+  /** Janus 标记的公共客户端；旧报告没有这个字段 */
+  oauthPublicClients?: CappedList<{
+    clientId: string
+    name: string | null
+    /** 原来用密钥接入的网站需要改成公共客户端，否则会收到 invalid_client */
+    hadSecret: boolean
+    /** 去掉标记之后剩下的回调地址 */
+    redirectUris: string[]
+    /** 还保留授权码流程 */
+    authorizationCode: boolean
+  }>
   files: {
     /** 导入的不同文件数 */
     total: number

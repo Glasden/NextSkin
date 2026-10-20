@@ -50,7 +50,7 @@
 |---|---|
 | 核心协议和基础功能 | yggdrasil-api、usm-api、legacy-api、config-generator、204-for-unexisted-players、insane-profile-cache；协议路径和响应由核心兼容 |
 | 核心认证、设置和导入 | password-algorithm-transition、disable-registration、restricted-email-domains、single-player-limit、texture-description、gravatar、trust-proxies、remote-addr、predis；batch-import 并入导入器。旧插件的每个细节不一定有独立开关，不要再接核心内部类 |
-| 核心方向但尚未完成 | yggdrasil-connect：OIDC 和设备授权另行实现，第一版没有可替代插件 API |
+| 核心已实现（部分） | yggdrasil-connect：设备码流程、公用应用、进服认 OAuth 令牌和安全页的“已授权的应用”已由核心实现（ADR-0037），导入器把 Janus 标记的应用转成公共客户端；授权码流程的同意页和“OAuth 应用”管理页还没做。没有可替代的插件 API |
 | S3 兼容存储驱动 | textures-aliyun-oss、textures-qcloud-cos、textures-qiniu-storage，站长配置存储，不通过插件提供存储驱动 |
 | 已迁为参考插件 | invitation-codes → invitation-codes；refresh-ali-cdn、refresh-qcloud-cdn、purge-azure-global-cdn → cdn-refresh |
 | 密码兼容部分 | authme-integration → authme-password；直接连接 AuthMe 数据库、读写核心 users 表的部分不迁 |

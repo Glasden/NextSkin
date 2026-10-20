@@ -9,9 +9,11 @@ import { Smartphone } from 'pixelarticons/react/Smartphone.js'
 import type { ReactNode } from 'react'
 import { externalErrorMessage } from '../../../lib/external-login'
 import { pluginIcon } from '../../../lib/plugins'
+import { clientLabel, describeScopes } from '../../../lib/oauth'
 import { getServer } from '../../../lib/server'
 import { getRequestRoot, requireUser } from '../../../lib/session'
 import { ChangePasswordForm } from './change-password-form'
+import { AuthorizationsPanel } from './authorizations-panel'
 import { ExternalAccountsPanel } from './external-accounts-panel'
 import { LauncherLoginsPanel } from './launcher-logins-panel'
 import { PasskeysPanel } from './passkeys-panel'
@@ -24,17 +26,19 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * 登录与安全：密码、两步验证、通行密钥（ADR-0023），第三方账号（ADR-0034），以及启动器登录（ADR-0030）。
+ * 登录与安全：密码、两步验证、通行密钥（ADR-0023），第三方账号（ADR-0034），启动器登录（ADR-0030），
+ * 以及已授权的应用（ADR-0037）。
  * 密码、两步验证、通行密钥的改动直接调用 Better Auth 的接口，其余的走自己的 REST 接口。
  * 绑定第三方账号的回调带着 `?linked=1` 或 `?error=` 回到这里
  */
 export default async function SecurityPage({ searchParams }: PageProps<'/user/security'>) {
   const user = await requireUser('/user/security')
   const [{ core }, root, query] = await Promise.all([getServer(), getRequestRoot(), searchParams])
-  const [security, launcherTokens, settings, hasPassword, externalAccounts, externalError, locale, t, format] =
+  const [security, launcherTokens, grants, settings, hasPassword, externalAccounts, externalError, locale, t, format] =
     await Promise.all([
       core.auth.security(user.uid, root),
       core.yggdrasil.listTokens(user.uid),
+      core.oauth.listAuthorizations(user.uid),
       core.settings.read(['site.name']),
       core.externalLogin.hasPassword(user.uid),
       core.externalLogin.accounts(user.uid),
@@ -65,6 +69,15 @@ export default async function SecurityPage({ searchParams }: PageProps<'/user/se
     issuedAt: dateTime(token.createdAt),
     status: token.status,
   }))
+  const authorizations = await Promise.all(
+    grants.map(async (grant) => ({
+      id: grant.id,
+      ...(await clientLabel(grant.client, settings['site.name'])),
+      scopes: (await describeScopes(grant.scopes)).map((scope) => scope.label),
+      players: grant.players.map((player) => player.name),
+      authorizedAt: dateTime(grant.authorizedAt),
+    })),
+  )
 
   return (
     <div className="flex flex-col gap-8">
@@ -170,6 +183,19 @@ export default async function SecurityPage({ searchParams }: PageProps<'/user/se
         description={t('launchers.description')}
       >
         <LauncherLoginsPanel logins={launcherLogins} />
+      </Section>
+
+      <Section
+        id="authorizations"
+        title={t('authorizations.title')}
+        badge={
+          authorizations.length ? (
+            <Badge>{t('overview.authorizationCount', { count: authorizations.length })}</Badge>
+          ) : undefined
+        }
+        description={t('authorizations.description')}
+      >
+        <AuthorizationsPanel authorizations={authorizations} />
       </Section>
     </div>
   )

@@ -157,8 +157,54 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0039_create_plugin_migrations',
     '0040_alter_accounts_key_columns',
     '0041_create_accounts_binding_indexes',
+    '0042_insert_shared_oauth_client',
+    '0043_create_oauth_reference_id_indexes',
+    '0044_add_users_oauth_version',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
+})
+
+test('迁移插入公用应用：没有主人和密钥，只走设备码和刷新，不能申请 email', async () => {
+  const row = await db
+    .selectFrom('oauth_clients')
+    .selectAll()
+    .where('client_id', '=', 'shared')
+    .executeTakeFirstOrThrow()
+  // JSON 列在 MySQL、PostgreSQL 上可能读出已解析的值
+  const json = (value: unknown): unknown => (typeof value === 'string' ? (JSON.parse(value) as unknown) : value)
+  expect({
+    secret: row.client_secret,
+    user: row.user_id,
+    disabled: readAuthBoolean(row.disabled),
+    method: row.token_endpoint_auth_method,
+    application: row.application_type,
+    redirects: json(row.redirect_uris),
+    grants: json(row.grant_types),
+    responses: row.response_types,
+    scopes: json(row.scopes),
+  }).toEqual({
+    secret: null,
+    user: null,
+    disabled: false,
+    method: 'none',
+    application: 'native',
+    redirects: [],
+    grants: ['urn:ietf:params:oauth:grant-type:device_code', 'refresh_token'],
+    responses: null,
+    scopes: [
+      'openid',
+      'profile',
+      'offline_access',
+      'Yggdrasil.PlayerProfiles.Select',
+      'Yggdrasil.PlayerProfiles.Read',
+      'Yggdrasil.Server.Join',
+    ],
+  })
+  readAuthDate(row.created_at)
+  // 没有显式写 id：之后插入的客户端照常拿到下一个 id（PostgreSQL 的序列）
+  const next = await insertReturningId(db, 'oauth_clients', { client_id: 'after-shared', redirect_uris: '[]' })
+  expect(next).toBeGreaterThan(row.id)
+  await db.deleteFrom('oauth_clients').where('id', '=', next).execute()
 })
 
 test('类型化写入完整引用关系，读回各列、默认值和认证字段', async () => {
@@ -176,6 +222,7 @@ test('类型化写入完整引用关系，读回各列、默认值和认证字�
     role: 'user',
     score: 0,
     email_version: 0,
+    oauth_version: 0,
     created_at: timestamp,
     updated_at: timestamp,
   })
@@ -249,6 +296,7 @@ test('用户领域字段均可省略，认证可空字段保留 NULL', async () 
     role: 'user',
     score: 0,
     email_version: 0,
+    oauth_version: 0,
     avatar_texture_id: null,
     image: null,
     two_factor_enabled: null,
@@ -531,12 +579,13 @@ test('角色实付积分列默认 0，且拒绝 null', async () => {
   ).rejects.toThrow()
 })
 
-test('邮箱版本迁移为已有用户和新用户补 0，拒绝 NULL，自增表达式只加一次', async () => {
+test.each([
+  ['0026_add_users_email_version', 'email_version'],
+  ['0044_add_users_oauth_version', 'oauth_version'],
+] as const)('%s 为已有用户和新用户补 0，拒绝 NULL，自增表达式只加一次', async (migration, column) => {
   const upgrade = await createTestDatabase<CoreDatabase>()
   try {
-    const previous = Object.fromEntries(
-      Object.entries(coreMigrations).filter(([name]) => name < '0026_add_users_email_version'),
-    )
+    const previous = Object.fromEntries(Object.entries(coreMigrations).filter(([name]) => name < migration))
     await migrateToLatest(upgrade.db, previous)
     const now = writeAuthDate(upgrade.db, timestamp)
     const values = {
@@ -548,12 +597,11 @@ test('邮箱版本迁移为已有用户和新用户补 0，拒绝 NULL，自增�
     }
     const existing = await insertReturningId(upgrade.db, 'users', values)
     expect(await migrateToLatest(upgrade.db, coreMigrations)).toEqual(
-      Object.keys(coreMigrations).filter((name) => name >= '0026_add_users_email_version'),
+      Object.keys(coreMigrations).filter((name) => name >= migration),
     )
     const added = await insertReturningId(upgrade.db, 'users', { ...values, email: 'after@example.test' })
     const version = async (uid: number) =>
-      (await upgrade.db.selectFrom('users').select('email_version').where('id', '=', uid).executeTakeFirstOrThrow())
-        .email_version
+      (await upgrade.db.selectFrom('users').select(column).where('id', '=', uid).executeTakeFirstOrThrow())[column]
     expect(await version(existing)).toBe(0)
     expect(await version(added)).toBe(0)
     for (const [email, expected] of [
@@ -562,7 +610,7 @@ test('邮箱版本迁移为已有用户和新用户补 0，拒绝 NULL，自增�
     ] as const) {
       await upgrade.db
         .updateTable('users')
-        .set((eb) => ({ email, email_version: eb('email_version', '+', 1) }))
+        .set((eb) => ({ email, [column]: eb(column, '+', 1) }))
         .where('id', '=', existing)
         .execute()
       expect(await version(existing)).toBe(expected)
@@ -571,7 +619,7 @@ test('邮箱版本迁移为已有用户和新用户补 0，拒绝 NULL，自增�
     await expect(
       upgrade.db
         .updateTable('users')
-        .set({ email_version: null as unknown as number })
+        .set({ [column]: null as unknown as number })
         .where('id', '=', existing)
         .execute(),
     ).rejects.toThrow()

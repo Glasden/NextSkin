@@ -1,3 +1,4 @@
+import { seedOAuth } from '../oauth/oauth.test-helper.ts'
 import { createHash } from 'node:crypto'
 import { markSiteInitialized } from '../setup/initialized.test-helper.ts'
 import {
@@ -75,6 +76,7 @@ beforeAll(async () => {
 })
 afterAll(async () => database?.cleanup())
 beforeEach(async () => {
+  await db().deleteFrom('device_codes').execute()
   await db().deleteFrom('users').execute()
   await db().deleteFrom('jobs').execute()
   await db().deleteFrom('settings').execute()
@@ -348,7 +350,28 @@ test.each(revokers)(
     const sessions = await countRows(db().selectFrom('sessions').where('user_id', '=', target.uid))
     expect(sessions).toBeGreaterThan(0)
 
+    for (const [uid, name] of [
+      [target.uid, 'TargetPlayer'],
+      [bystander.uid, 'OtherPlayer'],
+    ] as const) {
+      const pid = await insertReturningId(db(), 'players', {
+        user_id: uid,
+        name,
+        name_key: name.toLowerCase(),
+        uuid: String(uid).padStart(32, '0'),
+        created_at: toIsoTimestamp(new Date()),
+        updated_at: toIsoTimestamp(new Date()),
+      })
+      await seedOAuth(db(), uid, pid)
+    }
     expect(await run(target.uid)).toMatchObject({ revokedSessions: sessions, revokedTokens: 1 })
+    for (const table of ['oauth_access_tokens', 'oauth_refresh_tokens', 'device_code_selections'] as const) {
+      expect(await countRows(db().selectFrom(table).where('user_id', '=', target.uid))).toBe(0)
+      expect(await countRows(db().selectFrom(table).where('user_id', '=', bystander.uid))).toBeGreaterThan(0)
+    }
+    expect(await countRows(db().selectFrom('device_codes').where('user_id', '=', String(target.uid)))).toBe(0)
+    expect(await countRows(db().selectFrom('device_codes').where('user_id', '=', String(bystander.uid)))).toBe(2)
+    expect(await countRows(db().selectFrom('oauth_consents').where('user_id', '=', target.uid))).toBe(1)
 
     expect(await owner.session()).toBeNull()
     await expect(launcherValid(launcher.accessToken)).rejects.toMatchObject({ kind: 'ForbiddenOperationException' })

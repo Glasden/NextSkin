@@ -29,7 +29,7 @@ export function createSessions(options: {
   const players = createPlayerQueries(db)
   return {
     async join(input: JoinInput): Promise<void> {
-      const token = await tokens.readToken(input.accessToken, true)
+      const token = await tokens.readSessionToken(input.accessToken)
       if (token.player_id === null || token.uuid !== input.selectedProfile)
         throw forbidden('profile_mismatch', token.locale)
       tokens.assertOwned(token)

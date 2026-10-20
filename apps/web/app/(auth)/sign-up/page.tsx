@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation'
 import { externalProviders } from '../../../lib/external-login'
 import { registerFormFields } from '../../../lib/plugins'
 import { getServer } from '../../../lib/server'
-import { getSessionUser } from '../../../lib/session'
+import { getSessionUser, safeNextPath } from '../../../lib/session'
 import { AuthHeading } from '../auth-heading'
 import { ExternalLoginButtons } from '../external-login-buttons'
 import { SignUpForm } from './sign-up-form'
@@ -17,8 +17,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('title') }
 }
 
-export default async function SignUpPage() {
-  if (await getSessionUser()) redirect('/user')
+/** next：注册后去的站内路径，例如从 /device 过来的启动器授权（ADR-0037），和登录页一样检查过才用 */
+export default async function SignUpPage({ searchParams }: PageProps<'/sign-up'>) {
+  const next = safeNextPath((await searchParams).next)
+  if (await getSessionUser()) redirect(next)
   const [{ core }, t, locale] = await Promise.all([getServer(), getTranslations('auth.signUp'), getLocale()])
   const [settings, mailConfigured, initialized, providers] = await Promise.all([
     core.settings.read([
@@ -33,7 +35,8 @@ export default async function SignUpPage() {
   ])
   const heading = (
     <AuthHeading title={t('title')}>
-      {t('hasAccount')} <Link render={<NextLink href="/sign-in" />}>{t('signIn')}</Link>
+      {t('hasAccount')}{' '}
+      <Link render={<NextLink href={`/sign-in?next=${encodeURIComponent(next)}`} />}>{t('signIn')}</Link>
     </AuthHeading>
   )
   // 安装之前不开放注册（ADR-0031）：先注册的人会让安装向导关闭，站点就没有超级管理员了
@@ -66,6 +69,7 @@ export default async function SignUpPage() {
             : null
         }
         verificationNotice={mailConfigured}
+        next={next}
       />
       {/* 第三方登录（ADR-0034）：没有绑定的账号回来以后进"完成注册"页，和这里一样要填注册信息 */}
       {providers.length > 0 && (
@@ -73,7 +77,7 @@ export default async function SignUpPage() {
           <p className="flex items-center gap-3 text-sm text-text-muted before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
             {t('or')}
           </p>
-          <ExternalLoginButtons providers={providers} next="/user" verb="signUp" />
+          <ExternalLoginButtons providers={providers} next={next} verb="signUp" />
         </div>
       )}
     </>

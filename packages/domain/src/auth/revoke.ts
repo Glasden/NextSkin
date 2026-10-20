@@ -7,6 +7,7 @@
  */
 import type { CoreDatabase } from '@nextskin/db'
 import type { Kysely } from 'kysely'
+import { deleteOAuthTokensForUser, deleteClaimedDeviceCodes } from '../oauth/revoke.ts'
 
 function assertTransaction(tx: Kysely<CoreDatabase>) {
   if (!tx.isTransaction) throw new TypeError('作废登录必须在调用方的事务中执行')
@@ -67,6 +68,8 @@ export async function revokeLogins(tx: Kysely<CoreDatabase>, uid: number): Promi
   assertTransaction(tx)
   const sessions = await tx.deleteFrom('sessions').where('user_id', '=', uid).executeTakeFirst()
   const revokedTokens = await deleteLauncherTokens(tx, uid)
+  await deleteOAuthTokensForUser(tx, uid)
+  await deleteClaimedDeviceCodes(tx, uid)
   await deleteTwoFactorChallenges(tx, uid)
   await deletePasswordResetLinks(tx, uid)
   await tx

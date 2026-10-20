@@ -31,6 +31,7 @@ function mockCore(stored: Partial<Record<CoreSettingKey, unknown>> = {}) {
     players: { findByName, findByUuid },
     yggdrasil: { getSigningKey: vi.fn().mockResolvedValue(null) },
     auth: {
+      openIdConfigurationUrl: vi.fn().mockResolvedValue(null),
       handle: vi.fn((request: Request, root: string) => Promise.resolve(Response.json({ url: request.url, root }))),
     },
   } as unknown as Core

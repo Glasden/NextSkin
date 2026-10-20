@@ -1,5 +1,6 @@
 import { readAuthBoolean, readAuthDate, type IsoTimestamp, type CoreDatabase, type UserRole } from '@nextskin/db'
 import { isAPIError } from 'better-auth/api'
+import { DEVICE_CODE_GRANT_TYPE, OAUTH_SCOPES, SHARED_OAUTH_CLIENT_ID } from '../oauth/scopes.ts'
 import { DomainError } from '../errors.ts'
 import type { Kysely } from 'kysely'
 import type { MailService } from '../mail/service.ts'
@@ -42,28 +43,54 @@ const METADATA_CACHE_CONTROL = 'public, max-age=15, stale-while-revalidate=15, s
 
 export function createAuthService(options: AuthServiceOptions) {
   const { db, settings } = options
-  let cached: { key: string; auth: Auth } | undefined
+  let cached: { key: string; auth: Auth; ready: Promise<unknown> } | undefined
 
-  /** 站点地址或站点名改了就换一个实例：baseURL、passkey 的 rpID、两步验证的 issuer 都在创建时确定 */
+  const resolveSiteUrl = (value: string, requestRoot: string) =>
+    value.replace(/\/+$/, '') || (options.production ? '' : requestRoot.replace(/\/+$/, ''))
+
+  /** 地址、名称和令牌有效期都在创建时固定，设置改变后换实例，已签发的令牌不受影响。 */
   async function instance(requestRoot: string): Promise<Auth | null> {
-    const values = await settings.read(['site.url', 'site.name'])
-    const siteUrl = values['site.url'].replace(/\/+$/, '') || (options.production ? '' : requestRoot)
+    const values = await settings.read([
+      'site.url',
+      'site.name',
+      'yggdrasil.tokenValidSeconds',
+      'yggdrasil.tokenRefreshableSeconds',
+    ])
+    const siteUrl = resolveSiteUrl(values['site.url'], requestRoot)
     if (!siteUrl) return null
-    const key = JSON.stringify([siteUrl, values['site.name']])
+    const key = JSON.stringify([
+      siteUrl,
+      values['site.name'],
+      values['yggdrasil.tokenValidSeconds'],
+      values['yggdrasil.tokenRefreshableSeconds'],
+    ])
     if (cached?.key !== key) {
       const auth = createAuth({
         db,
         secretKey: options.secretKey,
         siteUrl,
         siteName: values['site.name'],
+        tokenValidSeconds: values['yggdrasil.tokenValidSeconds'],
+        tokenRefreshableSeconds: values['yggdrasil.tokenRefreshableSeconds'],
+        requireEmailVerification: async () =>
+          (await settings.read(['auth.requireEmailVerification']))['auth.requireEmailVerification'],
+        tokensPerUser: async () => (await settings.read(['yggdrasil.tokensPerUser']))['yggdrasil.tokensPerUser'],
         legacyPasswordSalt: async () => (await settings.read(['auth.legacyPasswordSalt']))['auth.legacyPasswordSalt'],
         passwordPlugins: options.passwordPlugins,
         mail: options.mail,
         onPasswordChanged: options.onPasswordChanged,
       })
-      cached = { key, auth }
+      // 首次并发签名会各建一把密钥；让同一实例的请求等同一个预热 Promise（SJMCL 只读 keys[0]）。
+      // 预热失败（数据库暂时不可用）时丢掉这个实例，下一个请求重新预热，不让失败一直缓存着
+      const ready = auth.api.getJwks().catch((error: unknown) => {
+        if (cached?.auth === auth) cached = undefined
+        throw error
+      })
+      cached = { key, auth, ready }
     }
-    return cached.auth
+    const current = cached
+    await current.ready
+    return current.auth
   }
 
   async function registeredAuthMethod(clientId: string) {
@@ -77,6 +104,11 @@ export function createAuthService(options: AuthServiceOptions) {
   }
 
   return {
+    async openIdConfigurationUrl(requestRoot: string): Promise<string | null> {
+      const values = await settings.read(['site.url'])
+      const siteUrl = resolveSiteUrl(values['site.url'], requestRoot)
+      return siteUrl.startsWith('https://') ? `${siteUrl}${DISCOVERY_PATH}` : null
+    },
     /** @param requestRoot 客户端看到的站点地址；开发环境没有设置站点地址时，用它创建 Better Auth 实例 */
     async security(
       uid: number,
@@ -155,7 +187,34 @@ export function createAuthService(options: AuthServiceOptions) {
       // Better Auth 把发现文档做成了只能在服务端调用的端点，由我们按 OIDC 的位置（issuer + /.well-known/…）提供
       if (new URL(request.url).pathname === DISCOVERY_PATH && (request.method === 'GET' || request.method === 'HEAD')) {
         const metadata = (await auth.api.getOpenIdConfig({ headers: request.headers })) as Record<string, unknown>
-        const body = request.method === 'HEAD' ? null : JSON.stringify(withoutSerialUnsafeMetadata(metadata))
+        const filtered = withoutSerialUnsafeMetadata(metadata)
+        filtered.token_endpoint_auth_methods_supported = [
+          ...new Set([...((filtered.token_endpoint_auth_methods_supported as string[]) ?? []), 'none']),
+        ]
+        filtered.grant_types_supported = ['authorization_code', 'refresh_token', DEVICE_CODE_GRANT_TYPE]
+        for (const key of [
+          'registration_endpoint',
+          'end_session_endpoint',
+          'backchannel_logout_supported',
+          'backchannel_logout_session_supported',
+        ])
+          delete filtered[key]
+        if (Array.isArray(filtered.prompt_values_supported))
+          filtered.prompt_values_supported = filtered.prompt_values_supported.filter(
+            (value) => value !== 'select_account' && value !== 'create',
+          )
+        filtered.scopes_supported = OAUTH_SCOPES
+        filtered.claims_supported = [
+          ...new Set([...((filtered.claims_supported as string[]) ?? []), 'selectedProfile', 'availableProfiles']),
+        ]
+        const shared = await db
+          .selectFrom('oauth_clients')
+          .select(['client_id', 'disabled'])
+          .where('client_id', '=', SHARED_OAUTH_CLIENT_ID)
+          .executeTakeFirst()
+        if (shared?.client_id === SHARED_OAUTH_CLIENT_ID && !readAuthBoolean(shared.disabled ?? false))
+          filtered.shared_client_id = SHARED_OAUTH_CLIENT_ID
+        const body = request.method === 'HEAD' ? null : JSON.stringify(filtered)
         return new Response(body, {
           headers: { 'Content-Type': 'application/json', 'Cache-Control': METADATA_CACHE_CONTROL },
         })

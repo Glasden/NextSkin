@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import {
   readAuthBoolean,
+  readAuthDate,
   toIsoTimestamp,
   transactionWithRetry,
   type CoreDatabase,
@@ -8,6 +9,7 @@ import {
 } from '@nextskin/db'
 import type { Kysely } from 'kysely'
 import { sha256 } from '../auth/auth.ts'
+import { JOIN_SCOPE, parsePlayerReference, readScopes } from '../oauth/scopes.ts'
 import { normalizeNameLookup } from '../players/queries.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import type { PluginPasswordVerifier } from '../auth/password.ts'
@@ -76,13 +78,13 @@ export function createTokens(options: {
   const { db, settings, now } = options
   const credentials = createCredentials(options)
 
-  async function readToken(accessToken: string | null, valid: boolean, unauthorized = false) {
-    const invalid = (locale: string | null = null) =>
-      unauthorized
-        ? new YggdrasilError('UnauthorizedException', 'yggdrasil.errors.token_unauthorized', locale)
-        : forbidden('token_invalid', locale)
-    if (accessToken === null) throw invalid()
-    const row = await db
+  const invalidToken = (unauthorized: boolean, locale: string | null = null) =>
+    unauthorized
+      ? new YggdrasilError('UnauthorizedException', 'yggdrasil.errors.token_unauthorized', locale)
+      : forbidden('token_invalid', locale)
+
+  const findLauncherToken = (hash: string) =>
+    db
       .selectFrom('yggdrasil_tokens as token')
       .innerJoin('users', 'users.id', 'token.user_id')
       .leftJoin('players', 'players.id', 'token.player_id')
@@ -95,15 +97,61 @@ export function createTokens(options: {
         'players.uuid',
         'players.name',
       ])
-      .where('token.access_token_hash', '=', sha256(accessToken))
+      .where('token.access_token_hash', '=', hash)
       .executeTakeFirst()
+
+  async function readToken(accessToken: string | null, valid: boolean, unauthorized = false) {
+    if (accessToken === null) throw invalidToken(unauthorized)
+    const row = await findLauncherToken(sha256(accessToken))
     const time = toIsoTimestamp(now())
-    if (!row || row.expires_at <= time || (valid && row.valid_until <= time)) throw invalid(row?.locale)
-    return row
+    if (!row || row.expires_at <= time || (valid && row.valid_until <= time))
+      throw invalidToken(unauthorized, row?.locale)
+    return { ...row, kind: 'launcher' as const }
   }
   type Token = Awaited<ReturnType<typeof readToken>>
 
-  function assertOwned(token: Token, unauthorized = false) {
+  async function readSessionToken(accessToken: string | null, unauthorized = false) {
+    if (accessToken === null) throw invalidToken(unauthorized)
+    const hash = sha256(accessToken)
+    const launcher = await findLauncherToken(hash)
+    const time = toIsoTimestamp(now())
+    // 找到了启动器令牌就沿用原有的两段有效期，不能用同哈希的 OAuth 令牌绕过失效
+    if (launcher) {
+      if (launcher.expires_at <= time || launcher.valid_until <= time) throw invalidToken(unauthorized, launcher.locale)
+      return { ...launcher, kind: 'launcher' as const }
+    }
+    const token = await db
+      .selectFrom('oauth_access_tokens as token')
+      .innerJoin('users', 'users.id', 'token.user_id')
+      .innerJoin('oauth_clients as client', 'client.client_id', 'token.client_id')
+      .selectAll('token')
+      .select(['users.email', 'users.locale', 'users.role', 'client.disabled'])
+      .where('token.token', '=', hash)
+      .executeTakeFirst()
+    if (
+      !token ||
+      token.token !== hash ||
+      token.user_id === null ||
+      token.revoked !== null ||
+      readAuthDate(token.expires_at) <= time ||
+      !readScopes(token.scopes).includes(JOIN_SCOPE) ||
+      readAuthBoolean(token.disabled ?? false)
+    )
+      throw invalidToken(unauthorized, token?.locale)
+    const pid = parsePlayerReference(token.reference_id)
+    const player =
+      pid === null
+        ? null
+        : await db
+            .selectFrom('players')
+            .select(['user_id as playerOwner', 'uuid', 'name'])
+            .where('id', '=', pid)
+            .executeTakeFirst()
+    if (!player) throw invalidToken(unauthorized, token.locale)
+    return { ...token, ...player, user_id: token.user_id, player_id: pid, kind: 'oauth' as const }
+  }
+
+  function assertOwned(token: Awaited<ReturnType<typeof readSessionToken>>, unauthorized = false) {
     if (token.player_id !== null && token.playerOwner !== token.user_id) {
       if (unauthorized)
         throw new YggdrasilError('UnauthorizedException', 'yggdrasil.errors.token_unauthorized', token.locale)
@@ -295,14 +343,31 @@ export function createTokens(options: {
       })
     },
     async validate(input: ValidateInput): Promise<void> {
-      const token = await readToken(input.accessToken, true)
-      assertClient(token, input.clientToken)
+      const token = await readSessionToken(input.accessToken)
+      if (token.kind === 'launcher') assertClient(token, input.clientToken)
       assertNotBanned(token)
       assertOwned(token)
     },
     async invalidate(input: { accessToken: string | null }): Promise<void> {
-      if (input.accessToken !== null)
-        await db.deleteFrom('yggdrasil_tokens').where('access_token_hash', '=', sha256(input.accessToken)).execute()
+      if (input.accessToken === null) return
+      const hash = sha256(input.accessToken)
+      const removed = await db
+        .deleteFrom('yggdrasil_tokens')
+        .where('access_token_hash', '=', hash)
+        .executeTakeFirstOrThrow()
+      if (removed.numDeletedRows === 0n)
+        await transactionWithRetry(db, async (tx) => {
+          const token = await tx
+            .selectFrom('oauth_access_tokens')
+            .select(['id', 'token', 'refresh_id'])
+            .where('token', '=', hash)
+            .executeTakeFirst()
+          // MySQL 的二进制排序规则仍忽略末尾空格，删行前必须逐字核对
+          if (!token || token.token !== hash) return
+          if (token.refresh_id !== null)
+            await tx.deleteFrom('oauth_refresh_tokens').where('id', '=', token.refresh_id).execute()
+          else await tx.deleteFrom('oauth_access_tokens').where('id', '=', token.id).execute()
+        })
     },
     async signout(input: CredentialsInput): Promise<void> {
       const { user } = await credentials(input)
@@ -344,6 +409,6 @@ export function createTokens(options: {
     },
     revokeAllTokens,
   }
-  return { service, readToken, assertOwned, assertNotBanned }
+  return { service, readToken, readSessionToken, assertOwned, assertNotBanned }
 }
 export type Tokens = ReturnType<typeof createTokens>

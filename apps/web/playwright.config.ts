@@ -60,12 +60,13 @@ export default defineConfig<{ pluginHost: boolean }>({
         'setup.spec.ts',
         'plugins.spec.ts',
         'external-login.spec.ts',
+        'connect.spec.ts',
       ],
     },
     {
       name: 'account',
       use: { ...devices['Desktop Chrome'], baseURL: accountSite },
-      testMatch: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts', 'admin.spec.ts'],
+      testMatch: ['account.spec.ts', 'skinlib.spec.ts', 'closet.spec.ts', 'admin.spec.ts', 'connect.spec.ts'],
     },
     {
       name: 'plugins',

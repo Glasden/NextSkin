@@ -51,7 +51,7 @@ export function createProfileTextures(options: {
 }) {
   const { db, settings, tokens, upload, closet, players } = options
   async function authorize(input: ResetTextureInput) {
-    const token = await tokens.readToken(input.accessToken, true, true)
+    const token = await tokens.readSessionToken(input.accessToken, true)
     tokens.assertOwned(token, true)
     const uuid = normalizeUuidLookup(input.uuid)
     const player =
@@ -65,6 +65,7 @@ export function createProfileTextures(options: {
     if (!player || player.uuid !== uuid)
       throw new YggdrasilError('NotFoundException', 'yggdrasil.errors.player_not_found', token.locale)
     if (player.user_id !== token.user_id) throw forbidden('profile_not_owned', token.locale)
+    if (token.kind === 'oauth' && token.player_id !== player.id) throw forbidden('profile_mismatch', token.locale)
     if (input.type !== 'skin' && input.type !== 'cape')
       throw new YggdrasilError('IllegalArgumentException', 'yggdrasil.errors.texture_type_invalid', token.locale, {
         type: input.type,

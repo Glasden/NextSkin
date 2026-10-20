@@ -13,11 +13,16 @@ import {
   type CoreDatabase,
 } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
-import { createLocalTextureStorage, offlineUuid } from '@nextskin/domain/importer'
+import {
+  createLocalTextureStorage,
+  DEVICE_CODE_GRANT_TYPE,
+  offlineUuid,
+  SHARED_OAUTH_CLIENT_ID,
+} from '@nextskin/domain/importer'
 import { sql } from 'kysely'
 import { afterAll, afterEach, beforeAll, beforeEach, expect, test } from 'vitest'
 import { reportToMarkdown } from './markdown.ts'
-import type { ImportReport } from './report.ts'
+import { LIST_LIMIT, type ImportReport } from './report.ts'
 import type { SourceDatabase } from './source/schema.ts'
 import { createBsSchema, insertRows } from './testing/bs.ts'
 import {
@@ -230,6 +235,263 @@ async function targetCounts() {
 
 const iso = (value: string) => toIsoTimestamp(new Date(value))
 
+const jsonValue = (value: unknown): unknown => (typeof value === 'string' ? JSON.parse(value) : value)
+
+function oauthClient(id: number, redirect: string, extra: Record<string, unknown> = {}) {
+  return {
+    id,
+    name: `client${id}`,
+    secret: null,
+    redirect,
+    personal_access_client: false,
+    password_client: false,
+    revoked: false,
+    ...extra,
+  }
+}
+
+test('刚迁移的空库只有公用应用，首次导入不需要 replace 或 force', async () => {
+  await createBsSchema(source.db)
+  const shared = await target.db.selectFrom('oauth_clients').selectAll().executeTakeFirstOrThrow()
+  expect(shared.client_id).toBe(SHARED_OAUTH_CLIENT_ID)
+  const result = await run()
+  expect(result.status).toBe('succeeded')
+  expect(result.report.blocking.total).toBe(0)
+  expect(result.report.target.newData).toBeNull()
+  expect(result.report.watermark?.maxOAuthClientId).toBe(0)
+  expect(await target.db.selectFrom('oauth_clients').selectAll().execute()).toEqual([shared])
+})
+
+test('Janus 公共客户端去掉密钥和标记，按剩余回调决定授权码，试跑和真实报告一致', async () => {
+  await seedWorld()
+  await source.db.deleteFrom('oauth_clients').execute()
+  const marker = 'https://old.test/yggc/client/public'
+  const loopback = 'http://127.0.0.1:8080/callback'
+  await insertRows(source.db, 'oauth_clients', [
+    oauthClient(1, marker, {
+      secret: 'old-secret',
+      user_id: 1,
+      revoked: true,
+      created_at: '2020-05-01 00:00:00',
+      updated_at: '2020-05-02 00:00:00',
+    }),
+    oauthClient(2, `${marker}, ${loopback}, https://other.test/sub/yggc/client/public/`),
+  ])
+  const dry = await run({ dryRun: true })
+  const result = await run()
+  expect(dry.status).toBe('succeeded')
+  expect(result.status).toBe('succeeded')
+  expect(comparable(result.report)).toEqual(comparable(dry.report))
+  const clients = await target.db
+    .selectFrom('oauth_clients')
+    .selectAll()
+    .where('client_id', '!=', SHARED_OAUTH_CLIENT_ID)
+    .orderBy('client_id')
+    .execute()
+  for (const client of clients) {
+    expect(client.client_secret).toBeNull()
+    expect(client.token_endpoint_auth_method).toBe('none')
+    expect(readAuthBoolean(client.require_pkce)).toBe(true)
+    expect(client.application_type).toBe('native')
+  }
+  expect(jsonValue(clients[0]!.redirect_uris)).toEqual([])
+  expect(jsonValue(clients[0]!.grant_types)).toEqual(['refresh_token', DEVICE_CODE_GRANT_TYPE])
+  expect(clients[0]!.response_types).toBeNull()
+  expect(clients[0]).toMatchObject({ name: 'client1', user_id: 1 })
+  expect(readAuthBoolean(clients[0]!.disabled)).toBe(true)
+  expect(readAuthDate(clients[0]!.created_at!)).toBe('2020-04-30T15:00:00.000Z')
+  expect(readAuthDate(clients[0]!.updated_at!)).toBe('2020-05-01T15:00:00.000Z')
+  expect(jsonValue(clients[1]!.redirect_uris)).toEqual([loopback])
+  expect(jsonValue(clients[1]!.grant_types)).toEqual(['authorization_code', 'refresh_token', DEVICE_CODE_GRANT_TYPE])
+  expect(jsonValue(clients[1]!.response_types)).toEqual(['code'])
+  expect(result.report.tables.oauthClients).toEqual({
+    source: 2,
+    imported: 2,
+    skipped: {},
+    adjusted: { janus_public_client: 2 },
+  })
+  expect(result.report.oauthPublicClients).toEqual({
+    total: 2,
+    items: [
+      { clientId: '1', name: 'client1', hadSecret: true, redirectUris: [], authorizationCode: false },
+      { clientId: '2', name: 'client2', hadSecret: false, redirectUris: [loopback], authorizationCode: true },
+    ],
+  })
+  const markdown = reportToMarkdown(result.report)
+  expect(markdown).toContain('Janus 标记的公共客户端，转成公共客户端并加上设备码流程 2')
+  expect(markdown).toContain('| 1 | client1 | 是 | — | 否 |')
+  expect(markdown).toContain(`| 2 | client2 | 否 | ${loopback} | 是 |`)
+  expect(markdown).toContain('invalid_client')
+  expect(markdown).not.toContain('old-secret')
+  expect(markdown.indexOf('## Janus 公共客户端')).toBeGreaterThan(markdown.indexOf('## 各表'))
+  expect(markdown.indexOf('## Janus 公共客户端')).toBeLessThan(markdown.indexOf('## 材质文件'))
+  const legacyReport = { ...result.report }
+  delete legacyReport.oauthPublicClients
+  expect(reportToMarkdown(legacyReport)).not.toContain('## Janus 公共客户端')
+  expect(reportToMarkdown(legacyReport)).toContain('## 材质文件')
+})
+
+test.each([
+  ['https://old.test/yggc/client/public/', true],
+  ['https://another.test/sub/path/yggc/client/public///?from=janus#marker', true],
+  ['https://old.test/yggc/client/public/x', false],
+  ['https://old.test/yggc/client/publicx', false],
+  ['/yggc/client/public', false],
+  ['invalid-url', false],
+])('Janus 标记只看可解析 URL 的路径：%s', async (redirect, marker) => {
+  await createBsSchema(source.db)
+  await insertRows(source.db, 'oauth_clients', [oauthClient(1, redirect)])
+  const result = await run()
+  expect(result.status).toBe('succeeded')
+  const client = await target.db
+    .selectFrom('oauth_clients')
+    .selectAll()
+    .where('client_id', '=', '1')
+    .executeTakeFirstOrThrow()
+  expect(jsonValue(client.redirect_uris)).toEqual(marker ? [] : [redirect])
+  expect(jsonValue(client.grant_types)).toEqual(
+    marker ? ['refresh_token', DEVICE_CODE_GRANT_TYPE] : ['authorization_code', 'refresh_token'],
+  )
+  expect(client.application_type).toBe(marker ? 'native' : null)
+  expect(result.report.tables.oauthClients.adjusted).toEqual(marker ? { janus_public_client: 1 } : {})
+  expect(result.report.oauthPublicClients?.total).toBe(marker ? 1 : 0)
+})
+
+test('个人访问和密码授权客户端带 Janus 标记也仍然跳过', async () => {
+  await createBsSchema(source.db)
+  const marker = 'https://old.test/yggc/client/public'
+  await insertRows(source.db, 'oauth_clients', [
+    oauthClient(1, marker, { personal_access_client: true }),
+    oauthClient(2, marker, { password_client: true }),
+  ])
+  const result = await run()
+  expect(result.status).toBe('succeeded')
+  expect(result.report.tables.oauthClients).toEqual({
+    source: 2,
+    imported: 0,
+    skipped: { unsupported_client: 2 },
+    adjusted: {},
+  })
+  expect(result.report.oauthPublicClients).toEqual({ total: 0, items: [] })
+  expect(await target.db.selectFrom('oauth_clients').select('client_id').execute()).toEqual([
+    { client_id: SHARED_OAUTH_CLIENT_ID },
+  ])
+})
+
+test('Janus 公共客户端报告只留前 200 项，Markdown 显示总数', async () => {
+  await createBsSchema(source.db)
+  await insertRows(
+    source.db,
+    'oauth_clients',
+    Array.from({ length: LIST_LIMIT + 1 }, (_, index) => oauthClient(index + 1, 'https://old.test/yggc/client/public')),
+  )
+  const result = await run()
+  expect(result.status).toBe('succeeded')
+  expect(result.report.tables.oauthClients.adjusted).toEqual({ janus_public_client: LIST_LIMIT + 1 })
+  expect(result.report.oauthPublicClients?.total).toBe(LIST_LIMIT + 1)
+  expect(result.report.oauthPublicClients?.items).toHaveLength(LIST_LIMIT)
+  const markdown = reportToMarkdown(result.report)
+  expect(markdown).toContain(`（共 ${LIST_LIMIT + 1} 项，只列出前 ${LIST_LIMIT} 项）`)
+  expect(markdown).not.toContain(`| ${LIST_LIMIT + 1} | client${LIST_LIMIT + 1} |`)
+})
+
+test('整库替换保留公用应用的 id 和停用状态，但清掉它的令牌、同意记录和设备码', async () => {
+  await seedWorld()
+  expect((await run()).status).toBe('succeeded')
+  await target.db
+    .updateTable('oauth_clients')
+    .set({ disabled: true })
+    .where('client_id', '=', SHARED_OAUTH_CLIENT_ID)
+    .execute()
+  const shared = await target.db
+    .selectFrom('oauth_clients')
+    .selectAll()
+    .where('client_id', '=', SHARED_OAUTH_CLIENT_ID)
+    .executeTakeFirstOrThrow()
+  expect((await run({ replace: true })).status).toBe('succeeded')
+  const date = writeAuthDate(target.db, iso('2030-01-01T00:00:00Z'))
+  const refreshId = await insertReturningId(target.db, 'oauth_refresh_tokens', {
+    client_id: SHARED_OAUTH_CLIENT_ID,
+    token: 'test-refresh',
+    user_id: 1,
+    scopes: '[]',
+    created_at: date,
+    expires_at: date,
+  })
+  await target.db
+    .insertInto('oauth_access_tokens')
+    .values({
+      client_id: SHARED_OAUTH_CLIENT_ID,
+      token: 'test-access',
+      user_id: 1,
+      refresh_id: refreshId,
+      scopes: '[]',
+      created_at: date,
+      expires_at: date,
+    })
+    .execute()
+  await target.db
+    .insertInto('oauth_consents')
+    .values({
+      client_id: SHARED_OAUTH_CLIENT_ID,
+      user_id: 1,
+      scopes: '[]',
+      created_at: date,
+      updated_at: date,
+    })
+    .execute()
+  await target.db
+    .insertInto('device_codes')
+    .values({
+      client_id: SHARED_OAUTH_CLIENT_ID,
+      device_code: 'test-device',
+      user_code: 'TESTCODE',
+      status: 'pending',
+      expires_at: date,
+    })
+    .execute()
+  // 公用应用本身不算新数据，但它名下的授权仍受删除新站数据的保护
+  const blocked = await run({ replace: true })
+  expect(blocked.report.blocking.items[0]).toMatchObject({
+    code: 'target_not_empty',
+    needs: 'force',
+    newData: { oauthClients: 0, oauthTokens: 3, other: 1 },
+  })
+  expect((await run({ replace: true, force: true })).status).toBe('succeeded')
+  expect(
+    await target.db
+      .selectFrom('oauth_clients')
+      .selectAll()
+      .where('client_id', '=', SHARED_OAUTH_CLIENT_ID)
+      .executeTakeFirst(),
+  ).toEqual(shared)
+  for (const table of ['oauth_access_tokens', 'oauth_refresh_tokens', 'oauth_consents', 'device_codes'] as const)
+    expect(await target.db.selectFrom(table).selectAll().execute()).toEqual([])
+})
+
+test('升级插入的公用应用 id 高于旧水位，替换导入也不需要 force，水位继续排除它', async () => {
+  await seedWorld()
+  const first = await run()
+  expect(first.status).toBe('succeeded')
+  await target.db.deleteFrom('oauth_clients').where('client_id', '=', SHARED_OAUTH_CLIENT_ID).execute()
+  const sharedId = await insertReturningId(target.db, 'oauth_clients', {
+    client_id: SHARED_OAUTH_CLIENT_ID,
+    redirect_uris: '[]',
+  })
+  expect(sharedId).toBeGreaterThan(first.report.watermark!.maxOAuthClientId)
+  const upgraded = await run({ replace: true })
+  expect(upgraded.status).toBe('succeeded')
+  expect(upgraded.report.target.newData?.oauthClients).toBe(0)
+  // 旧站随后删掉所有应用时，只有公用应用留在库里，水位也应归零
+  await source.db.deleteFrom('oauth_clients').execute()
+  const empty = await run({ replace: true })
+  expect(empty.status).toBe('succeeded')
+  expect(empty.report.watermark?.maxOAuthClientId).toBe(0)
+  expect(await target.db.selectFrom('oauth_clients').select(['id', 'client_id']).execute()).toEqual([
+    { id: sharedId, client_id: SHARED_OAUTH_CLIENT_ID },
+  ])
+})
+
 test('导入覆盖对照表的每一条规则，报告逐项列出', async () => {
   await seedWorld()
   const result = await run()
@@ -415,7 +677,12 @@ test('导入覆盖对照表的每一条规则，报告逐项列出', async () =>
   expect(report.reports).toEqual({ duplicates: 1, autoResolved: 1, refunded: 5 })
 
   // OAuth 客户端：secret 为空的是公共客户端；保密客户端的 secret 存 sha256
-  const clients = await db.selectFrom('oauth_clients').selectAll().orderBy('client_id').execute()
+  const clients = await db
+    .selectFrom('oauth_clients')
+    .selectAll()
+    .where('client_id', '!=', SHARED_OAUTH_CLIENT_ID)
+    .orderBy('client_id')
+    .execute()
   expect(clients.map((row) => [row.client_id, row.token_endpoint_auth_method, row.user_id])).toEqual([
     ['1', 'client_secret_basic', 1],
     ['2', 'none', null],
@@ -423,6 +690,12 @@ test('导入覆盖对照表的每一条规则，报告逐项列出', async () =>
   expect(clients[0]!.client_secret).toBe('WxFhjC5EAnh30M0JIe0Wa58Xb1BYf8kedTTdKUbbd9Y')
   const json = (value: unknown) => (typeof value === 'string' ? (JSON.parse(value) as unknown) : value)
   expect(json(clients[0]!.redirect_uris)).toEqual(['https://a.test/cb', 'https://b.test/cb'])
+  for (const client of clients) {
+    expect(json(client.grant_types)).toEqual(['authorization_code', 'refresh_token'])
+    expect(json(client.response_types)).toEqual(['code'])
+    expect(client.application_type).toBeNull()
+  }
+  expect(report.oauthPublicClients).toEqual({ items: [], total: 0 })
   expect(clients.map((row) => [readAuthBoolean(row.disabled), readAuthBoolean(row.require_pkce)])).toEqual([
     [false, false],
     [true, true],
@@ -1015,9 +1288,13 @@ test('超过 2^53 的 OAuth 客户端 id 原样成为 client_id', async () => {
     },
   ])
   expect((await run()).status).toBe('succeeded')
-  expect(await target.db.selectFrom('oauth_clients').select('client_id').execute()).toEqual([
-    { client_id: '9007199254740993' },
-  ])
+  expect(
+    await target.db
+      .selectFrom('oauth_clients')
+      .select('client_id')
+      .where('client_id', '!=', SHARED_OAUTH_CLIENT_ID)
+      .execute(),
+  ).toEqual([{ client_id: '9007199254740993' }])
 })
 
 test('首页设置写入并在重导时清除旧值，报告显示旧站描述和版权原文', async () => {

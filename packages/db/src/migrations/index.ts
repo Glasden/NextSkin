@@ -48,6 +48,9 @@ import * as createPluginKv from './0038_create_plugin_kv.ts'
 import * as createPluginMigrations from './0039_create_plugin_migrations.ts'
 import * as alterAccountsKeyColumns from './0040_alter_accounts_key_columns.ts'
 import * as createAccountsBindingIndexes from './0041_create_accounts_binding_indexes.ts'
+import * as insertSharedOauthClient from './0042_insert_shared_oauth_client.ts'
+import * as createOauthReferenceIdIndexes from './0043_create_oauth_reference_id_indexes.ts'
+import * as addUsersOauthVersion from './0044_add_users_oauth_version.ts'
 
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
@@ -91,4 +94,7 @@ export const coreMigrations: Record<string, Migration> = {
   '0039_create_plugin_migrations': createPluginMigrations,
   '0040_alter_accounts_key_columns': alterAccountsKeyColumns,
   '0041_create_accounts_binding_indexes': createAccountsBindingIndexes,
+  '0042_insert_shared_oauth_client': insertSharedOauthClient,
+  '0043_create_oauth_reference_id_indexes': createOauthReferenceIdIndexes,
+  '0044_add_users_oauth_version': addUsersOauthVersion,
 }

@@ -19,7 +19,7 @@ const CLIENT_WRITE_PATHS = new Set([
 ])
 
 /** 会做客户端认证的端点（extractClientCredentials 的调用方） */
-const CLIENT_AUTHENTICATION_PATHS = new Set(['/oauth2/token', '/oauth2/introspect', '/oauth2/revoke'])
+const CLIENT_AUTHENTICATION_PATHS = new Set(['/oauth2/token', '/oauth2/introspect', '/oauth2/revoke', '/device/code'])
 
 const UNSUPPORTED_METHOD = 'private_key_jwt'
 

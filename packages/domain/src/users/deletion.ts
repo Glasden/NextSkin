@@ -1,3 +1,4 @@
+import { deleteClaimedDeviceCodes } from '../oauth/revoke.ts'
 import type { CoreDatabase, IsoTimestamp } from '@nextskin/db'
 import type { Actor } from '@nextskin/plugin-sdk'
 import type { Transaction } from 'kysely'
@@ -113,6 +114,7 @@ export async function deleteAccountData(
     })
     if (admin) await auditTextureDeletion(tx, { actor, row: texture, ip: admin.ip, now })
   }
+  await deleteClaimedDeviceCodes(tx, uid)
   await tx.deleteFrom('users').where('id', '=', uid).execute()
   await events.emit(tx, 'user.deleted', actor, { uid }, now)
 }

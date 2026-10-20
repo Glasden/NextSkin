@@ -163,7 +163,13 @@
     "score_out_of_range": "调整之后的积分超出了范围：现在的余额是 {balance}，扣完不能少于 0，加完不能超过 2147483647。",
     "email_changed": "对方的邮箱刚刚改过了。请刷新页面，核对新的地址之后再操作。",
     "admin_own_texture": "这是你自己上传的材质，请在详情页里用上传者的操作修改。",
-    "texture_uploader_gone": "上传者已经注销，这个材质不能下架；要处理的话请删除它。"
+    "texture_uploader_gone": "上传者已经注销，这个材质不能下架；要处理的话请删除它。",
+    "device_code_invalid": "这个代码不对，或者已经用过了。回到启动器重新开始登录，拿一个新的代码。",
+    "device_code_expired": "这个代码已经过期了。回到启动器重新开始登录，拿一个新的代码。",
+    "device_code_claimed": "这个代码已经被另一个账号打开了。如果不是你自己在别的账号上打开的，回到启动器重新开始登录。",
+    "device_code_processed": "这次登录已经处理过了，回到启动器看看结果。",
+    "device_player_required": "这个应用要用你的一个角色登录，先选一个角色。",
+    "oauth_scope_invalid": "这个应用申请的权限组合不对，没法授权。请联系应用的开发者。"
   },
   "score": {
     "reasons": {
@@ -513,7 +519,8 @@
         "passkeyCount": "{count, plural, other {# 个}}",
         "launcherCount": "{count, plural, other {# 个}}",
         "passwordNotSet": "未设置",
-        "externalCount": "{count, plural, other {已绑定 # 个}}"
+        "externalCount": "{count, plural, other {已绑定 # 个}}",
+        "authorizationCount": "{count, plural, other {# 个}}"
       },
       "password": {
         "title": "密码",
@@ -609,7 +616,7 @@
       },
       "launchers": {
         "title": "启动器登录",
-        "description": "在启动器里用本站账号登录后，启动器会保存一个凭据，用来进服和上传皮肤；过了有效期，启动器下次启动时会自己续期。手机丢了、在别人的电脑上登录过，可以在这里退出。修改密码会退出全部启动器。",
+        "description": "在启动器里用本站账号登录后，启动器会保存一个凭据，用来进服和上传皮肤；过了有效期，启动器下次启动时会自己续期。手机丢了、在别人的电脑上登录过，可以在这里退出。修改密码会退出全部启动器，下面已授权的应用也要重新授权。",
         "empty": "还没有启动器登录。启动器的设置方法见<link>仪表盘</link>。",
         "player": "角色 {name}",
         "noPlayer": "还没选角色",
@@ -620,7 +627,7 @@
         "revoked": "已退出这个启动器登录",
         "revokeAll": "全部退出",
         "revokeAllTitle": "退出全部 {count, plural, other {# 个}}启动器登录？",
-        "revokeAllDescription": "所有启动器都要重新输入密码登录。已经进了服务器的游戏不受影响，网页上的登录也不受影响。",
+        "revokeAllDescription": "用密码登录的启动器都要重新输入密码。已经进了服务器的游戏、网页上的登录和下面已授权的应用不受影响。",
         "revokeAllConfirm": "全部退出",
         "revokedAll": "已退出全部启动器登录",
         "failed": "没有成功，请稍后重试。"
@@ -643,6 +650,20 @@
         "reauthTitle": "需要重新登录",
         "reauthDescription": "为了安全，绑定第三方账号前要在 10 分钟内登录过。重新登录后会回到这一页。",
         "reauth": "重新登录",
+        "failed": "没有成功，请稍后重试。"
+      },
+      "authorizations": {
+        "title": "已授权的应用",
+        "description": "你在启动器授权页上同意过的应用。取消授权后，它拿到的登录全部失效，下次使用要重新授权。修改密码也会让它们的登录失效。",
+        "empty": "还没有授权过应用。",
+        "players": "角色 {names}",
+        "noPlayers": "没有绑定角色",
+        "authorizedAt": "授权于 {time}",
+        "revoke": "取消授权",
+        "revokeTitle": "取消授权 {name}？",
+        "revokeDescription": "它拿到的登录全部失效，用它登录的启动器要重新授权。已经进了服务器的游戏不受影响。",
+        "revokeConfirm": "取消授权",
+        "revoked": "已取消授权 {name}",
         "failed": "没有成功，请稍后重试。"
       }
     },
@@ -1635,15 +1656,15 @@
           },
           "tokenValidSeconds": {
             "label": "令牌有效期",
-            "help": "秒。有效期内可进服、校验令牌和修改材质。"
+            "help": "秒。有效期内可进服、校验令牌和修改材质。启动器登录和已授权应用的令牌都按它算。"
           },
           "tokenRefreshableSeconds": {
             "label": "令牌可刷新期",
-            "help": "秒。到期后需要重新登录；短于有效期时按有效期算。"
+            "help": "秒。到期后需要重新登录或重新授权；短于有效期时按有效期算。"
           },
           "tokensPerUser": {
             "label": "每用户令牌上限",
-            "help": "个。签发新令牌时超过上限，就退出最早的启动器登录。"
+            "help": "个。签发新令牌时超过上限，就退出最早的启动器登录；已授权的应用各自按这个上限计数。"
           },
           "loginIntervalMs": {
             "label": "登录请求间隔",
@@ -1970,7 +1991,7 @@
         "copied": "已复制密码",
         "copyFailed": "复制失败，请手动选中复制。",
         "generateHint": "随机密码只显示这一次，关掉对话框就看不到了，请先复制。",
-        "passwordRevokes": "退出全部 {sessions, plural, other {#}} 个网页会话和 {tokens, plural, other {#}} 个启动器登录",
+        "passwordRevokes": "退出全部 {sessions, plural, other {#}} 个网页会话和 {tokens, plural, other {#}} 个启动器登录，吊销已授权应用拿到的令牌",
         "passwordRevokesPending": "作废还没完成的两步验证、找回密码链接和还没确认的改邮箱链接",
         "passwordKeeps": "通行密钥（{passkeys, plural, other {#}} 把）和第三方账号（{bindings, plural, other {#}} 个）不受影响，拿着它们的人可以立刻登回来。账号失控时请勾选收回账号。",
         "takeover": "收回账号",
@@ -2003,7 +2024,7 @@
         "unlinked": "已解绑 {name}，退出了 {sessions, plural, other {#}} 个网页会话和 {tokens, plural, other {#}} 个启动器登录",
         "revokeSessions": "退出全部登录",
         "revokeSessionsTitle": "让 {nickname} 退出全部登录？",
-        "revokeSessionsHint": "退出全部 {sessions, plural, other {#}} 个网页会话和 {tokens, plural, other {#}} 个启动器登录，作废还没完成的两步验证、找回密码链接和还没确认的改邮箱链接。",
+        "revokeSessionsHint": "退出全部 {sessions, plural, other {#}} 个网页会话和 {tokens, plural, other {#}} 个启动器登录，吊销已授权应用拿到的令牌，作废还没完成的两步验证、找回密码链接和还没确认的改邮箱链接。",
         "revokeSessionsKeeps": "密码、通行密钥（{passkeys, plural, other {#}} 把）和第三方账号（{bindings, plural, other {#}} 个）不变，知道或者拿着它们的人可以立刻登回来。账号失控时请用「设置密码」里的收回账号。",
         "sessionsRevoked": "退出了 {sessions, plural, other {#}} 个网页会话和 {tokens, plural, other {#}} 个启动器登录"
       },
@@ -2499,7 +2520,21 @@
         "invalid_status": "状态值不认识",
         "reporter_missing": "举报人不存在，置空",
         "invalid_report_at": "举报时间无效，取导入时刻",
-        "unsupported_client": "个人访问令牌或密码授权的客户端，不再支持"
+        "unsupported_client": "个人访问令牌或密码授权的客户端，不再支持",
+        "janus_public_client": "Janus 标记的公共客户端，转成了公共客户端"
+      },
+      "publicClients": {
+        "title": "Janus 公共客户端",
+        "description": "这些应用的回调地址里有 Janus 的公共客户端标记，导入时去掉了标记和密钥，转成公共客户端，并加上设备码登录。原来用密钥接入的网站要改成公共客户端的接法（授权码流程带 PKCE），继续传旧密钥会被拒绝。",
+        "columns": {
+          "client": "应用",
+          "secret": "原来的密钥",
+          "redirects": "剩下的回调地址"
+        },
+        "unnamed": "（没有名称）",
+        "hadSecret": "有，已作废",
+        "noSecret": "没有",
+        "deviceOnly": "没有了，只能用设备码登录"
       },
       "files": {
         "total": "文件",
@@ -2578,5 +2613,52 @@
     "failedPlain": "没能完成，插件没有说明原因。",
     "invalid": "有几项填写得不对，改好再提交。",
     "count": "共 {count, number} 条"
+  },
+  "oauth": {
+    "sharedClient": "{site} 公用应用",
+    "unnamedClient": "未命名的应用",
+    "owner": "由 {nickname} 创建",
+    "noOwner": "创建者的账号已经不在了",
+    "sharedHint": "本站内置的应用，任何启动器都能以它的名义发起登录。",
+    "scopes": {
+      "openid": "确认你在本站的账号",
+      "profile": "读取你的昵称和头像",
+      "email": "读取你的邮箱地址",
+      "offlineAccess": "保持登录，不用每次重新授权",
+      "playerSelect": "读取你选择的一个角色",
+      "playerRead": "读取你的全部角色",
+      "serverJoin": "用选择的角色进服，更换它的皮肤和披风"
+    }
+  },
+  "device": {
+    "title": "启动器授权",
+    "enterDescription": "输入启动器或设备上显示的代码，授权它使用你的账号。",
+    "code": "代码",
+    "codeHint": "8 位字母和数字，不区分大小写。",
+    "continue": "继续",
+    "invalid": "没有找到这个代码，它可能已经用过了。核对启动器上显示的代码，再输入一次。",
+    "expired": "这个代码已经过期。回到启动器，重新发起登录。",
+    "claimed": "这个代码已经在另一个账号上打开过。回到启动器，重新发起登录。",
+    "tooManyAttempts": "代码输错的次数太多，{minutes, plural, other {# 分钟}}后再试。",
+    "requestTitle": "确认授权",
+    "codeLabel": "启动器上显示的代码",
+    "expiresAt": "{time} 前有效",
+    "warning": "只有在你自己刚刚在启动器或设备上发起登录时才继续。别人发给你的代码，不要输入。",
+    "permissions": "授权以后，它可以：",
+    "player": "选择角色",
+    "playerHint": "它只能看到和使用这一个角色。换角色要重新授权。",
+    "noSkin": "还没有皮肤",
+    "noPlayers": "它需要使用一个角色，你还没有角色。",
+    "createPlayer": "去创建角色",
+    "banned": "你的账号已被封禁，不能授权。",
+    "approve": "授权",
+    "deny": "拒绝",
+    "failed": "没有成功，请重试。",
+    "approvedTitle": "已授权",
+    "approved": "回到启动器，登录会自动完成。可以关掉这个页面了。",
+    "deniedTitle": "已拒绝",
+    "denied": "{name} 没有拿到任何权限。可以关掉这个页面了。",
+    "figure": "{name} 的皮肤",
+    "figureEmpty": "{name} 还没有皮肤"
   }
 }

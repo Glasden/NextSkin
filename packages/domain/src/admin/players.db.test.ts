@@ -3,6 +3,7 @@
  * 按 ADR 和切片规格断言，不迎合实现；使用四种数据库共用的辅助函数，竞态固定在提交前或刷新进入事务前。
  * 用户侧换材质的错误优先级已由 closet/lifecycle.db.test.ts 的“换材质按可见性、衣柜、槽位顺序验证”覆盖。
  */
+import { seedOAuth } from '../oauth/oauth.test-helper.ts'
 import { randomUUID } from 'node:crypto'
 import { countRows, insertReturningId, toIsoTimestamp, type CoreDatabase, type UserRole } from '@nextskin/db'
 import type { Player } from '@nextskin/plugin-sdk'
@@ -24,6 +25,7 @@ let admin: AdminActor, superadmin: AdminActor
 
 beforeEach(async () => {
   vi.mocked(can).mockImplementation(permissions.can)
+  await env.db().deleteFrom('device_codes').execute()
   await env.db().deleteFrom('audit_logs').execute()
   admin = { ...(await env.user('admin')), ip: '2001:db8::36' }
   superadmin = { ...(await env.user('superadmin')), ip: '192.0.2.36' }
@@ -90,6 +92,9 @@ async function snapshot() {
     score: await db.selectFrom('score_transactions').selectAll().orderBy('id').execute(),
     tokens: await db.selectFrom('yggdrasil_tokens').selectAll().orderBy('id').execute(),
     selections: await db.selectFrom('device_code_selections').selectAll().orderBy('device_code').execute(),
+    oauthAccess: await db.selectFrom('oauth_access_tokens').selectAll().orderBy('id').execute(),
+    oauthRefresh: await db.selectFrom('oauth_refresh_tokens').selectAll().orderBy('id').execute(),
+    oauthConsents: await db.selectFrom('oauth_consents').selectAll().orderBy('id').execute(),
     audit: await logs(),
     jobs: await db.selectFrom('jobs').selectAll().orderBy('id').execute(),
   }
@@ -437,6 +442,7 @@ test('转让：新主人等于原主人时不写角色、不清令牌、不发�
   const target = await player(env.owner.uid, 'Before', await env.texture('steve', false))
   await launcherToken(target.uid, target.pid)
   await selection(target.uid, target.pid)
+  await seedOAuth(env.db(), target.uid, target.pid)
   const before = await snapshot(),
     writes = env.playerWrites
   env.tick()
@@ -914,3 +920,20 @@ test('查材质：公开、主人自己的私有材质可见，别人的私有�
     visibleToOwner: true,
   })
 })
+
+test.each(['transfer', 'admin-delete', 'self-delete'] as const)(
+  '%s 删除角色绑定的 OAuth 令牌和同意，别的角色不受影响',
+  async (action) => {
+    const target = await player()
+    const other = await player(target.uid, 'Other')
+    await seedOAuth(env.db(), target.uid, target.pid)
+    await seedOAuth(env.db(), target.uid, other.pid)
+    if (action === 'transfer') await env.core.admin.transferPlayer(admin, target.pid, env.actor.uid)
+    else if (action === 'admin-delete') await env.core.admin.deletePlayer(admin, target.pid)
+    else await env.core.players.delete({ uid: target.uid }, target.pid)
+    for (const table of ['oauth_access_tokens', 'oauth_refresh_tokens', 'oauth_consents'] as const)
+      expect(await env.db().selectFrom(table).select('reference_id').execute()).toEqual([
+        { reference_id: `player:${other.pid}` },
+      ])
+  },
+)

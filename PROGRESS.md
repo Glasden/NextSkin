@@ -9,6 +9,7 @@
 - **基础设施**（ADR-0013、ADR-0014）：monorepo 骨架、工具链、CI（`.github/workflows/ci.yml`）和 Renovate；核心表的迁移；国际化（ADR-0019）。
 - **协议端点**：CSL、USM、Legacy、`/textures`，契约测试（`tests/contract`，支持有状态的场景）。
 - **Yggdrasil**（ADR-0030）：元数据和角色查询；authserver 的令牌表和五个端点、进服、启动器上传和删除材质；开了两步验证的账号在密码后面接验证码。仪表盘的外置登录配置，安全页的启动器登录列表。
+  - Yggdrasil Connect 的设备码流程（ADR-0037 切片一）：三个 Yggdrasil scope 和组合规则、`selectedProfile`/`availableProfiles` 声明、发现文档（`shared_client_id`）、元数据的 `feature.openid_configuration_url`（https 站点）；迁移插入的公用应用；`/device` 批准页（认领、选角色、批准和拒绝走领域用例，按用户限制猜错代码的次数，防点击劫持的响应头）；`join`、`validate`、`invalidate` 和启动器上传、删除材质认 OAuth 令牌（要 Join，上传只能改绑定的角色）；有效期和每个应用的数量上限取 authserver 的设置；改密码、作废在途的登录、角色转让和删除、删除账号时吊销，签发途中被吊销的令牌签发后立即撤回（`users.oauth_version`）；授权码流程现有的端点也检查封禁和邮箱验证、不接受只同意一部分 scope、公共客户端每次都征求同意；安全页的"已授权的应用"和取消授权；导入器把 Janus 标记的应用转成公共客户端。
 - **认证和注册**（ADR-0007、ADR-0018）：Better Auth 的表和配置、旧密码兼容、serial 下的能力限制；注册用例和注册规则，注册接口 `POST /api/register` 是第一个 REST 接口（`packages/api/src/rest/`）；登录、注册和找回密码的页面。
 - **邮件**（ADR-0020、ADR-0021）：模板在 `packages/email`，发送是持久的后台任务。
 - **事件、后台任务和积分流水**（ADR-0021）：任务表和执行器；事件在业务事务里按订阅者展开成任务；`adjustScore`。
@@ -36,7 +37,7 @@
 
 - **插件 SDK 1.0**（ADR-0035）：冻结前的调整、打包和发布流程、作者文档（`packages/plugin-sdk/docs/`）已经做完，两个包的版本是 `1.0.0-rc.0`（预发布模式 `rc`）。还没做：第一个候选版由维护者在本地发（`pnpm release`），之后配好 npm 的可信发布，由 CI 发；候选期在仓库外照迁移指南迁一个 BS 社区插件、收集作者意见；1.0.0 之前仓库公开，退出预发布时去掉 README 和入门里的 `@rc`。
 - **第三方登录的字段核对**：四家的 subject、`emailVerified` 还要用真实账号核对一遍（ADR-0034"首批插件"）。
-- **Yggdrasil Connect**（ADR-0037 已采纳）：分三个切片，都还没做。一是设备码流程：scope 规则和声明、发现文档、元数据字段、公用应用、`/device` 页，进服、`validate`、`invalidate` 和启动器上传材质认 OAuth 令牌，有效期和数量上限，吊销规则，导入器认出 Janus 的公共客户端，安全页的"已授权的应用"；二是授权码流程：同意页、登录后续跑、scope 错误的重定向；三是用户中心和后台的"OAuth 应用"页、权限 `oauthClients.manage`。`@better-auth/oauth-provider` 已经接进 Better Auth 的配置。
+- **Yggdrasil Connect**（ADR-0037）：切片一（设备码流程）已经落地。还没做：二是授权码流程：同意页 `/oauth/consent`、登录后续跑、scope 错误的重定向，在这之前授权码流程拒绝 Yggdrasil scope；三是用户中心和后台的"OAuth 应用"页、权限 `oauthClients.manage`，后台停用公用应用，用户详情页的"已授权的应用"数。
 - **验证码**：做进核心，用设置项选 Turnstile、hCaptcha 或 reCAPTCHA（ADR-0033）。
 - **插件 API 推迟的部分**：写核心数据的能力、其余五个拦截点、运行时组件和插槽等，见 ADR-0033 的"推迟"表。
 - **启动器**（`nextskin` 进程监管和命令行）：现在 plugin host 由核心进程拉起。
