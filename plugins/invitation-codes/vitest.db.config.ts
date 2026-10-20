@@ -8,7 +8,9 @@ export default defineConfig({
         name: `invitation-codes:${dialect}`,
         environment: 'node',
         include: ['src/**/*.db.test.ts'],
-        testTimeout: 30_000,
+        // 四种库的项目并行跑，CI 上 MySQL 的迁移、建库会慢好几倍；四个包的 test:db 统一用这个上限
+        testTimeout: 60_000,
+        hookTimeout: 60_000,
         env: { TZ: 'Asia/Shanghai', NEXTSKIN_TEST_DB: dialect },
       },
     })),
