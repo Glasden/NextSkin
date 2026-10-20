@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
+import { cookies } from 'next/headers'
 import type { ReactNode } from 'react'
+import { COLOR_MODE_COOKIE, colorModeScript, parseColorMode } from '../lib/color-mode'
 import { getServer } from '../lib/server'
+import { ColorModeProvider } from './color-mode-menu'
 import './globals.css'
 
 // 站点描述同时是首页主标题下的一句话和 meta description；没写时用首页的默认介绍（ADR-0032）
@@ -20,11 +23,21 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
+// data-theme 由 <head> 里的内联脚本在第一次绘制之前设上（lib/color-mode.ts）。服务端渲染的 <html> 上没有这个属性，
+// 水合时和页面对不上，所以 <html> 不报水合不一致
 export default async function RootLayout({ children }: { readonly children: ReactNode }) {
+  const [locale, cookieStore] = await Promise.all([getLocale(), cookies()])
   return (
-    <html lang={await getLocale()}>
+    <html lang={locale} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: colorModeScript }} />
+      </head>
       <body className="min-h-dvh bg-bg font-sans text-text">
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider>
+          <ColorModeProvider value={parseColorMode(cookieStore.get(COLOR_MODE_COOKIE)?.value)}>
+            {children}
+          </ColorModeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   )

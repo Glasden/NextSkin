@@ -1,6 +1,7 @@
 'use client'
 
 import { Menu as BaseMenu } from '@base-ui/react/menu'
+import { Check } from 'pixelarticons/react/Check.js'
 import { ChevronDown } from 'pixelarticons/react/ChevronDown.js'
 import type { ReactElement, ReactNode } from 'react'
 import { cx } from '../cx.ts'
@@ -11,7 +12,7 @@ export interface MenuProps {
   label?: ReactNode
   /** 换掉默认的触发按钮，例如衣柜卡片右上角“更多”的 IconButton */
   trigger?: ReactElement
-  /** MenuItem、MenuLinkItem、MenuSeparator */
+  /** MenuItem、MenuLinkItem、MenuRadioGroup、MenuSeparator */
   children: ReactNode
   /** 菜单和触发按钮哪一边对齐。页头右上角的菜单用 end，免得伸出屏幕 */
   align?: 'start' | 'end'
@@ -99,6 +100,52 @@ export function MenuLinkItem({ children, render, href, icon }: MenuLinkItemProps
       {icon && <span className="shrink-0 text-text-muted">{icon}</span>}
       {children}
     </BaseMenu.LinkItem>
+  )
+}
+
+export interface MenuRadioGroupProps<Value extends string> {
+  /** 组的名称，用像素字体写在这组选项上面，例如“亮暗模式” */
+  label: string
+  value: Value
+  onValueChange: (value: Value) => void
+  /** MenuRadioItem */
+  children: ReactNode
+}
+
+/** 一组互斥的选项，例如页头的亮暗模式。选中项后面打勾，不只靠颜色区分（DESIGN.md §9） */
+export function MenuRadioGroup<Value extends string>({
+  label,
+  value,
+  onValueChange,
+  children,
+}: MenuRadioGroupProps<Value>) {
+  return (
+    <BaseMenu.RadioGroup value={value} onValueChange={(next: Value) => onValueChange(next)}>
+      <BaseMenu.GroupLabel className="px-3 pt-2 pb-1 font-pixel text-pixel-1 text-text-muted select-none">
+        {label}
+      </BaseMenu.GroupLabel>
+      {children}
+    </BaseMenu.RadioGroup>
+  )
+}
+
+export interface MenuRadioItemProps {
+  value: string
+  children: ReactNode
+  /** 24px 的 pixelarticons 图标，放在文字前面 */
+  icon?: ReactNode
+}
+
+/** MenuRadioGroup 里的一个选项。点了以后菜单关闭 */
+export function MenuRadioItem({ value, children, icon }: MenuRadioItemProps) {
+  return (
+    <BaseMenu.RadioItem className={itemClass} value={value} closeOnClick>
+      {icon && <span className="shrink-0 text-text-muted">{icon}</span>}
+      <span className="flex-1">{children}</span>
+      <BaseMenu.RadioItemIndicator className="shrink-0 text-accent">
+        <Check aria-hidden />
+      </BaseMenu.RadioItemIndicator>
+    </BaseMenu.RadioItem>
   )
 }
 

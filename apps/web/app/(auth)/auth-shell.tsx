@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import type { ReactNode } from 'react'
 import { getServer } from '../../lib/server'
+import { ColorModeMenu } from '../color-mode-menu'
 
 // 默认皮肤只有 k = 1 一种分辨率（64×64 的材质），预先渲染好随核心发布（packages/skin/assets）。
 // 材质的出图路由落地后，插图可以换成站点里的材质
@@ -48,8 +49,9 @@ export async function AuthShell({
   return (
     <div className="grid min-h-dvh lg:grid-cols-2">
       <div className="flex flex-col px-4 py-6 sm:px-8">
-        <header>
+        <header className="flex items-center justify-between gap-4">
           <Logo name={siteName} render={<NextLink href="/" />} />
+          <ColorModeMenu />
         </header>
         <div className="mt-6 h-56 lg:hidden">
           <Stage grid>{illustration(4)}</Stage>

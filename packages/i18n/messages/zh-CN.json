@@ -855,6 +855,12 @@
     },
     "signIn": "登录",
     "signUp": "注册",
+    "colorMode": {
+      "label": "亮暗模式",
+      "system": "跟随系统",
+      "light": "亮色",
+      "dark": "暗色"
+    },
     "footer": {
       "columns": {
         "site": "站点",

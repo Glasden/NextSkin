@@ -4,11 +4,12 @@ import { getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { getServer } from '../lib/server'
 import { getSessionUser } from '../lib/session'
+import { ColorModeMenu } from './color-mode-menu'
 import { SiteNav } from './site-nav'
 import { UserMenu } from './user/user-menu'
 
 /**
- * 全站的页头：标志、全站导航，右边是用户菜单；没有登录时是登录、注册的链接。
+ * 全站的页头：标志、全站导航，右边是亮暗模式和用户菜单；没有登录时是登录、注册的链接。
  * wide：后台的正文比前台宽（ADR-0027），页头跟着放宽，标志和侧栏才对得齐
  */
 export async function SiteHeader({ wide = false }: { wide?: boolean } = {}) {
@@ -30,6 +31,7 @@ export async function SiteHeader({ wide = false }: { wide?: boolean } = {}) {
           <SiteNav />
         </div>
         <div className="ml-auto flex h-16 min-w-0 shrink-0 items-center gap-4 text-sm">
+          <ColorModeMenu />
           {user ? (
             <UserMenu nickname={user.nickname} admin={hasAdminAccess(user.role)} />
           ) : (

@@ -855,6 +855,12 @@
     },
     "signIn": "Sign in",
     "signUp": "Sign up",
+    "colorMode": {
+      "label": "Color mode",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "footer": {
       "columns": {
         "site": "Site",
