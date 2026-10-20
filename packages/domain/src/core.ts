@@ -1,3 +1,4 @@
+import { createOAuthClients } from './oauth/clients.ts'
 import { createDevices } from './oauth/devices.ts'
 import { createAuthorizations } from './oauth/authorizations.ts'
 import { deleteOAuthTokensForUser, deleteClaimedDeviceCodes } from './oauth/revoke.ts'
@@ -290,7 +291,11 @@ export function createCore(options: CoreOptions) {
       ...createUserManagement(options, settings, mail, jobs, events, removal, now, passwordPlugins),
     },
     score: createScoreQueries(options.db),
-    oauth: { ...createDevices({ db: options.db, settings, now }), ...createAuthorizations({ db: options.db, now }) },
+    oauth: {
+      ...createOAuthClients({ db: options.db, settings, now }),
+      ...createDevices({ db: options.db, settings, now }),
+      ...createAuthorizations({ db: options.db, now }),
+    },
     yggdrasil,
   }
 }

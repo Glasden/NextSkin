@@ -53,6 +53,8 @@
         "binding": "解除了 {provider} 账号的绑定",
         "playerRenamed": "把角色 {from} 改名为 {to}",
         "playerDeleted": "删除了角色 {name}",
+        "oauthClientDisabled": "停用了你的 OAuth 应用 {name}",
+        "oauthClientDeleted": "删除了你的 OAuth 应用 {name}",
         "playerTransferredOut": "把角色 {name} 转给了其他用户",
         "playerTransferredIn": "把角色 {name} 转给了你"
       }
@@ -169,7 +171,16 @@
     "device_code_claimed": "这个代码已经被另一个账号打开了。如果不是你自己在别的账号上打开的，回到启动器重新开始登录。",
     "device_code_processed": "这次登录已经处理过了，回到启动器看看结果。",
     "device_player_required": "这个应用要用你的一个角色登录，先选一个角色。",
-    "oauth_scope_invalid": "这个应用申请的权限组合不对，没法授权。请联系应用的开发者。"
+    "oauth_scope_invalid": "这个应用申请的权限组合不对，没法授权。请联系应用的开发者。",
+    "oauth_client_not_found": "应用不存在。",
+    "oauth_client_name_invalid": "名称要有 {min} 到 {max} 个字符，不能有控制字符。",
+    "oauth_redirect_uri_invalid": "回调地址不可用：{uri}。网站只能用 https，启动器还可以用本机的 http 地址（localhost、127.0.0.1、[::1]）或自定义协议；地址里不能有 # 和用户名、密码。",
+    "oauth_redirect_uri_required": "至少要填一条回调地址。",
+    "oauth_redirect_uris_too_many": "回调地址最多 {max} 条。",
+    "oauth_redirect_uri_too_long": "每条回调地址最多 {max} 个字符。",
+    "oauth_client_public": "启动器类型的应用没有密钥。",
+    "oauth_client_shared": "公用应用不能删除。",
+    "oauth_client_not_manageable": "只有超级管理员能处理没有主人的应用。"
   },
   "score": {
     "reasons": {
@@ -313,7 +324,8 @@
       "profile": "个人资料",
       "security": "登录与安全",
       "closet": "衣柜",
-      "reports": "我的举报"
+      "reports": "我的举报",
+      "oauthClients": "OAuth 应用"
     },
     "menu": {
       "signOut": "退出登录",
@@ -748,6 +760,81 @@
       "previous": "上一页",
       "next": "下一页",
       "page": "第 {page} 页"
+    },
+    "oauthClients": {
+      "title": "OAuth 应用",
+      "count": "{count, number} 个",
+      "description": "让你的网站或启动器用本站账号登录：认出玩家、读取他的角色，或者以所选角色进入多人游戏服务器。",
+      "listLabel": "你的 OAuth 应用",
+      "banned": "你的账号已被封禁，不能创建、修改或删除 OAuth 应用。",
+      "emptyTitle": "还没有 OAuth 应用",
+      "emptyDescription": "建一个应用，第三方网站或启动器就能让玩家用本站账号登录。",
+      "create": "创建应用",
+      "createDescription": "类型创建之后不能改。",
+      "createdTitle": "已创建 {name}",
+      "done": "完成",
+      "name": "名称",
+      "nameHint": "显示在授权页上，让用户认出是谁在请求。",
+      "type": "类型",
+      "types": {
+        "web": "网站",
+        "native": "启动器或桌面程序"
+      },
+      "typeHints": {
+        "web": "运行在服务器上、能保管密钥的程序，例如论坛和网站。用授权码流程登录。",
+        "native": "装在玩家电脑上的程序，没有密钥。用设备码流程登录，填了回调地址时也能用授权码流程；不能读取邮箱地址。"
+      },
+      "redirectUris": "回调地址",
+      "redirectHints": {
+        "web": "每行一条，必须是 https 地址。",
+        "native": "每行一条，可以不填（只用设备码流程）。可以是本机地址（http://127.0.0.1、http://localhost）、自定义协议或 https 地址。"
+      },
+      "redirectRequired": "每行一条，至少留一条：这个应用不支持设备码流程。",
+      "edit": "修改",
+      "editTitle": "修改 {name}",
+      "editDescription": "已有的回调地址照旧保留，新加的按类型的规则检查。类型不能改。",
+      "save": "保存",
+      "saved": "已保存 {name}",
+      "deleted": "已删除 {name}",
+      "resetSecret": "重置密钥",
+      "resetTitle": "重置 {name} 的密钥？",
+      "resetDescription": "旧密钥立即失效，接入这个应用的服务要换上新密钥；已经授权的用户不受影响。",
+      "resetConfirm": "重置密钥",
+      "secretResetTitle": "{name} 的新密钥",
+      "delete": "删除",
+      "deleteTitle": "删除 {name}？",
+      "deleteDescription": "{count, plural, =0 {还没有用户授权过这个应用。} other {已经授权的 # 位用户全部失效。}}接入这个应用的服务要重新配置，无法恢复。",
+      "deleteConfirm": "删除应用",
+      "failed": "没能完成，请稍后再试。",
+      "secretOnce": "密钥只显示这一次，关掉之后就再也看不到了。现在把它填进接入的服务；忘了就重置一个。",
+      "noSecret": "启动器类型没有密钥，在启动器里填 client_id 就行。",
+      "clientId": "client_id",
+      "clientSecret": "密钥（client_secret）",
+      "copyClientId": "复制 client_id",
+      "clientIdCopied": "已复制 client_id",
+      "copySecret": "复制密钥",
+      "secretCopied": "已复制密钥",
+      "copyFailed": "复制失败，请手动选中复制",
+      "disabled": "已停用",
+      "disabledHint": "这个应用已被管理员停用：授权请求和已经签发的令牌都会被拒绝。你仍然可以修改或删除它，要重新启用请联系管理员。",
+      "meta": "创建于 {time} · {count, plural, =0 {还没有用户授权} other {# 位用户已授权}}",
+      "flowsLabel": "登录方式",
+      "flows": {
+        "authorizationCode": "授权码",
+        "deviceCode": "设备码",
+        "none": "无"
+      },
+      "noRedirectUris": "没有回调地址",
+      "integration": {
+        "title": "接入信息",
+        "description": "本站按 OpenID Connect 提供登录。大多数 OAuth 库填上发现文档的地址，就能自动找到各个端点。",
+        "discovery": "发现文档",
+        "copyDiscovery": "复制发现文档的地址",
+        "discoveryCopied": "已复制发现文档的地址",
+        "issuer": "issuer",
+        "web": "授权码流程，客户端认证用 client_secret_basic（HTTP Basic）。要刷新令牌就申请 offline_access，这时请求里要带 nonce 或 PKCE。",
+        "native": "设备码流程（RFC 8628），或者带 PKCE 的授权码流程，都不带密钥。外置登录的启动器申请 openid offline_access Yggdrasil.PlayerProfiles.Select Yggdrasil.Server.Join。"
+      }
     }
   },
   "site": {
@@ -1030,7 +1117,8 @@
       "audit": "审计日志",
       "settings": "设置",
       "migration": "数据迁移",
-      "plugins": "插件"
+      "plugins": "插件",
+      "oauthClients": "OAuth 应用"
     },
     "roles": {
       "banned": "已封禁",
@@ -1290,7 +1378,10 @@
         "closetAdd": "加入衣柜",
         "closetRemove": "移出衣柜",
         "textureUpdate": "修改材质",
-        "textureUnpublish": "下架材质"
+        "textureUnpublish": "下架材质",
+        "oauthClientDisable": "停用 OAuth 应用",
+        "oauthClientEnable": "启用 OAuth 应用",
+        "oauthClientDelete": "删除 OAuth 应用"
       },
       "subjects": {
         "user": "用户 #{id}",
@@ -1299,7 +1390,8 @@
         "other": "{type} #{id}",
         "setting": "设置",
         "plugin": "插件 {name}",
-        "pluginHost": "plugin host"
+        "pluginHost": "plugin host",
+        "oauthClient": "OAuth 应用 #{id}"
       },
       "actorSystem": "系统",
       "actorPlugin": "插件 {id}",
@@ -1342,7 +1434,9 @@
         "textureName": "名字「{from}」→「{to}」",
         "textureModel": "模型 {from} → {to}",
         "textureDescription": "描述 {from} 字 → {to} 字",
-        "textureUnpublish": "{name}{closets, plural, =0 {} other {，从 # 个衣柜里移除}}{refunded, plural, =0 {} other {，退还 # 积分}}"
+        "textureUnpublish": "{name}{closets, plural, =0 {} other {，从 # 个衣柜里移除}}{refunded, plural, =0 {} other {，退还 # 积分}}",
+        "oauthClient": "client_id {clientId}{owner, select, none {，没有主人} other {，主人 #{owner}}}",
+        "oauthClientDelete": "{summary}；{users, plural, other {# 位用户的授权}}，{accessTokens, plural, other {# 个访问令牌}}、{refreshTokens, plural, other {# 个刷新令牌}}"
       },
       "filterActor": "只看操作者 #{uid}",
       "filterSubject": "只看 {subject}",
@@ -2027,7 +2121,9 @@
         "revokeSessionsTitle": "让 {nickname} 退出全部登录？",
         "revokeSessionsHint": "退出全部 {sessions, plural, other {#}} 个网页会话和 {tokens, plural, other {#}} 个启动器登录，吊销已授权应用拿到的令牌，作废还没完成的两步验证、找回密码链接和还没确认的改邮箱链接。",
         "revokeSessionsKeeps": "密码、通行密钥（{passkeys, plural, other {#}} 把）和第三方账号（{bindings, plural, other {#}} 个）不变，知道或者拿着它们的人可以立刻登回来。账号失控时请用「设置密码」里的收回账号。",
-        "sessionsRevoked": "退出了 {sessions, plural, other {#}} 个网页会话和 {tokens, plural, other {#}} 个启动器登录"
+        "sessionsRevoked": "退出了 {sessions, plural, other {#}} 个网页会话和 {tokens, plural, other {#}} 个启动器登录",
+        "authorizedAppsLabel": "已授权的应用",
+        "authorizedApps": "{count, number} 个"
       },
       "players": {
         "title": "角色",
@@ -2106,7 +2202,64 @@
         "banFirst": "建议先封禁：删除期间对方仍能上传新的公开材质，这些会留下。",
         "emailReusable": "这个邮箱之后可以重新注册。要挡住这个人，就保持封禁，不要删除。",
         "uuidRetention": "角色的 UUID 只留在审计记录里，{days} 天后随记录一起删除。"
+      },
+      "oauthClients": {
+        "title": "OAuth 应用",
+        "owned": "名下的应用",
+        "manage": "在 OAuth 应用页管理"
       }
+    },
+    "oauthClients": {
+      "title": "OAuth 应用",
+      "count": "{count, number} 个",
+      "description": "站点上的全部 OAuth 应用。后台只能停用、启用和删除，不能改别人应用的配置；自己的应用到用户中心改。",
+      "searchLabel": "按名称或 client_id 查找",
+      "searchPlaceholder": "名称或 client_id",
+      "search": "查找",
+      "ownerFilter": "{nickname} 名下的应用",
+      "ownerDetail": "用户详情",
+      "ownerGone": "用户 #{uid} 不存在",
+      "clearOwner": "查看全部",
+      "tableLabel": "OAuth 应用",
+      "empty": "还没有 OAuth 应用。",
+      "emptyFiltered": "没有符合条件的应用。",
+      "columns": {
+        "id": "#",
+        "client": "应用",
+        "clientId": "client_id",
+        "owner": "主人",
+        "status": "状态",
+        "authorizedUsers": "已授权",
+        "createdAt": "创建时间",
+        "actions": "操作"
+      },
+      "sharedType": "公用应用",
+      "types": {
+        "web": "网站",
+        "native": "启动器或桌面程序"
+      },
+      "ownerSite": "站点",
+      "ownerNone": "无（导入时主人已不在）",
+      "statusDisabled": "已停用",
+      "statusEnabled": "正常",
+      "manage": "管理",
+      "manageLabel": "管理 {name}",
+      "disable": "停用",
+      "enable": "启用",
+      "delete": "删除",
+      "disableTitle": "停用 {name}？",
+      "disableHint": "停用之后，这个应用发起的授权和已经签发的令牌都会被拒绝；重新启用后，没过期的令牌照常可用。{notify, select, yes {会给主人发邮件通知。} other {}}",
+      "disableSharedHint": "停用之后，发现文档里不再给出公用应用：没有写死 client_id 的启动器都登录不了，已经用它登录的启动器也会失效。重新启用后，没过期的令牌照常可用。",
+      "disableConfirm": "停用应用",
+      "disabled": "已停用 {name}",
+      "enableTitle": "启用 {name}？",
+      "enableHint": "启用之后可以重新发起授权，没过期的令牌照常可用。",
+      "enableConfirm": "启用应用",
+      "enabled": "已启用 {name}",
+      "deleteTitle": "删除 {name}？",
+      "deleteHint": "{count, plural, =0 {还没有用户授权过这个应用。} other {已经授权的 # 位用户全部失效。}}接入这个应用的服务要重新配置，无法恢复。{notify, select, yes {会给主人发邮件通知。} other {}}",
+      "deleteConfirm": "删除应用",
+      "deleted": "已删除 {name}"
     }
   },
   "yggdrasil": {

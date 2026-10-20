@@ -16,6 +16,7 @@ import type { SigningKey } from '../yggdrasil/signing-key.ts'
 import { authorize, changeRole, lockTarget } from './context.ts'
 import { createAdminTextures } from './textures.ts'
 import { createAdminCloset } from './closet.ts'
+import { createAdminOAuthClients } from './oauth-clients.ts'
 import { createAdminPlayers } from './players.ts'
 import { createAdminQueries, reportView, userView } from './queries.ts'
 import { claimReport, settleReport } from './report-resolution.ts'
@@ -78,6 +79,7 @@ export function createAdmin(options: AdminOptions) {
     ...users,
     ...createAdminUserDeletion(options),
     ...createAdminPlayers(options),
+    ...createAdminOAuthClients(options),
     ...createAdminTextures(options),
     ...createAdminCloset(options),
     /** 只改身份：PATCH 只带 role 时的说法，规则见 updateUser */

@@ -194,6 +194,11 @@ export default async function AdminUserPage({
           <Fact label={t('security.launcherLabel')}>
             <Count value={counts.launcherTokens}>{t('security.launcher', { count: counts.launcherTokens })}</Count>
           </Fact>
+          <Fact label={t('security.authorizedAppsLabel')}>
+            <Count value={counts.authorizedApps}>
+              {t('security.authorizedApps', { count: counts.authorizedApps })}
+            </Count>
+          </Fact>
           <Fact label={t('security.bindingsLabel')}>
             <Count value={bindings.length}>{t('security.bindings', { count: bindings.length })}</Count>
           </Fact>
@@ -284,6 +289,19 @@ export default async function AdminUserPage({
         {counts.publicTextures + counts.privateTextures > 0 && (
           <span className="text-sm">
             <Link render={<NextLink href={`/skinlib?uploader=${uid}`} />}>{t('textures.browse')}</Link>
+          </span>
+        )}
+      </Section>
+
+      <Section id="oauth-clients" title={t('oauthClients.title')}>
+        <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+          <Fact label={t('oauthClients.owned')}>
+            <span className="tabular-nums">{format.number(counts.oauthClients)}</span>
+          </Fact>
+        </dl>
+        {counts.oauthClients > 0 && can(viewer.role, 'oauthClients.manage') && (
+          <span className="text-sm">
+            <Link render={<NextLink href={`/admin/oauth-clients?owner=${uid}`} />}>{t('oauthClients.manage')}</Link>
           </span>
         )}
       </Section>

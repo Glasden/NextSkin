@@ -126,6 +126,15 @@ const statuses = {
   device_code_processed: 409,
   device_player_required: 400,
   oauth_scope_invalid: 400,
+  oauth_client_not_found: 404,
+  oauth_client_name_invalid: 400,
+  oauth_redirect_uri_invalid: 400,
+  oauth_redirect_uri_required: 400,
+  oauth_redirect_uris_too_many: 400,
+  oauth_redirect_uri_too_long: 400,
+  oauth_client_public: 400,
+  oauth_client_shared: 403,
+  oauth_client_not_manageable: 403,
 } as const satisfies Partial<Record<ErrorCode, number>>
 type ResponseCode = keyof typeof statuses
 const fieldNames: Partial<Record<ResponseCode, string>> = {

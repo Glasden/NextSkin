@@ -555,3 +555,70 @@ test('下架别人的材质：收藏者的衣柜里没有了，管理员仍能�
   await expect(audit.getByRole('cell', { name: t('admin.audit.actions.closetAdd'), exact: true })).toBeVisible()
   await expect(audit.getByRole('cell', { name: t('admin.audit.actions.closetRemove'), exact: true })).toBeVisible()
 })
+
+test('OAuth 应用页：从用户详情页进来停用、启用用户的应用；公用应用排在最前，普通管理员处理不了；审计记下了', async ({
+  page,
+  browser,
+  playwright,
+  baseURL,
+}) => {
+  const ownerContext = await browser.newContext({ locale: 'zh-CN' })
+  const owner = await ownerContext.newPage()
+  const ownerName = `Oa${suffix}`
+  const ownerEmail = await register(owner, '203.0.113.75', ownerName)
+  const appName = `后台 E2E 应用 ${suffix}`
+  const created = await owner.request.post('/api/oauth-clients', {
+    data: { name: appName, type: 'native', redirectUris: [] },
+  })
+  expect(created.status()).toBe(201)
+  const { client } = (await created.json()) as { client: { id: number; clientId: string } }
+  // 启动器那一侧不带 Cookie 请求设备码
+  const launcher = await playwright.request.newContext({ baseURL })
+  const deviceCode = () =>
+    launcher.post('/api/auth/device/code', { form: { client_id: client.clientId, scope: 'openid' } })
+  expect((await deviceCode()).status()).toBe(200)
+
+  // 普通管理员：公用应用排在最前面，没有主人，只有超级管理员能处理，所以没有操作按钮
+  setRole(await register(page, '203.0.113.76', `Om${suffix}`), 'admin')
+  await page.goto('/admin/oauth-clients')
+  const table = page.getByRole('table', { name: t('admin.oauthClients.tableLabel') })
+  const first = table.getByRole('row').nth(1)
+  await expect(first).toContainText(t('admin.oauthClients.sharedType'))
+  await expect(first.getByRole('button')).toHaveCount(0)
+
+  // 从用户详情页的"OAuth 应用"一节进来，只列出这个用户的应用
+  await page.goto(`/admin/users?q=${encodeURIComponent(ownerEmail)}`)
+  await page.getByRole('link', { name: ownerName, exact: true }).click()
+  await page
+    .getByRole('region', { name: t('admin.userDetail.oauthClients.title'), exact: true })
+    .getByRole('link', { name: t('admin.userDetail.oauthClients.manage') })
+    .click()
+  await expect(page.getByText(t('admin.oauthClients.ownerFilter', { nickname: ownerName }))).toBeVisible()
+  const manage = page.getByRole('button', { name: t('admin.oauthClients.manageLabel', { name: appName }) })
+
+  // 停用：Better Auth 拒绝它的请求，主人在用户中心看到说明
+  await manage.click()
+  await page.getByRole('menuitem', { name: t('admin.oauthClients.disable') }).click()
+  const disable = page.getByRole('alertdialog', { name: t('admin.oauthClients.disableTitle', { name: appName }) })
+  await disable.getByRole('button', { name: t('admin.oauthClients.disableConfirm') }).click()
+  await expect(page.getByText(t('admin.oauthClients.disabled', { name: appName }))).toBeVisible()
+  await expect(table).toContainText(t('admin.oauthClients.statusDisabled'))
+  expect((await deviceCode()).ok()).toBe(false)
+  await owner.goto('/user/oauth-clients')
+  await expect(owner.getByText(t('user.oauthClients.disabledHint'))).toBeVisible()
+
+  // 启用以后照常可用
+  await manage.click()
+  await page.getByRole('menuitem', { name: t('admin.oauthClients.enable') }).click()
+  const enable = page.getByRole('dialog', { name: t('admin.oauthClients.enableTitle', { name: appName }) })
+  await enable.getByRole('button', { name: t('admin.oauthClients.enableConfirm') }).click()
+  await expect(page.getByText(t('admin.oauthClients.enabled', { name: appName }))).toBeVisible()
+  expect((await deviceCode()).status()).toBe(200)
+
+  // 审计日志以应用为对象
+  await page.goto(`/admin/audit?subject=oauthClient:${client.id}`)
+  await expect(page.getByText(t('admin.audit.actions.oauthClientDisable'), { exact: true })).toBeVisible()
+  await expect(page.getByText(t('admin.audit.actions.oauthClientEnable'), { exact: true })).toBeVisible()
+  await launcher.dispose()
+  await ownerContext.close()
+})

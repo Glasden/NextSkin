@@ -4,6 +4,7 @@ import { Nav, NavItem } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import NextLink from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Code } from 'pixelarticons/react/Code.js'
 import { Flag } from 'pixelarticons/react/Flag.js'
 import { Layout } from 'pixelarticons/react/Layout.js'
 import { Shield } from 'pixelarticons/react/Shield.js'
@@ -23,6 +24,7 @@ export const userNavItems = [
   { href: '/user/reports', icon: Flag, label: 'reports' },
   { href: '/user/profile', icon: User, label: 'profile' },
   { href: '/user/security', icon: Shield, label: 'security' },
+  { href: '/user/oauth-clients', icon: Code, label: 'oauthClients' },
 ] as const
 
 export function UserNav({

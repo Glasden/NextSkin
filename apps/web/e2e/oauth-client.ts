@@ -14,7 +14,7 @@ export const CONNECT_SCOPE = 'openid offline_access Yggdrasil.PlayerProfiles.Sel
 /** 启动器那样的公共客户端：环回地址回调，登记时不写端口，请求时用随机端口（RFC 8252） */
 const LOOPBACK_CALLBACK = 'http://127.0.0.1/callback'
 
-/** account 服务的 SQLite 数据库（playwright.config.ts 给每个服务一个数据目录）。应用的管理界面还没做，直接写表 */
+/** account 服务的 SQLite 数据库（playwright.config.ts 给每个服务一个数据目录）。直接写表，测流程的用例不用每次都经过用户中心建应用 */
 function database() {
   const directory = process.env.NEXTSKIN_E2E_ACCOUNT_DATA_DIR
   if (!directory) throw new Error('没有 account 服务的数据目录')

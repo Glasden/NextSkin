@@ -7,6 +7,7 @@ export type CorePermission =
   | 'users.manage'
   | 'users.appointAdmin'
   | 'players.manage'
+  | 'oauthClients.manage'
   | 'audit.read'
   | 'settings.manage'
   | 'import.manage'
@@ -14,7 +15,15 @@ export type CorePermission =
 const permissions: Record<UserRole, readonly CorePermission[]> = {
   banned: [],
   user: [],
-  admin: ['reports.review', 'textures.manage', 'users.ban', 'users.manage', 'players.manage', 'audit.read'],
+  admin: [
+    'reports.review',
+    'textures.manage',
+    'users.ban',
+    'users.manage',
+    'players.manage',
+    'oauthClients.manage',
+    'audit.read',
+  ],
   superadmin: [
     'reports.review',
     'textures.manage',
@@ -22,6 +31,7 @@ const permissions: Record<UserRole, readonly CorePermission[]> = {
     'users.manage',
     'users.appointAdmin',
     'players.manage',
+    'oauthClients.manage',
     'audit.read',
     'settings.manage',
     'import.manage',

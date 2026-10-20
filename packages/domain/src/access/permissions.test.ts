@@ -9,6 +9,7 @@ const permissions: CorePermission[] = [
   'users.manage',
   'users.appointAdmin',
   'players.manage',
+  'oauthClients.manage',
   'audit.read',
   'settings.manage',
   'import.manage',

@@ -50,6 +50,9 @@ const actionKeys = {
   'plugin.upgrade': 'pluginUpgrade',
   'plugin.uninstall': 'pluginUninstall',
   'plugin.restartHost': 'pluginRestartHost',
+  'oauthClient.disable': 'oauthClientDisable',
+  'oauthClient.enable': 'oauthClientEnable',
+  'oauthClient.delete': 'oauthClientDelete',
 } as const satisfies Record<AuditAction, string>
 
 function isAuditAction(action: string): action is AuditAction {
@@ -156,12 +159,22 @@ export async function AuditTable({
       return section ? <Link render={<NextLink href={settingsHref(section)} />}>{name}</Link> : name
     }
     const label =
-      type === 'user' || type === 'texture' || type === 'report'
+      type === 'user' || type === 'texture' || type === 'report' || type === 'oauthClient'
         ? t(`subjects.${type}`, { id })
         : t('subjects.other', { type, id })
     // 已删除对象的快照：用户是昵称，材质是名字。角色的操作以主人为对象（ADR-0036），details.name 是角色名，不是快照
     const snapshot = type === 'user' ? text(entry.details.nickname) : text(entry.details.name)
-    const href = !exists ? null : type === 'user' ? `/admin/users/${id}` : type === 'texture' ? `/skinlib/${id}` : null
+    // OAuth 应用没有详情页，链接到按 client_id 查找的列表
+    const clientId = type === 'oauthClient' ? text(entry.details.clientId) : null
+    const href = !exists
+      ? null
+      : type === 'user'
+        ? `/admin/users/${id}`
+        : type === 'texture'
+          ? `/skinlib/${id}`
+          : clientId
+            ? `/admin/oauth-clients?q=${encodeURIComponent(clientId)}`
+            : null
     return (
       <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
         {href ? (
@@ -232,6 +245,15 @@ export async function AuditTable({
     const provider = text(details.provider) ?? ''
     const label = core.plugins.get(plugin)?.manifest.providers.login.find((item) => item.id === provider)?.label
     return label ? core.plugins.translate(plugin, label, locale) : `${plugin} / ${provider}`
+  }
+
+  /** OAuth 应用的 client_id 和主人（ADR-0037"权限和审计"）；没有主人的是公用应用，或者导入时主人已经不在 */
+  function oauthClientSummary(details: AuditEntry['details']): string {
+    const owner = details.ownerUid
+    return t('details.oauthClient', {
+      clientId: text(details.clientId) ?? '',
+      owner: typeof owner === 'number' ? String(owner) : 'none',
+    })
   }
 
   const number = (value: unknown) => format.number(count(value))
@@ -372,6 +394,15 @@ export async function AuditTable({
         job: count(details.job),
       }),
     'plugin.restartHost': () => null,
+    'oauthClient.disable': oauthClientSummary,
+    'oauthClient.enable': oauthClientSummary,
+    'oauthClient.delete': (details) =>
+      t('details.oauthClientDelete', {
+        summary: oauthClientSummary(details),
+        users: count(details.authorizedUsers),
+        accessTokens: count(details.accessTokens),
+        refreshTokens: count(details.refreshTokens),
+      }),
   }
 
   function details(entry: AuditEntry) {

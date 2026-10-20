@@ -135,6 +135,31 @@ export function playersHref(params: PlayerParams, changes: Partial<PlayerParams>
   return withQuery('/admin/players', query)
 }
 
+export interface OAuthClientParams {
+  /** 名称（包含匹配）或 client_id（逐字相同） */
+  q: string
+  /** 只看某个用户名下的应用：`?owner=5`，用户详情页链接到这里 */
+  owner: number | null
+  page: number
+}
+
+export function parseOAuthClientParams(search: SearchParams): OAuthClientParams {
+  return {
+    q: first(search.q).trim().slice(0, 255),
+    owner: parseId(first(search.owner)),
+    page: parsePage(first(search.page)),
+  }
+}
+
+export function oauthClientsHref(params: OAuthClientParams, changes: Partial<OAuthClientParams> = {}): string {
+  const next = { ...params, page: 1, ...changes }
+  const query = new URLSearchParams()
+  if (next.q) query.set('q', next.q)
+  if (next.owner !== null) query.set('owner', String(next.owner))
+  if (next.page > 1) query.set('page', String(next.page))
+  return withQuery('/admin/oauth-clients', query)
+}
+
 /** 用户详情页衣柜节的页码（`?closet=`）：每页 50 行，翻页回到衣柜节（ADR-0036"页面"） */
 export function parseClosetPage(search: SearchParams): number {
   return parsePage(first(search.closet))

@@ -37,6 +37,8 @@ const adminAccountChange = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('binding'), provider: z.string() }),
   z.object({ kind: z.literal('playerRenamed'), from: z.string(), to: z.string() }),
   z.object({ kind: z.literal('playerDeleted'), name: z.string() }),
+  z.object({ kind: z.literal('oauthClientDisabled'), name: z.string() }),
+  z.object({ kind: z.literal('oauthClientDeleted'), name: z.string() }),
   z.object({ kind: z.literal('playerTransferredOut'), name: z.string() }),
   z.object({ kind: z.literal('playerTransferredIn'), name: z.string() }),
 ]) satisfies z.ZodType<AdminAccountChange>

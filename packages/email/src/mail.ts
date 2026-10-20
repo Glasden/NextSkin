@@ -207,6 +207,8 @@ export type AdminAccountChange =
   | { kind: 'binding'; provider: string } // 已按收件人的语言翻译好的第三方名称
   | { kind: 'playerRenamed'; from: string; to: string }
   | { kind: 'playerDeleted'; name: string }
+  | { kind: 'oauthClientDisabled'; name: string }
+  | { kind: 'oauthClientDeleted'; name: string }
   | { kind: 'playerTransferredOut'; name: string }
   | { kind: 'playerTransferredIn'; name: string }
 
@@ -233,6 +235,10 @@ function adminChangeLine(t: ReturnType<typeof createTranslator>, change: AdminAc
       return t('mail.adminAccountChanged.changes.binding', { provider: change.provider })
     case 'playerRenamed':
       return t('mail.adminAccountChanged.changes.playerRenamed', { from: change.from, to: change.to })
+    case 'oauthClientDisabled':
+      return t('mail.adminAccountChanged.changes.oauthClientDisabled', { name: change.name })
+    case 'oauthClientDeleted':
+      return t('mail.adminAccountChanged.changes.oauthClientDeleted', { name: change.name })
     case 'playerDeleted':
       return t('mail.adminAccountChanged.changes.playerDeleted', { name: change.name })
     case 'playerTransferredOut':

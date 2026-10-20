@@ -1,3 +1,4 @@
+import type { OAuthClientView } from '../oauth/clients.ts'
 import type { IsoTimestamp } from '@nextskin/db'
 import type { TextureType, UserRole } from '@nextskin/db'
 
@@ -100,6 +101,8 @@ export interface AdminUserDetail {
     privateTextures: number
     closetItems: number
     oauthClients: number
+    /** 有同意记录或未吊销、未过期的访问/刷新令牌的应用数，按 client_id 去重 */
+    authorizedApps: number
   }
   /** 名下角色，按 pid 升序，最多 100 个；总数见 counts.players */
   players: { pid: number; name: string; uuid: string }[]
@@ -168,4 +171,10 @@ export interface AdminClosetItem {
   visibleToOwner: boolean
   /** 别人的私有材质在操作者没有 textures.manage 时为 null */
   texture: { name: string; type: TextureType; hash: string; scale: number; public: boolean } | null
+}
+
+/** 后台 OAuth 应用列表和写操作返回的快照（ADR-0037）。 */
+export interface AdminOAuthClient extends OAuthClientView {
+  shared: boolean
+  owner: { uid: number; nickname: string; role: UserRole } | null
 }

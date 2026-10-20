@@ -369,3 +369,89 @@ test('已登录时第三方网站跨站 POST 发起授权：看不到会话 Cook
   expect(callback.get('code')).toEqual(expect.any(String))
   expect(callback.get('state')).toBe(flow.state)
 })
+
+test('用户中心：建一个网站应用，用它的密钥走完授权码流程；删除应用以后令牌失效', async ({
+  page,
+  playwright,
+  baseURL,
+}) => {
+  const suffix = String(Date.now()).slice(-6)
+  const email = `site-${suffix}@example.test`
+  await page.context().setExtraHTTPHeaders({ 'x-forwarded-for': '203.0.113.187' })
+  await register(page.request, '203.0.113.187', email, `Ws${suffix}`)
+  const appName = `E2E 论坛 ${suffix}`
+  const callback = 'https://forum.example.test/oauth/callback'
+
+  await page.goto('/user/oauth-clients')
+  await expect(page.getByText(t('user.oauthClients.emptyTitle'))).toBeVisible()
+  await clickHydrated(page.getByRole('button', { name: t('user.oauthClients.create'), exact: true }))
+  const dialog = page.getByRole('alertdialog', { name: t('user.oauthClients.create') })
+  await dialog.getByLabel(t('user.oauthClients.name')).fill(appName)
+  // 网站的回调地址必须是 https：接口拒绝，填过的内容留着，改一下再提交
+  const insecure = 'http://forum.example.test/oauth/callback'
+  await dialog.getByLabel(t('user.oauthClients.redirectUris')).fill(insecure)
+  await dialog.getByRole('button', { name: t('user.oauthClients.create'), exact: true }).click()
+  await expect(dialog.getByRole('alert')).toHaveText(
+    t('errors.oauth_redirect_uri_invalid', { uri: insecure, type: 'web' }),
+  )
+  await dialog.getByLabel(t('user.oauthClients.redirectUris')).fill(callback)
+  await dialog.getByRole('button', { name: t('user.oauthClients.create'), exact: true }).click()
+
+  // 密钥只显示这一次
+  const created = page.getByRole('alertdialog', { name: t('user.oauthClients.createdTitle', { name: appName }) })
+  await expect(created.getByText(t('user.oauthClients.secretOnce'))).toBeVisible()
+  const [clientId, secret] = await created.locator('code').allTextContents()
+  expect(clientId).toMatch(/^[a-z]{32}$/)
+  expect(secret).toMatch(/^[\w-]{43}$/)
+  await created.getByRole('button', { name: t('user.oauthClients.done') }).click()
+  const card = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: appName }) })
+  await expect(card.getByText(clientId!, { exact: true })).toBeVisible()
+  await expect(card.getByText(callback, { exact: true })).toBeVisible()
+  await expect(card.getByText(t('user.oauthClients.types.web'), { exact: true })).toBeVisible()
+
+  // 第三方网站发起授权：机密客户端第一次要同意；不申请 offline_access，不用 PKCE
+  const state = `site-${suffix}`
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: clientId!,
+    redirect_uri: callback,
+    scope: 'openid profile',
+    state,
+  })
+  // 同意之后页面整页跳到回调地址（不是重定向链），page.route 拦得到
+  await page.route(
+    (url) => url.href.startsWith(`${callback}?`),
+    (route) => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>forum</title>' }),
+  )
+  await page.goto(`/api/auth/oauth2/authorize?${params}`)
+  await expect(page).toHaveURL(/\/oauth\/consent\?/)
+  await expect(page.getByText(appName)).toBeVisible()
+  await expect(page.getByText('forum.example.test')).toBeVisible()
+  await clickHydrated(page.getByRole('button', { name: t('oauth.approve'), exact: true }))
+  await page.waitForURL((url) => url.href.startsWith(`${callback}?`))
+  const returned = new URL(page.url()).searchParams
+  expect(returned.get('state')).toBe(state)
+
+  // 论坛那一侧：HTTP Basic 带上 client_id 和密钥换令牌
+  const forum = await playwright.request.newContext({ baseURL })
+  const basic = `Basic ${Buffer.from(`${clientId}:${secret}`).toString('base64')}`
+  const exchanged = await forum.post('/api/auth/oauth2/token', {
+    headers: { authorization: basic },
+    form: { grant_type: 'authorization_code', code: returned.get('code')!, redirect_uri: callback },
+  })
+  expect(exchanged.status()).toBe(200)
+  const { access_token: accessToken } = (await exchanged.json()) as { access_token: string }
+  const userinfo = () => forum.get('/api/auth/oauth2/userinfo', { headers: { authorization: `Bearer ${accessToken}` } })
+  expect((await userinfo()).status()).toBe(200)
+
+  // 回到用户中心：已授权的用户数是 1；删除以后令牌跟着失效
+  await page.goto('/user/oauth-clients')
+  await expect(card).toContainText(t('user.oauthClients.meta', { time: '', count: 1 }).split(' · ')[1]!)
+  await clickHydrated(card.getByRole('button', { name: t('user.oauthClients.delete'), exact: true }))
+  const confirm = page.getByRole('alertdialog', { name: t('user.oauthClients.deleteTitle', { name: appName }) })
+  await expect(confirm).toContainText(t('user.oauthClients.deleteDescription', { count: 1 }))
+  await confirm.getByRole('button', { name: t('user.oauthClients.deleteConfirm') }).click()
+  await expect(page.getByText(t('user.oauthClients.emptyTitle'))).toBeVisible()
+  expect((await userinfo()).status()).toBe(401)
+  await forum.dispose()
+})

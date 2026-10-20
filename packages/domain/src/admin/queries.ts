@@ -10,6 +10,7 @@ import {
 } from '@nextskin/db'
 import type { Kysely, SelectQueryBuilder } from 'kysely'
 import { can, hasAdminAccess, outranks, type CorePermission } from '../access/permissions.ts'
+import { countAuthorizedApps } from '../oauth/clients.ts'
 import { DomainError } from '../errors.ts'
 import { textureScaleOrNull, toNameKey } from '../players/queries.ts'
 import { textureRows } from '../textures/dto.ts'
@@ -40,7 +41,7 @@ export function toAdminClosetItem(item: AdminClosetItem, reveal: boolean): Admin
   return reveal ? item : { ...item, name: null, texture: null }
 }
 
-function pagination(input: { page: number; perPage?: number }) {
+export function pagination(input: { page: number; perPage?: number }) {
   const perPage = Math.max(1, Math.min(100, Math.trunc(input.perPage ?? 50)))
   return { limit: perPage, offset: (Math.max(1, Math.trunc(input.page)) - 1) * perPage }
 }
@@ -213,7 +214,7 @@ function parseDetails(value: string): Record<string, unknown> {
   }
 }
 
-const subjectTables = { user: 'users', texture: 'textures', report: 'reports' } as const
+const subjectTables = { oauthClient: 'oauth_clients', user: 'users', texture: 'textures', report: 'reports' } as const
 
 async function auditViews(db: Kysely<CoreDatabase>, ids: number[]): Promise<AuditEntry[]> {
   if (!ids.length) return []
@@ -480,6 +481,7 @@ export function createAdminQueries(
           privateTextures: await countRows(ownTextures.where('is_public', '=', 0)),
           closetItems: await countRows(db.selectFrom('closet_items').where('user_id', '=', uid)),
           oauthClients: await countRows(db.selectFrom('oauth_clients').where('user_id', '=', uid)),
+          authorizedApps: await countAuthorizedApps(db, uid, current),
         },
         players: players.map((p) => ({ pid: p.id, name: p.name, uuid: p.uuid })),
         recentAudit: await auditViews(

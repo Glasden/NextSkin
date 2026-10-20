@@ -60,6 +60,7 @@ export type { Report, OwnReport } from './reports/service.ts'
 export { can, hasAdminAccess, outranks, type CorePermission } from './access/permissions.ts'
 export type {
   AdminActor,
+  AdminOAuthClient,
   ReportAction,
   AssignableRole,
   AdminReport,
@@ -125,3 +126,5 @@ export { canPlugin } from './access/permissions.ts'
 export type { OAuthClientSummary, DeviceCodeView } from './oauth/devices.ts'
 export type { OAuthAuthorization } from './oauth/authorizations.ts'
 export { OAUTH_SCOPES, SELECT_SCOPE, READ_SCOPE, JOIN_SCOPE, SHARED_OAUTH_CLIENT_ID } from './oauth/scopes.ts'
+
+export type { OAuthClientType, OAuthClientView } from './oauth/clients.ts'

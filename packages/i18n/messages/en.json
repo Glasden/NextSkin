@@ -53,6 +53,8 @@
         "binding": "Unlinked your {provider} account",
         "playerRenamed": "Renamed your player {from} to {to}",
         "playerDeleted": "Deleted your player {name}",
+        "oauthClientDisabled": "Disabled your OAuth application {name}",
+        "oauthClientDeleted": "Deleted your OAuth application {name}",
         "playerTransferredOut": "Transferred your player {name} to another user",
         "playerTransferredIn": "Transferred the player {name} to you"
       }
@@ -169,7 +171,16 @@
     "device_code_claimed": "This code has already been opened by another account. If that wasn't you on another account, start signing in again in your launcher.",
     "device_code_processed": "This sign-in has already been handled. Check the result in your launcher.",
     "device_player_required": "This app signs in with one of your players. Choose a player first.",
-    "oauth_scope_invalid": "This app asked for a combination of permissions that can't be granted. Contact the app's developer."
+    "oauth_scope_invalid": "This app asked for a combination of permissions that can't be granted. Contact the app's developer.",
+    "oauth_client_not_found": "Application not found.",
+    "oauth_client_name_invalid": "The name must contain {min} to {max} characters and no control characters.",
+    "oauth_redirect_uri_invalid": "Invalid redirect URI: {uri}. Websites require https. Native applications may also use http on localhost, 127.0.0.1 or [::1], or a custom scheme. Fragments, usernames and passwords are not allowed.",
+    "oauth_redirect_uri_required": "At least one redirect URI is required.",
+    "oauth_redirect_uris_too_many": "You can register at most {max} redirect URIs.",
+    "oauth_redirect_uri_too_long": "Each redirect URI must be at most {max} characters.",
+    "oauth_client_public": "Native applications do not have a client secret.",
+    "oauth_client_shared": "The shared application cannot be deleted.",
+    "oauth_client_not_manageable": "Only a super administrator can manage applications without an owner."
   },
   "score": {
     "reasons": {
@@ -313,7 +324,8 @@
       "profile": "Profile",
       "security": "Sign-in & security",
       "closet": "Closet",
-      "reports": "My reports"
+      "reports": "My reports",
+      "oauthClients": "OAuth apps"
     },
     "menu": {
       "signOut": "Sign out",
@@ -748,6 +760,81 @@
       "previous": "Previous",
       "next": "Next",
       "page": "Page {page}"
+    },
+    "oauthClients": {
+      "title": "OAuth apps",
+      "count": "{count, number}",
+      "description": "Let your website or launcher sign players in with their account here: identify them, read their players, or join multiplayer servers as the chosen player.",
+      "listLabel": "Your OAuth apps",
+      "banned": "Your account is banned, so you can’t create, edit or delete OAuth apps.",
+      "emptyTitle": "No OAuth apps yet",
+      "emptyDescription": "Create an app so a website or launcher can let players sign in with their account here.",
+      "create": "Create app",
+      "createDescription": "The type can’t be changed after the app is created.",
+      "createdTitle": "{name} created",
+      "done": "Done",
+      "name": "Name",
+      "nameHint": "Shown on the authorization page so people can tell who is asking.",
+      "type": "Type",
+      "types": {
+        "web": "Website",
+        "native": "Launcher or desktop app"
+      },
+      "typeHints": {
+        "web": "Runs on a server and can keep a secret, such as a forum or website. Signs in with the authorization code flow.",
+        "native": "Installed on the player’s computer and has no secret. Signs in with the device code flow, or the authorization code flow when it has redirect URIs. Can’t read email addresses."
+      },
+      "redirectUris": "Redirect URIs",
+      "redirectHints": {
+        "web": "One per line. Must be https.",
+        "native": "One per line. Optional when you only use the device code flow. Loopback addresses (http://127.0.0.1, http://localhost), custom schemes and https are allowed."
+      },
+      "redirectRequired": "One per line. Keep at least one: this app doesn’t support the device code flow.",
+      "edit": "Edit",
+      "editTitle": "Edit {name}",
+      "editDescription": "Existing redirect URIs are kept as they are; new ones are checked against the rules for the app’s type. The type can’t be changed.",
+      "save": "Save",
+      "saved": "{name} saved",
+      "deleted": "{name} deleted",
+      "resetSecret": "Reset secret",
+      "resetTitle": "Reset the secret of {name}?",
+      "resetDescription": "The old secret stops working right away, and services using this app need the new one. People who already authorized it aren’t affected.",
+      "resetConfirm": "Reset secret",
+      "secretResetTitle": "New secret for {name}",
+      "delete": "Delete",
+      "deleteTitle": "Delete {name}?",
+      "deleteDescription": "{count, plural, =0 {Nobody has authorized this app yet.} one {The authorization of # user will stop working.} other {The authorizations of # users will stop working.}} Services using this app need to be set up again. This can’t be undone.",
+      "deleteConfirm": "Delete app",
+      "failed": "That didn’t work. Try again later.",
+      "secretOnce": "The secret is shown only once. After you close this, it’s gone. Put it into your service now; if you lose it, reset it.",
+      "noSecret": "Launcher apps have no secret. Enter the client_id in your launcher.",
+      "clientId": "client_id",
+      "clientSecret": "Secret (client_secret)",
+      "copyClientId": "Copy client_id",
+      "clientIdCopied": "client_id copied",
+      "copySecret": "Copy secret",
+      "secretCopied": "Secret copied",
+      "copyFailed": "Couldn’t copy. Select it and copy it yourself",
+      "disabled": "Disabled",
+      "disabledHint": "An administrator disabled this app: authorization requests and issued tokens are rejected. You can still edit or delete it; ask an administrator to enable it again.",
+      "meta": "Created {time} · {count, plural, =0 {not authorized yet} one {# user authorized} other {# users authorized}}",
+      "flowsLabel": "Sign-in flows",
+      "flows": {
+        "authorizationCode": "Authorization code",
+        "deviceCode": "Device code",
+        "none": "None"
+      },
+      "noRedirectUris": "No redirect URIs",
+      "integration": {
+        "title": "Integration",
+        "description": "Sign-in works with OpenID Connect. Most OAuth libraries find every endpoint from the discovery document.",
+        "discovery": "Discovery document",
+        "copyDiscovery": "Copy the discovery document URL",
+        "discoveryCopied": "Discovery document URL copied",
+        "issuer": "issuer",
+        "web": "Authorization code flow with client_secret_basic (HTTP Basic). Request offline_access to get refresh tokens; the request then needs a nonce or PKCE.",
+        "native": "Device code flow (RFC 8628), or the authorization code flow with PKCE, without a secret. Launchers using authlib-injector request openid offline_access Yggdrasil.PlayerProfiles.Select Yggdrasil.Server.Join."
+      }
     }
   },
   "site": {
@@ -1030,7 +1117,8 @@
       "audit": "Audit log",
       "settings": "Settings",
       "migration": "Migration",
-      "plugins": "Plugins"
+      "plugins": "Plugins",
+      "oauthClients": "OAuth apps"
     },
     "roles": {
       "banned": "Banned",
@@ -1290,7 +1378,10 @@
         "closetAdd": "Add to closet",
         "closetRemove": "Remove from closet",
         "textureUpdate": "Edit texture",
-        "textureUnpublish": "Unpublish texture"
+        "textureUnpublish": "Unpublish texture",
+        "oauthClientDisable": "Disable OAuth app",
+        "oauthClientEnable": "Enable OAuth app",
+        "oauthClientDelete": "Delete OAuth app"
       },
       "subjects": {
         "user": "User #{id}",
@@ -1299,7 +1390,8 @@
         "other": "{type} #{id}",
         "setting": "Settings",
         "plugin": "Plugin {name}",
-        "pluginHost": "Plugin host"
+        "pluginHost": "Plugin host",
+        "oauthClient": "OAuth app #{id}"
       },
       "actorSystem": "System",
       "actorPlugin": "Plugin {id}",
@@ -1342,7 +1434,9 @@
         "textureName": "name “{from}” → “{to}”",
         "textureModel": "model {from} → {to}",
         "textureDescription": "description {from} → {to} characters",
-        "textureUnpublish": "{name}{closets, plural, =0 {} one {, removed from # closet} other {, removed from # closets}}{refunded, plural, =0 {} one {, # point refunded} other {, # points refunded}}"
+        "textureUnpublish": "{name}{closets, plural, =0 {} one {, removed from # closet} other {, removed from # closets}}{refunded, plural, =0 {} one {, # point refunded} other {, # points refunded}}",
+        "oauthClient": "client_id {clientId}{owner, select, none {, no owner} other {, owner #{owner}}}",
+        "oauthClientDelete": "{summary}; {users, plural, one {# user’s authorization} other {# users’ authorizations}}, {accessTokens, plural, one {# access token} other {# access tokens}}, {refreshTokens, plural, one {# refresh token} other {# refresh tokens}}"
       },
       "filterActor": "Only actor #{uid}",
       "filterSubject": "Only {subject}",
@@ -2027,7 +2121,9 @@
         "revokeSessionsTitle": "Sign {nickname} out everywhere?",
         "revokeSessionsHint": "Signs out all {sessions, plural, one {# web session} other {# web sessions}} and {tokens, plural, one {# launcher sign-in} other {# launcher sign-ins}}, revokes tokens held by authorized apps, and voids unfinished two-factor sign-ins, password reset links and unconfirmed email change links.",
         "revokeSessionsKeeps": "The password, {passkeys, plural, one {# passkey} other {# passkeys}} and {bindings, plural, one {# linked account} other {# linked accounts}} stay, so anyone who knows or holds them can sign right back in. If the account has been taken over, use account recovery under “Set password”.",
-        "sessionsRevoked": "Signed out {sessions, plural, one {# web session} other {# web sessions}} and {tokens, plural, one {# launcher sign-in} other {# launcher sign-ins}}"
+        "sessionsRevoked": "Signed out {sessions, plural, one {# web session} other {# web sessions}} and {tokens, plural, one {# launcher sign-in} other {# launcher sign-ins}}",
+        "authorizedAppsLabel": "Authorized apps",
+        "authorizedApps": "{count, number}"
       },
       "players": {
         "title": "Players",
@@ -2106,7 +2202,64 @@
         "banFirst": "Consider banning first: while the deletion runs, the user can still upload new public textures, and those would stay.",
         "emailReusable": "This email can register again later. To keep this person out, leave them banned instead of deleting.",
         "uuidRetention": "Player UUIDs remain only in the audit log and are deleted with those records after {days} days."
+      },
+      "oauthClients": {
+        "title": "OAuth apps",
+        "owned": "Owned apps",
+        "manage": "Manage on the OAuth apps page"
       }
+    },
+    "oauthClients": {
+      "title": "OAuth apps",
+      "count": "{count, number}",
+      "description": "Every OAuth app on the site. Here you can only disable, enable and delete apps, not change other people’s settings; edit your own apps in the user center.",
+      "searchLabel": "Search by name or client_id",
+      "searchPlaceholder": "Name or client_id",
+      "search": "Search",
+      "ownerFilter": "Apps owned by {nickname}",
+      "ownerDetail": "User details",
+      "ownerGone": "User #{uid} doesn’t exist",
+      "clearOwner": "Show all",
+      "tableLabel": "OAuth apps",
+      "empty": "No OAuth apps yet.",
+      "emptyFiltered": "No apps match.",
+      "columns": {
+        "id": "#",
+        "client": "App",
+        "clientId": "client_id",
+        "owner": "Owner",
+        "status": "Status",
+        "authorizedUsers": "Authorized",
+        "createdAt": "Created",
+        "actions": "Actions"
+      },
+      "sharedType": "Shared app",
+      "types": {
+        "web": "Website",
+        "native": "Launcher or desktop app"
+      },
+      "ownerSite": "The site",
+      "ownerNone": "None (owner gone at import)",
+      "statusDisabled": "Disabled",
+      "statusEnabled": "Active",
+      "manage": "Manage",
+      "manageLabel": "Manage {name}",
+      "disable": "Disable",
+      "enable": "Enable",
+      "delete": "Delete",
+      "disableTitle": "Disable {name}?",
+      "disableHint": "Authorization requests from this app and the tokens it already has will be rejected. After you enable it again, unexpired tokens work again.{notify, select, yes { The owner gets an email.} other {}}",
+      "disableSharedHint": "The discovery document will stop listing the shared app: launchers without a built-in client_id can’t sign in, and launchers already signed in with it stop working. After you enable it again, unexpired tokens work again.",
+      "disableConfirm": "Disable app",
+      "disabled": "{name} disabled",
+      "enableTitle": "Enable {name}?",
+      "enableHint": "The app can request authorization again, and unexpired tokens work again.",
+      "enableConfirm": "Enable app",
+      "enabled": "{name} enabled",
+      "deleteTitle": "Delete {name}?",
+      "deleteHint": "{count, plural, =0 {Nobody has authorized this app yet.} one {The authorization of # user will stop working.} other {The authorizations of # users will stop working.}} Services using this app need to be set up again. This can’t be undone.{notify, select, yes { The owner gets an email.} other {}}",
+      "deleteConfirm": "Delete app",
+      "deleted": "{name} deleted"
     }
   },
   "yggdrasil": {

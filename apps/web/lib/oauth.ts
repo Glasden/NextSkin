@@ -28,6 +28,14 @@ export async function describeScopes(scopes: readonly string[]): Promise<{ scope
 }
 
 /**
+ * OAuth 的 issuer，同 Better Auth 的 baseURL（ADR-0037"发现文档"）：填了站点地址就用它，没填时按这次请求的地址，
+ * 同 yggdrasilApiUrl。发现文档在它后面加 `/.well-known/openid-configuration`
+ */
+export function oauthIssuer(siteUrl: string, requestRoot: string): string {
+  return `${(siteUrl || requestRoot).replace(/\/+$/, '')}/api/auth`
+}
+
+/**
  * 应用在界面上的名字和下面一行说明。公用应用没有名称和创建者，名字按站点名生成，并说明任何启动器都能以它的名义
  * 发起登录（ADR-0037"公用应用"）；名称是创建者填的，属于用户产生的内容
  */
