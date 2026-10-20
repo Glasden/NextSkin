@@ -7,6 +7,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import { createTranslator } from '@nextskin/i18n'
 import { expect, test as base, type Page } from '@playwright/test'
+import { nextskin } from './nextskin-cli'
 
 // 参考插件跑通（ADR-0033"验收：参考插件"）：后台启用、插件的设置、插件加的页面和导航、注册表单上的字段和
 // 事务内的拦截器、核对导入的旧密码。跑两遍：plugins 项目里是随站点发布的官方插件，在核心进程内运行；plugins-host 项目里先用
@@ -83,18 +84,10 @@ async function register(page: Page, ip: string, name: string) {
   return email
 }
 
-/** 第一个超级管理员由脚本设定（ADR-0027），直接改这个服务的数据目录 */
+/** 第一个超级管理员由命令行设定（ADR-0027），直接改这个服务的数据目录 */
 function setRole(email: string, role: string, host: boolean) {
-  execFileSync(process.execPath, ['scripts/set-role.ts', email, role], {
-    cwd: fileURLToPath(new URL('..', import.meta.url)),
-    env: {
-      ...process.env,
-      NEXTSKIN_DATA_DIR: host
-        ? process.env.NEXTSKIN_E2E_PLUGINS_HOST_DATA_DIR
-        : process.env.NEXTSKIN_E2E_PLUGINS_DATA_DIR,
-      NEXTSKIN_SECRET: process.env.NEXTSKIN_E2E_SECRET,
-    },
-  })
+  const directory = host ? process.env.NEXTSKIN_E2E_PLUGINS_HOST_DATA_DIR : process.env.NEXTSKIN_E2E_PLUGINS_DATA_DIR
+  nextskin(directory, 'set-role', email, role)
 }
 
 /** 从后台上传插件包：确认框里写着插件的名字和信任提示（要用高风险能力的还有 `highRisk`），装好之后到插件页，还没启用 */

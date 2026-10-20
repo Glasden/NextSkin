@@ -2,7 +2,7 @@ import { resolve } from 'node:path'
 import { createImportService, type ImportService } from '@nextskin/importer'
 import { createApp } from '@nextskin/api'
 import { coreConfigFromEnv, DomainError, openCore, pluginHostEntry, type Core } from '@nextskin/domain'
-import { officialPlugins } from './official-plugins'
+import { officialPlugins } from '@nextskin/official-plugins'
 
 export interface Server {
   core: Core
@@ -13,12 +13,17 @@ export interface Server {
 // Route Handler 和 proxy 可能各自打包出一份模块，靠 globalThis 共用同一个连接池；next dev 热更新后也不会重复连接
 const holder = globalThis as typeof globalThis & { nextskinServer?: Promise<Server> }
 
-/** 第一次调用时连接数据库并执行迁移（启动器落地之前由 Web 进程负责）。失败后下一次调用会重试 */
+/** 第一次调用时连接数据库并执行迁移（由核心进程负责）。失败后下一次调用会重试 */
 export function getServer(): Promise<Server> {
   holder.nextskinServer ??= open().catch((error: unknown) => {
     holder.nextskinServer = undefined
     throw error
   })
+  return holder.nextskinServer
+}
+
+/** 现在缓存的那一次打开（可能还在进行），不触发新的打开。停止时用它收掉后台任务（lib/launcher-channel.ts） */
+export function openedServer(): Promise<Server> | undefined {
   return holder.nextskinServer
 }
 

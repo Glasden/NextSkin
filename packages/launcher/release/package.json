@@ -1,0 +1,11 @@
+{
+  "name": "nextskin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node nextskin.mjs start"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

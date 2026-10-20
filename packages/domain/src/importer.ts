@@ -25,7 +25,7 @@ export { createImagePool, type ImagePool } from './textures/image-pool.ts'
 export type { InspectedImage } from './textures/image.ts'
 export { assertTextureHash, createLocalTextureStorage, type ImportableTextureStorage } from './textures/storage.ts'
 export { DomainError } from './errors.ts'
-export { coreConfigFromEnv, type CoreConfig } from './bootstrap.ts'
+export { coreConfigFromEnv, type CoreConfig } from './config.ts'
 export { isLocale, matchLocale, type Locale } from '@nextskin/i18n'
 
 export { isSiteInitialized } from './setup/initialized.ts'

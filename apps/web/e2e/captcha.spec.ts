@@ -1,7 +1,6 @@
-import { execFileSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
 import { createTranslator } from '@nextskin/i18n'
 import { expect, test, type Page } from '@playwright/test'
+import { nextskin } from './nextskin-cli'
 
 // 验证码（ADR-0038）。启用之后登录、注册都要过验证码，和别的用例共用一个站点会让它们失败，
 // 所以跑在单并发的 plugins 服务上（playwright.config.ts），最后用命令行关掉。
@@ -40,15 +39,8 @@ async function fakeWidget(page: Page) {
   await page.route(TURNSTILE, (route) => route.fulfill({ contentType: 'text/javascript', body: fakeTurnstile }))
 }
 
-function cli(script: string, ...args: string[]) {
-  execFileSync(process.execPath, [`scripts/${script}.ts`, ...args], {
-    cwd: fileURLToPath(new URL('..', import.meta.url)),
-    env: {
-      ...process.env,
-      NEXTSKIN_DATA_DIR: process.env.NEXTSKIN_E2E_PLUGINS_DATA_DIR,
-      NEXTSKIN_SECRET: process.env.NEXTSKIN_E2E_SECRET,
-    },
-  })
+function cli(...args: string[]) {
+  nextskin(process.env.NEXTSKIN_E2E_PLUGINS_DATA_DIR, ...args)
 }
 
 test('启用验证码后，登录、注册、找回密码都要先过挂件，令牌放在请求头里；命令行能关掉它', async ({ page, browser }) => {

@@ -1,17 +1,17 @@
 // 给用户设新密码，超级管理员丢了密码或者账号失控时用它找回：后台动不了超级管理员（ADR-0036"命令行"）。
-//   pnpm set-password <邮箱或 uid> [--remove-other-methods] [--email <新地址>]
-// 读和 `pnpm dev` 相同的环境变量（packages/domain/src/bootstrap.ts），工作目录是 apps/web。
+//   nextskin set-password <邮箱或 uid> [--remove-other-methods] [--email <新地址>]
 // 新密码在终端里输入两次、不回显，不接受参数里的密码：参数会留在 shell 历史和进程列表里。
 // 效果同后台的改密码和收回账号，在一个事务里做完：作废全部网页和启动器登录、还没用的找回链接和改邮箱链接；
 // --remove-other-methods 删掉全部通行密钥、解绑全部第三方账号；--email 把邮箱立即换成新地址，算已验证。
 // 攻击者多半把邮箱换成了自己的，所以也能按 uid 找人。操作者是 system：不受身份规则限制，照样写审计记录，IP 为空
+import type { ReadCommandContext } from '../context.ts'
 import { createInterface } from 'node:readline'
 import { Writable } from 'node:stream'
 import { parseArgs } from 'node:util'
-import { coreConfigFromEnv, DomainError, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, openCore } from '@nextskin/domain'
-import { officialPlugins } from '../lib/official-plugins.ts'
+import { DomainError, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, openCore } from '@nextskin/domain'
+import { officialPlugins } from '@nextskin/official-plugins'
 
-const USAGE = `用法：pnpm set-password <邮箱或 uid> [--remove-other-methods] [--email <新地址>]
+const USAGE = `用法：nextskin set-password <邮箱或 uid> [--remove-other-methods] [--email <新地址>]
 
   --remove-other-methods  同时删掉全部通行密钥、解绑全部第三方账号，只留下这个密码
   --email <新地址>        同时把邮箱立即换成新地址（算已验证，不发确认链接）
@@ -93,7 +93,7 @@ function describeError(error: unknown, withNewEmail: boolean): string {
   }
 }
 
-async function main(argv: string[]): Promise<number> {
+export async function run(argv: string[], read: ReadCommandContext): Promise<number> {
   const args = parse(argv)
   if (!args) {
     console.error(USAGE)
@@ -103,6 +103,8 @@ async function main(argv: string[]): Promise<number> {
     console.error('要在终端里运行：新密码只能在终端里输入，不接受管道和参数。')
     return 1
   }
+  // 配置有错的话在输入密码之前就说
+  const context = await read()
 
   // 先读密码再连数据库：等人输入的时候不占着连接
   let password: string
@@ -124,12 +126,8 @@ async function main(argv: string[]): Promise<number> {
   }
 
   try {
-    const config = coreConfigFromEnv(process.env, {
-      cwd: process.cwd(),
-      production: process.env.NODE_ENV === 'production',
-    })
     // 带上官方插件：通知邮件里解绑的第三方账号要按插件的文案写出名称，用例发出的事件也要展开给启用的官方插件
-    const opened = await openCore(config, { startJobs: false, officialPlugins })
+    const opened = await openCore(context.config, { startJobs: false, officialPlugins })
     try {
       const result = await opened.core.admin.setPasswordAsSystem(args.target, {
         password,
@@ -151,5 +149,3 @@ async function main(argv: string[]): Promise<number> {
     return 1
   }
 }
-
-process.exitCode = await main(process.argv.slice(2))

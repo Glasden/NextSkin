@@ -9,6 +9,16 @@
       "dependsOn": ["^build", "typecheck"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
+    // 发行目录在包外，缓存恢复不了；必须等 standalone 构建完成再组装（ADR-0039）
+    "@nextskin/launcher#build": {
+      "dependsOn": ["^build", "typecheck", "@nextskin/web#build"],
+      "cache": false
+    },
+    // e2e 从发行目录启动，覆盖启动器和打包后的命令行（ADR-0039）
+    "@nextskin/web#e2e": {
+      "dependsOn": ["build", "@nextskin/launcher#build"],
+      "cache": false
+    },
     // Next 的 next-env.d.ts 和 .next/types 不进仓库，由 typegen 生成；类型检查和带类型的 lint 都读它们。
     // 只在这里生成一次：两个任务并行跑时，lint 可能读到还没生成或正在重写的文件
     "typegen": {

@@ -1,9 +1,9 @@
-import { execFileSync } from 'node:child_process'
 import { createHmac } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createTranslator } from '@nextskin/i18n'
 import { expect, test, type Page } from '@playwright/test'
+import { nextskin } from './nextskin-cli'
 
 // 后台的主流程（ADR-0027）：举报 → 管理员删除材质 → 举报人看到已采纳 → 审计日志；封禁上传者 → 他只看到封禁说明，
 // CSL 对他的角色返回 403。设置页（ADR-0028）：只有超级管理员能进，改了立即生效。
@@ -49,16 +49,9 @@ async function signIn(page: Page, email: string, secret: string, next: string) {
   await page.getByRole('button', { name: t('auth.signIn.submit'), exact: true }).click()
 }
 
-/** 第一个超级管理员由脚本设定（ADR-0027）。直接改 account 服务的数据目录，和运行中的服务共用一个 SQLite 文件 */
+/** 第一个超级管理员由命令行设定（ADR-0027）。直接改 account 服务的数据目录，和运行中的服务共用一个 SQLite 文件 */
 function setRole(email: string, role: string) {
-  execFileSync(process.execPath, ['scripts/set-role.ts', email, role], {
-    cwd: fileURLToPath(new URL('..', import.meta.url)),
-    env: {
-      ...process.env,
-      NEXTSKIN_DATA_DIR: process.env.NEXTSKIN_E2E_ACCOUNT_DATA_DIR,
-      NEXTSKIN_SECRET: process.env.NEXTSKIN_E2E_SECRET,
-    },
-  })
+  nextskin(process.env.NEXTSKIN_E2E_ACCOUNT_DATA_DIR, 'set-role', email, role)
 }
 
 test('举报的材质被管理员删除，举报人看到已采纳；封禁上传者后他的角色在 CSL 里是 403；审计日志都记下了', async ({

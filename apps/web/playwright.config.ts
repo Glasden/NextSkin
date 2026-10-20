@@ -39,8 +39,12 @@ const pluginsHostDataDirectory = (process.env.NEXTSKIN_E2E_PLUGINS_HOST_DATA_DIR
   join(tmpdir(), 'nextskin-e2e-plugins-host-'),
 ))
 const oldSiteDirectory = (process.env.NEXTSKIN_E2E_OLD_SITE_DIR ??= mkdtempSync(join(tmpdir(), 'nextskin-e2e-bs-')))
-const server = { NEXTSKIN_SECRET: secret, HOSTNAME: '127.0.0.1' }
-// 后台和插件的用例（e2e/admin.spec.ts、plugins.spec.ts）用 set-role 脚本设定超级管理员，要用同一个密钥打开服务的数据目录
+const server = { NEXTSKIN_SECRET: secret, NEXTSKIN_HOST: '127.0.0.1' }
+// e2e 任务依赖 pnpm build 组装出的发行目录（turbo.json），每个服务都经启动器启动（ADR-0039）
+const start = 'node ../../dist/nextskin/nextskin.mjs start'
+// 收尾时给启动器发 SIGTERM，走它按顺序停止的路径（先收任务、再关 HTTP）；启动器最多等核心 30 秒
+const gracefulShutdown = { signal: 'SIGTERM', timeout: 40_000 } as const
+// 后台和插件的用例（e2e/admin.spec.ts、plugins.spec.ts）用命令行 set-role 设定超级管理员，要用同一个密钥打开服务的数据目录
 process.env.NEXTSKIN_E2E_SECRET = secret
 
 export default defineConfig<{ pluginHost: boolean }>({
@@ -85,62 +89,57 @@ export default defineConfig<{ pluginHost: boolean }>({
     // 每个用例自己指定站点（两个未初始化的服务），用例之间不共享状态
     { name: 'setup', use: { ...devices['Desktop Chrome'] }, testMatch: ['setup.spec.ts'] },
   ],
-  // e2e 任务依赖 build（turbo.json），这里启动 standalone 产物；静态资源要按 Next 文档手动复制进去
   webServer: [
     {
-      command: [
-        `node ../../tests/contract/scripts/seed-sqlite.ts ${dataDirectory}`,
-        'cp -r .next/static .next/standalone/apps/web/.next/',
-        'node .next/standalone/apps/web/server.js',
-      ].join(' && '),
-      env: { ...server, PORT: String(port), NEXTSKIN_DATA_DIR: dataDirectory },
+      command: [`node ../../tests/contract/scripts/seed-sqlite.ts ${dataDirectory}`, start].join(' && '),
+      env: { ...server, NEXTSKIN_PORT: String(port), NEXTSKIN_DATA_DIR: dataDirectory },
       url: `http://localhost:${port}`,
       // 回放依赖本次写入的数据和签名公钥，不能复用已经在运行的服务
       reuseExistingServer: false,
+      gracefulShutdown,
     },
     {
-      command: [
-        // 两个服务共用同一份 standalone 产物，静态资源由上面那个服务复制
-        `node ../../tests/contract/scripts/seed-sqlite.ts ${accountDataDirectory} ${accountSite}`,
-        'node .next/standalone/apps/web/server.js',
-      ].join(' && '),
-      env: { ...server, PORT: String(accountPort), NEXTSKIN_DATA_DIR: accountDataDirectory },
+      command: [`node ../../tests/contract/scripts/seed-sqlite.ts ${accountDataDirectory} ${accountSite}`, start].join(
+        ' && ',
+      ),
+      env: { ...server, NEXTSKIN_PORT: String(accountPort), NEXTSKIN_DATA_DIR: accountDataDirectory },
       url: accountSite,
       reuseExistingServer: false,
+      gracefulShutdown,
     },
     {
-      command: [
-        `node ../../tests/contract/scripts/seed-sqlite.ts ${pluginsDataDirectory} ${pluginsSite}`,
-        'node .next/standalone/apps/web/server.js',
-      ].join(' && '),
-      env: { ...server, PORT: String(pluginsPort), NEXTSKIN_DATA_DIR: pluginsDataDirectory },
+      command: [`node ../../tests/contract/scripts/seed-sqlite.ts ${pluginsDataDirectory} ${pluginsSite}`, start].join(
+        ' && ',
+      ),
+      env: { ...server, NEXTSKIN_PORT: String(pluginsPort), NEXTSKIN_DATA_DIR: pluginsDataDirectory },
       url: pluginsSite,
       reuseExistingServer: false,
+      gracefulShutdown,
     },
     {
       command: [
         `node ../../tests/contract/scripts/seed-sqlite.ts ${pluginsHostDataDirectory} ${pluginsHostSite}`,
-        'node .next/standalone/apps/web/server.js',
+        start,
       ].join(' && '),
-      env: { ...server, PORT: String(pluginsHostPort), NEXTSKIN_DATA_DIR: pluginsHostDataDirectory },
+      env: { ...server, NEXTSKIN_PORT: String(pluginsHostPort), NEXTSKIN_DATA_DIR: pluginsHostDataDirectory },
       url: pluginsHostSite,
       reuseExistingServer: false,
+      gracefulShutdown,
     },
     {
       // 不写任何数据：站点未初始化，启动时生成安装码
-      command: 'node .next/standalone/apps/web/server.js',
-      env: { ...server, PORT: String(setupNewPort), NEXTSKIN_DATA_DIR: setupNewDataDirectory },
+      command: start,
+      env: { ...server, NEXTSKIN_PORT: String(setupNewPort), NEXTSKIN_DATA_DIR: setupNewDataDirectory },
       url: `http://localhost:${setupNewPort}/api/health`,
       reuseExistingServer: false,
+      gracefulShutdown,
     },
     {
-      command: [
-        `node ../../packages/importer/scripts/bs-sqlite-site.ts ${oldSiteDirectory}`,
-        'node .next/standalone/apps/web/server.js',
-      ].join(' && '),
-      env: { ...server, PORT: String(setupImportPort), NEXTSKIN_DATA_DIR: setupImportDataDirectory },
+      command: [`node ../../packages/importer/scripts/bs-sqlite-site.ts ${oldSiteDirectory}`, start].join(' && '),
+      env: { ...server, NEXTSKIN_PORT: String(setupImportPort), NEXTSKIN_DATA_DIR: setupImportDataDirectory },
       url: `http://localhost:${setupImportPort}/api/health`,
       reuseExistingServer: false,
+      gracefulShutdown,
     },
   ],
 })

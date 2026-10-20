@@ -1,6 +1,6 @@
 # packages/importer
 
-从 BS v6 导入（ADR-0031）。导入引擎由命令行（`src/cli.ts`，根目录的 `pnpm import:bs`）和网页导入服务（`src/service.ts`，安装向导和后台的"数据迁移"）共用；逐表的规则在 `docs/schema.md` 的"从 BS 导入"，写代码前先读。服主看的迁移步骤在 `MIGRATION.md`。
+从 BS v6 导入（ADR-0031）。导入引擎由命令行（`src/cli.ts`，经启动器的 `nextskin import blessing-skin` 运行，ADR-0039）和网页导入服务（`src/service.ts`，安装向导和后台的"数据迁移"）共用；逐表的规则在 `docs/schema.md` 的"从 BS 导入"，写代码前先读。服主看的迁移步骤在 `MIGRATION.md`。
 
 ## 不变量 4 的例外只在这里
 

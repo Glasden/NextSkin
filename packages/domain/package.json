@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./importer": "./src/importer.ts"
+    "./importer": "./src/importer.ts",
+    "./config": "./src/config.ts"
   },
   "scripts": {
     "lint": "eslint --max-warnings 0 .",

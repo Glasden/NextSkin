@@ -7,11 +7,6 @@
     "node": ">=24"
   },
   "scripts": {
-    "set-role": "pnpm --filter @nextskin/web set-role",
-    "set-password": "pnpm --filter @nextskin/web set-password",
-    "disable-2fa": "pnpm --filter @nextskin/web disable-2fa",
-    "disable-captcha": "pnpm --filter @nextskin/web disable-captcha",
-    "import:bs": "pnpm --filter @nextskin/web exec node ../../packages/importer/src/cli.ts",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "check": "turbo run lint typecheck test format:check",
@@ -29,7 +24,8 @@
     "design:sync": "pnpm --filter @nextskin/ui design:sync",
     "font:sync": "pnpm --filter @nextskin/ui font:sync",
     "changeset": "changeset",
-    "release": "turbo run test:pack --filter=@nextskin/plugin-cli && changeset publish"
+    "release": "turbo run test:pack --filter=@nextskin/plugin-cli && changeset publish",
+    "nextskin": "node packages/launcher/src/main.ts"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.3",

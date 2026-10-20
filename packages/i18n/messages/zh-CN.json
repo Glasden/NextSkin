@@ -1850,7 +1850,7 @@
       "description": "从 Blessing Skin 6 导入：切换前的最终同步，或者用“新站”建好的站点后来要导入旧数据。每次运行都从旧库重新导入全部数据，整库替换。",
       "start": "开始导入",
       "noticeTitle": "导入期间站点处于维护状态",
-      "notice": "试跑和导入都会让站点进入维护状态，直到运行结束。网页导入只支持单实例部署；多实例的站点请停掉服务，用命令行 pnpm import:bs 导入。",
+      "notice": "试跑和导入都会让站点进入维护状态，直到运行结束。网页导入只支持单实例部署；多实例的站点请停掉服务，用命令行 node nextskin.mjs import blessing-skin 导入。",
       "emptyTitle": "还没有运行过",
       "empty": "试跑和导入的记录会列在这里，每一条都带着对账报告。",
       "tableLabel": "历次运行",
@@ -2464,7 +2464,7 @@
         "notesTitle": "开始之前",
         "noteDuration": "导入期间站点处于维护状态，用时和试跑差不多（试跑用了 {seconds} 秒）。",
         "noteSignIn": "导入会替换全部用户，你现在的登录会失效。完成后用旧站的账号登录。",
-        "noteSingleInstance": "网页导入只支持单实例部署。多个实例的站点请停掉服务，用命令行 pnpm import:bs 导入。",
+        "noteSingleInstance": "网页导入只支持单实例部署。多个实例的站点请停掉服务，用命令行 node nextskin.mjs import blessing-skin 导入。",
         "start": "开始导入"
       },
       "done": {
@@ -2520,7 +2520,7 @@
         "auth_failed": "核对旧站 .env 的 DB_USERNAME 和 DB_PASSWORD。",
         "database_missing": "核对旧站 .env 的 DB_DATABASE。",
         "not_blessing_skin": "核对表前缀和库名。",
-        "failed": "再试一次；还是不行的话，用命令行 pnpm import:bs 试跑，看完整的错误。"
+        "failed": "再试一次；还是不行的话，用命令行 node nextskin.mjs import blessing-skin 试跑，看完整的错误。"
       },
       "missing": "缺少 {name}。核对表前缀和库名，确认旧站是 Blessing Skin 6。",
       "texturesUnreadable": "材质目录读不了",

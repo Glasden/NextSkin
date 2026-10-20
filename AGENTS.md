@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-插件系统第一版（ADR-0033）的三步都已落地，插件 SDK 1.0 进入候选期（ADR-0035，`1.0.0-rc.N`）；后台其余管理操作（ADR-0036）的三个切片都已落地；Yggdrasil Connect（ADR-0037）的三个切片和验证码（ADR-0038）都已落地；启动器（ADR-0039）落地中。各领域已经落地和还没做的部分逐项列在 `PROGRESS.md`；判断某个功能有没有、做到哪一步，先看它。
+插件系统第一版（ADR-0033）的三步都已落地，插件 SDK 1.0 进入候选期（ADR-0035，`1.0.0-rc.N`）；后台其余管理操作（ADR-0036）的三个切片都已落地；Yggdrasil Connect（ADR-0037）的三个切片和验证码（ADR-0038）都已落地；启动器（ADR-0039）的切片一已落地。各领域已经落地和还没做的部分逐项列在 `PROGRESS.md`；判断某个功能有没有、做到哪一步，先看它。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
@@ -16,35 +16,31 @@
 ## 系统结构
 
 ```
-nextskin 启动器（进程监管 + 命令行）
- ├─ 核心进程：Next.js（只做页面）+ Hono（协议端点 / REST / 插件路由）+ 领域层
- │            └─ Kysely → SQLite（默认）| MySQL/MariaDB | PostgreSQL
- └─ plugin host 进程：运行安装插件，通过 RPC 调用核心，没有数据库凭据
+nextskin 启动器（进程监管 + 命令行，ADR-0039）
+ └─ 核心进程：Next.js（只做页面）+ Hono（协议端点 / REST / 插件路由）+ 领域层 + 后台任务
+     ├─ Kysely → SQLite（默认）| MySQL/MariaDB | PostgreSQL
+     └─ plugin host 进程：核心拉起，运行安装插件，通过 RPC 调用核心，没有数据库凭据
 ```
 
 ## 命令
 
 | 命令 | 用途 |
 |---|---|
-| `pnpm dev` | 启动开发环境，不依赖任何外部服务（默认 SQLite，数据在 `apps/web/data`；环境变量见 `packages/domain/src/bootstrap.ts`。种子数据还没有：空库先在 `/setup` 建站，安装码在数据目录的 `setup-code`，安装之前不能注册） |
+| `pnpm dev` | 启动开发环境，不依赖任何外部服务（默认 SQLite，数据在 `apps/web/data`；环境变量见 `packages/domain/src/config.ts`。种子数据还没有：空库先在 `/setup` 建站，安装码在数据目录的 `setup-code`，安装之前不能注册） |
 | `pnpm check` | lint + 类型检查 + 单元测试 + 格式检查；提交前必须通过。CI 还会跑 `test:db` 和 `e2e`，改了数据库代码或 Next 配置时先在本地跑 |
-| `pnpm build` | 构建 Next standalone 产物、插件 SDK 的声明文件和 plugin host 的单文件包（`packages/plugin-host/dist/host.mjs`，standalone 里运行它）。Next 关了构建期类型检查，所以会先对构建涉及的每个包跑 `typecheck` |
+| `pnpm build` | 构建 Next standalone 产物、插件 SDK 的声明文件和 plugin host 的单文件包（`packages/plugin-host/dist/host.mjs`，standalone 里运行它），再组装发行目录 `dist/nextskin/`（启动器和命令行的单文件包加上 standalone，ADR-0039）。Next 关了构建期类型检查，所以会先对构建涉及的每个包跑 `typecheck` |
 | `pnpm test <path>` | 只跑指定文件或目录的测试 |
 | `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑 `*.db.test.ts`（需要 Docker，测试库容器跑完后保留；`pnpm test` 只用 SQLite 跑） |
 | `pnpm test:contract` | 协议契约测试：回放从真实 BS v6 录制的用例，不需要 Docker，`pnpm check` 也会跑。录制见 `tests/contract/README.md` |
 | `pnpm storybook` | 组件工作台 |
 | `pnpm design:sync` | 改了 `packages/ui/src/theme.css` 或标志的图形之后，重新生成 DESIGN.md §3 的 token 表和 `apps/web/app` 里的站点图标（不同步时 ui 的测试会失败） |
 | `pnpm font:sync` | 重新生成像素字体的分片（DESIGN.md §4），需要联网；只在换字体版本或改切片规则时运行 |
-| `pnpm e2e` | Playwright 端到端测试；也经过 Next standalone 回放全部契约用例 |
+| `pnpm e2e` | Playwright 端到端测试：从 `dist/nextskin` 经启动器启动服务、用打包后的命令行设定身份；也经过 Next standalone 回放全部契约用例 |
 | `pnpm test:visual` | 组件截图回归：给每个 story 拍亮暗两张截图，和基线比较（需要 Docker，浏览器跑在容器里）。外观改动是有意的，就加 `-- --update-snapshots` 更新基线，并检查新截图 |
 | `pnpm test:pack` | 打包冒烟测试：在仓库外用 npm 安装 `pnpm pack` 出来的 SDK 和构建命令，类型检查、构建一个插件（要联网，不进 `pnpm check`，ADR-0035） |
 | `pnpm release` | 发布插件 SDK 和构建命令：先跑 `test:pack`，再 `changeset publish`。平时由 `.github/workflows/release.yml` 运行，版本号先在本地用 `pnpm changeset version` 改好（ADR-0035） |
 | `pnpm format` | Prettier 格式化 |
-| `pnpm import:bs -- <参数>` | 从 BS v6 导入（ADR-0031），参数见 `-- --help`，步骤见 `packages/importer/MIGRATION.md`；读和 `pnpm dev` 相同的环境变量，运行时服务要停着 |
-| `pnpm set-role <邮箱> <身份>` | 设定用户的身份（`users.role`），例如另指定一个超级管理员（ADR-0027）；第一个超级管理员在安装向导 `/setup` 里创建，安装码在数据目录的 `setup-code` 文件（ADR-0031）。读和 `pnpm dev` 相同的环境变量 |
-| `pnpm set-password <邮箱或 uid> [--remove-other-methods] [--email <新地址>]` | 给用户设新密码，超级管理员丢了密码或账号失控时用（后台动不了超级管理员，ADR-0036）。密码在终端里输入两次、不回显；退出对方全部登录，`--remove-other-methods` 删掉全部通行密钥、解绑全部第三方账号，`--email` 把邮箱立即换成新地址。读和 `pnpm dev` 相同的环境变量 |
-| `pnpm disable-2fa <邮箱或 uid>` | 关掉用户的两步验证，超级管理员丢了验证器和备用码时用（ADR-0036）；不退出登录。读和 `pnpm dev` 相同的环境变量 |
-| `pnpm disable-captcha` | 关掉验证码（`captcha.provider` 设为 `none`），服务商故障、密钥配错、没人登录得了后台时用（ADR-0038）。读和 `pnpm dev` 相同的环境变量 |
+| `pnpm nextskin <命令>` | 启动器的命令行（ADR-0039），发行目录里是 `node nextskin.mjs <命令>`，`help` 列出全部命令。源码里读 `apps/web/.env` 和环境变量，数据目录同 `pnpm dev`。`set-role <邮箱> <身份>` 另指定超级管理员（第一个在 `/setup` 创建，安装码在数据目录的 `setup-code`）；`set-password <邮箱或 uid>`、`disable-2fa <邮箱或 uid>` 找回超级管理员（后台动不了它，ADR-0036）；`disable-captcha` 关掉验证码（ADR-0038）；`import blessing-skin` 从 BS v6 导入（ADR-0031，服务要停着，步骤见 `packages/importer/MIGRATION.md`）；`migrate` 只跑迁移。`start` 只在发行目录里运行 |
 
 单元测试和 story 测试跑在 Chromium 里，第一次运行前要装浏览器：`pnpm --filter @nextskin/web exec playwright install chromium`。
 
@@ -79,6 +75,8 @@ nextskin 启动器（进程监管 + 命令行）
 | `packages/plugin-sdk`、`plugin-host` | 插件 API（公开面，ADR-0033）；插件侧的运行时：host 进程的入口和帧协议、加载插件定义、构造 `ctx`、插件包的格式和校验。核心侧的注册表、网关、换代和安装在 `packages/domain/src/plugins/` |
 | `packages/plugin-cli` | `nextskin-plugin build`：把插件打成插件包（manifest、单文件的服务端代码、文案），插件作者和测试共用。和 SDK 一起发布到 npm，版本号相同；发布的是连同 plugin-host、SDK、zod 打成的单文件（ADR-0035） |
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |
+| `packages/launcher` | 启动器 `nextskin`（ADR-0039）：`start` 监管核心进程，其余命令在进程内打开核心；打包脚本组装发行目录 `dist/nextskin/` |
+| `packages/official-plugins` | 随发行包分发的官方插件清单，核心和命令行共用 |
 | `packages/importer` | 从 BS v6 只读导入（ADR-0031）：导入引擎、命令行和网页导入服务（`apps/web` 创建、注入 Hono），迁移指南在 `MIGRATION.md`，该目录有自己的 AGENTS.md |
 | `packages/oauth-client` | 几个 OAuth 官方插件共用的代码（拼授权地址、换令牌、读 ID 令牌），不发布，打进各插件的单文件；第三方插件不能依赖它（ADR-0034） |
 | `plugins/*` | 官方插件，只用公开 API 编写，随站点发布、在后台启用；也是 ADR-0033 的参考插件 |
@@ -111,7 +109,7 @@ nextskin 启动器（进程监管 + 命令行）
 - Better Auth：`database.transaction` 默认是 `false`，必须打开；用户表主键列名只能叫 `id`。
 - 服务端的 worker 写成 `new Worker(new URL('./x.ts', import.meta.url), …)`，Turbopack 会把它打成单独的 chunk，`next dev` 和 standalone 产物里都能运行。`workerData` 只能传普通对象：Turbopack 会把它展开、再塞进自己的字段，传数字、数组、TypedArray 会丢失或变形。不要用 `next build --webpack`，worker chunk 的路径会错。
 - 脚本里不写裸的 `tsc`：`node_modules/.bin/tsc` 可能指向 TS 6 也可能指向 TS 7，类型检查按路径调用 TS 7（ADR-0014）。
-- Node 直接运行的代码（脚本、ESLint 插件、开发和测试时的 plugin host，以及将来的启动器）里，相对导入要写 `.ts` 扩展名：Node 的类型剥离不补扩展名，类型检查却不会报错。
+- Node 直接运行的代码（脚本、ESLint 插件、源码里的启动器和命令行、开发和测试时的 plugin host）里，相对导入要写 `.ts` 扩展名：Node 的类型剥离不补扩展名，类型检查却不会报错。
 - pnpm 12 拒绝安装发布不到 1 天的版本（`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`）。换一个早一点的版本，不要往 `pnpm-workspace.yaml` 里加 `minimumReleaseAgeExclude`。
 - 术语：**材质**是皮肤和披风的统称；**角色**（player）是 Minecraft 里的玩家名，不是**用户**（user）。一个用户可以有多个角色。**身份**指 `users.role`（封禁、用户、管理员、超级管理员），界面和文案里不叫角色。
 

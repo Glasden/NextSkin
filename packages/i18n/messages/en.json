@@ -1850,7 +1850,7 @@
       "description": "Import from Blessing Skin 6: the final sync before switching over, or importing old data into a site created with New site. Every run imports everything from the old database again and replaces this site's data.",
       "start": "Start import",
       "noticeTitle": "The site is in maintenance while importing",
-      "notice": "Both dry runs and imports put the site in maintenance until they finish. Web imports only support single-instance deployments; for multiple instances, stop the service and use the pnpm import:bs command.",
+      "notice": "Both dry runs and imports put the site in maintenance until they finish. Web imports only support single-instance deployments; for multiple instances, stop the service and use the node nextskin.mjs import blessing-skin command.",
       "emptyTitle": "No runs yet",
       "empty": "Dry runs and imports are listed here, each with its report.",
       "tableLabel": "Runs",
@@ -2464,7 +2464,7 @@
         "notesTitle": "Before you start",
         "noteDuration": "The site is in maintenance during the import, which takes about as long as the dry run (the dry run took {seconds} s).",
         "noteSignIn": "The import replaces all users, so you'll be signed out. Sign in with your old account afterwards.",
-        "noteSingleInstance": "Web imports only support single-instance deployments. For multiple instances, stop the service and use the pnpm import:bs command.",
+        "noteSingleInstance": "Web imports only support single-instance deployments. For multiple instances, stop the service and use the node nextskin.mjs import blessing-skin command.",
         "start": "Start import"
       },
       "done": {
@@ -2520,7 +2520,7 @@
         "auth_failed": "Check DB_USERNAME and DB_PASSWORD in the old .env.",
         "database_missing": "Check DB_DATABASE in the old .env.",
         "not_blessing_skin": "Check the table prefix and the database name.",
-        "failed": "Try again. If it still fails, do a dry run with the pnpm import:bs command to see the full error."
+        "failed": "Try again. If it still fails, do a dry run with the node nextskin.mjs import blessing-skin command to see the full error."
       },
       "missing": "{name} is missing. Check the table prefix and database name, and make sure the old site runs Blessing Skin 6.",
       "texturesUnreadable": "Can't read the textures directory",

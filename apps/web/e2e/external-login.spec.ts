@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createTranslator } from '@nextskin/i18n'
 import { expect, test as base } from '@playwright/test'
+import { nextskin } from './nextskin-cli'
 
 const test = base.extend<object, { pluginHost: boolean }>({
   pluginHost: [false, { option: true, scope: 'worker' }],
@@ -81,16 +82,10 @@ test('GitHub 登录：后台配置回调、登录按钮、授权参数和取消�
     data: { email, password: 'correct horse battery staple', playerName: `OAuth${suffix}` },
   })
   expect(registration.status()).toBe(201)
-  execFileSync(process.execPath, ['scripts/set-role.ts', email, 'superadmin'], {
-    cwd: fileURLToPath(new URL('..', import.meta.url)),
-    env: {
-      ...process.env,
-      NEXTSKIN_DATA_DIR: pluginHost
-        ? process.env.NEXTSKIN_E2E_PLUGINS_HOST_DATA_DIR
-        : process.env.NEXTSKIN_E2E_PLUGINS_DATA_DIR,
-      NEXTSKIN_SECRET: process.env.NEXTSKIN_E2E_SECRET,
-    },
-  })
+  const directory = pluginHost
+    ? process.env.NEXTSKIN_E2E_PLUGINS_HOST_DATA_DIR
+    : process.env.NEXTSKIN_E2E_PLUGINS_DATA_DIR
+  nextskin(directory, 'set-role', email, 'superadmin')
   if (pluginHost) {
     if (!packageFile) throw new Error('没有打出 GitHub 插件包')
     await page.goto('/admin/plugins')

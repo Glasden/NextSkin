@@ -1,11 +1,11 @@
-// 命令行：从 BS v6 导入（ADR-0031）。启动器落地之前用根目录的 `pnpm import:bs -- <参数>`，之后是 `nextskin import blessing-skin`。
-// 读和 `pnpm dev` 相同的环境变量（packages/domain/src/bootstrap.ts），工作目录是 apps/web。运行时服务要停着。
-// 退出码：0 成功；1 有停止类问题，目标库没有改动；2 参数错误、连不上数据库或运行失败
+// nextskin import blessing-skin：由启动器提供核心配置，用户参数的相对路径按调用目录解析（ADR-0039）。
+// 退出码：0 成功；1 有停止类问题；2 参数错误、连接失败或运行失败
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { coreMigrations, createDatabase, migrateToLatest, type CoreDatabase } from '@nextskin/db'
-import { coreConfigFromEnv, createImagePool, createLocalTextureStorage } from '@nextskin/domain/importer'
+import { createImagePool, createLocalTextureStorage } from '@nextskin/domain/importer'
+import type { CoreConfig } from '@nextskin/domain/config'
 import type { ImportProgress } from './context.ts'
 import { ImportOptionsError, runImport } from './engine.ts'
 import { describeIssue, reportToMarkdown } from './markdown.ts'
@@ -13,7 +13,7 @@ import { parseSourceDsn, type SourceConnection } from './source/connection.ts'
 import { parseDotenv, readBsEnvironment, type BsEnvironment } from './source/env.ts'
 import { failInterruptedRuns } from './target.ts'
 
-const USAGE = `用法：pnpm import:bs -- [参数]
+const USAGE = `用法：nextskin import blessing-skin [参数]
 
   --from <地址>            旧库：mysql://用户:密码@主机:端口/库名、postgres://…，或 sqlite:<文件>。
                            省略时从 --bs-env 的 DB_* 读取（推荐：命令行参数在进程列表里看得见）
@@ -54,10 +54,9 @@ function fail(message: string): never {
   throw new UsageError(message)
 }
 
-async function main(argv: string[]): Promise<number> {
-  let parsed
+function parse(argv: string[]) {
   try {
-    parsed = parseArgs({
+    return parseArgs({
       args: argv[0] === '--' ? argv.slice(1) : argv,
       options: {
         from: { type: 'string' },
@@ -87,12 +86,31 @@ async function main(argv: string[]): Promise<number> {
     }
     fail('参数不对：缺少参数的值，或者开关参数带了值')
   }
-  const args = parsed.values
+}
+
+/**
+ * 读配置、锁数据目录之前先处理的：--help 和写错的参数，和 `runImportCli` 的输出、退出码相同。
+ * 返回退出码；null 表示参数没问题，接着读配置、调用 `runImportCli`
+ */
+export function checkImportArgs(argv: string[]): number | null {
+  try {
+    if (!parse(argv).values.help) return null
+    console.log(USAGE)
+    return 0
+  } catch (error) {
+    if (!(error instanceof UsageError)) throw error
+    console.error(`${error.message}\n\n${USAGE}`)
+    return 2
+  }
+}
+
+async function main(argv: string[], options: { config: CoreConfig; cwd: string }): Promise<number> {
+  const args = parse(argv).values
   if (args.help) {
     console.log(USAGE)
     return 0
   }
-  const cwd = process.cwd()
+  const { cwd, config } = options
 
   let env: BsEnvironment | null = null
   if (args['bs-env']) {
@@ -135,7 +153,6 @@ async function main(argv: string[]): Promise<number> {
     uuidOverrides = value as Record<string, string>
   }
 
-  const config = coreConfigFromEnv(process.env, { cwd, production: process.env.NODE_ENV === 'production' })
   if (config.database.dialect === 'sqlite') await mkdir(dirname(config.database.file), { recursive: true })
   const db = createDatabase<CoreDatabase>(config.database)
   const imagePool = createImagePool()
@@ -220,14 +237,16 @@ async function main(argv: string[]): Promise<number> {
   }
 }
 
-try {
-  process.exitCode = await main(process.argv.slice(2))
-} catch (error) {
-  if (error instanceof UsageError || error instanceof ImportOptionsError) {
-    console.error(`${error.message}\n\n${USAGE}`)
-  } else {
-    // 旧库的连接错误已经由 packages/db 脱敏；其余错误只给类型和消息
-    console.error(`导入失败：${error instanceof Error ? error.message : String(error)}`)
+export async function runImportCli(argv: string[], options: { config: CoreConfig; cwd: string }): Promise<number> {
+  try {
+    return await main(argv, options)
+  } catch (error) {
+    if (error instanceof UsageError || error instanceof ImportOptionsError) {
+      console.error(`${error.message}\n\n${USAGE}`)
+    } else {
+      // 旧库的连接错误已经由 packages/db 脱敏；其余错误只给类型和消息
+      console.error(`导入失败：${error instanceof Error ? error.message : String(error)}`)
+    }
+    return 2
   }
-  process.exitCode = 2
 }

@@ -1,0 +1,24 @@
+{
+  "name": "@nextskin/launcher",
+  "version": "0.0.0",
+  "private": true,
+  "description": "启动器、管理命令与发行目录（ADR-0039）",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nextskin/domain": "workspace:*",
+    "@nextskin/db": "workspace:*",
+    "@nextskin/importer": "workspace:*",
+    "@nextskin/official-plugins": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "rolldown": "catalog:",
+    "vitest": "catalog:"
+  }
+}

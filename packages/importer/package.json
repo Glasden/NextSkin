@@ -5,7 +5,8 @@
   "description": "从 BS v6 导入：安装向导、后台和命令行共用的导入引擎（ADR-0031）",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts"
   },
   "scripts": {
     "lint": "eslint --max-warnings 0 .",

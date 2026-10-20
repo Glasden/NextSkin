@@ -334,27 +334,9 @@ importers:
       '@nextskin/importer':
         specifier: workspace:*
         version: link:../../packages/importer
-      '@nextskin/plugin-authme-password':
+      '@nextskin/official-plugins':
         specifier: workspace:*
-        version: link:../../plugins/authme-password
-      '@nextskin/plugin-cdn-refresh':
-        specifier: workspace:*
-        version: link:../../plugins/cdn-refresh
-      '@nextskin/plugin-invitation-codes':
-        specifier: workspace:*
-        version: link:../../plugins/invitation-codes
-      '@nextskin/plugin-oauth-github':
-        specifier: workspace:*
-        version: link:../../plugins/oauth-github
-      '@nextskin/plugin-oauth-google':
-        specifier: workspace:*
-        version: link:../../plugins/oauth-google
-      '@nextskin/plugin-oauth-littleskin':
-        specifier: workspace:*
-        version: link:../../plugins/oauth-littleskin
-      '@nextskin/plugin-oauth-microsoft':
-        specifier: workspace:*
-        version: link:../../plugins/oauth-microsoft
+        version: link:../../packages/official-plugins
       '@nextskin/skin':
         specifier: workspace:*
         version: link:../../packages/skin
@@ -585,7 +567,66 @@ importers:
         specifier: 'catalog:'
         version: 5.0.5(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
+  packages/launcher:
+    dependencies:
+      '@nextskin/db':
+        specifier: workspace:*
+        version: link:../db
+      '@nextskin/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@nextskin/importer':
+        specifier: workspace:*
+        version: link:../importer
+      '@nextskin/official-plugins':
+        specifier: workspace:*
+        version: link:../official-plugins
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.2.14
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.5(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
   packages/oauth-client:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.5(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
+  packages/official-plugins:
+    dependencies:
+      '@nextskin/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@nextskin/plugin-authme-password':
+        specifier: workspace:*
+        version: link:../../plugins/authme-password
+      '@nextskin/plugin-cdn-refresh':
+        specifier: workspace:*
+        version: link:../../plugins/cdn-refresh
+      '@nextskin/plugin-invitation-codes':
+        specifier: workspace:*
+        version: link:../../plugins/invitation-codes
+      '@nextskin/plugin-oauth-github':
+        specifier: workspace:*
+        version: link:../../plugins/oauth-github
+      '@nextskin/plugin-oauth-google':
+        specifier: workspace:*
+        version: link:../../plugins/oauth-google
+      '@nextskin/plugin-oauth-littleskin':
+        specifier: workspace:*
+        version: link:../../plugins/oauth-littleskin
+      '@nextskin/plugin-oauth-microsoft':
+        specifier: workspace:*
+        version: link:../../plugins/oauth-microsoft
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

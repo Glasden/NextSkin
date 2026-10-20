@@ -1,0 +1,29 @@
+{
+  "name": "@nextskin/official-plugins",
+  "version": "0.0.0",
+  "private": true,
+  "description": "随发行包分发的官方插件清单（ADR-0039）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@nextskin/domain": "workspace:*",
+    "@nextskin/plugin-authme-password": "workspace:*",
+    "@nextskin/plugin-cdn-refresh": "workspace:*",
+    "@nextskin/plugin-invitation-codes": "workspace:*",
+    "@nextskin/plugin-oauth-github": "workspace:*",
+    "@nextskin/plugin-oauth-google": "workspace:*",
+    "@nextskin/plugin-oauth-littleskin": "workspace:*",
+    "@nextskin/plugin-oauth-microsoft": "workspace:*"
+  }
+}
