@@ -1,6 +1,6 @@
 # ADR-0030 Yggdrasil：authserver 令牌存进自己的表，不与 OAuth 令牌合并；修掉 yggdrasil-api 的越权和吊销缺陷；开了两步验证的账号在密码后面接验证码
 
-- 状态：已采纳（后台退出全部登录、刷新令牌时在锁内核对角色的主人，由 ADR-0036 补充）
+- 状态：已采纳（后台退出全部登录、刷新令牌时在锁内核对角色的主人，由 ADR-0036 补充；进服、`validate`、`invalidate`、启动器上传材质认 OAuth 令牌，令牌的设置项也作用于 OAuth 令牌，元数据的 `feature.openid_configuration_url`，由 ADR-0037 补充）
 - 日期：2026-10-18
 - 补充 ADR-0016 的"不复现"一表：新增一类"yggdrasil-api 的安全缺陷"，ADR-0016 的其余部分不变
 

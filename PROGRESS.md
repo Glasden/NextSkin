@@ -36,7 +36,7 @@
 
 - **插件 SDK 1.0**（ADR-0035）：冻结前的调整、打包和发布流程、作者文档（`packages/plugin-sdk/docs/`）已经做完，两个包的版本是 `1.0.0-rc.0`（预发布模式 `rc`）。还没做：第一个候选版由维护者在本地发（`pnpm release`），之后配好 npm 的可信发布，由 CI 发；候选期在仓库外照迁移指南迁一个 BS 社区插件、收集作者意见；1.0.0 之前仓库公开，退出预发布时去掉 README 和入门里的 `@rc`。
 - **第三方登录的字段核对**：四家的 subject、`emailVerified` 还要用真实账号核对一遍（ADR-0034"首批插件"）。
-- **Yggdrasil Connect**（OIDC 和设备授权）：另写 ADR（ADR-0007、ADR-0030）。`@better-auth/oauth-provider` 已经接进 Better Auth 的配置，端点和页面还没有。
+- **Yggdrasil Connect**（ADR-0037 已采纳）：分三个切片，都还没做。一是设备码流程：scope 规则和声明、发现文档、元数据字段、公用应用、`/device` 页，进服、`validate`、`invalidate` 和启动器上传材质认 OAuth 令牌，有效期和数量上限，吊销规则，导入器认出 Janus 的公共客户端，安全页的"已授权的应用"；二是授权码流程：同意页、登录后续跑、scope 错误的重定向；三是用户中心和后台的"OAuth 应用"页、权限 `oauthClients.manage`。`@better-auth/oauth-provider` 已经接进 Better Auth 的配置。
 - **验证码**：做进核心，用设置项选 Turnstile、hCaptcha 或 reCAPTCHA（ADR-0033）。
 - **插件 API 推迟的部分**：写核心数据的能力、其余五个拦截点、运行时组件和插槽等，见 ADR-0033 的"推迟"表。
 - **启动器**（`nextskin` 进程监管和命令行）：现在 plugin host 由核心进程拉起。
