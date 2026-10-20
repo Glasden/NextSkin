@@ -24,12 +24,18 @@ interface World {
   cleanup(): Promise<void>
 }
 
+/**
+ * 登录间隔和 BS 一样从请求开始时计时。第一次登录要校验密码、签发令牌，负载高的 CI 上超过默认的 1 秒，
+ * 下一步到的时候已经不在间隔内。录制时各步都在 1 秒内完成，回放这个场景时放大间隔，验证的仍是"间隔内被拒、换个 username 不受影响"
+ */
+const loginIntervals: Record<string, number> = { 'auth/authenticate-throttled': 60_000 }
+
 /** 一个写好固定数据的新核心实例。场景各用一个：令牌、节流、进服记录都不能从别的场景带过来 */
-async function createWorld(): Promise<World> {
+async function createWorld(loginIntervalMs?: number): Promise<World> {
   const directory = await mkdtemp(join(tmpdir(), 'nextskin-contract-'))
   const database = await createTestDatabase<CoreDatabase>()
   const textureDirectory = join(directory, 'textures')
-  await seedWorld(database.db, { textureDirectory, secretKey, signingKey: keys.privateKey })
+  await seedWorld(database.db, { textureDirectory, secretKey, signingKey: keys.privateKey, loginIntervalMs })
   const core = createCore({
     db: database.db,
     textureStorage: createLocalTextureStorage(textureDirectory),
@@ -92,7 +98,7 @@ describe.each(cases)('$id：$title', (contractCase) => {
 
 describe.each(scenarios)('$id：$title', (scenario) => {
   test('每一步都与 BS v6 一致', async () => {
-    const fresh = await createWorld()
+    const fresh = await createWorld(loginIntervals[scenario.id])
     try {
       const problems = await checkScenario(fresh.send, scenario, { recording, publicKey: keys.publicKey, startedAt })
       expect(problems, problems.join('\n')).toEqual([])

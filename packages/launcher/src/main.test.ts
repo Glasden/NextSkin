@@ -3,8 +3,15 @@ import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import metadata from '../package.json' with { type: 'json' }
+import { run as disable2fa } from './commands/disable-2fa.ts'
+import { run as disableCaptcha } from './commands/disable-captcha.ts'
+import { run as doctor } from './commands/doctor.ts'
+import { run as importBlessingSkin } from './commands/import.ts'
+import { run as setPassword } from './commands/set-password.ts'
+import { run as setRole } from './commands/set-role.ts'
+import type { LauncherContext, ReadCommandContext } from './context.ts'
 
 async function run(...args: string[]) {
   return runWith({}, ...args)
@@ -21,6 +28,19 @@ async function runWith(env: NodeJS.ProcessEnv, ...args: string[]) {
   } catch (error) {
     const result = error as { code: number; stdout: string; stderr: string }
     return { code: result.code, output: result.stdout + result.stderr }
+  }
+}
+
+/** 在进程内调用命令，收集它打印的内容。各命令模块都会加载领域层，逐个起进程在负载高的 CI 上超过 30 秒 */
+async function capture(call: () => Promise<number>) {
+  const lines: unknown[] = []
+  const log = vi.spyOn(console, 'log').mockImplementation((line) => lines.push(line))
+  const error = vi.spyOn(console, 'error').mockImplementation((line) => lines.push(line))
+  try {
+    return { code: await call(), output: lines.join('\n') }
+  } finally {
+    log.mockRestore()
+    error.mockRestore()
   }
 }
 
@@ -42,21 +62,30 @@ test('version 和 help 不需要配置或数据库，兼容 pnpm 的 --', async 
 })
 
 test('命令先检查参数、处理 --help，再读配置', async () => {
-  // 配置文件指向一个目录，读配置一定失败
-  const env = { NEXTSKIN_ENV_FILE: fileURLToPath(new URL('.', import.meta.url)) }
-  const help = await runWith(env, 'import', 'blessing-skin', '--help')
+  const read = vi.fn<ReadCommandContext>(() => Promise.reject(new Error('参数有错时不应读取配置')))
+  const help = await capture(() => importBlessingSkin(['--help'], read))
   expect(help.code).toBe(0)
   expect(help.output).toContain('用法：nextskin import blessing-skin')
-  expect((await runWith(env, 'import', 'blessing-skin', '--frm')).code).toBe(2)
-  for (const argv of [['set-role'], ['set-password'], ['disable-2fa'], ['disable-captcha', 'extra']]) {
-    const result = await runWith(env, ...argv)
+  expect((await capture(() => importBlessingSkin(['--frm'], read))).code).toBe(2)
+  for (const call of [
+    () => setRole([], read),
+    () => setPassword([], read),
+    () => disable2fa([], read),
+    () => disableCaptcha(['extra'], read),
+  ]) {
+    const result = await capture(call)
     expect(result.code).toBe(1)
     expect(result.output).toContain('用法：')
   }
-  const configured = await runWith(env, 'migrate')
-  expect(configured.code).toBe(78)
-  expect(configured.output).toContain('读不了配置文件')
-  // 依次起 7 个 Node 进程，Linux 上就要 8 秒，Windows 有负载时超过默认的 10 秒
+  expect(read).not.toHaveBeenCalled()
+})
+
+test('读不了配置是配置错误，退出 78', async () => {
+  // 配置文件指向一个目录，读配置一定失败
+  const env = { NEXTSKIN_ENV_FILE: fileURLToPath(new URL('.', import.meta.url)) }
+  const result = await runWith(env, 'migrate')
+  expect(result.code).toBe(78)
+  expect(result.output).toContain('读不了配置文件')
 }, 30_000)
 
 test('源码模式 start 是配置错误，退出 78', async () => {
@@ -77,13 +106,12 @@ test('发行入口在旧 Node 上先报版本错误，退出 78', async () => {
 })
 
 test('doctor 先处理帮助和参数，不读取配置', async () => {
-  const env = { NEXTSKIN_ENV_FILE: fileURLToPath(new URL('.', import.meta.url)) }
+  const context: LauncherContext = { root: '/', cwd: '/', source: true, production: false, version: '0.0.0' }
+  // 给一个读不了的配置文件：真去读配置，输出就不止用法这一行
+  const options = { env: { NEXTSKIN_ENV_FILE: fileURLToPath(new URL('.', import.meta.url)) } }
   for (const flag of ['--help', '-h']) {
-    const result = await runWith(env, 'doctor', flag)
-    expect(result.code).toBe(0)
-    expect(result.output).toContain('用法：nextskin doctor')
+    const result = await capture(() => doctor([flag], context, options))
+    expect(result).toEqual({ code: 0, output: '用法：nextskin doctor' })
   }
-  const result = await runWith(env, 'doctor', 'extra')
-  expect(result.code).toBe(1)
-  expect(result.output).toContain('用法：nextskin doctor')
-}, 30_000)
+  expect(await capture(() => doctor(['extra'], context, options))).toEqual({ code: 1, output: '用法：nextskin doctor' })
+})

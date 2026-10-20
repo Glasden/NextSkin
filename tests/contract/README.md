@@ -42,7 +42,7 @@ Minecraft 协议（CSL / USM / Legacy / Yggdrasil）以真实 BS v6 的行为为
 authserver、进服和上传材质是有状态的：要先登录拿到令牌，后面的请求才能用它。`cases.ts` 里的场景是有序的若干步，每一步可以从前面的 JSON 响应里取 `accessToken`、`clientToken`（`capture`），填进后面的请求。
 
 - 每个场景从固定数据开始：录制时重新写入 BS 的数据库、清空缓存（令牌、节流、进服记录都在缓存里）；回放时用一个新的核心实例。
-- authenticate 和 signout 按 `username` 节流：同一个 `username` 1 秒内只能请求一次，不论成败。所以它们只出现在场景里，同一个场景里换着用邮箱和角色名登录；节流本身有专门的场景。
+- authenticate 和 signout 按 `username` 节流：同一个 `username` 1 秒内只能请求一次，不论成败。所以它们只出现在场景里，同一个场景里换着用邮箱和角色名登录；节流本身有专门的场景，回放它时登录间隔放大到 60 秒（`contract.test.ts`）：间隔从请求开始时算，慢的机器上第一次登录就超过 1 秒。
 - e2e 只回放一问一答的用例：Next standalone 只有一个实例，场景之间的令牌和节流会互相影响。经过 Next 的有状态流程由账号页的 e2e 覆盖（ADR-0030）。
 - 两步验证、启动器登录列表、失败次数限速这些 BS 没有的行为，写在 `packages/api`、`packages/domain` 的测试里。
 

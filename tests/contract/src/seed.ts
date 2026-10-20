@@ -24,6 +24,8 @@ export interface SeedOptions {
   secretKey: string
   /** PKCS#8 PEM */
   signingKey: string
+  /** 覆盖 BS 默认的 1 秒登录间隔（`ygg_rate_limit`），见 contract.test.ts */
+  loginIntervalMs?: number
 }
 
 const iso = (value: string) => toIsoTimestamp(new Date(value))
@@ -157,6 +159,14 @@ export async function seedWorld(db: Kysely<CoreDatabase>, options: SeedOptions):
           key: 'yggdrasil.tokensPerUser',
           value: encodeSettingValue('yggdrasil.tokensPerUser', settings.tokensPerUser, secret),
         },
+        ...(options.loginIntervalMs === undefined
+          ? []
+          : [
+              {
+                key: 'yggdrasil.loginIntervalMs',
+                value: encodeSettingValue('yggdrasil.loginIntervalMs', options.loginIntervalMs, secret),
+              },
+            ]),
       ].map((row) => ({ namespace: 'core', updated_at: now, ...row })),
     )
     .execute()
