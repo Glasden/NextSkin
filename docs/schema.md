@@ -219,12 +219,17 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | user_id | integer | 非空；外键 → users，cascade | |
 | delta | integer | 非空 | |
 | balance | integer | 非空 | 变动后的余额 |
-| reason | varchar(128) | 非空 | 原因的 i18n 键，例如签到、上传材质、导入 |
+| reason | varchar(128) | 非空 | 原因的 i18n 键，例如签到、上传材质、导入。插件写的是插件自己的文案键，按插件的文案翻译，插件卸载后显示"来自插件 {id}"（ADR-0041） |
 | subject_type | varchar(32) | 可空 | 关联对象，例如上传材质时是 `texture` |
 | subject_id | integer | 可空 | 关联对象的 id。退还积分不查流水，按对象行上记的实付数（例如 `players.score_paid`，ADR-0022） |
+| plugin_id | varchar(64) | 可空，不建外键 | 写这一笔的插件（能力 `users.score`，ADR-0041）；核心自己写的为空。卸载之后照样要说明来源，同 `audit_logs.actor_plugin_id` |
+| plugin_key | varchar(255) | 可空 | 插件给的幂等键，在本插件内唯一，永久保存 |
 | created_at | 时间 | 非空 | |
 
 另建 `(user_id, id)` 索引。改余额和写流水在同一事务里：先用 `score = score + ?` 原子更新（扣减时带上"余额足够"的条件），再读回余额写流水。
+
+- `plugin_id`、`plugin_key` 要么都为空、要么都不为空（CHECK）；`(plugin_id, plugin_key)` 唯一，核心自己的流水两列都是 NULL，互不冲突。这个索引也供后台的插件详情页按插件统计累计加减的积分。
+- 插件改积分时先按 `(plugin_id, plugin_key)` 查流水：参数相同就当作已经做过，什么都不改；不同就拒绝。并发的同一个键撞上唯一索引时，整个事务回滚后再查一次（ADR-0041）。插件改积分不写审计。
 
 `users.score` 只经过领域层的 `adjustScore` 修改，导入器例外（ADR-0021）。每个用户流水的 `delta` 之和恒等于 `score`。
 
