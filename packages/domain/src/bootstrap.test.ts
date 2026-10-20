@@ -12,6 +12,7 @@ test('默认把 SQLite 和材质放在工作目录下的 data', () => {
   const config = coreConfigFromEnv({}, dev)
   expect(config.database).toEqual({ dialect: 'sqlite', file: join(cwd, 'data', 'nextskin.sqlite') })
   expect(config.dataDirectory).toBe(join(cwd, 'data'))
+  expect(config.backupDirectory).toBe(join(cwd, 'data', 'backups'))
   expect(config.textureDirectory).toBe(join(cwd, 'data', 'textures'))
   expect(config.renderCacheDirectory).toBe(join(cwd, 'data', 'render-cache'))
 })
@@ -23,6 +24,7 @@ test('数据目录和 SQLite 路径按工作目录解析', () => {
   )
   expect(config.database).toEqual({ dialect: 'sqlite', file: join(cwd, 'db', 'site.sqlite') })
   expect(config.dataDirectory).toBe(join(cwd, 'storage'))
+  expect(config.backupDirectory).toBe(join(cwd, 'storage', 'backups'))
   expect(config.textureDirectory).toBe(join(cwd, 'storage', 'textures'))
 })
 

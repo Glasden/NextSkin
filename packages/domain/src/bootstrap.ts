@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
-import { coreMigrations, createDatabase, migrateToLatest, type CoreDatabase } from '@nextskin/db'
+import { dirname, join, resolve } from 'node:path'
+import { backupSqlite, coreMigrations, createDatabase, migrateToLatest, type CoreDatabase } from '@nextskin/db'
+import type { Kysely } from 'kysely'
 import type { CoreConfig } from './config.ts'
 import { createCore, type Core } from './core.ts'
 import type { PluginHostEntry } from './plugins/host.ts'
@@ -10,6 +11,54 @@ import { createLocalRenderCache } from './textures/render-cache.ts'
 import { createLocalTextureStorage } from './textures/storage.ts'
 
 export { coreConfigFromEnv, type CoreConfig } from './config.ts'
+
+type MigrationBackup = { backup: Promise<string>; failedAt?: number }
+const migrationBackupsKey = Symbol.for('nextskin.migrationBackups')
+// Next 会把领域层打进多个包；进程内的备份记录通过 globalThis 共用，仅在内存里，重启就会重新备份。
+const holder = globalThis as typeof globalThis & { [migrationBackupsKey]?: Map<string, MigrationBackup> }
+const migrationBackups = (holder[migrationBackupsKey] ??= new Map<string, MigrationBackup>())
+
+/** SQLite 已有核心迁移时先备份，再升级；全新库和其他方言直接迁移（ADR-0040）。 */
+export function migrateCore(db: Kysely<CoreDatabase>, config: CoreConfig): Promise<string[]> {
+  const { database } = config
+  // 单独的连接看不到同一个内存库；:memory: 直接迁移，不做文件备份。
+  return migrateToLatest(
+    db,
+    coreMigrations,
+    database.dialect === 'sqlite' && database.file !== ':memory:'
+      ? {
+          beforeUpgrade: async (pending) => {
+            const key = JSON.stringify([resolve(database.file), pending])
+            let attempt = migrationBackups.get(key)
+            if (attempt?.failedAt !== undefined && Date.now() - attempt.failedAt >= 60_000) attempt = undefined
+            const reused = attempt !== undefined
+            if (!attempt) {
+              const current: MigrationBackup = {
+                backup: backupSqlite({
+                  file: database.file,
+                  directory: config.backupDirectory,
+                  label: pending[0]!,
+                }),
+              }
+              current.backup = current.backup.catch((error: unknown) => {
+                current.failedAt = Date.now()
+                throw error
+              })
+              migrationBackups.set(key, current)
+              attempt = current
+            }
+            // 核心尚未打开，本进程没有改过库；同一批迁移沿用备份。期间手工改过库时须重启，清空内存记录后重新备份。
+            const file = await attempt.backup
+            console.info(
+              reused
+                ? `[nextskin] 有 ${pending.length} 个迁移要执行，沿用本进程为这批迁移做的备份 ${file}；核心打不开期间手工改过库的话，请重启服务，会重新备份`
+                : `[nextskin] 有 ${pending.length} 个迁移要执行，已先把数据库备份到 ${file}`,
+            )
+          },
+        }
+      : {},
+  )
+}
 
 /**
  * 连接数据库、执行核心迁移、启动任务执行器，返回领域层的入口。由核心进程在启动时调用。
@@ -28,7 +77,7 @@ export async function openCore(
   if (config.database.dialect === 'sqlite') await mkdir(dirname(config.database.file), { recursive: true })
   const db = createDatabase<CoreDatabase>(config.database)
   try {
-    await migrateToLatest(db, coreMigrations)
+    await migrateCore(db, config)
     const renderCache = createLocalRenderCache(config.renderCacheDirectory)
     void renderCache.pruneOtherVersions().catch(() => console.warn('旧版出图缓存清理失败'))
     const core = createCore({

@@ -36,6 +36,7 @@ export {
   type DatabaseDialect,
 } from './helpers.ts'
 export { migrateToLatest, type MigrationOptions } from './migrations.ts'
+export { backupSqlite, MigrationBackupError } from './sqlite/backup.ts'
 export { SqliteWriteLockTimeoutError } from './sqlite/dialect.ts'
 export { coreMigrations } from './migrations/index.ts'
 export type {

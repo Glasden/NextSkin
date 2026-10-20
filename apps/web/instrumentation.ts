@@ -7,9 +7,14 @@ export async function register() {
     if (process.env.NEXT_PHASE !== 'phase-production-build') {
       const { getServer, openedServer } = await import('./lib/server')
       const { connectLauncher } = await import('./lib/launcher-channel')
+      const { MigrationBackupError } = await import('@nextskin/domain')
       const opening = getServer()
-      // 失败时第一个请求会重试并返回错误；这里不输出异常，里面可能带着数据库地址（不变量 11）
-      opening.catch(() => console.error('[core] open_failed'))
+      // 只回显备份错误的安全文案；其他异常可能带着数据库地址（不变量 11）
+      opening.catch((error: unknown) =>
+        console.error(
+          error instanceof MigrationBackupError ? `[core] open_failed: ${error.message}` : '[core] open_failed',
+        ),
+      )
       connectLauncher(opening, openedServer)
     }
   }

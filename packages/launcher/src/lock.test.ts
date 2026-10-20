@@ -1,9 +1,10 @@
 import { fork } from 'node:child_process'
 import { once } from 'node:events'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { removeTestDirectory } from '@nextskin/db/testing'
 import { expect, test } from 'vitest'
 import { acquireDataLock } from './lock.ts'
 
@@ -30,6 +31,7 @@ test('子进程持锁时返回 null，强杀之后立即释放', async () => {
       child.kill('SIGKILL')
       await exited
     }
-    await rm(directory, { recursive: true, force: true })
+    // 子进程刚被强杀时 Windows 可能还没放开它打开的文件，删目录偶发 ENOTEMPTY
+    await removeTestDirectory(directory)
   }
 })

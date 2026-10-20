@@ -4,6 +4,7 @@ import { Migrator, type Migration } from 'kysely/migration'
 export interface MigrationOptions {
   migrationTableName?: string
   migrationLockTableName?: string
+  beforeUpgrade?: (pending: string[]) => Promise<void>
 }
 
 /** 迁移按字典序执行，名称请使用 0001_create_users 这样的前缀。 */
@@ -18,6 +19,11 @@ export async function migrateToLatest<DB>(
     migrationTableName: options.migrationTableName ?? 'nextskin_migration',
     migrationLockTableName: options.migrationLockTableName ?? 'nextskin_migration_lock',
   })
+  if (options.beforeUpgrade) {
+    const migrations = await migrator.getMigrations()
+    const pending = migrations.filter((migration) => !migration.executedAt).map((migration) => migration.name)
+    if (migrations.some((migration) => migration.executedAt) && pending.length) await options.beforeUpgrade(pending)
+  }
   const { error, results } = await migrator.migrateToLatest()
   if (error) {
     const failed = results?.find((result) => result.status === 'Error')

@@ -5,6 +5,8 @@ export interface CoreConfig {
   database: DatabaseConfig
   /** `NEXTSKIN_DATA_DIR`：数据目录，导入器把报告写在这里 */
   dataDirectory: string
+  /** SQLite 升级前的备份：`<数据目录>/backups`（ADR-0040） */
+  backupDirectory: string
   /** 本地材质存储目录 */
   textureDirectory: string
   renderCacheDirectory: string
@@ -51,6 +53,7 @@ export function coreConfigFromEnv(
   return {
     database,
     dataDirectory,
+    backupDirectory: join(dataDirectory, 'backups'),
     textureDirectory: join(dataDirectory, 'textures'),
     renderCacheDirectory: join(dataDirectory, 'render-cache'),
     pluginPackageDirectory: join(dataDirectory, 'plugin-packages'),

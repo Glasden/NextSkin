@@ -1,6 +1,6 @@
 import { sql, type Kysely } from 'kysely'
 import type { Migration } from 'kysely/migration'
-import { afterEach, beforeEach, expect, test } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { autoIncrementId, countRows, createTable, migrateToLatest } from './index.ts'
 import { createTestDatabase, testDialect, type TestDatabase } from './testing.ts'
 interface Schema {
@@ -51,6 +51,59 @@ test('迁移按字典序执行，重复运行时不再执行迁移', async () =>
       expect.objectContaining({ name: 'nextskin_migration_lock' }),
     ]),
   )
+})
+
+test('全新的库没有已执行的迁移，不调用升级前回调', async () => {
+  const beforeUpgrade = vi.fn(async () => {})
+  const migrations = { '0001_initial': { up: async () => {} } }
+  expect((await db.introspection.getTables()).map((table) => table.name)).not.toContain('nextskin_migration')
+  expect(await migrateToLatest(db, migrations, { beforeUpgrade })).toEqual(['0001_initial'])
+  expect(beforeUpgrade).not.toHaveBeenCalled()
+})
+
+test('没有要执行的迁移时不调用升级前回调', async () => {
+  const migrations = { '0001_initial': { up: async () => {} } }
+  await migrateToLatest(db, migrations)
+  const beforeUpgrade = vi.fn(async () => {})
+  expect(await migrateToLatest(db, migrations, { beforeUpgrade })).toEqual([])
+  expect(beforeUpgrade).not.toHaveBeenCalled()
+})
+
+test('已有迁移时按字典序把未执行的名字传给升级前回调一次', async () => {
+  const initial = { '0001_initial': { up: async () => {} } }
+  const options = { migrationTableName: 'upgrade_migration', migrationLockTableName: 'upgrade_lock' }
+  await migrateToLatest(db, initial, options)
+  const second = vi.fn(async () => {})
+  const third = vi.fn(async () => {})
+  const beforeUpgrade = vi.fn((pending: string[]) => {
+    expect(pending).toEqual(['0002_second', '0003_third'])
+    expect(second).not.toHaveBeenCalled()
+    expect(third).not.toHaveBeenCalled()
+    return Promise.resolve()
+  })
+  expect(
+    await migrateToLatest(
+      db,
+      { '0003_third': { up: third }, ...initial, '0002_second': { up: second } },
+      { ...options, beforeUpgrade },
+    ),
+  ).toEqual(['0002_second', '0003_third'])
+  expect(beforeUpgrade).toHaveBeenCalledExactlyOnceWith(['0002_second', '0003_third'])
+})
+
+test('升级前回调抛错时原样抛出，不执行新迁移，之后可以重试', async () => {
+  const initial = { '0001_initial': { up: async () => {} } }
+  await migrateToLatest(db, initial)
+  const failure = new Error('备份失败')
+  const upgrade = vi.fn(async (trx: Kysely<unknown>) => {
+    await sql`insert into items values (2)`.execute(trx)
+  })
+  const migrations = { ...initial, '0002_upgrade': { up: upgrade } }
+  await expect(migrateToLatest(db, migrations, { beforeUpgrade: () => Promise.reject(failure) })).rejects.toBe(failure)
+  expect(upgrade).not.toHaveBeenCalled()
+  expect(await db.selectFrom('items').selectAll().execute()).toEqual([{ n: 1 }])
+  expect(await migrateToLatest(db, migrations)).toEqual(['0002_upgrade'])
+  expect(await db.selectFrom('items').selectAll().orderBy('n').execute()).toEqual([{ n: 1 }, { n: 2 }])
 })
 
 test('迁移失败时报告迁移名并保留原因，不标记为已执行', async () => {
