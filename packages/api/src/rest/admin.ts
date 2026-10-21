@@ -1,5 +1,5 @@
 import { createRoute, z, type OpenAPIHono } from '@hono/zod-openapi'
-import { CAPTCHA_HEADER, type Core } from '@nextskin/domain'
+import { CAPTCHA_HEADER, DomainError, SITE_IMAGE_MAX_BYTES, type Core } from '@nextskin/domain'
 import { clientIp } from '../client-ip.ts'
 import type { AppEnv } from '../env.ts'
 import { registerAdminTextures } from './admin-textures.ts'
@@ -106,6 +106,27 @@ const generateSetting = createRoute({
     ...errors,
   },
 })
+const uploadSiteImage = createRoute({
+  method: 'post',
+  path: '/admin/site-images',
+  request: {
+    body: {
+      required: true,
+      content: {
+        'multipart/form-data': {
+          schema: z.object({ file: z.instanceof(File).openapi({ type: 'string', format: 'binary' }) }),
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: '站点图片已上传；值是像素 hash，随设置表单保存才生效（ADR-0042）',
+      content: { 'application/json': { schema: z.object({ hash: z.string() }) } },
+    },
+    ...errors,
+  },
+})
 const testMail = createRoute({
   method: 'post',
   path: '/admin/settings/mail/test',
@@ -159,6 +180,12 @@ export function registerAdmin(app: OpenAPIHono<AppEnv>, core: Core) {
       ),
       200,
     )
+  })
+  app.openapi(uploadSiteImage, async (c) => {
+    const { file } = c.req.valid('form')
+    if (file.size > SITE_IMAGE_MAX_BYTES) throw new DomainError('site_image_file_invalid')
+    const actor = { uid: c.get('user')!.uid, ip: await clientIp(c, core) }
+    return c.json(await core.admin.uploadSiteImage(actor, new Uint8Array(await file.arrayBuffer())), 201)
   })
   app.openapi(testMail, async (c) =>
     c.json(await core.admin.sendTestMail({ uid: c.get('user')!.uid, ip: await clientIp(c, core) }), 200),

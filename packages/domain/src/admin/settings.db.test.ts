@@ -2,8 +2,11 @@ import { generateKeyPairSync } from 'node:crypto'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { setup } from '../closet/test-support.ts'
 import { createCore, type MailTransport } from '../index.ts'
+import { SITE_IMAGE_MAX_BYTES } from '../site-images/image.ts'
+import { createMemorySiteImageStorage, siteImageFile, type SiteImageStorage } from '../site-images/storage.ts'
 import { encodeSettingValue } from '../settings/codec.ts'
 import { coreSettingsRegistry } from '../settings/registry.ts'
+import type { ImagePool } from '../textures/image-pool.ts'
 import { parseSigningKey } from '../yggdrasil/signing-key.ts'
 
 const env = setup()
@@ -13,7 +16,11 @@ beforeEach(async () => {
   await env.db().deleteFrom('audit_logs').execute()
   await env.db().updateTable('users').set({ role: 'superadmin' }).where('id', '=', env.actor.uid).execute()
 })
-function core(production = false, mailTransport?: MailTransport) {
+function core(
+  production = false,
+  mailTransport?: MailTransport,
+  site?: { storage: SiteImageStorage; processSiteImage: ImagePool['processSiteImage'] },
+) {
   return createCore({
     db: env.db(),
     secretKey,
@@ -29,7 +36,14 @@ function core(production = false, mailTransport?: MailTransport) {
       delete: () => Promise.resolve(),
       deleteTemp: () => Promise.resolve(),
     },
-    imagePool: { close: () => Promise.resolve(), processUpload: vi.fn(), inspect: vi.fn(), render: vi.fn() },
+    imagePool: {
+      close: () => Promise.resolve(),
+      processUpload: vi.fn(),
+      inspect: vi.fn(),
+      render: vi.fn(),
+      processSiteImage: site?.processSiteImage ?? vi.fn(),
+    },
+    siteImageStorage: site?.storage,
   })
 }
 async function audits() {
@@ -198,15 +212,72 @@ test('坏 JSON、schema 不符、错误加密密钥可查询并修复，审计�
   expect((await audits()).at(-1)?.details).toEqual({ key: 'mail.smtp.password', secret: true })
 })
 
-test.each(['admin', 'user', 'banned'] as const)('%s 的三个设置用例都无权限；空提交也必须授权', async (role) => {
+test.each(['admin', 'user', 'banned'] as const)('%s 的设置用例都无权限；空提交也必须授权', async (role) => {
   await env.db().updateTable('users').set({ role }).where('id', '=', env.actor.uid).execute()
   for (const operation of [
     () => env.core.admin.updateSettings(actor(), {}),
     () => env.core.admin.generateSetting(actor(), 'yggdrasil.signingKey'),
     () => env.core.admin.sendTestMail(actor()),
+    () => env.core.admin.uploadSiteImage(actor(), new Uint8Array(8)),
   ])
     await expect(operation()).rejects.toMatchObject({ code: 'permission_denied' })
   expect(await audits()).toEqual([])
+})
+
+test('站点图片：上传只写存储；保存时核对存储里有这张图，审计记前后两个 hash（ADR-0042）', async () => {
+  const storage = createMemorySiteImageStorage()
+  const hash = 'c'.repeat(64)
+  const processSiteImage = vi.fn(() =>
+    Promise.resolve({ pixelHash: hash, png: Uint8Array.of(1), opaque: Uint8Array.of(2) }),
+  )
+  const site = core(false, undefined, { storage, processSiteImage })
+  expect(await site.admin.uploadSiteImage(actor(), Uint8Array.of(137, 80))).toEqual({ hash })
+  expect(await storage.read(siteImageFile(hash))).toEqual(Uint8Array.of(1))
+  expect(await storage.read(siteImageFile(hash, 'opaque'))).toEqual(Uint8Array.of(2))
+  expect(await site.settings.read(['site.logo'])).toEqual({ 'site.logo': null })
+  expect(await audits()).toEqual([])
+  // 存储里没有的 hash 当作这一项的值无效，同一次提交的别的项也不写
+  await expect(
+    site.admin.updateSettings(actor(), { 'site.logo': 'd'.repeat(64), 'site.name': 'Not saved' }),
+  ).rejects.toMatchObject({ code: 'invalid_request', fields: ['site.logo'] })
+  await expect(site.admin.updateSettings(actor(), { 'site.favicon': 'not a hash' })).rejects.toMatchObject({
+    fields: ['site.favicon'],
+  })
+  expect(await site.admin.updateSettings(actor(), { 'site.logo': hash, 'site.favicon': hash })).toEqual({
+    updated: ['site.logo', 'site.favicon'],
+  })
+  expect(await site.settings.read(['site.name', 'site.logo', 'site.favicon'])).toEqual({
+    'site.name': 'NextSkin',
+    'site.logo': hash,
+    'site.favicon': hash,
+  })
+  expect(await site.admin.updateSettings(actor(), { 'site.logo': null })).toEqual({ updated: ['site.logo'] })
+  expect((await audits()).map((entry) => entry.details)).toEqual([
+    { key: 'site.logo', from: null, to: hash },
+    { key: 'site.favicon', from: null, to: hash },
+    { key: 'site.logo', from: hash, to: null },
+  ])
+  expect((await site.admin.settingsSection('site')).filter((view) => view.key !== 'site.name').slice(0, 2)).toEqual([
+    {
+      key: 'site.logo',
+      control: { kind: 'image', minSide: 16, maxSide: 512 },
+      value: null,
+      generate: false,
+      unreadable: false,
+    },
+    {
+      key: 'site.favicon',
+      control: { kind: 'image', minSide: 16, maxSide: 512 },
+      value: hash,
+      generate: false,
+      unreadable: false,
+    },
+  ])
+  // 超过 1 MiB 的不交给图像 worker
+  await expect(site.admin.uploadSiteImage(actor(), new Uint8Array(SITE_IMAGE_MAX_BYTES + 1))).rejects.toMatchObject({
+    code: 'site_image_file_invalid',
+  })
+  expect(processSiteImage).toHaveBeenCalledTimes(1)
 })
 
 test('真实生成 4096 位密钥立即用于 Yggdrasil，不回传私钥；生成后在事务里再次授权', async () => {

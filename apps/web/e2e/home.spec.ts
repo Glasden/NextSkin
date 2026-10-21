@@ -27,7 +27,7 @@ test('首页有主视觉、领奖台、最新上传、外置登录三步和页�
   await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', t('home.description'))
 })
 
-// 站点图标由 design:sync 生成，放在 app 目录里按 Next 的文件约定输出（ADR-0032）
+// 默认的站点图标由 design:sync 生成，放在 public 目录里，没有上传图标时由根布局声明（ADR-0032、ADR-0042）
 test('站点图标的三个文件都在页头里声明并能取到', async ({ page, request }) => {
   await page.goto('/')
   const icons = [

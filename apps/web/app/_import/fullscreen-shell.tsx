@@ -2,6 +2,7 @@ import { Logo, ToastProvider } from '@nextskin/ui'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
 import { getServer } from '../../lib/server'
+import { siteImageUrl } from '../../lib/site-images'
 import { ColorModeMenu } from '../color-mode-menu'
 
 /**
@@ -10,13 +11,14 @@ import { ColorModeMenu } from '../color-mode-menu'
  */
 export async function FullscreenShell({ children }: { readonly children: ReactNode }) {
   const [{ core }, common] = await Promise.all([getServer(), getTranslations('common')])
-  const { 'site.name': siteName } = await core.settings.read(['site.name'])
+  // 安装之前没有设置，标志是内置的图形；导入不动站点标志（ADR-0042），维护页照旧显示它
+  const { 'site.name': siteName, 'site.logo': logo } = await core.settings.read(['site.name', 'site.logo'])
   return (
     <ToastProvider label={common('notifications')} closeLabel={common('close')}>
       <div className="flex min-h-dvh flex-col">
         <header className="border-b border-border bg-surface">
           <div className="mx-auto flex h-16 w-full max-w-4xl items-center justify-between gap-4 px-4 sm:px-6">
-            <Logo name={siteName} />
+            <Logo name={siteName} image={logo ? siteImageUrl(logo) : undefined} />
             <ColorModeMenu />
           </div>
         </header>

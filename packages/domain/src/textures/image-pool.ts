@@ -2,6 +2,7 @@ import { availableParallelism } from 'node:os'
 import { Worker } from 'node:worker_threads'
 import type { TextureType } from '@nextskin/skin'
 import { DomainError } from '../errors.ts'
+import type { SiteImage } from '../site-images/image.ts'
 import type { InspectedImage, RenderInput, UploadImage } from './image.ts'
 import type { ImageTask } from './image-worker.ts'
 
@@ -11,9 +12,11 @@ export interface ImagePool {
   /** 导入器用（ADR-0031）：只解码、算像素 hash，不重新编码。同样转移 bytes 的所有权 */
   inspect(input: { bytes: Uint8Array; type: TextureType }): Promise<InspectedImage>
   render(input: RenderInput): Promise<Uint8Array>
+  /** 站点图片（ADR-0042）：检查尺寸、重新编码，另出一份白底的。同样转移 bytes 的所有权 */
+  processSiteImage(input: { bytes: Uint8Array }): Promise<SiteImage>
   close(): Promise<void>
 }
-type ImageResult = UploadImage | InspectedImage | Uint8Array
+type ImageResult = UploadImage | InspectedImage | SiteImage | Uint8Array
 interface Pending {
   input: ImageTask
   resolve(value: ImageResult): void
@@ -123,6 +126,7 @@ export function createImagePool(options: { size?: number; queueLimit?: number; t
     processUpload: (input) => submit({ kind: 'upload', ...input }) as Promise<UploadImage>,
     inspect: (input) => submit({ kind: 'inspect', ...input }) as Promise<InspectedImage>,
     render: (input) => submit({ kind: 'render', input }) as Promise<Uint8Array>,
+    processSiteImage: (input) => submit({ kind: 'siteImage', ...input }) as Promise<SiteImage>,
     async close() {
       closed = true
       for (const task of queue.splice(0)) task.reject(new DomainError('service_unavailable'))

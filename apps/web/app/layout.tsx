@@ -5,19 +5,28 @@ import { cookies } from 'next/headers'
 import type { ReactNode } from 'react'
 import { COLOR_MODE_COOKIE, colorModeScript, parseColorMode } from '../lib/color-mode'
 import { getServer } from '../lib/server'
+import { iconsMetadata, siteIconHash } from '../lib/site-icons'
 import { ColorModeProvider } from './color-mode-menu'
 import './globals.css'
 
-// 站点描述同时是首页主标题下的一句话和 meta description；没写时用首页的默认介绍（ADR-0032）
+// 站点描述同时是首页主标题下的一句话和 meta description；没写时用首页的默认介绍（ADR-0032）。
+// 图标总是写在这里，不用 Next 的文件约定：那样的 favicon.ico 总排在最前面，换不掉（ADR-0042）
 export async function generateMetadata(): Promise<Metadata> {
   const [{ core }, t] = await Promise.all([getServer(), getTranslations('home')])
-  const settings = await core.settings.read(['site.name', 'site.description', 'site.keywords'])
+  const settings = await core.settings.read([
+    'site.name',
+    'site.description',
+    'site.keywords',
+    'site.logo',
+    'site.favicon',
+  ])
   const name = settings['site.name']
   const description = settings['site.description'].trim() || t('description')
   return {
     title: { default: name, template: `%s · ${name}` },
     description,
     ...(settings['site.keywords'].length ? { keywords: settings['site.keywords'] } : {}),
+    icons: iconsMetadata(siteIconHash(settings)),
     // 聊天软件贴出站点链接时显示站点名和描述；不带图片
     openGraph: { type: 'website', siteName: name, title: name, description },
   }

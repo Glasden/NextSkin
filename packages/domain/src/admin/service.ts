@@ -24,6 +24,8 @@ import { claimReport, settleReport } from './report-resolution.ts'
 import { createAdminUserDeletion } from './user-deletion.ts'
 import { createAdminUsers } from './users.ts'
 import { auditTextureDeletion } from '../users/deletion.ts'
+import type { SiteImageStorage } from '../site-images/storage.ts'
+import type { ImagePool } from '../textures/image-pool.ts'
 import type { AdminActor, AdminReport, AdminUser, AssignableRole, ReportAction } from './types.ts'
 
 export interface AdminOptions {
@@ -40,6 +42,9 @@ export interface AdminOptions {
   /** 第三方登录的 Provider：解绑时判断能不能用、通知邮件里按收件人的语言翻译名称（ADR-0034） */
   plugins: Pick<PluginSystem, 'loginProviders' | 'translate' | 'get'>
   getSigningKey: () => Promise<SigningKey | null>
+  /** 站点图片的存储和处理（ADR-0042） */
+  siteImages: SiteImageStorage
+  imagePool: Pick<ImagePool, 'processSiteImage'>
 }
 
 export function createAdmin(options: AdminOptions) {

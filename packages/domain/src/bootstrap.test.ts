@@ -14,6 +14,7 @@ test('默认把 SQLite 和材质放在工作目录下的 data', () => {
   expect(config.dataDirectory).toBe(join(cwd, 'data'))
   expect(config.backupDirectory).toBe(join(cwd, 'data', 'backups'))
   expect(config.textureDirectory).toBe(join(cwd, 'data', 'textures'))
+  expect(config.siteImageDirectory).toBe(join(cwd, 'data', 'site-images'))
   expect(config.renderCacheDirectory).toBe(join(cwd, 'data', 'render-cache'))
 })
 

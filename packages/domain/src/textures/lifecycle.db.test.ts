@@ -46,6 +46,7 @@ const pool = {
   processUpload: processImage,
   inspect: vi.fn(),
   render: () => Promise.resolve(new Uint8Array()),
+  processSiteImage: vi.fn(),
   close: () => Promise.resolve(),
 }
 function createStorage(lateWindow: number) {

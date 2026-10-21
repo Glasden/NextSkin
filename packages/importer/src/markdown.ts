@@ -274,6 +274,11 @@ export function reportToMarkdown(report: ImportReport): string {
     )
   if (settings.notImported.some((item) => item.option === 'copyright_text'))
     lines.push('', '旧站版权文字是原始 HTML，请改写成 Markdown 后填进 site.footer；备案号链接也需要改写。')
+  if (settings.notImported.some((item) => item.option === 'favicon_url'))
+    lines.push(
+      '',
+      '旧站的网站图标是一个地址，没有导入。请到后台的站点设置里重新上传站点图标（正方形的 PNG），也可以只上传站点标志，图标跟着它（ADR-0042）。',
+    )
   if (settings.otherLocales.length)
     lines.push(
       '',

@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { getServer } from '../lib/server'
 import { getSessionUser } from '../lib/session'
+import { siteImageUrl } from '../lib/site-images'
 import { ColorModeMenu } from './color-mode-menu'
 import { SiteNav } from './site-nav'
 import { UserMenu } from './user/user-menu'
@@ -14,7 +15,7 @@ import { UserMenu } from './user/user-menu'
  */
 export async function SiteHeader({ wide = false }: { wide?: boolean } = {}) {
   const [{ core }, user, t] = await Promise.all([getServer(), getSessionUser(), getTranslations('site')])
-  const { 'site.name': siteName } = await core.settings.read(['site.name'])
+  const { 'site.name': siteName, 'site.logo': logo } = await core.settings.read(['site.name', 'site.logo'])
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-surface">
       {/* 窄屏放不下一行：导航换到第二行，横向滚动；宽屏标志、导航、用户菜单排成一行 */}
@@ -25,7 +26,7 @@ export async function SiteHeader({ wide = false }: { wide?: boolean } = {}) {
         )}
       >
         <div className="flex h-16 items-center">
-          <Logo name={siteName} render={<NextLink href="/" />} />
+          <Logo name={siteName} image={logo ? siteImageUrl(logo) : undefined} render={<NextLink href="/" />} />
         </div>
         <div className="order-last w-full overflow-x-auto pb-2 sm:order-none sm:w-auto sm:min-w-0 sm:flex-1 sm:pb-0">
           <SiteNav />

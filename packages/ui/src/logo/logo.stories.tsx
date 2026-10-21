@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent } from 'storybook/test'
+import { uploadedLogo } from './fixtures.ts'
 import { Logo } from './logo.tsx'
 
 const meta = {
@@ -38,5 +39,21 @@ export const AsLink: Story = {
     // 键盘聚焦时有焦点框（DESIGN.md §9）
     await expect(getComputedStyle(link).outlineStyle).toBe('solid')
     link.blur()
+  },
+}
+
+/** 站长上传了标志（ADR-0042）：换掉像素图形，尺寸不变，站点名照旧 */
+export const WithImage: Story = {
+  name: 'With image',
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <Logo name="NextSkin" image={uploadedLogo} />
+      <Logo name="NextSkin" size="sm" image={uploadedLogo} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const images = [...canvasElement.querySelectorAll('img')]
+    await expect(images.map((image) => image.width)).toEqual([32, 24])
+    await expect(images.every((image) => image.alt === '')).toBe(true)
   },
 }

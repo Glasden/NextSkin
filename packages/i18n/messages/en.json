@@ -116,6 +116,8 @@
     "texture_name_rule_misconfigured": "This site's texture name rule is misconfigured. Please contact an administrator.",
     "texture_description_too_long": "Descriptions can be at most {max} characters long. Please shorten it and try again.",
     "texture_type_invalid": "This texture cannot use that model. Capes cannot be changed, and slim (Alex) skins must be square.",
+    "site_image_file_invalid": "This file is not a valid PNG image, or it is larger than 1 MiB. Please try another file.",
+    "site_image_size_invalid": "The image dimensions {width}×{height} are not supported. The image must be square, 16 to 512 pixels on each side.",
     "closet_item_exists": "This texture is already in your closet.",
     "closet_item_not_found": "This texture isn't in your closet. Add it to your closet first.",
     "texture_type_mismatch": "{slot, select, skin {A player's skin must be a skin, not a cape.} cape {A player's cape must be a cape, not a skin.} other {Only skins can be used as an avatar, not capes.}}",
@@ -1507,6 +1509,16 @@
         "hint": "Markdown is supported, HTML is not. At most {max, number} characters.",
         "buttonLabel": "{action}: {label}"
       },
+      "image": {
+        "upload": "Upload image",
+        "replace": "Replace",
+        "reset": "Use default",
+        "hint": "Square PNG, {min}–{max} pixels on each side, up to 1 MiB. Images under 64 pixels are treated as pixel art and scaled up by a whole number.",
+        "default": "Default mark",
+        "followsLogo": "Same as the site logo",
+        "custom": "Uploaded",
+        "previewLabel": "Preview of the {label}"
+      },
       "lines": "One per line.",
       "checked": "On",
       "unchecked": "Off",
@@ -1561,6 +1573,14 @@
           "name": {
             "label": "Site name",
             "help": "Shown in the header, the browser tab and emails. Launchers show it as the name of the authentication server."
+          },
+          "logo": {
+            "label": "Site logo",
+            "help": "Replaces the block-head mark in the header, the footer and the sign-in pages; the site name stays beside it. A transparent image of 64 pixels or more works best."
+          },
+          "favicon": {
+            "label": "Site icon",
+            "help": "The icon in browser tabs, bookmarks and on phone home screens. Without one, the site logo is used. Use 180 pixels or more so it looks sharp on home screens; transparent parts get a white background there."
           },
           "description": {
             "label": "Site description",

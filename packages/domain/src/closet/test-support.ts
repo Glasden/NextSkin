@@ -23,6 +23,7 @@ import {
   type CoreSettingValue,
 } from '../index.ts'
 import { adjustScore } from '../score/adjust.ts'
+import { processSiteImage } from '../site-images/image.ts'
 
 const secretKey = 'test-only-secret-key-with-at-least-32-characters'
 export const old = toIsoTimestamp(new Date('2020-01-01T00:00:00Z'))
@@ -73,7 +74,14 @@ export function setup(options: Pick<CoreOptions, 'captcha'> = {}) {
         delete: () => Promise.resolve(),
         deleteTemp: () => Promise.resolve(),
       },
-      imagePool: { close: () => Promise.resolve(), processUpload: vi.fn(), inspect: vi.fn(), render: vi.fn() },
+      imagePool: {
+        close: () => Promise.resolve(),
+        processUpload: vi.fn(),
+        inspect: vi.fn(),
+        render: vi.fn(),
+        // 站点图片按真的规则处理，在测试进程里同步执行（ADR-0042）
+        processSiteImage: vi.fn(({ bytes }: { bytes: Uint8Array }) => Promise.resolve(processSiteImage(bytes))),
+      },
     })
     await setting('score.perPlayer', 0)
     owner = await user('owner')

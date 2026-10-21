@@ -9,6 +9,8 @@ export interface CoreConfig {
   backupDirectory: string
   /** 本地材质存储目录 */
   textureDirectory: string
+  /** 站点图片（存储接口的本地驱动）：`<数据目录>/site-images`（ADR-0042） */
+  siteImageDirectory: string
   renderCacheDirectory: string
   /** 安装插件的包（存储接口的本地驱动）：`<数据目录>/plugin-packages` */
   pluginPackageDirectory: string
@@ -55,6 +57,7 @@ export function coreConfigFromEnv(
     dataDirectory,
     backupDirectory: join(dataDirectory, 'backups'),
     textureDirectory: join(dataDirectory, 'textures'),
+    siteImageDirectory: join(dataDirectory, 'site-images'),
     renderCacheDirectory: join(dataDirectory, 'render-cache'),
     pluginPackageDirectory: join(dataDirectory, 'plugin-packages'),
     pluginDirectory: join(dataDirectory, 'plugins'),

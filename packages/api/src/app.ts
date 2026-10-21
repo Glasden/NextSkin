@@ -13,6 +13,7 @@ import { registerUsm } from './protocol/usm.ts'
 import { registerYggdrasil, yggdrasilError } from './protocol/yggdrasil.ts'
 import { registerPluginRoutes } from './plugins.ts'
 import { registerRender } from './render.ts'
+import { registerSiteImages } from './site-images.ts'
 import { createRestApp } from './rest/app.ts'
 import { createMemoryRateLimiter } from './rest/rate-limit.ts'
 
@@ -35,6 +36,8 @@ export function createApp(options: { core: Core; importer?: ImportGateway }) {
       const path = c.req.path.replace(/\/+$/, '')
       if (
         path === '/api/health' ||
+        // 站点图片只读存储，不碰数据库（ADR-0042）
+        path.startsWith('/site-images/') ||
         path === '/api/setup' ||
         path.startsWith('/api/setup/') ||
         path === '/api/import/run' ||
@@ -68,6 +71,7 @@ export function createApp(options: { core: Core; importer?: ImportGateway }) {
   registerUsm(app, core)
   registerCsl(app, core)
   registerRender(app, core)
+  registerSiteImages(app, core)
   registerPluginRoutes(app, core)
   // REST 的通配中间件排在协议处理器后，避免协议请求经过 REST 的校验和设置读取。
   app.route('/api', createRestApp(core, { uploadRateLimiter, importer }))

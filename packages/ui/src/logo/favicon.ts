@@ -3,7 +3,7 @@ import type { ThemeTokens } from '../tokens.ts'
 import { LOGO_MARK, LOGO_MARK_COLORS, LOGO_MARK_SIZE, logoMarkRects } from './mark.ts'
 
 /**
- * 站点图标，由标志的图形和 theme.css 的颜色生成（ADR-0032）。`pnpm design:sync` 把结果写进 apps/web/app/，
+ * 站点图标，由标志的图形和 theme.css 的颜色生成（ADR-0032）。`pnpm design:sync` 把结果写进 apps/web/public/，
  * favicon.test.ts 检查那里的文件和这里生成的一致。只给生成脚本和测试用，不从包入口导出
  */
 export interface Favicons {
@@ -154,5 +154,5 @@ export function renderFavicons(theme: ThemeTokens): Favicons {
   }
 }
 
-/** 生成的文件在 apps/web/app/ 下的名字：Next 按文件名生成 `<link rel="icon">` */
+/** 生成的文件在 apps/web/public/ 下的名字。站长没有上传图标时，根布局的 `<link rel="icon">` 指向它们（ADR-0042） */
 export const FAVICON_FILES = { svg: 'icon.svg', ico: 'favicon.ico', appleIcon: 'apple-icon.png' } as const

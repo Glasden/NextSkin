@@ -151,7 +151,7 @@ test('举报的材质被管理员删除，举报人看到已采纳；封禁上�
   await expect(log.getByText(t('admin.audit.actorSystem'), { exact: true })).toBeVisible()
 })
 
-test('管理员看不到设置；超级管理员改站点名、写公告、生成签名密钥都当场生效', async ({ page, browser }) => {
+test('管理员看不到设置；超级管理员改站点名、换站点标志、写公告、生成签名密钥都当场生效', async ({ page, browser }) => {
   const nav = (target: Page) => target.getByRole('navigation', { name: t('admin.nav.label') })
 
   // 管理员（不是超级管理员）的导航里没有“设置”，直接访问是 404，接口是 403
@@ -179,6 +179,21 @@ test('管理员看不到设置；超级管理员改站点名、写公告、生�
   await siteName.fill(renamed)
   await expect(page.getByText(t('admin.settings.dirty', { count: 1 }))).toBeVisible()
 
+  // 站点标志（ADR-0042）：选了文件当场上传和预览，不是正方形的说明原因；图标没传，写着跟着标志
+  const logo = page.getByRole('group', { name: t('admin.settings.fields.site.logo.label') })
+  const logoFile = logo.locator('input[type="file"]')
+  await logoFile.setInputFiles(fixture('deadmau5'))
+  await expect(logo.getByText(t('errors.site_image_size_invalid', { width: 64, height: 32 }))).toBeVisible()
+  await logoFile.setInputFiles(fixture('haka'))
+  await expect(logo.getByText(t('admin.settings.image.custom'))).toBeVisible()
+  const logoUrl = await logo.locator('img').first().getAttribute('src')
+  expect(logoUrl).toMatch(/^\/site-images\/[0-9a-f]{64}\.png$/)
+  await expect(
+    page
+      .getByRole('group', { name: t('admin.settings.fields.site.favicon.label') })
+      .getByText(t('admin.settings.image.followsLogo')),
+  ).toBeVisible()
+
   // 公告：预览和仪表盘用同一个组件，原始 HTML 不渲染
   const heading = `开服通知 ${suffix}`
   // exact：“预览：公告”按钮的名字里也有“公告”
@@ -198,8 +213,18 @@ test('管理员看不到设置；超级管理员改站点名、写公告、生�
   })
   await expect(preview.getByRole('heading', { level: 3 })).toHaveText(heading)
   await page.getByRole('button', { name: t('admin.settings.save') }).click()
-  await expect(page.getByText(t('admin.settings.saved', { count: 2 }))).toBeVisible()
+  await expect(page.getByText(t('admin.settings.saved', { count: 3 }))).toBeVisible()
   await expect(page.getByRole('banner').getByText(renamed)).toBeVisible()
+
+  // 页头的标志换成上传的图；标签页图标和不看页面的 /favicon.ico 跟着标志走
+  await expect(page.getByRole('banner').getByRole('link', { name: renamed }).locator('img')).toHaveAttribute(
+    'src',
+    logoUrl!,
+  )
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', logoUrl!)
+  const favicon = await page.request.get('/favicon.ico', { maxRedirects: 0 })
+  expect(favicon.status()).toBe(302)
+  expect(favicon.headers().location).toBe(logoUrl)
 
   // 仪表盘的“公告”区块是 h2，`##` 渲染成 h4
   await page.goto('/user')
@@ -246,11 +271,14 @@ test('管理员看不到设置；超级管理员改站点名、写公告、生�
       .first(),
   ).toContainText(renamed)
 
-  // 恢复站点名和公告
+  // 恢复站点名、标志和公告；/favicon.ico 回到 public 里默认的那份
   const restored = await page.request.patch('/api/admin/settings', {
-    data: { values: { 'site.name': original, 'site.announcement': '' } },
+    data: { values: { 'site.name': original, 'site.logo': null, 'site.announcement': '' } },
   })
   expect(restored.status()).toBe(200)
+  const defaultIcon = await page.request.get('/favicon.ico', { maxRedirects: 0 })
+  expect(defaultIcon.status()).toBe(200)
+  expect(defaultIcon.headers()['content-type']).toContain('image/')
 })
 
 test('用户丢了验证器：管理员关掉两步验证，用户只用密码登录；管理员重设密码，用户原来的会话被退出', async ({

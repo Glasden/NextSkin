@@ -11,6 +11,8 @@ import { createScheduler } from './jobs/schedules.ts'
 import { AUTH_CLEANUP_JOB, createAuthCleanup } from './auth/cleanup.ts'
 import { AUDIT_CLEANUP_JOB, createAuditCleanup } from './audit/cleanup.ts'
 import { TEXTURE_SWEEP_JOB, createTextureSweep } from './textures/sweep.ts'
+import { SITE_IMAGE_SWEEP_JOB, createSiteImageSweep } from './site-images/sweep.ts'
+import { createMemorySiteImageStorage, isSiteImageFile, type SiteImageStorage } from './site-images/storage.ts'
 import { createAdmin } from './admin/service.ts'
 import { createCloset } from './closet/service.ts'
 import { createReports } from './reports/service.ts'
@@ -57,6 +59,8 @@ export interface CoreOptions {
   setupCodeFile?: string | null
   db: Kysely<CoreDatabase>
   textureStorage: TextureStorage
+  /** 站点图片的存储（ADR-0042），默认存在内存里 */
+  siteImageStorage?: SiteImageStorage
   /** 领域用例与任务共享的时钟；同时供任务执行器入队和轮询使用。 */
   now?: () => Date
   textureClaimLeaseMs?: number
@@ -106,6 +110,7 @@ export function createCore(options: CoreOptions) {
     pool: imagePool,
   })
   const settings = createSettingQueries(options.db, options.secretKey)
+  const siteImages = options.siteImageStorage ?? createMemorySiteImageStorage()
   const captcha = createCaptcha(settings, options.captcha?.fetch)
   // 执行器每次轮询都读这张表，事件订阅和核心任务往里登记处理函数
   const handlers = new Map<string, JobHandler>()
@@ -139,6 +144,10 @@ export function createCore(options: CoreOptions) {
       leaseMs,
       log: options.jobs?.log,
     }),
+  )
+  handlers.set(
+    SITE_IMAGE_SWEEP_JOB,
+    createSiteImageSweep({ storage: siteImages, settings, now, log: options.jobs?.log }),
   )
   const schedules = createScheduler({
     db: options.db,
@@ -176,6 +185,7 @@ export function createCore(options: CoreOptions) {
   schedules.add({ name: AUTH_CLEANUP_JOB, job: AUTH_CLEANUP_JOB, cron: '17 4 * * *' })
   schedules.add({ name: AUDIT_CLEANUP_JOB, job: AUDIT_CLEANUP_JOB, cron: '27 4 * * *' })
   schedules.add({ name: TEXTURE_SWEEP_JOB, job: TEXTURE_SWEEP_JOB, cron: '47 4 * * 0' })
+  schedules.add({ name: SITE_IMAGE_SWEEP_JOB, job: SITE_IMAGE_SWEEP_JOB, cron: '57 4 * * 0' })
   const removal = createTextureRemoval(events, files)
   const textureOptions = {
     db: options.db,
@@ -263,6 +273,7 @@ export function createCore(options: CoreOptions) {
       plugins,
       getSigningKey,
       captcha,
+      siteImages,
     }),
     closet,
     reports: createReports(textureOptions),
@@ -283,6 +294,10 @@ export function createCore(options: CoreOptions) {
       ...createTextureManagement(textureOptions),
     },
     settings,
+    /** 站点图片的公开地址 `/site-images/<文件>`：文件名不对、文件不在时返回 null */
+    siteImages: {
+      read: (file: string) => (isSiteImageFile(file) ? siteImages.read(file) : Promise.resolve(null)),
+    },
     captcha,
     auth,
     externalLogin,

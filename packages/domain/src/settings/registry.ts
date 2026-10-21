@@ -35,8 +35,18 @@ function validRegex(value: string): boolean {
   }
 }
 
+// 站点图片（ADR-0042）：值是存储里的像素 hash，null 时用内置的图形。图片控件按这个媒体类型生成（settings/form.ts）
+const siteImage = z
+  .string()
+  .regex(/^[0-9a-f]{64}$/)
+  .nullable()
+  .meta({ contentMediaType: 'image/png' })
+
 export const coreSettingsRegistry = {
   'site.name': { schema: z.string(), default: 'NextSkin', section: 'site', secret: false },
+  'site.logo': { schema: siteImage, default: null, section: 'site', secret: false },
+  // 没设时用 site.logo，也没有时用默认图标
+  'site.favicon': { schema: siteImage, default: null, section: 'site', secret: false },
   'site.description': { schema: z.string().max(200), default: '', section: 'site', secret: false },
   'site.keywords': {
     schema: z.array(z.string().min(1).max(64)).max(32),

@@ -7,7 +7,7 @@ import { registerImport } from './import.ts'
 import { registerAdmin } from './admin.ts'
 import { MAX_PLUGIN_PACKAGE_REQUEST_BYTES, registerPluginAdmin } from './plugins.ts'
 import { OpenAPIHono } from '@hono/zod-openapi'
-import { DomainError, type Core } from '@nextskin/domain'
+import { DomainError, SITE_IMAGE_MAX_BYTES, type Core } from '@nextskin/domain'
 import type { MiddlewareHandler } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { csrf } from 'hono/csrf'
@@ -27,6 +27,8 @@ import { registerYggdrasilTokens } from './yggdrasil-tokens.ts'
 
 /** 上传插件包的两个接口：请求体是 multipart，上限按插件包算 */
 const PLUGIN_PACKAGE_PATH = /\/admin\/plugin-packages(?:\/preview)?\/?$/
+/** 上传站点图片（ADR-0042）：multipart，图片最大 1 MiB */
+const SITE_IMAGE_PATH = /\/admin\/site-images\/?$/
 export function createRestApp(
   core: Core,
   options: { rateLimiter?: RateLimiter; uploadRateLimiter?: RateLimiter; importer?: ImportGateway } = {},
@@ -68,10 +70,14 @@ export function createRestApp(
   app.use(
     '*',
     createMiddleware<AppEnv>(async (c, next) => {
-      if (c.req.method === 'POST' && PLUGIN_PACKAGE_PATH.test(c.req.path)) {
-        // 插件包（ADR-0033"安装"）：和材质一样逐块计数，不信任 Content-Length
-        const maxSize = MAX_PLUGIN_PACKAGE_REQUEST_BYTES
-        const tooLarge = () => new DomainError('plugin_package_invalid', { reason: 'too_large' })
+      const pluginPackage = PLUGIN_PACKAGE_PATH.test(c.req.path)
+      if (c.req.method === 'POST' && (pluginPackage || SITE_IMAGE_PATH.test(c.req.path))) {
+        // 插件包（ADR-0033"安装"）和站点图片：和材质一样逐块计数，不信任 Content-Length；multipart 的其余部分另外留 64 KiB
+        const maxSize = pluginPackage ? MAX_PLUGIN_PACKAGE_REQUEST_BYTES : SITE_IMAGE_MAX_BYTES + 64 * 1024
+        const tooLarge = () =>
+          pluginPackage
+            ? new DomainError('plugin_package_invalid', { reason: 'too_large' })
+            : new DomainError('site_image_file_invalid')
         if (Number(c.req.header('content-length')) > maxSize) throw tooLarge()
         const headers = new Headers(c.req.raw.headers)
         headers.delete('content-length')
@@ -131,7 +137,10 @@ export function createRestApp(
   app.use(
     '*',
     createMiddleware<AppEnv>(async (c, next) => {
-      if (c.req.method === 'POST' && (/\/textures\/?$/.test(c.req.path) || PLUGIN_PACKAGE_PATH.test(c.req.path))) {
+      if (
+        c.req.method === 'POST' &&
+        (/\/textures\/?$/.test(c.req.path) || PLUGIN_PACKAGE_PATH.test(c.req.path) || SITE_IMAGE_PATH.test(c.req.path))
+      ) {
         if (!/^multipart\/form-data(?:\s*;|$)/i.test(c.req.header('content-type') ?? ''))
           return errorResponse(c, 'invalid_request', undefined, undefined, 415)
         return next()

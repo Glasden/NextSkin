@@ -9,6 +9,11 @@ export interface MarkdownProps {
   children: string
   /** 所在区块标题的级别：Markdown 的 `#` 从下一级开始。默认 2，`#` 渲染成 h3 */
   headingLevel?: 1 | 2 | 3 | 4 | 5
+  /**
+   * 页脚这类只有一两行字的地方：图片缩到一行字的高度，和文字排在同一行，不加圆角。
+   * 例如备案号前面的公安备案图标（ADR-0042）
+   */
+  inlineImages?: boolean
 }
 
 const linkProtocols = /^(?:https?|mailto)$/i
@@ -50,7 +55,7 @@ function heading(depth: number, level: number) {
   }
 }
 
-function components(level: number): Components {
+function components(level: number, inlineImages: boolean): Components {
   return {
     h1: heading(1, level),
     h2: heading(2, level),
@@ -108,24 +113,30 @@ function components(level: number): Components {
     ),
     td: (props) => <td {...omitNode(props)} className={cellClass} />,
     hr: (props) => <hr {...omitNode(props)} className="border-border" />,
-    // 图片不经过 next/image（不变量 8）
+    // 图片不经过 next/image（不变量 8）。一行高的图片顶端对齐行框，正好占满一行，不把行撑高
     img: (props) =>
       props.src ? (
-        <img {...omitNode(props)} alt={props.alt ?? ''} loading="lazy" className="h-auto max-w-full rounded-sm" />
+        <img
+          {...omitNode(props)}
+          alt={props.alt ?? ''}
+          loading="lazy"
+          className={inlineImages ? 'inline h-[1lh] w-auto max-w-full align-top' : 'h-auto max-w-full rounded-sm'}
+        />
       ) : null,
     del: (props) => <del {...omitNode(props)} className="text-text-muted" />,
   }
 }
 
-const cache = new Map<number, Components>()
+const cache = new Map<string, Components>()
 
 /**
  * 管理员写的长文，例如公告和内容政策。块之间间距 16px，字号随所在的容器；
  * 链接、图片按 markdownUrl 过滤，原始 HTML 去掉。用户产生的内容（材质描述）不用它，按纯文本显示（ADR-0025）
  */
-export function Markdown({ children, headingLevel = 2 }: MarkdownProps) {
-  let mapped = cache.get(headingLevel)
-  if (!mapped) cache.set(headingLevel, (mapped = components(headingLevel)))
+export function Markdown({ children, headingLevel = 2, inlineImages = false }: MarkdownProps) {
+  const key = `${headingLevel}:${inlineImages}`
+  let mapped = cache.get(key)
+  if (!mapped) cache.set(key, (mapped = components(headingLevel, inlineImages)))
   return (
     <div className="flex min-w-0 flex-col gap-4 break-words text-text">
       <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml urlTransform={markdownUrl} components={mapped}>

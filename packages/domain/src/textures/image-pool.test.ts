@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { afterEach, expect, test, vi } from 'vitest'
 import { DomainError } from '../errors.ts'
 import { createImagePool, type ImagePool } from './image-pool.ts'
+import { processSiteImage } from '../site-images/image.ts'
 import { decodeTexturePng, inspectTexture, processUpload, renderTexture } from './image.ts'
 
 const pools: ImagePool[] = []
@@ -50,6 +51,23 @@ test('导入检查在 worker 里执行，解码不了的保留领域 code', asyn
   expect(await promise).toEqual(expected)
   await expect(p.inspect({ bytes: new Uint8Array(8), type: 'steve' })).rejects.toMatchObject({
     code: 'texture_file_invalid',
+  })
+})
+
+test('站点图片在 worker 里处理，两份 PNG 都转回来，尺寸错误保留宽高', async () => {
+  const p = pool({ size: 1 }),
+    task = await input(),
+    legacy = new Uint8Array(await readFile(new URL('../../../skin/test/fixtures/sethbling.png', import.meta.url)))
+  const expected = processSiteImage(task.bytes)
+  const promise = p.processSiteImage({ bytes: task.bytes })
+  expect(task.bytes.byteLength).toBe(0)
+  expect(await promise).toEqual(expected)
+  await expect(p.processSiteImage({ bytes: legacy })).rejects.toMatchObject({
+    code: 'site_image_size_invalid',
+    params: { width: 64, height: 32 },
+  })
+  await expect(p.processSiteImage({ bytes: new Uint8Array(8) })).rejects.toMatchObject({
+    code: 'site_image_file_invalid',
   })
 })
 

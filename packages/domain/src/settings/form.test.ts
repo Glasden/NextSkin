@@ -1,25 +1,29 @@
+import { settingControl as pluginSettingControl, type SettingControl as PluginControl } from '@nextskin/plugin-host'
 import { expect, test } from 'vitest'
 import { settingControl, settingJsonSchema, type SettingControl, type JsonSchema } from './form.ts'
 import { coreSettingsRegistry, settingSections, type CoreSettingKey } from './registry.ts'
 
-const text: SettingControl = { kind: 'text', format: null, required: false, maxLength: null }
-const boolean: SettingControl = { kind: 'boolean' }
-const lines: SettingControl = { kind: 'lines' }
-const integer = (min: number | null, max: number | null = null): SettingControl => ({
+const text: PluginControl = { kind: 'text', format: null, required: false, maxLength: null }
+const boolean: PluginControl = { kind: 'boolean' }
+const lines: PluginControl = { kind: 'lines' }
+const integer = (min: number | null, max: number | null = null): PluginControl => ({
   kind: 'number',
   integer: true,
   min,
   max,
 })
-const select = (...options: string[]): SettingControl => ({ kind: 'select', options })
-const object = (properties: Record<string, SettingControl>): SettingControl => ({
+const select = (...options: string[]): PluginControl => ({ kind: 'select', options })
+const object = (properties: Record<string, PluginControl>): PluginControl => ({
   kind: 'object',
   properties: Object.entries(properties).map(([name, control]) => ({ name, control })),
 })
 const score = integer(0, 2147483647)
-const markdown: SettingControl = { kind: 'markdown', maxLength: 20000 }
+const markdown: PluginControl = { kind: 'markdown', maxLength: 20000 }
+const image: SettingControl = { kind: 'image', minSide: 16, maxSide: 512 }
 const expected = {
   'site.name': text,
+  'site.logo': image,
+  'site.favicon': image,
   'site.description': { ...text, maxLength: 200 },
   'site.keywords': lines,
   'site.url': { ...text, format: 'url' },
@@ -110,6 +114,7 @@ test.each<[JsonSchema, SettingControl]>([
     { writeOnly: true, anyOf: [{ type: 'null' }, { type: 'string' }], contentMediaType: 'application/x-pem-file' },
     { kind: 'secret', multiline: true },
   ],
+  [{ anyOf: [{ type: 'string' }, { type: 'null' }], contentMediaType: 'image/png' }, image],
 ])('映射独立 JSON Schema：%j', (schema, control) => {
   expect(settingControl(schema)).toEqual(control)
 })
@@ -126,4 +131,11 @@ test.each<JsonSchema>([
   { type: 'number', writeOnly: true },
 ])('映射不了的类型返回 null：%j', (schema) => {
   expect(settingControl(schema)).toBeNull()
+})
+
+// 站点图片只给核心的设置项（ADR-0042）：插件的设置走 plugin-host 的规则，带同样的媒体类型也没有控件
+test('插件的设置没有图片控件', () => {
+  const schema: JsonSchema = { anyOf: [{ type: 'string' }, { type: 'null' }], contentMediaType: 'image/png' }
+  expect(pluginSettingControl(schema)).toBeNull()
+  expect(settingControl({ type: 'string', contentMediaType: 'image/png' })).toEqual(text)
 })

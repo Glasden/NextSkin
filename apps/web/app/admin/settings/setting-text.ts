@@ -60,16 +60,23 @@ export function settingsHref(section: SettingSection): string {
 }
 
 /**
- * 审计记录里的设置值写成一行字：开关写“开启”“关闭”，枚举写选项的文案，对象逐个属性列出。
- * control 为 null 时（这一项后来从注册表里删掉了）按 JSON 原样显示
+ * 审计记录里的设置值写成一行字：开关写“开启”“关闭”，枚举写选项的文案，对象逐个属性列出，
+ * 站点图片写 hash 的开头几位、没上传时写“默认图形”。control 为 null 时（这一项后来从注册表里删掉了）按 JSON 原样显示
  */
 export function formatSettingValue(
   value: unknown,
   control: SettingControl | null,
   text: SettingText,
-  words: { checked: string; unchecked: string; empty: string; number: (value: number) => string },
+  words: {
+    checked: string
+    unchecked: string
+    empty: string
+    defaultImage: string
+    number: (value: number) => string
+  },
 ): string {
   if (control?.kind === 'boolean' && typeof value === 'boolean') return value ? words.checked : words.unchecked
+  if (control?.kind === 'image') return typeof value === 'string' ? `${value.slice(0, 8)}…` : words.defaultImage
   if (control?.kind === 'select' && typeof value === 'string') return text.options?.[value] ?? value
   if (control?.kind === 'object' && isRecord(value))
     return control.properties

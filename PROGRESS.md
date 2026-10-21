@@ -31,6 +31,7 @@
   - 安装向导 `/setup`（安装码、"新站"、从 BS 导入）、后台的"数据迁移"、导入期间的维护模式（页面换成维护页，接口返回 503，任务和定时任务暂停）。
 - **亮暗模式**（DESIGN.md §10）：页头、认证页和安装向导右上角的菜单（跟随系统、亮色、暗色），偏好按设备记在 Cookie 里；根布局的内联脚本在第一次绘制之前设好 `data-theme`，跟随系统时随系统切换；组件 `MenuRadioGroup`。
 - **首页**（ADR-0032）：领奖台（最近 7 天新加进衣柜最多的三个皮肤）、站点统计、最新上传、外置登录三步；全站页脚；站点描述、关键词和页脚文字三个设置项；标志"折起来的头"，站点图标由 `pnpm design:sync` 从 token 生成。
+- **站点外观**（ADR-0042）：站点标志 `site.logo` 和站点图标 `site.favicon`（图标没传时用标志）；设置表单的图片控件（组件 ImageInput，按实际尺寸预览）和上传接口 `POST /api/admin/site-images`（PNG、正方形、边长 16～512，小图按最近邻放大，重新编码，另存白底的一份）；单独的存储 `<数据目录>/site-images` 和 `/site-images/<hash>.png`；每周清理没引用的图（`core:site-image-sweep`）；根布局自己写图标的 `<link>`，默认图标挪到 `apps/web/public/`，`/favicon.ico` 有自定义图标时重定向；页头、页脚、登录注册页和全屏页的标志显示上传的图；页脚 Markdown 里的图片缩到一行字高；导入报告提示重新上传图标。
 - **插件系统第一版**（ADR-0033），按 ADR 的三步落地：
   1. 插件在核心进程内运行（`packages/domain/src/plugins/`、`packages/plugin-host`）：能力检查、事件、任务和定时任务、KV、设置；插件自有表经网关查询（重建 SQL，SQLite 用专用的只读连接）；`/plugins/{id}/*` 路由网关；声明式的页面、导航和注册表单字段；`user.register` 拦截器；后台的"插件"页（启用、停用、设置、死信）；官方插件"邀请码"和"CDN 刷新"。
   2. 上传的插件在 plugin host 进程里运行：核心进程拉起；stdin/stdout 上带长度前缀的帧；`--permission`，环境变量为空，Node 26 起不能直接连网；整代切换，新一代报告的定义要和 manifest 一致；崩溃后退避重启，连续崩溃就停下、等管理员在后台重启。`nextskin-plugin build` 打插件包（`packages/plugin-cli`）；后台上传安装、升级（列出新增的能力）、卸载，都写审计；多实例按 `plugins.package_hash` 从存储接口取包。
@@ -46,5 +47,4 @@
 - **第三方登录的字段核对**：四家的 subject、`emailVerified` 还要用真实账号核对一遍（ADR-0034"首批插件"）。
 - **插件 API 推迟的部分**：其余写核心数据的能力（以指定 UUID 建角色、发通知等，见 ADR-0041 的"以后的写能力"）、其余五个拦截点、运行时组件和插槽等，见 ADR-0033 的"推迟"表。
 - **第一次发布**（ADR-0040）：两个发布工作流还没真正跑过，amd64 镜像还没运行过；仓库公开了，ZIP 和镜像的构建来源证明（`actions/attest-build-provenance`）可以加了，第一次推镜像之后要核对 GHCR 的 `nextskin` 包是公开的；部署文档里标了"未实测"的条目（宝塔和 1Panel 的反向代理、Windows 的 Ctrl+C 和 NSSM、Docker 里导入）等真实环境核对；国内的下载渠道等第一版发出后再定。
-- **站点外观**（ADR-0042 已采纳，还没开始）：设置项 `site.logo`、`site.favicon`（图标没传时用标志）；设置表单的图片控件和上传接口 `POST /api/admin/site-images`（PNG、正方形、边长 16～512，小图按最近邻放大，重新编码，另存白底的一份）；单独的存储 `<数据目录>/site-images` 和 `/site-images/<hash>.png`；每周清理没引用的图；根布局自己写图标的 `<link>`，默认图标挪出文件约定，`/favicon.ico` 按设置重定向；Logo 组件显示上传的图；页脚 Markdown 里的图片按一行文字的高度显示。
 - 通知、站点的 CSP（根布局里亮暗模式的内联脚本要带 nonce 或 hash）、失败任务的后台页面、后台覆盖翻译、种子数据。

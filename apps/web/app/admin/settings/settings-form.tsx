@@ -10,7 +10,9 @@ import {
   DialogClose,
   Field,
   Form,
+  ImageInput,
   Input,
+  LogoMark,
   Markdown,
   Select,
   Textarea,
@@ -19,12 +21,13 @@ import {
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
-import { apiError, formErrors, sendJson } from '../../../lib/api-client'
+import { apiError, formErrors, postForm, sendJson } from '../../../lib/api-client'
+import { siteImageUrl } from '../../../lib/site-images'
 import type { SettingItem, SettingText } from './setting-text'
 
 /** 表单里的值：数字和多行列表先按输入的原文保存，提交时再转换 */
 type Draft = string | boolean | { readonly [name: string]: Draft }
-type Leaf = Exclude<SettingControl, { kind: 'object' | 'secret' }>
+type Leaf = Exclude<SettingControl, { kind: 'object' | 'secret' | 'image' }>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -68,6 +71,8 @@ function fromDraft(control: SettingControl, draft: Draft): unknown {
           fromDraft(control, (isRecord(draft) ? draft[name] : undefined) ?? ''),
         ]),
       )
+    case 'image':
+      return draft === '' ? null : draft
     default:
       return draft
   }
@@ -164,6 +169,7 @@ export function SettingsForm({
                 item={item}
                 endpoint={endpoint}
                 draft={drafts[item.key] ?? ''}
+                fallback={imageFallback(item.key, drafts)}
                 error={errors[item.key]}
                 onChange={(draft) => update(item.key, draft)}
               />
@@ -196,18 +202,33 @@ function Setting({
   item,
   endpoint,
   draft,
+  fallback,
   error,
   onChange,
 }: {
   item: SettingItem
   endpoint: string
   draft: Draft
+  /** 站点图片没上传时退回的那一项的草稿：图标退回标志 */
+  fallback: Draft | undefined
   error: string | undefined
   onChange: (draft: Draft) => void
 }) {
   const { control, text, key } = item
   if (control.kind === 'secret')
     return <SecretSetting item={item} endpoint={endpoint} draft={draft} error={error} onChange={onChange} />
+  if (control.kind === 'image')
+    return (
+      <ImageSetting
+        settingKey={key}
+        control={control}
+        text={text}
+        draft={draft}
+        fallback={fallback}
+        error={error}
+        onChange={onChange}
+      />
+    )
   if (control.kind === 'markdown')
     return (
       <MarkdownSetting name={key} text={text} max={control.maxLength} draft={draft} error={error} onChange={onChange} />
@@ -389,6 +410,92 @@ function MarkdownSetting({
         </section>
       )}
     </div>
+  )
+}
+
+/**
+ * 站点图片按实际用到的尺寸预览（ADR-0042）：标志在页头 32px、页脚 24px，图标在标签页 16px。
+ * 没上传图标时用标志，都没上传时是内置的图形
+ */
+const imageSettings: Record<string, { sizes: number[]; fallback?: string }> = {
+  'site.logo': { sizes: [64, 32, 24] },
+  'site.favicon': { sizes: [64, 32, 16], fallback: 'site.logo' },
+}
+
+function imageFallback(key: string, drafts: Record<string, Draft>): Draft | undefined {
+  const fallback = imageSettings[key]?.fallback
+  return fallback ? drafts[fallback] : undefined
+}
+
+/**
+ * 站点图片：选了文件当场上传，服务端处理好、存下来，返回 hash 填进草稿；和其他项一样点“保存”才生效。
+ * “恢复默认”把草稿清空，保存后回到内置的图形
+ */
+function ImageSetting({
+  settingKey,
+  control,
+  text,
+  draft,
+  fallback,
+  error,
+  onChange,
+}: {
+  settingKey: string
+  control: Extract<SettingControl, { kind: 'image' }>
+  text: SettingText
+  draft: Draft
+  fallback: Draft | undefined
+  error?: string
+  onChange: (draft: Draft) => void
+}) {
+  const t = useTranslations('admin.settings.image')
+  const admin = useTranslations('admin')
+  const common = useTranslations('common')
+  const [uploading, setUploading] = useState(false)
+  const [failure, setFailure] = useState<string | null>(null)
+  const value = typeof draft === 'string' ? draft : ''
+  const inherited = !value && typeof fallback === 'string' ? fallback : ''
+  const hint = t('hint', { min: control.minSide, max: control.maxSide })
+
+  async function upload(file: File) {
+    setUploading(true)
+    setFailure(null)
+    const body = new FormData()
+    body.set('file', file)
+    const { status, data } = await postForm('/api/admin/site-images', body)
+    setUploading(false)
+    if (status === 201 && isRecord(data) && typeof data.hash === 'string') onChange(data.hash)
+    else {
+      const error = apiError(data)
+      setFailure(error?.fields?.file?.message ?? error?.message ?? admin('failed'))
+    }
+  }
+
+  return (
+    <ImageInput
+      label={text.label}
+      status={value ? t('custom') : inherited ? t('followsLogo') : t('default')}
+      src={value || inherited ? siteImageUrl(value || inherited) : null}
+      // 内置的图形是 8×8 格
+      fallback={(size) => <LogoMark cell={size / 8} />}
+      sizes={imageSettings[settingKey]?.sizes ?? [64]}
+      previewLabel={t('previewLabel', { label: text.label })}
+      onFile={(file) => void upload(file)}
+      accept="image/png"
+      uploadLabel={value ? t('replace') : t('upload')}
+      uploading={uploading}
+      resetLabel={t('reset')}
+      onReset={
+        value
+          ? () => {
+              setFailure(null)
+              onChange('')
+            }
+          : undefined
+      }
+      description={text.help ? common('sentences', { first: text.help, second: hint }) : hint}
+      error={failure ?? error}
+    />
   )
 }
 

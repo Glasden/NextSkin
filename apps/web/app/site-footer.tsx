@@ -2,6 +2,7 @@ import { Link, Logo, Markdown } from '@nextskin/ui'
 import { getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { getServer } from '../lib/server'
+import { siteImageUrl } from '../lib/site-images'
 
 const COLUMNS = [
   {
@@ -27,7 +28,14 @@ const COLUMNS = [
  */
 export async function SiteFooter() {
   const [{ core }, t, home] = await Promise.all([getServer(), getTranslations('site.footer'), getTranslations('home')])
-  const settings = await core.settings.read(['site.name', 'site.description', 'site.footer', 'site.timeZone'])
+  const settings = await core.settings.read([
+    'site.name',
+    'site.logo',
+    'site.description',
+    'site.footer',
+    'site.timeZone',
+  ])
+  const logo = settings['site.logo']
   const year = new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: settings['site.timeZone'] }).format(
     new Date(),
   )
@@ -36,7 +44,12 @@ export async function SiteFooter() {
     <footer className="border-t border-border">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-8 px-4 py-10 sm:px-6 lg:grid-cols-4">
         <div className="col-span-2 flex flex-col items-start gap-3">
-          <Logo name={settings['site.name']} size="sm" render={<NextLink href="/" />} />
+          <Logo
+            name={settings['site.name']}
+            size="sm"
+            image={logo ? siteImageUrl(logo) : undefined}
+            render={<NextLink href="/" />}
+          />
           <p className="max-w-sm text-sm text-pretty text-text-muted">
             {settings['site.description'].trim() || home('description')}
           </p>
@@ -59,7 +72,8 @@ export async function SiteFooter() {
         ))}
         <div className="flex flex-col gap-2 border-t border-border pt-6 text-sm text-text-muted col-span-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6 lg:col-span-4">
           {custom ? (
-            <Markdown>{custom.replaceAll('{year}', year)}</Markdown>
+            // 备案号前面的公安备案图标这类图片缩到一行字高（ADR-0042）
+            <Markdown inlineImages>{custom.replaceAll('{year}', year)}</Markdown>
           ) : (
             <p>{t('copyright', { year, name: settings['site.name'] })}</p>
           )}

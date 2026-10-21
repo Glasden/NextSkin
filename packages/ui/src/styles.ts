@@ -1,6 +1,13 @@
 /** 焦点框：2px 实线，外加 2px 间距（DESIGN.md §9） */
 export const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus'
 
+// 透明区域的棋盘格，每格 8px（DESIGN.md §5）：checker-a 打底，checker-b 画对角的两格
+export const checker = [
+  'bg-checker-a',
+  'bg-[conic-gradient(var(--color-checker-b)_25%,transparent_0_50%,var(--color-checker-b)_0_75%,transparent_0)]',
+  'bg-size-[16px_16px]',
+].join(' ')
+
 // 大展台的 16px 网格，×4 时正好 4 个材质像素一格；网格线由 text 按比例混入 stage，不单独设 token（DESIGN.md §2.2）
 export const stageGrid = [
   '[--stage-line:color-mix(in_srgb,var(--color-text)_7%,var(--color-stage))]',

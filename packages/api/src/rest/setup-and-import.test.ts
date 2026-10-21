@@ -20,6 +20,7 @@ function setup() {
       createSession: vi.fn().mockResolvedValue(['session=one; HttpOnly', 'other=two; HttpOnly']),
     },
     admin: { requirePermission: vi.fn().mockResolvedValue(undefined) },
+    siteImages: { read: vi.fn().mockResolvedValue(Uint8Array.of(137, 80, 78, 71)) },
   }
   const state: ImportRunState = {
     id: 1,
@@ -261,6 +262,8 @@ test('维护分支不读设置；协议返回纯文本，REST 返回本地化 JS
     '/api/import/run',
     '/api/import/run/',
     '/api/import/run/report.md',
+    // 站点图片只读存储（ADR-0042）
+    `/site-images/${'a'.repeat(64)}.png`,
   ])
     expect((await env.request('GET', path, undefined, 'nextskin-import-run=run-token')).status).toBe(200)
   expect((await env.request('POST', '/api/setup/import/env', { text: '', directory: null })).status).toBe(200)

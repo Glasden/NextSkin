@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import type { ReactNode } from 'react'
 import { getServer } from '../../lib/server'
+import { siteImageUrl } from '../../lib/site-images'
 import { ColorModeMenu } from '../color-mode-menu'
 
 // 默认皮肤只有 k = 1 一种分辨率（64×64 的材质），预先渲染好随核心发布（packages/skin/assets）。
@@ -45,12 +46,12 @@ export async function AuthShell({
   readonly illustration?: (scale: 4 | 8) => ReactNode
 }) {
   const { core } = await getServer()
-  const { 'site.name': siteName } = await core.settings.read(['site.name'])
+  const { 'site.name': siteName, 'site.logo': logo } = await core.settings.read(['site.name', 'site.logo'])
   return (
     <div className="grid min-h-dvh lg:grid-cols-2">
       <div className="flex flex-col px-4 py-6 sm:px-8">
         <header className="flex items-center justify-between gap-4">
-          <Logo name={siteName} render={<NextLink href="/" />} />
+          <Logo name={siteName} image={logo ? siteImageUrl(logo) : undefined} render={<NextLink href="/" />} />
           <ColorModeMenu />
         </header>
         <div className="mt-6 h-56 lg:hidden">

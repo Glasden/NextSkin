@@ -13,6 +13,13 @@ export { MigrationBackupError } from '@nextskin/db'
 export { coreConfigFromEnv, type CoreConfig } from './config.ts'
 export { toNameKey, normalizeNameLookup, normalizeUuidLookup, type PlayerView } from './players/queries.ts'
 export { createLocalTextureStorage, type TextureStorage } from './textures/storage.ts'
+export {
+  createLocalSiteImageStorage,
+  createMemorySiteImageStorage,
+  siteImageFile,
+  type SiteImageStorage,
+} from './site-images/storage.ts'
+export { SITE_IMAGE_MAX_BYTES, SITE_IMAGE_MAX_SIDE, SITE_IMAGE_MIN_SIDE } from './site-images/image.ts'
 export { encodeSettingValue } from './settings/codec.ts'
 export {
   settingSections,

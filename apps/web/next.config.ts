@@ -16,6 +16,8 @@ const protocolRewrites = [
   '/cape/:player.png',
   '/textures/:hash',
   '/render/:path*',
+  // 站点图片（ADR-0042）
+  '/site-images/:file',
   // 插件的路由（ADR-0033）
   '/plugins/:id/:path*',
 ]

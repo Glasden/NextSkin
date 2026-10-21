@@ -24,6 +24,9 @@ import {
   type SettingSection,
 } from '../settings/registry.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
+import { SITE_IMAGE_MAX_BYTES } from '../site-images/image.ts'
+import { siteImageFile, type SiteImageStorage } from '../site-images/storage.ts'
+import type { ImagePool } from '../textures/image-pool.ts'
 import type { SigningKey } from '../yggdrasil/signing-key.ts'
 import type { AdminActor } from './types.ts'
 
@@ -58,6 +61,8 @@ export function createAdminSettings(options: {
   mail: MailService
   captcha: CaptchaService
   getSigningKey: () => Promise<SigningKey | null>
+  siteImages: SiteImageStorage
+  imagePool: Pick<ImagePool, 'processSiteImage'>
   now: () => Date
   authorize: (
     tx: Transaction<CoreDatabase>,
@@ -65,8 +70,10 @@ export function createAdminSettings(options: {
     permission: CorePermission,
   ) => Promise<Extract<Actor, { kind: 'user' }>>
 }) {
-  const { db, settings, secretKey, production, mail, captcha, getSigningKey, now, authorize } = options
+  const { db, settings, secretKey, production, mail, captcha, getSigningKey, siteImages, imagePool, now, authorize } =
+    options
   const keys = Object.keys(coreSettingsRegistry) as CoreSettingKey[]
+  const imageKeys = new Set(keys.filter((key) => settingControl(settingJsonSchema(key))?.kind === 'image'))
 
   function deleteSetting(tx: Transaction<CoreDatabase>, key: CoreSettingKey) {
     return tx.deleteFrom('settings').where('namespace', '=', coreSettingsNamespace).where('key', '=', key).execute()
@@ -107,6 +114,13 @@ export function createAdminSettings(options: {
   }
 
   async function update(actor: AdminActor | null, values: Record<string, unknown>, generated = false) {
+    // 站点图片的值要指向存储里已经有的图（ADR-0042"上传和保存"）。在事务之外核对：以后的共享存储是网络请求
+    const missingImages = new Set<string>()
+    for (const key of imageKeys) {
+      const value = Object.hasOwn(values, key) ? values[key] : null
+      if (typeof value === 'string' && /^[0-9a-f]{64}$/.test(value) && !(await siteImages.has(siteImageFile(value))))
+        missingImages.add(key)
+    }
     return transactionWithRetry(db, async (tx) => {
       const eventActor: Actor = actor ? await authorize(tx, actor, 'settings.manage') : { kind: 'system' }
       if (Object.keys(values).some((key) => !visibleKey(key))) throw new DomainError('invalid_request')
@@ -117,7 +131,12 @@ export function createAdminSettings(options: {
         const definition = coreSettingsRegistry[key]
         const result = definition.schema.safeParse(values[key])
         // 联合注册表的 schema 已验证了 check 所对应的输入类型。
-        if (!result.success || ('check' in definition && !definition.check(result.data as never))) fields.push(key)
+        if (
+          !result.success ||
+          ('check' in definition && !definition.check(result.data as never)) ||
+          missingImages.has(key)
+        )
+          fields.push(key)
         else parsed.set(key, result.data)
       }
       if (fields.length) throw new DomainError('invalid_request', undefined, fields)
@@ -221,6 +240,19 @@ export function createAdminSettings(options: {
       return captcha.test(input)
     },
     updateSettings: (actor: AdminActor, values: Record<string, unknown>) => update(actor, values),
+    /**
+     * 上传站点图片（ADR-0042）：处理完写进存储，返回 hash，不改设置；站长随设置表单保存才生效。
+     * bytes 的所有权转给图像 worker
+     */
+    async uploadSiteImage(actor: AdminActor, bytes: Uint8Array): Promise<{ hash: string }> {
+      if (bytes.length > SITE_IMAGE_MAX_BYTES) throw new DomainError('site_image_file_invalid')
+      await transactionWithRetry(db, (tx) => authorize(tx, actor, 'settings.manage'))
+      const image = await imagePool.processSiteImage({ bytes })
+      // 先写白底的那份：有了 <hash>.png 就说明两份都在，保存时只核对它
+      await siteImages.write(siteImageFile(image.pixelHash, 'opaque'), image.opaque)
+      await siteImages.write(siteImageFile(image.pixelHash), image.png)
+      return { hash: image.pixelHash }
+    },
     async generateSetting(actor: AdminActor, key: string): Promise<{ updated: CoreSettingKey[] }> {
       const user = await db.selectFrom('users').select('role').where('id', '=', actor.uid).executeTakeFirst()
       if (!user || !can(user.role, 'settings.manage')) throw new DomainError('permission_denied')

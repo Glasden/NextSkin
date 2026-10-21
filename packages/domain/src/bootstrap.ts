@@ -9,6 +9,7 @@ import { createLocalPluginPackageStore, createPluginPackages } from './plugins/p
 import type { OfficialPlugin } from './plugins/system.ts'
 import { createLocalRenderCache } from './textures/render-cache.ts'
 import { createLocalTextureStorage } from './textures/storage.ts'
+import { createLocalSiteImageStorage } from './site-images/storage.ts'
 
 export { coreConfigFromEnv, type CoreConfig } from './config.ts'
 
@@ -85,6 +86,7 @@ export async function openCore(
       renderCache,
       db,
       textureStorage: createLocalTextureStorage(config.textureDirectory),
+      siteImageStorage: createLocalSiteImageStorage(config.siteImageDirectory),
       secretKey: config.secretKey,
       production: config.production,
       plugins: {

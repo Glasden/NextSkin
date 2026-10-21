@@ -1,6 +1,7 @@
 import { DomainError } from '@nextskin/domain'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { setup as setupDomain } from '../../../domain/src/closet/test-support.ts'
+import { encodeTexturePng } from '../../../domain/src/textures/image.ts'
 import { createApp } from '../app.ts'
 
 const env = setupDomain()
@@ -61,7 +62,7 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(37)
+  expect(routes).toHaveLength(38)
   for (const route of routes) {
     const path = route.path
       .slice('/api'.length)
@@ -82,29 +83,33 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
     upload.set('file', new Blob([new Uint8Array([1])]), 'plugin.tgz')
     upload.set('packageHash', '0'.repeat(64))
     // 请求体要能通过 zod 和用例在查权限之前做的格式检查，才会走到权限检查
+    const image = new FormData()
+    image.set('file', new Blob([new Uint8Array([1])]), 'logo.png')
     const body = route.path.startsWith('/api/admin/plugin-packages')
       ? upload
-      : route.path.endsWith('/settings')
-        ? { values: {} }
-        : route.path.endsWith('/email')
-          ? { email: 'new@example.test' }
-          : route.path.endsWith('/password')
-            ? { password: 'new-password-123' }
-            : route.path.endsWith('/score')
-              ? { delta: 1 }
-              : route.path.endsWith('/transfer')
-                ? { uid: 8 }
-                : route.path.endsWith('/closet') && route.method === 'POST'
-                  ? { tid: 7 }
-                  : route.path.startsWith('/api/admin/textures/') && route.method === 'PATCH'
-                    ? { name: 'Skin' }
-                    : route.path.startsWith('/api/admin/players/') && route.method === 'PATCH'
-                      ? { name: 'Steve' }
-                      : route.method === 'POST'
-                        ? { action: 'dismiss' }
-                        : route.method === 'PATCH'
-                          ? { role: 'banned' }
-                          : undefined
+      : route.path === '/api/admin/site-images'
+        ? image
+        : route.path.endsWith('/settings')
+          ? { values: {} }
+          : route.path.endsWith('/email')
+            ? { email: 'new@example.test' }
+            : route.path.endsWith('/password')
+              ? { password: 'new-password-123' }
+              : route.path.endsWith('/score')
+                ? { delta: 1 }
+                : route.path.endsWith('/transfer')
+                  ? { uid: 8 }
+                  : route.path.endsWith('/closet') && route.method === 'POST'
+                    ? { tid: 7 }
+                    : route.path.startsWith('/api/admin/textures/') && route.method === 'PATCH'
+                      ? { name: 'Skin' }
+                      : route.path.startsWith('/api/admin/players/') && route.method === 'PATCH'
+                        ? { name: 'Steve' }
+                        : route.method === 'POST'
+                          ? { action: 'dismiss' }
+                          : route.method === 'PATCH'
+                            ? { role: 'banned' }
+                            : undefined
     for (const loggedIn of [true, false]) {
       authenticated = loggedIn
       const response = await request(route.method, path + query, body)
@@ -245,6 +250,7 @@ test('参数校验、CSRF、JSON 类型和请求体上限；OpenAPI 声明这些
     '/admin/settings',
     '/admin/settings/{key}/generate',
     '/admin/settings/mail/test',
+    '/admin/site-images',
     '/admin/users/{uid}/email',
     '/admin/users/{uid}/password',
     '/admin/users/{uid}/two-factor',
@@ -261,17 +267,71 @@ test('参数校验、CSRF、JSON 类型和请求体上限；OpenAPI 声明这些
   expect(Object.keys(spec.paths['/admin/users/{uid}'] as object).sort()).toEqual(['delete', 'patch'])
 })
 
-test('管理员没有 settings.manage，三个设置接口都返回 403', async () => {
+test('管理员没有 settings.manage，设置的接口都返回 403', async () => {
   await admin()
+  const image = new FormData()
+  image.set('file', new Blob([new Uint8Array([1])]), 'logo.png')
   for (const [method, path, body] of [
     ['PATCH', '/admin/settings', { values: {} }],
     ['POST', '/admin/settings/yggdrasil.signingKey/generate', undefined],
     ['POST', '/admin/settings/mail/test', undefined],
+    ['POST', '/admin/site-images', image],
   ] as const) {
     const response = await setup().request(method, path, body)
     expect(response.status).toBe(403)
     expect(await response.json()).toMatchObject({ error: { code: 'permission_denied' } })
   }
+})
+
+test('超级管理员上传站点图片：返回 hash、公开地址能取到，随设置保存才生效（ADR-0042）', async () => {
+  await env.db().updateTable('users').set({ role: 'superadmin' }).where('id', '=', env.actor.uid).execute()
+  const { app, request } = setup()
+  const form = (bytes: Uint8Array) => {
+    const body = new FormData()
+    body.set('file', new Blob([bytes]), 'logo.png')
+    return body
+  }
+  const logo = { width: 16, height: 16, data: new Uint8Array(16 * 16 * 4).fill(200) }
+  const uploaded = await request('POST', '/admin/site-images', form(encodeTexturePng(logo)))
+  expect(uploaded.status).toBe(201)
+  const { hash } = (await uploaded.json()) as { hash: string }
+  expect(hash).toMatch(/^[0-9a-f]{64}$/)
+  expect((await env.core.settings.read(['site.logo']))['site.logo']).toBeNull()
+  for (const file of [`${hash}.png`, `${hash}.opaque.png`]) {
+    const image = await app.request(`http://example.test/site-images/${file}`)
+    expect(image.status, file).toBe(200)
+    expect(Object.fromEntries(image.headers)).toMatchObject({
+      'content-type': 'image/png',
+      'cache-control': 'public, max-age=31536000, immutable',
+      'x-content-type-options': 'nosniff',
+    })
+    // 像素画放大到 64×64
+    expect(new DataView(await image.arrayBuffer()).getUint32(16)).toBe(64)
+  }
+  const head = await app.request(`http://example.test/site-images/${hash}.png`, { method: 'HEAD' })
+  expect(head.status).toBe(200)
+  expect(await head.text()).toBe('')
+  for (const file of [`${'0'.repeat(64)}.png`, 'logo.png', `${hash}.png.tmp`])
+    expect((await app.request(`http://example.test/site-images/${file}`)).status, file).toBe(404)
+  expect((await app.request(`http://example.test/site-images/${hash}.png`, { method: 'POST' })).status).toBe(405)
+
+  const wide = await request('POST', '/admin/site-images', form(encodeTexturePng({ ...logo, width: 8, height: 32 })))
+  expect(wide.status).toBe(400)
+  expect(await wide.json()).toMatchObject({
+    error: { code: 'site_image_size_invalid', fields: { file: { code: 'site_image_size_invalid' } } },
+  })
+  const tooLarge = await request('POST', '/admin/site-images', form(new Uint8Array(1024 * 1024 + 1)))
+  expect(tooLarge.status).toBe(400)
+  expect(await tooLarge.json()).toMatchObject({ error: { code: 'site_image_file_invalid' } })
+  const json = await request('POST', '/admin/site-images', { file: 'x' })
+  expect(json.status).toBe(415)
+
+  const saved = await request('PATCH', '/admin/settings', { values: { 'site.logo': hash } })
+  expect(saved.status).toBe(200)
+  expect((await env.core.settings.read(['site.logo']))['site.logo']).toBe(hash)
+  const missing = await request('PATCH', '/admin/settings', { values: { 'site.favicon': '0'.repeat(64) } })
+  expect(missing.status).toBe(400)
+  expect(await missing.json()).toMatchObject({ error: { code: 'invalid_request', fields: { 'site.favicon': {} } } })
 })
 
 test('超级管理员保存设置：字段错误以设置键为名，整批拒绝；未知和内部项不带字段', async () => {

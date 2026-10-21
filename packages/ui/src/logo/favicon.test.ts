@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
-import appleIconUrl from '../../../../apps/web/app/apple-icon.png?url'
-import icoUrl from '../../../../apps/web/app/favicon.ico?url'
-import iconSvg from '../../../../apps/web/app/icon.svg?raw'
+import appleIconUrl from '../../../../apps/web/public/apple-icon.png?url'
+import icoUrl from '../../../../apps/web/public/favicon.ico?url'
+import iconSvg from '../../../../apps/web/public/icon.svg?raw'
 import themeCss from '../theme.css?raw'
 import { parseTheme } from '../tokens.ts'
 import { renderFavicons } from './favicon.ts'
@@ -11,7 +11,7 @@ const favicons = renderFavicons(parseTheme(themeCss))
 const bytes = async (url: string) => new Uint8Array(await (await fetch(url)).arrayBuffer())
 
 // 改了 token 或标志的图形以后要运行 `pnpm design:sync`，否则站点图标和界面对不上（ADR-0032）
-it('apps/web/app 里的站点图标与 token 和标志的图形一致', async () => {
+it('apps/web/public 里的默认站点图标与 token 和标志的图形一致', async () => {
   expect(iconSvg).toBe(favicons.svg)
   expect(await bytes(icoUrl)).toEqual(favicons.ico)
   expect(await bytes(appleIconUrl)).toEqual(favicons.appleIcon)

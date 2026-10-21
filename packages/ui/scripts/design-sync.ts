@@ -15,10 +15,10 @@ if (updated !== doc) {
   console.log('DESIGN.md 已是最新')
 }
 
-// 站点图标由标志的图形和 token 生成（ADR-0032），放在 Next 的 app 目录，按文件约定输出 <link rel="icon">
+// 默认的站点图标由标志的图形和 token 生成（ADR-0032），放在 public 目录；<link rel="icon"> 由根布局输出（ADR-0042）
 const favicons = renderFavicons(theme)
 for (const [key, name] of Object.entries(FAVICON_FILES) as [keyof typeof FAVICON_FILES, string][]) {
-  const path = new URL(`../../../apps/web/app/${name}`, import.meta.url)
+  const path = new URL(`../../../apps/web/public/${name}`, import.meta.url)
   const content = favicons[key]
   const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content
   let current: Uint8Array | undefined

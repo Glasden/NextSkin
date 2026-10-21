@@ -193,6 +193,7 @@ export async function AuditTable({
       checked: settings('checked'),
       unchecked: settings('unchecked'),
       empty: t('details.settingUpdate.empty'),
+      defaultImage: settings('image.default'),
       number: (value: number) => format.number(value),
     }
     if (details.secret === true)

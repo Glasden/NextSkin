@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect } from 'storybook/test'
+// 不内联：小图在构建时会变成 data: 地址，Markdown 不放行
+import badge from './fixtures/badge.png?url&no-inline'
 import { Markdown } from './markdown.tsx'
 
 const meta = {
@@ -86,5 +88,25 @@ export const UnsafeContent: Story = {
     // 不安全的地址被清空，留下没有 href 的文字
     for (const name of ['危险链接', '数据链接']) await expect(canvas.getByText(name)).not.toHaveAttribute('href')
     await expect(canvas.getByRole('link', { name: '普通链接' })).toHaveAttribute('href', 'https://example.test')
+  },
+}
+
+/** 页脚：图片缩到一行字的高度，例如公安备案号前面的图标；图片是 story 用的示意图 */
+export const InlineImages: Story = {
+  args: {
+    inlineImages: true,
+    children: `[京ICP备00000000号-1](https://beian.miit.gov.cn/) · ![](${badge}) [京公网安备 11010800000000 号](https://beian.mps.gov.cn/)`,
+  },
+  decorators: [
+    (Story) => (
+      <div className="text-sm text-text-muted">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const image = canvasElement.querySelector('img')!
+    await expect(image.getBoundingClientRect().height).toBe(20)
+    await expect(image.closest('p')!.getBoundingClientRect().height).toBe(20)
   },
 }

@@ -116,6 +116,8 @@
     "texture_name_rule_misconfigured": "本站的材质名规则设置有误，请联系管理员。",
     "texture_description_too_long": "描述最多 {max} 个字符，请删减后重试。",
     "texture_type_invalid": "这个材质不能改成这种模型：披风不能改，纤细（Alex）模型的皮肤必须是正方形。",
+    "site_image_file_invalid": "这个文件不是有效的 PNG 图片，或者超过了 1 MiB，换一个文件试试。",
+    "site_image_size_invalid": "图片尺寸 {width}×{height} 不符合要求：要正方形，边长 16 到 512 像素。",
     "closet_item_exists": "这个材质已经在你的衣柜里了。",
     "closet_item_not_found": "你的衣柜里没有这个材质，先把它加入衣柜。",
     "texture_type_mismatch": "{slot, select, skin {角色的皮肤只能用皮肤，不能用披风。} cape {角色的披风只能用披风，不能用皮肤。} other {头像只能用皮肤，不能用披风。}}",
@@ -1507,6 +1509,16 @@
         "hint": "支持 Markdown，不支持 HTML，最多 {max, number} 个字。",
         "buttonLabel": "{action}：{label}"
       },
+      "image": {
+        "upload": "上传图片",
+        "replace": "换一张",
+        "reset": "恢复默认",
+        "hint": "PNG，正方形，边长 {min}–{max} 像素，不超过 1 MiB。边长不到 64 像素的当作像素画，按整数倍放大。",
+        "default": "默认图形",
+        "followsLogo": "跟着站点标志",
+        "custom": "已上传",
+        "previewLabel": "{label}的预览"
+      },
       "lines": "一行一项。",
       "checked": "开启",
       "unchecked": "关闭",
@@ -1561,6 +1573,14 @@
           "name": {
             "label": "站点名称",
             "help": "显示在页头、浏览器标签页和邮件里，启动器里显示的验证服务器名称也是它。"
+          },
+          "logo": {
+            "label": "站点标志",
+            "help": "替换页头、页脚和登录页上的方块头图形，站点名照旧写在旁边。透明背景、边长 64 像素以上的图效果最好。"
+          },
+          "favicon": {
+            "label": "站点图标",
+            "help": "浏览器标签页、书签和手机主屏幕上的图标。没有上传时用站点标志。边长 180 像素以上，手机主屏幕上才清晰；透明的部分在主屏幕上铺白底。"
           },
           "description": {
             "label": "站点描述",

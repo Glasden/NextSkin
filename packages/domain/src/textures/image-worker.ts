@@ -1,18 +1,25 @@
 import { parentPort } from 'node:worker_threads'
 import { DomainError } from '../errors.ts'
 import { inspectTexture, processUpload, renderTexture, type RenderInput } from './image.ts'
+import { processSiteImage } from '../site-images/image.ts'
 import type { TextureType } from '@nextskin/skin'
 
 export type ImageTask =
   | { kind: 'upload'; bytes: Uint8Array; type: TextureType }
   | { kind: 'inspect'; bytes: Uint8Array; type: TextureType }
   | { kind: 'render'; input: RenderInput }
+  | { kind: 'siteImage'; bytes: Uint8Array }
 const port = parentPort
 if (!port) throw new Error('图像 worker 缺少通信端口')
 port.on('message', (task: ImageTask) => {
   try {
     if (task.kind === 'inspect') {
       port.postMessage({ ok: true, result: inspectTexture(task.bytes, task.type) })
+      return
+    }
+    if (task.kind === 'siteImage') {
+      const result = processSiteImage(task.bytes)
+      port.postMessage({ ok: true, result }, [result.png.buffer as ArrayBuffer, result.opaque.buffer as ArrayBuffer])
       return
     }
     const result = task.kind === 'upload' ? processUpload(task.bytes, task.type) : renderTexture(task.input)
