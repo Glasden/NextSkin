@@ -28,7 +28,7 @@
 | [0014](0014-toolchain.md) | 工具链：pnpm + Turborepo，TypeScript 7 做类型检查（TS 6 只给依赖编译器 API 的工具），ESLint、Prettier、Vitest、changesets | 已采纳（发布流程由 ADR-0035 补充） |
 | [0015](0015-core-schema-conventions.md) | 核心 schema 约定：时间存 ISO 字符串、角色名靠规范化列、UUID 绑定角色；逐表设计见 `docs/schema.md` | 已采纳 |
 | [0016](0016-protocol-contract.md) | 协议契约以录制结果为判据；客户端可能依赖的 BS 行为照样复现，只有异常输入才触发的 Laravel/PHP 副产品不复现 | 已采纳（"不复现"一表由 ADR-0030 补充了一类） |
-| [0017](0017-skin-figure-rendering.md) | 皮肤的 2D 正背面由服务端出图，按显示倍数选分辨率，浏览器只做整数倍放大 | 已采纳 |
+| [0017](0017-skin-figure-rendering.md) | 皮肤的 2D 正背面由服务端出图，按显示倍数选分辨率，浏览器只做整数倍放大 | 已采纳（皮肤的 2D 正背面和转身已被 ADR-0048 取代；披风和头像照旧） |
 | [0018](0018-registration-and-mail.md) | 注册走领域用例，规则和默认值取 BS；邮件在事务之外异步发送 | 已采纳（react-email 一条已被 ADR-0020 取代，进程内的邮件队列一条已被 ADR-0021 取代，验证码由官方插件接一条已被 ADR-0033 取代；授权 OAuth 应用要先验证邮箱由 ADR-0037 补充；注册的验证码由 ADR-0038 补充） |
 | [0019](0019-i18n.md) | 国际化：URL 不带语言前缀，消息集中在 `packages/i18n`，接口错误带 code 和本地化文案 | 已采纳 |
 | [0020](0020-email-templates-without-react.md) | 邮件模板不用 React，改用无依赖的 HTML 模板函数（取代 ADR-0012、ADR-0018 里 react-email 的部分） | 已采纳 |
@@ -59,6 +59,7 @@
 | [0045](0045-yggdrasil-issue-token-interceptor.md) | 拦截点 `yggdrasil.issueToken`：签发能进服的令牌之前调用插件，覆盖启动器登录、刷新和 Connect 的令牌端点；失败时拒绝，不在事务内；网页登录不拦（补充 ADR-0030、0033、0037） | 已采纳（网页上的受限操作由 ADR-0046 补充） |
 | [0046](0046-user-action-interceptor.md) | 拦截点 `user.action`：用户管理角色、材质、OAuth 应用和举报之前调用插件，范围与"要求验证邮箱"一致；失败时拒绝，不在事务内（补充 ADR-0033、0045） | 已采纳 |
 | [0047](0047-branching.md) | 分支：main 是主干，加迁移、改协议端点或 SDK 公开 API、多个提交的功能开分支走 PR；修旧版本时才从标签拉 `release/X.Y`，修复先进 main 再挑过去，修订版不带迁移；main、维护分支和发布标签只有维护者能动（补充 ADR-0035、0040） | 已采纳 |
+| [0048](0048-skin-pose-rendering.md) | 皮肤改成服务端的 3D 出图（斜着站、略微俯视，背面和正面并排或只有正面），按显示倍数乘设备像素比出图、浏览器不缩放；悬浮时抬手，拼图第一次悬浮才下载；出图改用调色板 PNG（取代 ADR-0017 的皮肤部分） | 已采纳 |
 
 ## 待做的 spike
 
