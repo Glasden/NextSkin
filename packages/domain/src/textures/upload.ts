@@ -11,6 +11,8 @@ import { DomainError } from '../errors.ts'
 import type { Events } from '../events/emit.ts'
 import { adjustScore } from '../score/adjust.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
+import { assertUserActionAllowed } from '../users/action.ts'
+import type { UserActionInterceptor } from '../plugins/system.ts'
 import { assertPlayerManagementAllowed, lockUser, type UserActor } from '../users/lock.ts'
 import { storageFee, textureRows, toTexture } from './dto.ts'
 import type { TextureFiles } from './files.ts'
@@ -27,6 +29,7 @@ export interface UploadTextureInput {
   description?: string | null
 }
 export function createTextureUpload(options: {
+  interceptUserAction: UserActionInterceptor
   db: Kysely<CoreDatabase>
   settings: ReturnType<typeof createSettingQueries>
   events: Events
@@ -36,7 +39,7 @@ export function createTextureUpload(options: {
   now: () => Date
   renders: { warm(hash: string, type: TextureType): void }
 }) {
-  const { db, settings, events, files, storage, imagePool, now } = options
+  const { db, settings, events, files, storage, imagePool, now, interceptUserAction } = options
   return async function upload(
     actor: UserActor,
     input: UploadTextureInput,
@@ -57,6 +60,7 @@ export function createTextureUpload(options: {
       .executeTakeFirst()
     if (!user) throw new DomainError('unauthenticated')
     assertPlayerManagementAllowed(user, values['auth.requireEmailVerification'])
+    await assertUserActionAllowed(interceptUserAction, actor.uid, 'texture.upload')
     const image = await imagePool.processUpload({ bytes: input.bytes, type: input.type })
     // 插件运行时落地后，在这里调用 texture.upload 拦截器；花费在它之后计算。
     const waitBudget = { remainingMs: 1800 }

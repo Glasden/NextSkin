@@ -188,6 +188,7 @@ export function createCore(options: CoreOptions) {
   schedules.add({ name: SITE_IMAGE_SWEEP_JOB, job: SITE_IMAGE_SWEEP_JOB, cron: '57 4 * * 0' })
   const removal = createTextureRemoval(events, files)
   const textureOptions = {
+    interceptUserAction: plugins.interceptUserAction,
     db: options.db,
     settings,
     events,
@@ -238,7 +239,10 @@ export function createCore(options: CoreOptions) {
   // 第三方登录（ADR-0034）：首次登录经过注册用例，user.register 拦截器和注册表单的插件字段照样生效
   const externalLogin = createExternalLogin({ db: options.db, settings, plugins, mail, jobs, register, now })
   const getSigningKey = createSigningKeyQuery(settings)
-  const players = { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events, now) }
+  const players = {
+    ...createPlayerQueries(options.db),
+    ...createPlayerManagement(options.db, settings, events, now, plugins.interceptUserAction),
+  }
   const closet = createCloset(textureOptions)
   const upload = createTextureUpload(textureOptions)
   const tokens = createTokens({
@@ -321,7 +325,7 @@ export function createCore(options: CoreOptions) {
     },
     score: createScoreQueries(options.db),
     oauth: {
-      ...createOAuthClients({ db: options.db, settings, now }),
+      ...createOAuthClients({ db: options.db, settings, now, interceptUserAction: plugins.interceptUserAction }),
       ...createDevices({ db: options.db, settings, now }),
       ...createAuthorizations({ db: options.db, now }),
     },

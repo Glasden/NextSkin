@@ -141,6 +141,7 @@
     "site_url_invalid": "站点地址要以 http:// 或 https:// 开头。",
     "plugin_unavailable": "站点的插件暂时出了问题，这个操作没能完成。请稍后重试，一直这样的话请联系站点管理员。",
     "registration_denied": "{message}",
+    "action_denied": "{message}",
     "plugin_route_not_found": "找不到这个地址，提供它的插件可能已经停用了。",
     "plugin_timeout": "插件处理得太久了，请稍后重试。",
     "plugin_error": "插件出错了，请稍后重试。",
@@ -2037,7 +2038,8 @@
       },
       "interceptors": {
         "user": {
-          "register": "注册：可以拒绝"
+          "register": "注册：可以拒绝",
+          "action": "管理角色和材质：可以拒绝"
         },
         "yggdrasil": {
           "issueToken": "外置登录：可以拒绝"

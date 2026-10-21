@@ -11,11 +11,14 @@ import {
   type CoreDatabase,
   type IsoTimestamp,
 } from '@nextskin/db'
+import type { UserAction } from '@nextskin/plugin-sdk'
 import type { Kysely, Selectable, Transaction } from 'kysely'
 import { sha256 } from '../auth/auth.ts'
 import { DomainError } from '../errors.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { rejectNul } from '../text.ts'
+import { assertUserActionAllowed } from '../users/action.ts'
+import type { UserActionInterceptor } from '../plugins/system.ts'
 import { assertPlayerManagementAllowed, lockUser, type UserActor } from '../users/lock.ts'
 import { validateClientRedirectUri } from './redirect-uris.ts'
 import { DEVICE_CODE_GRANT_TYPE, readScopes, SHARED_CLIENT_SCOPES } from './scopes.ts'
@@ -122,11 +125,12 @@ function redirectUris(input: string[], type: OAuthClientType, previous: string[]
 }
 
 export function createOAuthClients(options: {
+  interceptUserAction: UserActionInterceptor
   db: Kysely<CoreDatabase>
   settings: ReturnType<typeof createSettingQueries>
   now: () => Date
 }) {
-  const { db, settings, now } = options
+  const { db, settings, now, interceptUserAction } = options
   async function owned(tx: Transaction<CoreDatabase>, actor: UserActor, id: number) {
     const row = await tx
       .selectFrom('oauth_clients')
@@ -137,8 +141,10 @@ export function createOAuthClients(options: {
     if (!row) throw new DomainError('oauth_client_not_found')
     return row
   }
-  async function write<T>(actor: UserActor, run: (tx: Transaction<CoreDatabase>) => Promise<T>) {
+  async function write<T>(actor: UserActor, action: UserAction, run: (tx: Transaction<CoreDatabase>) => Promise<T>) {
     const values = await settings.read(['auth.requireEmailVerification'])
+    // 事务之前调用插件（ADR-0046）；输入的校验仍在锁内、封禁和邮箱验证之后
+    await assertUserActionAllowed(interceptUserAction, actor.uid, action)
     return transactionWithRetry(db, async (tx) => {
       const user = await lockUser(tx, actor.uid)
       assertPlayerManagementAllowed(user, values['auth.requireEmailVerification'])
@@ -163,7 +169,7 @@ export function createOAuthClients(options: {
       // PG 的唯一冲突会作废事务；事务外捕获并重新生成 id、重做整笔事务，最多三次。
       for (let attempt = 0; ; attempt++) {
         try {
-          return await write(actor, async (tx) => {
+          return await write(actor, 'oauthClient.create', async (tx) => {
             const name = clientName(input.name)
             if (input.type !== 'web' && input.type !== 'native') throw new DomainError('invalid_request')
             const uris = redirectUris(input.redirectUris, input.type)
@@ -204,7 +210,7 @@ export function createOAuthClients(options: {
       id: number,
       input: { name?: string; redirectUris?: string[] },
     ): Promise<OAuthClientView> {
-      return write(actor, async (tx) => {
+      return write(actor, 'oauthClient.update', async (tx) => {
         const row = await owned(tx, actor, id)
         if (input.name === undefined && input.redirectUris === undefined) throw new DomainError('invalid_request')
         const at = toIsoTimestamp(now())
@@ -239,7 +245,7 @@ export function createOAuthClients(options: {
       })
     },
     async resetClientSecret(actor: UserActor, id: number): Promise<{ client: OAuthClientView; clientSecret: string }> {
-      return write(actor, async (tx) => {
+      return write(actor, 'oauthClient.resetSecret', async (tx) => {
         const row = await owned(tx, actor, id)
         if (row.token_endpoint_auth_method === 'none') throw new DomainError('oauth_client_public')
         const clientSecret = randomBytes(32).toString('base64url')
@@ -253,7 +259,7 @@ export function createOAuthClients(options: {
       })
     },
     async deleteClient(actor: UserActor, id: number): Promise<void> {
-      await write(actor, async (tx) => deleteOAuthClientRow(tx, await owned(tx, actor, id)))
+      await write(actor, 'oauthClient.delete', async (tx) => deleteOAuthClientRow(tx, await owned(tx, actor, id)))
     },
   }
 }

@@ -1,3 +1,5 @@
+import { definePlugin, deny } from '@nextskin/plugin-sdk'
+import { official } from '../plugins/plugins.test-helper.ts'
 import { expect, test, vi } from 'vitest'
 import { DomainError } from '../errors.ts'
 import { encodeTexturePng } from '../textures/image.ts'
@@ -246,3 +248,43 @@ test('封禁和未验证邮箱由已有用例检查，并包装成 403', async (
     messageKey: 'errors.email_not_verified',
   })
 })
+
+test.each(['texture.upload', 'player.update'] as const)(
+  '启动器上传在 %s 被拒绝，重置同样经过 player.update',
+  async (action) => {
+    const player = await s.player(),
+      token = await s.login()
+    const handler = vi.fn(({ input }: { input: { action: string } }) =>
+      Promise.resolve(input.action === action ? deny('binding_required', '请先绑定') : undefined),
+    )
+    const core = s.makeCore({
+      plugins: {
+        official: [official('binding', definePlugin({ capabilities: [], intercept: { 'user.action': handler } }))],
+      },
+    })
+    await s.db().updateTable('users').set({ role: 'superadmin' }).where('id', '=', s.uid).execute()
+    await core.plugins.start()
+    await core.plugins.admin.enable({ uid: s.uid, ip: '' }, 'binding')
+    const input = { accessToken: token.accessToken, uuid: player.uuid, type: 'skin' }
+    await expect(
+      core.yggdrasil.uploadTexture({ ...input, file: { bytes: png(), filename: 'skin.png' }, model: null }),
+    ).rejects.toMatchObject({
+      kind: 'ForbiddenOperationException',
+      messageKey: 'errors.action_denied',
+      params: { message: '请先绑定' },
+    })
+    expect((await row(player.pid)).skin_texture_id).toBeNull()
+    expect(await s.db().selectFrom('textures').select('id').execute()).toHaveLength(action === 'texture.upload' ? 0 : 1)
+    if (action === 'player.update') {
+      await expect(core.yggdrasil.resetTexture(input)).rejects.toMatchObject({
+        kind: 'ForbiddenOperationException',
+        messageKey: 'errors.action_denied',
+      })
+      handler.mockRejectedValueOnce(new Error('host failure'))
+      await expect(core.yggdrasil.resetTexture(input)).rejects.toMatchObject({
+        kind: 'ForbiddenOperationException',
+        messageKey: 'errors.plugin_unavailable',
+      })
+    }
+  },
+)

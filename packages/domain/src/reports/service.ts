@@ -15,6 +15,8 @@ import { adjustScore } from '../score/adjust.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { rejectNul } from '../text.ts'
 import { lockTexture } from '../textures/manage.ts'
+import { assertUserActionAllowed } from '../users/action.ts'
+import type { UserActionInterceptor } from '../plugins/system.ts'
 import { assertPlayerManagementAllowed, lockUser, type UserActor } from '../users/lock.ts'
 
 export interface Report {
@@ -36,18 +38,20 @@ export interface OwnReport {
   resolvedAt: IsoTimestamp | null
 }
 export function createReports(options: {
+  interceptUserAction: UserActionInterceptor
   db: Kysely<CoreDatabase>
   settings: ReturnType<typeof createSettingQueries>
   events: Events
   now: () => Date
 }) {
-  const { db, settings, events, now } = options
+  const { db, settings, events, now, interceptUserAction } = options
   return {
     async create(actor: UserActor, input: { tid: number; reason: string }): Promise<Report> {
       const reason = rejectNul(input.reason).trim()
       if ([...reason].length < 1 || [...reason].length > 500)
         throw new DomainError('report_reason_length', { min: 1, max: 500 })
       const values = await settings.read(['auth.requireEmailVerification', 'report.cost'])
+      await assertUserActionAllowed(interceptUserAction, actor.uid, 'report.create')
       return transactionWithRetry(db, async (tx) => {
         const user = await lockUser(tx, actor.uid)
         assertPlayerManagementAllowed(user, values['auth.requireEmailVerification'])

@@ -97,6 +97,7 @@ const statuses = {
   ip_limit_reached: 403,
   plugin_unavailable: 503,
   registration_denied: 403,
+  action_denied: 403,
   plugin_route_not_found: 404,
   plugin_timeout: 504,
   plugin_error: 502,
@@ -227,8 +228,8 @@ export function createErrorResponse(
     const error = {
       code,
       message: translate(messageKey, params),
-      // 插件拒绝注册时给的机器可读原因（SDK 的 Deny.code）
-      ...(code === 'registration_denied' && params
+      // 插件拒绝时给的机器可读原因（SDK 的 Deny.code）
+      ...((code === 'registration_denied' || code === 'action_denied') && params
         ? { plugin: String(params.plugin), reason: String(params.reason) }
         : {}),
     }

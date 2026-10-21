@@ -581,3 +581,22 @@ definePlugin({
     'yggdrasil.issueToken': async () => ({ action: 'patch', patch: {} }),
   },
 })
+
+// 用户操作拦截器在事务外运行，action 允许次版本扩展，不能返回 patch。
+definePlugin({
+  capabilities: ['storage.kv'],
+  intercept: {
+    'user.action': async ({ input, ctx }) => {
+      if (input.action === 'texture.upload') await ctx.kv.set(String(input.uid), true)
+      void ctx.fetch
+      void ctx.jobs
+    },
+  },
+})
+definePlugin({
+  capabilities: [],
+  intercept: {
+    // @ts-expect-error 用户操作拦截器不能返回 patch
+    'user.action': async () => ({ action: 'patch', patch: {} }),
+  },
+})

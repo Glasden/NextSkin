@@ -141,6 +141,7 @@
     "site_url_invalid": "The site URL is missing or invalid. Enter a URL starting with http:// or https://.",
     "plugin_unavailable": "A plugin on this site is having trouble, so this couldn't be completed. Please try again later, and contact the site administrator if it keeps happening.",
     "registration_denied": "{message}",
+    "action_denied": "{message}",
     "plugin_route_not_found": "This address doesn't exist. The plugin that provides it may have been disabled.",
     "plugin_timeout": "The plugin took too long to respond. Please try again later.",
     "plugin_error": "The plugin ran into an error. Please try again later.",
@@ -2037,7 +2038,8 @@
       },
       "interceptors": {
         "user": {
-          "register": "Sign-up: can refuse"
+          "register": "Sign-up: can refuse",
+          "action": "Manage players and textures: can refuse"
         },
         "yggdrasil": {
           "issueToken": "Launcher login: can refuse"

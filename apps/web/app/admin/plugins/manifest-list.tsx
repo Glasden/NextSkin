@@ -112,7 +112,9 @@ export function ManifestList({
                 ? t('interceptors.user.register')
                 : name === 'yggdrasil.issueToken'
                   ? t('interceptors.yggdrasil.issueToken')
-                  : name}
+                  : name === 'user.action'
+                    ? t('interceptors.user.action')
+                    : name}
             </span>
           ))}
         />

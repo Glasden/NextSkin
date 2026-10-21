@@ -401,3 +401,19 @@ test.each(['authenticate', 'refresh'] as const)('%s 拒绝显示插件 message�
   expect(response.status).toBe(403)
   expect(await response.json()).toEqual({ error: 'ForbiddenOperationException', errorMessage: '请先绑定 QQ' })
 })
+
+test.each(['action_denied', 'plugin_unavailable'] as const)(
+  '启动器上传 %s 映射为 403 ForbiddenOperationException',
+  async (code) => {
+    const { app, methods, form } = setup()
+    methods.uploadTexture.mockRejectedValueOnce(
+      new YggdrasilError('ForbiddenOperationException', `errors.${code}`, 'en', { message: '请先绑定' }),
+    )
+    const response = await app.request(`http://example.test${profilePath}`, { method: 'PUT', body: form() })
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({
+      error: 'ForbiddenOperationException',
+      errorMessage: code === 'action_denied' ? '请先绑定' : createTranslator('en')('errors.plugin_unavailable'),
+    })
+  },
+)

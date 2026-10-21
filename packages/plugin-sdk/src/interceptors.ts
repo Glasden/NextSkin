@@ -1,5 +1,31 @@
 import type { Actor, ExtraFields, Uid } from './dto.ts'
 
+/** 用户本人的受限操作；次版本可能加成员。 */
+export type UserAction =
+  /** 添加角色 */
+  | 'player.create'
+  /** 改名、换材质或清材质，包括启动器上传和重置材质 */
+  | 'player.update'
+  /** 删除角色 */
+  | 'player.delete'
+  /** 上传材质，包括启动器上传 */
+  | 'texture.upload'
+  /** 改材质的名字、类型、公开状态或描述 */
+  | 'texture.update'
+  /** 删除材质 */
+  | 'texture.delete'
+  /** 举报材质 */
+  | 'report.create'
+  /** 创建自己的 OAuth 应用 */
+  | 'oauthClient.create'
+  /** 修改自己的 OAuth 应用 */
+  | 'oauthClient.update'
+  /** 重置自己的 OAuth 应用密钥 */
+  | 'oauthClient.resetSecret'
+  /** 删除自己的 OAuth 应用 */
+  | 'oauthClient.delete'
+  | (string & {})
+
 /**
  * 拦截器：在操作发生**之前**同步调用，可以拒绝。
  *
@@ -24,6 +50,11 @@ export interface CoreInterceptors {
       extra: ExtraFields
     }
     /** 不能改字段：昵称在事务之前校验，注册时还可能同时建同名角色 */
+    patch: never
+  }
+  /** 用户本人管理角色、材质、OAuth 应用或举报之前，在事务外调用；封禁的用户不调用。只能拒绝，失败时拒绝。 */
+  'user.action': {
+    input: { uid: Uid; action: UserAction }
     patch: never
   }
   /**
@@ -60,6 +91,7 @@ export interface InterceptorPolicy {
 
 /** 每个拦截点的失败策略与时间预算由核心规定，属于插件 API 契约的一部分。 */
 export const interceptorPolicies = {
+  'user.action': { onFailure: 'closed', timeoutMs: 2000, transactional: false },
   'user.register': { onFailure: 'closed', timeoutMs: 300, transactional: true },
   'yggdrasil.issueToken': { onFailure: 'closed', timeoutMs: 2000, transactional: false },
 } as const satisfies Record<InterceptorName, InterceptorPolicy>

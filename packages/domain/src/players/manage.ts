@@ -15,6 +15,8 @@ import { DomainError } from '../errors.ts'
 import type { Events } from '../events/emit.ts'
 import { adjustScore } from '../score/adjust.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
+import { assertUserActionAllowed } from '../users/action.ts'
+import type { UserActionInterceptor } from '../plugins/system.ts'
 import { assertPlayerManagementAllowed, lockUser, type UserActor } from '../users/lock.ts'
 import { createPlayer, retryOnPlayerUuidRace, validatePlayerName } from './create.ts'
 import { lockTexture } from '../textures/manage.ts'
@@ -129,6 +131,7 @@ export function createPlayerManagement(
   settings: ReturnType<typeof createSettingQueries>,
   events: Events,
   clock: () => Date,
+  interceptUserAction: UserActionInterceptor,
 ) {
   async function create(actor: UserActor, input: { name: string }): Promise<Player> {
     const values = await settings.read([
@@ -140,6 +143,8 @@ export function createPlayerManagement(
       'score.perPlayer',
       'auth.requireEmailVerification',
     ])
+    // 事务之前调用插件（ADR-0046）；名字仍在锁内、上限之后校验（ADR-0043 的顺序）
+    await assertUserActionAllowed(interceptUserAction, actor.uid, 'player.create')
     return retryOnPlayerUuidRace(db, () =>
       transactionWithRetry(db, async (tx) => {
         const user = await lockUser(tx, actor.uid)
@@ -187,6 +192,7 @@ export function createPlayerManagement(
       'auth.requireEmailVerification',
     ])
     const name = input.name === undefined ? undefined : validatePlayerName(input.name, values)
+    await assertUserActionAllowed(interceptUserAction, actor.uid, 'player.update')
     try {
       return await transactionWithRetry(db, async (tx) => {
         const user = await lockUser(tx, actor.uid)
@@ -220,6 +226,7 @@ export function createPlayerManagement(
 
   async function deletePlayer(actor: UserActor, pid: number): Promise<{ refunded: number }> {
     const values = await settings.read(['score.refundOnDelete', 'auth.requireEmailVerification'])
+    await assertUserActionAllowed(interceptUserAction, actor.uid, 'player.delete')
     return transactionWithRetry(db, async (tx) => {
       const user = await lockUser(tx, actor.uid)
       assertPlayerManagementAllowed(user, values['auth.requireEmailVerification'])

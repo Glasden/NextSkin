@@ -1,4 +1,4 @@
-import { countRows, dialectOf, toIsoTimestamp } from '@nextskin/db'
+import { countRows, dialectOf, toIsoTimestamp, writeAuthDate } from '@nextskin/db'
 import { loadPlugin, remoteDialect, type CoreRpc, type InvocationContext, type PluginCall } from '@nextskin/plugin-host'
 import { definePlugin, deny, table } from '@nextskin/plugin-sdk'
 import { Kysely } from 'kysely'
@@ -953,7 +953,7 @@ test('签发拦截器超时 2000ms，abort 后返回也不放行', async () => {
   await expect(result).resolves.toEqual({ action: 'unavailable' })
 })
 
-test('启用着却取不到包时注册和签发都关闭', async () => {
+test('启用着却取不到包时注册、签发和用户操作都关闭', async () => {
   await env.boot([])
   await env.db
     .insertInto('plugins')
@@ -967,11 +967,15 @@ test('启用着却取不到包时注册和签发都关闭', async () => {
     })
     .execute()
   await env.core.plugins.sync()
+  const actor = await env.actor()
+  await expect(env.core.plugins.interceptUserAction({ uid: actor.uid, action: 'player.create' })).resolves.toEqual({
+    action: 'unavailable',
+  })
   await expect(issueToken()).resolves.toEqual({ action: 'unavailable' })
   await expect(env.core.users.register(env.input())).rejects.toMatchObject({ code: 'plugin_unavailable' })
 })
 
-test.each(['user.register', 'yggdrasil.issueToken'] as const)(
+test.each(['user.register', 'yggdrasil.issueToken', 'user.action'] as const)(
   '有 manifest 但激活失败时只关闭声明的 %s',
   async (name) => {
     await env.boot([
@@ -993,8 +997,316 @@ test.each(['user.register', 'yggdrasil.issueToken'] as const)(
     await env.core.plugins.sync()
     expect(env.core.plugins.isActive('a')).toBe(false)
     await expect(issueToken()).resolves.toEqual({ action: name === 'yggdrasil.issueToken' ? 'unavailable' : 'allow' })
+    const actor = await env.actor()
+    await expect(env.core.plugins.interceptUserAction({ uid: actor.uid, action: 'player.create' })).resolves.toEqual({
+      action: name === 'user.action' ? 'unavailable' : 'allow',
+    })
     const registration = env.core.users.register(env.input())
     if (name === 'user.register') await expect(registration).rejects.toMatchObject({ code: 'plugin_unavailable' })
     else await expect(registration).resolves.toMatchObject({ uid: expect.any(Number) as number })
   },
 )
+
+test('用户操作放行，scope 使用真实身份、用户语言和空 IP，ctx.kv 可在事务外使用', async () => {
+  const handler = vi.fn()
+  await env.boot([
+    official(
+      'a',
+      definePlugin({
+        capabilities: ['storage.kv'],
+        intercept: {
+          'user.action': async ({ ctx, scope, input }) => {
+            handler(input, scope)
+            expect(typeof ctx.fetch).toBe('function')
+            expect(ctx.jobs).toBeDefined()
+            await ctx.kv.set('checked', input.uid)
+            expect(await ctx.kv.get('checked')).toBe(input.uid)
+          },
+        },
+      }),
+    ),
+  ])
+  const actor = await enable('a')
+  await env.db.updateTable('users').set({ locale: 'en' }).where('id', '=', actor.uid).execute()
+  const input = { uid: actor.uid, action: 'texture.upload' }
+  await expect(env.core.plugins.interceptUserAction(input)).resolves.toEqual({ action: 'allow' })
+  expect(handler).toHaveBeenLastCalledWith(input, {
+    requestId: expect.any(String) as string,
+    actor: { kind: 'user', uid: actor.uid, role: 'superadmin' },
+    locale: 'en',
+    ip: '',
+  })
+  await env.db.updateTable('users').set({ locale: null }).where('id', '=', actor.uid).execute()
+  const locale = (await env.core.settings.read(['site.locale']))['site.locale']
+  await env.core.plugins.interceptUserAction(input)
+  expect(handler).toHaveBeenLastCalledWith(input, expect.objectContaining({ locale, ip: '' }))
+})
+
+test('用户操作拒绝按码点截断 reason 和 message', async () => {
+  await env.boot([
+    official(
+      'a',
+      definePlugin({
+        capabilities: [],
+        intercept: { 'user.action': () => Promise.resolve(deny('🧩'.repeat(70), '🧩'.repeat(210))) },
+      }),
+    ),
+  ])
+  const actor = await enable('a')
+  await expect(env.core.plugins.interceptUserAction({ uid: actor.uid, action: 'player.create' })).resolves.toEqual({
+    action: 'deny',
+    plugin: 'a',
+    reason: '🧩'.repeat(64),
+    message: '🧩'.repeat(200),
+  })
+})
+
+test.each(['throw', 'invalid', 'unavailable'] as const)(
+  '用户操作 %s 失败关闭，连续三次熔断，冷却后恢复',
+  async (kind) => {
+    const run = vi.fn<() => Promise<unknown>>(() =>
+      kind === 'throw'
+        ? Promise.reject(new Error('failure'))
+        : kind === 'unavailable'
+          ? Promise.reject(unavailableError())
+          : Promise.resolve({ action: 'patch', patch: {} }),
+    )
+    await env.boot([official('a', definePlugin({ capabilities: [], intercept: { 'user.action': async () => {} } }))], {
+      plugins: { load: injected(run) },
+    })
+    const actor = await enable('a')
+    const check = () => env.core.plugins.interceptUserAction({ uid: actor.uid, action: 'player.create' })
+    for (let n = 0; n < 4; n++) await expect(check()).resolves.toEqual({ action: 'unavailable' })
+    expect(run).toHaveBeenCalledTimes(3)
+    const now = Date.now()
+    vi.spyOn(Date, 'now').mockImplementation(() => now + 30_001)
+    run.mockResolvedValue(null)
+    await expect(check()).resolves.toEqual({ action: 'allow' })
+    expect(run).toHaveBeenCalledTimes(4)
+  },
+)
+
+test('用户操作超时 2000ms，abort 后返回也不放行', async () => {
+  vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] })
+  const entered = Promise.withResolvers<void>()
+  await env.boot([
+    official(
+      'a',
+      definePlugin({
+        capabilities: [],
+        intercept: {
+          'user.action': async ({ ctx }) => {
+            entered.resolve()
+            await new Promise<void>((resolve) => ctx.signal.addEventListener('abort', () => resolve(), { once: true }))
+          },
+        },
+      }),
+    ),
+  ])
+  const actor = await enable('a')
+  const result = env.core.plugins.interceptUserAction({ uid: actor.uid, action: 'player.create' })
+  await entered.promise
+  await vi.advanceTimersByTimeAsync(2000)
+  await expect(result).resolves.toEqual({ action: 'unavailable' })
+})
+
+test('用户操作没有拦截器时不读用户；有拦截器时读用户出错按不可用处理', async () => {
+  await env.boot([official('a', definePlugin({ capabilities: [], intercept: { 'user.action': async () => {} } }))])
+  const actor = await env.actor()
+  const read = vi.spyOn(env.db, 'selectFrom')
+  await expect(env.core.plugins.interceptUserAction({ uid: actor.uid, action: 'player.create' })).resolves.toEqual({
+    action: 'allow',
+  })
+  expect(read).not.toHaveBeenCalled()
+  read.mockRestore()
+  await env.core.plugins.admin.enable(actor, 'a')
+  vi.spyOn(env.db, 'selectFrom').mockImplementation(() => {
+    throw new Error('database unavailable')
+  })
+  await expect(env.core.plugins.interceptUserAction({ uid: actor.uid, action: 'player.create' })).resolves.toEqual({
+    action: 'unavailable',
+  })
+})
+
+test('用户操作准备 scope 时读默认语言出错按不可用处理', async () => {
+  const handler = vi.fn()
+  await env.boot([official('a', definePlugin({ capabilities: [], intercept: { 'user.action': handler } }))])
+  const actor = await enable('a')
+  vi.spyOn(env.core.settings, 'read').mockRejectedValue(new Error('settings unavailable'))
+  await expect(env.core.plugins.interceptUserAction({ uid: actor.uid, action: 'player.create' })).resolves.toEqual({
+    action: 'unavailable',
+  })
+  expect(handler).not.toHaveBeenCalled()
+})
+
+test('封禁或不存在的用户不调用用户操作拦截器，按读到的状态直接报错', async () => {
+  const handler = vi.fn()
+  await env.boot([official('a', definePlugin({ capabilities: [], intercept: { 'user.action': handler } }))])
+  const actor = await enable('a')
+  await env.db.updateTable('users').set({ role: 'banned' }).where('id', '=', actor.uid).execute()
+  await expect(env.core.plugins.interceptUserAction({ uid: actor.uid, action: 'player.create' })).rejects.toMatchObject(
+    {
+      code: 'user_banned',
+    },
+  )
+  await expect(
+    env.core.plugins.interceptUserAction({ uid: actor.uid + 1000, action: 'player.create' }),
+  ).rejects.toMatchObject({ code: 'unauthenticated' })
+  await expect(env.core.players.create(actor, { name: 'Steve' })).rejects.toMatchObject({ code: 'user_banned' })
+  await expect(env.core.players.create({ uid: actor.uid + 1000 }, { name: 'Steve' })).rejects.toMatchObject({
+    code: 'unauthenticated',
+  })
+  expect(handler).not.toHaveBeenCalled()
+})
+
+test('读到封禁之后、事务之前被解封，添加角色仍被拒绝，不会绕过插件', async () => {
+  const handler = vi.fn(() => Promise.resolve(deny('binding_required', '请先绑定')))
+  await env.boot([official('a', definePlugin({ capabilities: [], intercept: { 'user.action': handler } }))])
+  const actor = await enable('a')
+  await env.db.updateTable('users').set({ role: 'banned' }).where('id', '=', actor.uid).execute()
+  // 用例在调用插件之后才开事务：开事务之前先解封，模拟管理员恰好在这之间操作
+  const transaction = env.db.transaction.bind(env.db)
+  vi.spyOn(env.db, 'transaction').mockImplementation(() => {
+    const builder = transaction()
+    return {
+      execute: async (run: Parameters<typeof builder.execute>[0]) => {
+        await env.db.updateTable('users').set({ role: 'user' }).where('id', '=', actor.uid).execute()
+        return builder.execute(run)
+      },
+    } as typeof builder
+  })
+  await expect(env.core.players.create(actor, { name: 'Steve' })).rejects.toMatchObject({ code: 'user_banned' })
+  expect(await env.db.selectFrom('players').select('id').where('user_id', '=', actor.uid).execute()).toEqual([])
+  expect(handler).not.toHaveBeenCalled()
+})
+
+const userActions = [
+  'player.create',
+  'player.update',
+  'player.delete',
+  'texture.upload',
+  'texture.update',
+  'texture.delete',
+  'report.create',
+  'oauthClient.create',
+  'oauthClient.update',
+  'oauthClient.resetSecret',
+  'oauthClient.delete',
+] as const
+
+test.each(userActions)('%s 在事务外被拒绝：不写入，封禁仍报 user_banned', async (action) => {
+  const handler = vi.fn(() => Promise.resolve(deny('binding_required', '请先绑定')))
+  const processUpload = vi.fn(() =>
+    Promise.resolve({ png: new Uint8Array(100), pixelHash: 'a'.repeat(64), width: 64, height: 64 }),
+  )
+  await env.boot([official('a', definePlugin({ capabilities: [], intercept: { 'user.action': handler } }))], {
+    imagePool: { processUpload, inspect: vi.fn(), render: vi.fn(), processSiteImage: vi.fn(), close: async () => {} },
+  })
+  vi.spyOn(env.core.renders, 'warm').mockImplementation(() => {})
+  const actor = await env.actor()
+  await env.db.updateTable('users').set({ score: 10000, email_verified: true }).where('id', '=', actor.uid).execute()
+  const player = await env.core.players.create(actor, { name: 'Steve' })
+  const upload = { bytes: new Uint8Array(1), name: 'Skin', type: 'steve' as const, public: true }
+  const { texture } = await env.core.textures.upload(actor, upload)
+  const { client } = await env.core.oauth.createClient(actor, {
+    name: 'App',
+    type: 'web',
+    redirectUris: ['https://example.test/cb'],
+  })
+  await env.core.plugins.admin.enable(actor, 'a')
+  processUpload.mockClear()
+  const snapshot = async () => ({
+    users: await env.db.selectFrom('users').selectAll().execute(),
+    players: await env.db.selectFrom('players').selectAll().execute(),
+    textures: await env.db.selectFrom('textures').selectAll().execute(),
+    files: await env.db.selectFrom('texture_files').selectAll().execute(),
+    closet: await env.db.selectFrom('closet_items').selectAll().execute(),
+    reports: await env.db.selectFrom('reports').selectAll().execute(),
+    clients: await env.db.selectFrom('oauth_clients').selectAll().execute(),
+    score: await env.db.selectFrom('score_transactions').selectAll().execute(),
+    jobs: await env.db.selectFrom('jobs').selectAll().execute(),
+  })
+  const calls = {
+    'player.create': () => env.core.players.create(actor, { name: 'Alex' }),
+    'player.update': () => env.core.players.update(actor, player.pid, { name: 'Alex' }),
+    'player.delete': () => env.core.players.delete(actor, player.pid),
+    'texture.upload': () => env.core.textures.upload(actor, upload),
+    'texture.update': () => env.core.textures.update(actor, texture.tid, { name: 'Renamed' }),
+    'texture.delete': () => env.core.textures.delete(actor, texture.tid),
+    'report.create': () => env.core.reports.create(actor, { tid: texture.tid, reason: 'Report' }),
+    'oauthClient.create': () => env.core.oauth.createClient(actor, { name: 'New', type: 'native', redirectUris: [] }),
+    'oauthClient.update': () => env.core.oauth.updateClient(actor, client.id, { name: 'Renamed' }),
+    'oauthClient.resetSecret': () => env.core.oauth.resetClientSecret(actor, client.id),
+    'oauthClient.delete': () => env.core.oauth.deleteClient(actor, client.id),
+  }
+  const before = await snapshot()
+  const transaction = vi.spyOn(env.db, 'transaction')
+  await expect(calls[action]()).rejects.toMatchObject({
+    code: 'action_denied',
+    params: { plugin: 'a', reason: 'binding_required', message: '请先绑定' },
+  })
+  expect(transaction).not.toHaveBeenCalled()
+  expect(handler).toHaveBeenCalledOnce()
+  expect(handler).toHaveBeenCalledWith(expect.objectContaining({ input: { uid: actor.uid, action } }))
+  expect(await snapshot()).toEqual(before)
+  expect(processUpload).not.toHaveBeenCalled()
+  handler.mockClear()
+  await env.db.updateTable('users').set({ role: 'banned' }).where('id', '=', actor.uid).execute()
+  await expect(calls[action]()).rejects.toMatchObject({ code: 'user_banned' })
+  expect(handler).not.toHaveBeenCalled()
+})
+
+test('衣柜、设备码确认、注册顺带建角色和后台代操作不调用 user.action', async () => {
+  const handler = vi.fn(() => Promise.resolve(deny('blocked', '不允许')))
+  await env.boot([official('a', definePlugin({ capabilities: [], intercept: { 'user.action': handler } }))], {
+    imagePool: {
+      processUpload: () =>
+        Promise.resolve({ png: new Uint8Array(100), pixelHash: 'a'.repeat(64), width: 64, height: 64 }),
+      inspect: vi.fn(),
+      render: vi.fn(),
+      processSiteImage: vi.fn(),
+      close: async () => {},
+    },
+  })
+  vi.spyOn(env.core.renders, 'warm').mockImplementation(() => {})
+  const actor = await env.actor()
+  await env.db.updateTable('users').set({ score: 10000, email_verified: true }).where('id', '=', actor.uid).execute()
+  const { texture } = await env.core.textures.upload(actor, {
+    bytes: new Uint8Array(1),
+    name: 'Skin',
+    type: 'steve',
+    public: true,
+  })
+  const { client } = await env.core.oauth.createClient(actor, { name: 'App', type: 'native', redirectUris: [] })
+  await env.core.plugins.admin.enable(actor, 'a')
+  await env.core.closet.remove(actor, texture.tid)
+  await env.core.closet.add(actor, { tid: texture.tid })
+  await env.core.closet.rename(actor, texture.tid, { name: 'Renamed' })
+  await env.db
+    .insertInto('device_codes')
+    .values({
+      device_code: 'device',
+      user_code: 'ABCDEFGH',
+      user_id: String(actor.uid),
+      status: 'pending',
+      scope: 'openid profile',
+      client_id: client.clientId,
+      oauth_client_id: client.clientId,
+      expires_at: writeAuthDate(env.db, toIsoTimestamp(new Date(Date.now() + 600000))),
+    })
+    .execute()
+  await env.core.oauth.approveDevice(actor.uid, { userCode: 'ABCDEFGH', pid: null })
+  expect(
+    (
+      await env.db
+        .selectFrom('device_codes')
+        .select('status')
+        .where('device_code', '=', 'device')
+        .executeTakeFirstOrThrow()
+    ).status,
+  ).toBe('approved')
+  const { uid } = await env.core.users.register(env.input())
+  const player = await env.db.selectFrom('players').select('id').where('user_id', '=', uid).executeTakeFirstOrThrow()
+  await env.core.admin.updatePlayer(actor, player.id, { name: 'Renamed' })
+  expect(handler).not.toHaveBeenCalled()
+})

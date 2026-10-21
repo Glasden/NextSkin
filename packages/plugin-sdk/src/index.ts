@@ -52,6 +52,7 @@ export {
 } from './dto.ts'
 export { type CoreEvents, type EventName, type EventEnvelope, type EventHandler } from './events.ts'
 export {
+  type UserAction,
   type CoreInterceptors,
   type InterceptorName,
   type InterceptorPolicy,

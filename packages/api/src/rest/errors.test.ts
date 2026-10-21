@@ -31,3 +31,18 @@ test.each(errors)('%s 有状态码和两种语言的可插值文案', async (cod
     expect(body.error.message).not.toMatch(/\{(?:min|max|uri|type)\}/)
   }
 })
+
+test('action_denied 返回 403 和插件的文案、plugin、reason', async () => {
+  const core = { settings: { read: () => Promise.resolve({ 'site.locale': 'zh-CN' }) } } as unknown as Core
+  const app = new OpenAPIHono<AppEnv>()
+  const respond = createErrorResponse(core)
+  const error = new DomainError('action_denied', { plugin: 'binding', reason: 'binding_required', message: '请先绑定' })
+  app.get('/', (c) => respond(c, restErrorCode(error), error.params))
+  for (const locale of ['zh-CN', 'en']) {
+    const response = await app.request('http://example.test/', { headers: { 'accept-language': locale } })
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({
+      error: { code: 'action_denied', message: '请先绑定', plugin: 'binding', reason: 'binding_required' },
+    })
+  }
+})

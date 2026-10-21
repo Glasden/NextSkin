@@ -12,6 +12,8 @@ import { DomainError } from '../errors.ts'
 import type { Events } from '../events/emit.ts'
 import { adjustScore } from '../score/adjust.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
+import { assertUserActionAllowed } from '../users/action.ts'
+import type { UserActionInterceptor } from '../plugins/system.ts'
 import { assertPlayerManagementAllowed, lockUser, type UserActor } from '../users/lock.ts'
 import { storageFee, textureRows, toTexture, type TextureRow } from './dto.ts'
 import type { TextureRemoval } from './removal.ts'
@@ -143,13 +145,14 @@ export async function changeTexture(
   return { texture, scoreDelta, fields, ...cleanup }
 }
 export function createTextureManagement(options: {
+  interceptUserAction: UserActionInterceptor
   db: Kysely<CoreDatabase>
   settings: ReturnType<typeof createSettingQueries>
   events: Events
   removal: TextureRemoval
   now: () => Date
 }) {
-  const { db, settings, events, removal, now } = options
+  const { db, settings, events, removal, now, interceptUserAction } = options
   async function owned(tx: Transaction<CoreDatabase>, actor: UserActor, tid: number) {
     const row = await lockTexture(tx, tid)
     if (!row || (row.is_public === 0 && row.uploader_id !== actor.uid)) throw new DomainError('texture_not_found')
@@ -169,6 +172,7 @@ export function createTextureManagement(options: {
         'score.perKbPrivate',
         'score.refundOnDelete',
       ])
+      await assertUserActionAllowed(interceptUserAction, actor.uid, 'texture.update')
       return transactionWithRetry(db, async (tx) => {
         const user = await lockUser(tx, actor.uid)
         assertPlayerManagementAllowed(user, values['auth.requireEmailVerification'])
@@ -186,6 +190,7 @@ export function createTextureManagement(options: {
     },
     async delete(actor: UserActor, tid: number): Promise<{ refunded: number }> {
       const values = await settings.read(['auth.requireEmailVerification', 'score.refundOnDelete'])
+      await assertUserActionAllowed(interceptUserAction, actor.uid, 'texture.delete')
       return transactionWithRetry(db, async (tx) => {
         const user = await lockUser(tx, actor.uid)
         assertPlayerManagementAllowed(user, values['auth.requireEmailVerification'])

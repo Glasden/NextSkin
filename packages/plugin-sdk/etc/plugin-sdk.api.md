@@ -166,6 +166,13 @@ export interface CoreEvents {
 
 // @public
 export interface CoreInterceptors {
+    'user.action': {
+        input: {
+            uid: Uid;
+            action: UserAction;
+        };
+        patch: never;
+    };
     'user.register': {
         input: {
             email: string;
@@ -296,6 +303,11 @@ export type InterceptorName = keyof CoreInterceptors;
 
 // @public
 export const interceptorPolicies: {
+    readonly 'user.action': {
+        readonly onFailure: 'closed';
+        readonly timeoutMs: 2000;
+        readonly transactional: false;
+    };
     readonly 'user.register': {
         readonly onFailure: 'closed';
         readonly timeoutMs: 300;
@@ -842,6 +854,31 @@ export interface UiContributions<P> {
 export type Uid = number;
 
 export { Updateable }
+
+// @public
+export type UserAction =
+/** 添加角色 */
+'player.create'
+/** 改名、换材质或清材质，包括启动器上传和重置材质 */
+| 'player.update'
+/** 删除角色 */
+| 'player.delete'
+/** 上传材质，包括启动器上传 */
+| 'texture.upload'
+/** 改材质的名字、类型、公开状态或描述 */
+| 'texture.update'
+/** 删除材质 */
+| 'texture.delete'
+/** 举报材质 */
+| 'report.create'
+/** 创建自己的 OAuth 应用 */
+| 'oauthClient.create'
+/** 修改自己的 OAuth 应用 */
+| 'oauthClient.update'
+/** 重置自己的 OAuth 应用密钥 */
+| 'oauthClient.resetSecret'
+/** 删除自己的 OAuth 应用 */
+| 'oauthClient.delete' | (string & {});
 
 // @public (undocumented)
 export type UserActor = Extract<Actor, {

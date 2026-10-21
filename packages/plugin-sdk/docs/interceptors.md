@@ -1,6 +1,6 @@
 # 拦截器
 
-`user.register` 用于拒绝注册，`yggdrasil.issueToken` 用于拒绝能进服的令牌签发。操作已经完成后的工作放在[事件](./events.md)中。
+`user.register` 用于拒绝注册，`yggdrasil.issueToken` 用于拒绝能进服的令牌签发。`user.action` 用于拒绝用户本人管理角色、材质、OAuth 应用和举报。操作已经完成后的工作放在[事件](./events.md)中。
 
 ## user.register：时机和返回值
 
@@ -81,3 +81,29 @@ export default definePlugin({
 ```
 
 解绑后已签发的令牌在有效期内仍可进服，默认最长 3 天（yggdrasil.tokenValidSeconds）；之后刷新被拒绝。需要立即失效时，管理员对该用户执行“退出全部登录”。
+
+## user.action
+
+用户本人操作之前、事务之前调用；上传在图片处理之前调用。核心原有的检查顺序不变：插件的拒绝排在封禁之后、事务里的检查之前，原来在事务里做的校验（例如角色名）仍在事务里，所以名字不合法的请求也会先经过插件。input 是 `{ uid, action }`，目标的角色、材质需要插件按能力读取。`UserAction` 是开放字符串联合，次版本可能增加成员；需要限制所有操作的插件应默认检查所有 action。
+
+| action | 操作 |
+| --- | --- |
+| `player.create` | 添加角色 |
+| `player.update` | 改名、换材质、清材质，包括启动器上传和重置材质 |
+| `player.delete` | 删除角色 |
+| `texture.upload` | 网页和启动器上传材质 |
+| `texture.update` | 改名、改类型、改公开、改描述 |
+| `texture.delete` | 删除材质 |
+| `report.create` | 举报材质 |
+| `oauthClient.create` | 创建自己的 OAuth 应用 |
+| `oauthClient.update` | 修改自己的 OAuth 应用 |
+| `oauthClient.resetSecret` | 重置自己的 OAuth 应用密钥 |
+| `oauthClient.delete` | 删除自己的 OAuth 应用 |
+
+封禁用户、不存在的用户不调用，仍由核心报原来的错误。不调用衣柜、设备码确认、OAuth 授权同意、管理员后台代操作和注册时顺带创建角色（注册由 `user.register` 管）。调用范围与核心“要求验证邮箱”的用户管理用例一致，但不包含 Connect 的确认和同意。
+
+`scope.actor` 是这个用户，带 uid 和身份；locale 是用户语言，没有时用站点默认语言；领域用例拿不到客户端 IP，ip 是空串。
+
+策略是 `{ onFailure: 'closed', timeoutMs: 2000, transactional: false }`，提供完整 ctx（fetch、jobs 和按能力提供的 kv、db 等），可在事务外访问外部服务。排序、短路、返回值校验、熔断和码点截断与上面的拦截点相同：只能返回 void 或 deny，不能返回 patch。超时、抛错、host 不可用、非法返回值和熔断都拒绝。
+
+REST 拒绝响应是 403、`action_denied`，带 plugin、reason 和 message；reason 截到 64 个码点，message 截到 200 个码点。插件不可用是 503、`plugin_unavailable`。启动器上传、重置材质收到 403 `ForbiddenOperationException`，errorMessage 是插件文案或核心的 `plugin_unavailable` 文案。网页在提交时显示失败提示，不会预先禁用按钮。

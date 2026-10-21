@@ -31,7 +31,14 @@ function wrapError(error: unknown, locale: string | null): never {
       code === 'texture_type_mismatch' ||
       code === 'texture_type_invalid'
         ? 'IllegalArgumentException'
-        : ['score_insufficient', 'user_banned', 'email_not_verified', 'too_many_requests'].includes(code)
+        : [
+              'score_insufficient',
+              'user_banned',
+              'email_not_verified',
+              'too_many_requests',
+              'action_denied',
+              'plugin_unavailable',
+            ].includes(code)
           ? 'ForbiddenOperationException'
           : code === 'player_not_found'
             ? 'NotFoundException'

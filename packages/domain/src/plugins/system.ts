@@ -81,6 +81,8 @@ import { createPluginSettings, settingProperties, type PluginSettingProperty } f
 export type IssueTokenDecision =
   { action: 'allow' } | { action: 'deny'; plugin: string; reason: string; message: string } | { action: 'unavailable' }
 
+export type UserActionInterceptor = (input: CoreInterceptors['user.action']['input']) => Promise<IssueTokenDecision>
+
 export type IssueTokenInterceptor = (
   input: CoreInterceptors['yggdrasil.issueToken']['input'],
   scope: { actor: { kind: 'user'; uid: number; role: UserRole }; locale: string | null; ip: string | null },
@@ -1448,6 +1450,39 @@ export function createPluginSystem(options: {
           message: result.message,
         })
     },
+
+    /**
+     * 没有拦截器时不读用户。封禁和不存在的用户不调用插件，按这次读到的状态直接报错：交给事务里的检查的话，
+     * 读完之后被解封的用户既没经过插件、又能通过检查（ADR-0046）
+     */
+    interceptUserAction: (async (input) => {
+      const name = 'user.action'
+      if (
+        !activeWith('interceptors', (items) => items.some((item) => item.name === name)).length &&
+        ![...unavailable.values()].some((names) => names.has(name))
+      )
+        return { action: 'allow' }
+      let user
+      try {
+        user = await db.selectFrom('users').select(['role', 'locale']).where('id', '=', input.uid).executeTakeFirst()
+      } catch {
+        log(`[plugins] intercept_failed ${name} user_error`)
+        return { action: 'unavailable' }
+      }
+      if (!user) throw new DomainError('unauthenticated')
+      if (user.role === 'banned') throw new DomainError('user_banned')
+      const { role, locale } = user
+      return intercept(
+        name,
+        () => input,
+        async () => ({
+          requestId: randomUUID(),
+          actor: { kind: 'user', uid: input.uid, role },
+          locale: locale ?? (await options.settings.read(['site.locale']))['site.locale'],
+          ip: '',
+        }),
+      )
+    }) satisfies UserActionInterceptor,
 
     /** 签发前在事务外调用，未知 IP 用空串，用户未选语言时才读站点默认语言。 */
     interceptIssueToken: (async (input, scope) =>
