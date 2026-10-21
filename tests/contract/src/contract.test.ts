@@ -26,9 +26,13 @@ interface World {
 
 /**
  * 登录间隔和 BS 一样从请求开始时计时。第一次登录要校验密码、签发令牌，负载高的 CI 上超过默认的 1 秒，
- * 下一步到的时候已经不在间隔内。录制时各步都在 1 秒内完成，回放这个场景时放大间隔，验证的仍是"间隔内被拒、换个 username 不受影响"
+ * 下一步到的时候已经不在间隔内。录制时各步都在 1 秒内完成，回放两个节流场景时放大间隔，
+ * 验证的仍是"间隔内被拒、换个 username 不受影响"和"signout 与 authenticate 共用节流"
  */
-const loginIntervals: Record<string, number> = { 'auth/authenticate-throttled': 60_000 }
+const loginIntervals: Record<string, number> = {
+  'auth/authenticate-throttled': 60_000,
+  'auth/signout-throttled': 60_000,
+}
 
 /** 一个写好固定数据的新核心实例。场景各用一个：令牌、节流、进服记录都不能从别的场景带过来 */
 async function createWorld(loginIntervalMs?: number): Promise<World> {
