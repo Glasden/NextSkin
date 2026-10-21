@@ -1,5 +1,6 @@
 /** 插件写核心数据的参数边界；业务规则仍由领域用例检查（ADR-0041）。 */
 import { hasPluginMessage, type PluginMessages } from '@nextskin/plugin-host'
+import { isStorageKey } from '../text.ts'
 import { PluginCallRejected } from './errors.ts'
 
 export function scoreAdjustInput(args: Record<string, unknown>, messages: PluginMessages) {
@@ -15,15 +16,7 @@ export function scoreAdjustInput(args: Record<string, unknown>, messages: Plugin
     !hasPluginMessage(messages, reason)
   )
     throw new PluginCallRejected('reason 必须是本插件文案里存在的键，长度在 1 到 128 个字符之间')
-  if (
-    typeof key !== 'string' ||
-    [...key].length < 1 ||
-    [...key].length > 255 ||
-    key !== key.trim() ||
-    key.includes('\0') ||
-    // 不成对的代理项写进数据库会变成 U+FFFD，两个不同的键就撞成了一个
-    !key.isWellFormed()
-  )
+  if (typeof key !== 'string' || !isStorageKey(key, 255))
     throw new PluginCallRejected('key 必须是 1 到 255 个字符的字符串，没有首尾空白、NUL 或不成对的代理项')
   return { uid, delta, reason, key }
 }

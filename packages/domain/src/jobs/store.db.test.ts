@@ -169,6 +169,10 @@ test.each([
   // MySQL 会把它和 'request-42' 当成同一个键，PG 和 SQLite 不会
   { dedupeKey: 'request-42 ' },
   { dedupeKey: ' request-42' },
+  // PostgreSQL 存不了 NUL；不成对的代理项写进数据库变成 U+FFFD，'\ud800' 和 '\ud801' 会被当成同一个键
+  { dedupeKey: 'a\u0000b' },
+  { dedupeKey: '\ud800' },
+  { dedupeKey: 'a\udc00' },
 ])('非法入队参数抛 RangeError：%j', async (invalid) => {
   await expect(insertJob(db, { name: 'core:test', payload: {}, runAt: now, ...invalid }, now)).rejects.toThrow(
     RangeError,

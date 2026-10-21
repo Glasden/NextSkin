@@ -20,3 +20,14 @@ export function rejectNul(text: string, code = 'invalid_request'): string {
   if (text.includes('\u0000')) throw new DomainError(code)
   return text
 }
+
+/**
+ * 存进数据库、靠唯一索引去重或查找的键（插件 KV 的键、任务去重键、插件改积分的幂等键）：1 到 maxLength 个码位，并且
+ * - 首尾没有空白：MySQL 的 utf8mb4_bin 比较时忽略末尾空格，另外三种数据库不会；
+ * - 没有 U+0000：PostgreSQL 存不了；
+ * - 没有不成对的代理项：写进数据库会变成 U+FFFD，两个不同的键就撞成了一个
+ */
+export function isStorageKey(key: string, maxLength: number): boolean {
+  const length = [...key].length
+  return length >= 1 && length <= maxLength && key === key.trim() && !key.includes('\u0000') && key.isWellFormed()
+}

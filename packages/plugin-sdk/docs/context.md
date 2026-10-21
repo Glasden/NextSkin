@@ -126,9 +126,9 @@ export default definePlugin({
 
 ## KV 和入队
 
-`kv.get<T>(key)` 返回 JSON 值或 `null`；泛型 T 不会校验存储内容，读取后需要你自己校验。`kv.set(key, value, { ttlSec }?)` 覆盖值，`kv.delete(key)` 删除，不存在也成功。键按 Unicode 码点计 1–255 字符，不能有首尾空白；值 JSON 序列化后最多 64 KiB。TTL 是 1–315360000 秒的整数，省略表示不过期；到期读取为 `null`，物理清理由核心异步完成。KV 按插件隔离。
+`kv.get<T>(key)` 返回 JSON 值或 `null`；泛型 T 不会校验存储内容，读取后需要你自己校验。`kv.set(key, value, { ttlSec }?)` 覆盖值，`kv.delete(key)` 删除，不存在也成功。键按 Unicode 码点计 1–255 字符，不能有首尾空白、NUL 和不成对的代理项；值 JSON 序列化后最多 64 KiB。TTL 是 1–315360000 秒的整数，省略表示不过期；到期读取为 `null`，物理清理由核心异步完成。KV 按插件隔离。
 
-`jobs.enqueue(name, payload, { delaySec?, dedupeKey? }?)` 只能指向自己 `jobs` 里声明的名字；payload 序列化后最多 64 KiB。delaySec 为 0–2592000 的整数，默认 0。dedupeKey 按 Unicode 码点计 1–255 字符且无首尾空白，同名任务在队列中尚未完成时按键去重；方法返回 `void`，不区分新入队还是重复。完成后同键可以再入队。去重不代替 handler 幂等。
+`jobs.enqueue(name, payload, { delaySec?, dedupeKey? }?)` 只能指向自己 `jobs` 里声明的名字；payload 序列化后最多 64 KiB。delaySec 为 0–2592000 的整数，默认 0。dedupeKey 规则同 KV 的键，同名任务在队列中尚未完成时按键去重；方法返回 `void`，不区分新入队还是重复。完成后同键可以再入队。去重不代替 handler 幂等。
 
 `ctx.db` 的参数和结果有独立上限，见[插件表](./tables.md)。
 

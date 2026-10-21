@@ -3,7 +3,7 @@ import { validatePlayerName } from './players/create.ts'
 import { coreSettingsRegistry } from './settings/registry.ts'
 import { validateTextureDescription, validateTextureName } from './textures/validation.ts'
 import { validateNickname } from './users/validation.ts'
-import { phpTrim } from './text.ts'
+import { isStorageKey, phpTrim } from './text.ts'
 
 // PostgreSQL 的 text 存不了 U+0000：用户填的文本在写库之前一律拒绝，四种数据库的结果才一致
 test('用户填的文本里有 U+0000 时拒绝', () => {
@@ -26,4 +26,11 @@ test('用户填的文本里有 U+0000 时拒绝', () => {
 test('phpTrim 只去掉 PHP trim() 默认的空白字符', () => {
   expect(phpTrim(' \t\n\r\0\x0BSteve \t\n\r\0\x0B')).toBe('Steve')
   expect(phpTrim('\u00a0Steve\u3000')).toBe('\u00a0Steve\u3000')
+})
+
+test('isStorageKey：码位计长，首尾空白、NUL、不成对的代理项都不行', () => {
+  expect(isStorageKey('😀'.repeat(3), 3)).toBe(true)
+  expect(isStorageKey('😀'.repeat(4), 3)).toBe(false)
+  for (const key of ['', ' a', 'a ', '\ta', 'a\u0000b', '\ud800', 'a\udc00', '\udc00\ud800'])
+    expect(isStorageKey(key, 255)).toBe(false)
 })

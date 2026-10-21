@@ -30,7 +30,7 @@ export interface PluginContextLocal<S> {
 export interface PluginContextBase<S> extends PluginContextLocal<S> {
   readonly jobs: {
     /** name 必须是本插件 `jobs` 中声明的键；载荷序列化后不超过 64 KiB。
-     * delaySec 是 0–2592000 的整数，默认 0；dedupeKey 是 1–255 字符且无首尾空白。
+     * delaySec 是 0–2592000 的整数，默认 0；dedupeKey 是 1–255 字符，无首尾空白、NUL 和不成对的代理项。
      * 同名任务的同一键在未完成期间去重；返回值不区分是否新入队。 */
     enqueue(name: string, payload: Json, options?: { delaySec?: number; dedupeKey?: string }): Promise<void>
   }
@@ -125,7 +125,7 @@ export interface TextureFilesApi {
   read(hash: string): Promise<Uint8Array | null>
 }
 
-/** 键为 1–255 字符，不允许首尾空白。 */
+/** 键为 1–255 字符，不允许首尾空白、NUL 和不成对的代理项。 */
 export interface KvApi {
   get<T extends Json>(key: string): Promise<T | null>
   /** 值序列化后不超过 64 KiB。ttlSec 为 1–315360000 的整数；省略时不过期，到期后读到 null。 */

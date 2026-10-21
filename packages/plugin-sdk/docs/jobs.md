@@ -40,7 +40,7 @@ export default definePlugin({
 
 handler 参数是 `{ payload: Json, attempt: number, ctx }`；attempt 从 1 开始。payload 是你自己定义的数据，读取时校验，不能因为有 TypeScript 就信任持久数据。
 
-入队方法 `ctx.jobs.enqueue(name, payload, options?)` 返回 Promise<void>。name 必须已声明在自己 jobs 中。payload 序列化后最多 64 KiB，delaySec 为 0–2592000 的整数，默认 0。dedupeKey 按 Unicode 码点计 1–255 字符、无首尾空白；同名任务同键在未完成期间只保留一份，返回值不区分是否新入队。任务完成或进入死信后键不再占用，不能当永久幂等键。
+入队方法 `ctx.jobs.enqueue(name, payload, options?)` 返回 Promise<void>。name 必须已声明在自己 jobs 中。payload 序列化后最多 64 KiB，delaySec 为 0–2592000 的整数，默认 0。dedupeKey 按 Unicode 码点计 1–255 字符，无首尾空白、NUL 和不成对的代理项；同名任务同键在未完成期间只保留一份，返回值不区分是否新入队。任务完成或进入死信后键不再占用，不能当永久幂等键。
 
 ## 执行、重试和死信
 

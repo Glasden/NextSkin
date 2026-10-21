@@ -8,6 +8,7 @@ import {
   type IsoTimestamp,
 } from '@nextskin/db'
 import type { Kysely } from 'kysely'
+import { isStorageKey } from '../text.ts'
 
 export const FAILED_JOB_RETENTION_DAYS = 30
 
@@ -32,12 +33,8 @@ export async function insertJob(db: Kysely<CoreDatabase>, job: NewJob, now: IsoT
   const nameLength = [...job.name].length
   if (nameLength < 1 || nameLength > 128 || job.name !== job.name.trim())
     throw new RangeError('任务名长度必须在 1 到 128 个字符之间，首尾不能有空白')
-  if (
-    job.dedupeKey != null &&
-    ([...job.dedupeKey].length < 1 || [...job.dedupeKey].length > 255 || job.dedupeKey !== job.dedupeKey.trim())
-  ) {
-    throw new RangeError('任务去重键长度必须在 1 到 255 个字符之间，首尾不能有空白')
-  }
+  if (job.dedupeKey != null && !isStorageKey(job.dedupeKey, 255))
+    throw new RangeError('任务去重键长度必须在 1 到 255 个字符之间，首尾不能有空白，不能有 NUL 或不成对的代理项')
   return insertOrIgnore(
     db,
     'jobs',

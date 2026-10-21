@@ -1,6 +1,7 @@
 import { toIsoTimestamp, upsert, type CoreDatabase } from '@nextskin/db'
 import type { Json } from '@nextskin/plugin-sdk'
 import type { Kysely } from 'kysely'
+import { isStorageKey } from '../text.ts'
 import { PluginCallRejected } from './errors.ts'
 
 /** 单个值序列化后的上限，同插件任务的载荷（ADR-0033） */
@@ -10,9 +11,8 @@ const MAX_TTL_SEC = 10 * 365 * 86_400
 export const PLUGIN_KV_CLEANUP_JOB = 'core:plugin-kv-cleanup'
 
 function checkKey(key: unknown): string {
-  // MySQL 的 utf8mb4_bin 比较时忽略末尾空格，首尾带空白的键在四种数据库上行为不同（同任务的去重键）
-  if (typeof key !== 'string' || [...key].length < 1 || [...key].length > 255 || key !== key.trim())
-    throw new PluginCallRejected('KV 的键长度必须在 1 到 255 个字符之间，首尾不能有空白')
+  if (typeof key !== 'string' || !isStorageKey(key, 255))
+    throw new PluginCallRejected('KV 的键长度必须在 1 到 255 个字符之间，首尾不能有空白，不能有 NUL 或不成对的代理项')
   return key
 }
 

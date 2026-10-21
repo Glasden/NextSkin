@@ -63,3 +63,22 @@ test('64 KiB 按序列化后的 UTF-8 字节数限制，拒绝不写入', async 
   expect(await kv.get('a', 'limit')).toHaveLength(MAX_KV_VALUE_BYTES - 2)
   expect(await kv.get('a', 'unicode')).toBeNull()
 })
+
+test.each(['', 'x'.repeat(256), ' key', 'key ', 'a\u0000b', '\ud800', 'a\udc00'])(
+  '非法的键拒绝，不读不写：%j',
+  async (key) => {
+    const kv = createPluginKv(env.db, () => new Date())
+    const rows = () => env.db.selectFrom('plugin_kv').select('key').where('plugin_id', '=', 'a').execute()
+    const before = await rows()
+    await expect(kv.set('a', key, 1)).rejects.toBeInstanceOf(PluginCallRejected)
+    await expect(kv.get('a', key)).rejects.toBeInstanceOf(PluginCallRejected)
+    await expect(kv.delete('a', key)).rejects.toBeInstanceOf(PluginCallRejected)
+    expect(await rows()).toEqual(before)
+  },
+)
+
+test('码位长度的上限和不在 BMP 里的字符可以当键', async () => {
+  const kv = createPluginKv(env.db, () => new Date())
+  await kv.set('a', '😀'.repeat(255), 1)
+  expect(await kv.get('a', '😀'.repeat(255))).toBe(1)
+})
