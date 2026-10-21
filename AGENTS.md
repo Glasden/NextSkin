@@ -93,6 +93,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 - **新设置项**：在设置注册表（`packages/domain/src/settings/registry.ts`）里声明类型、默认值和分区（`section`），在 i18n 的 `admin.settings.fields` 下按键名写标签和说明（测试守着）。后台表单会自动生成，不要手写表单（ADR-0028）。
 - **新的或改动的协议行为**：先在 `tests/contract/src/cases.ts` 加用例、从 BS v6 录制，再实现。
 - **新包**：照抄现有包的 `package.json` 脚本和 `tsconfig.json`。包之间的依赖只用 `workspace:*` 声明；几个包共用的外部依赖，版本写进 `pnpm-workspace.yaml` 的 catalog。
+- **提交和分支**（ADR-0047）：文档和单提交的修复直接进 main；加迁移、改协议端点或 SDK 公开 API、要分几个提交的功能，开 `feat/` 或 `fix/` 分支提 PR，CI 通过后由维护者合并。修已发布的版本：修复先进 main，再 `git cherry-pick -x` 到 `release/X.Y`；修订版不带迁移。
 - **刻意不跟上游升级的依赖**（TS 6、`@types/node` 24、测试库镜像这类）：在 `renovate.json` 里加一条写明原因的 packageRule，否则 Renovate 会提 PR 升级它。
 
 ## 已知的坑

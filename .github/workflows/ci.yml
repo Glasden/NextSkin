@@ -4,7 +4,8 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # 维护分支（ADR-0047）上的提交也要跑：修订版从那里发
+    branches: [main, 'release/**']
     paths-ignore: ['**/*.md', 'docs/**', 'spikes/**']
   pull_request:
     paths-ignore: ['**/*.md', 'docs/**', 'spikes/**']
@@ -13,7 +14,7 @@ on:
 permissions:
   contents: read
 
-# 只取消 PR 上被新提交取代的运行。推送到 main 的运行各占一组：同组里排队的运行会被后来者顶掉，
+# 只取消 PR 上被新提交取代的运行。推送的运行各占一组：同组里排队的运行会被后来者顶掉，
 # 共用一组就不能保证每次推送都有结果
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.run_id }}
@@ -150,7 +151,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: pnpm changeset status
         env:
-          # PR 与目标分支比较；推送到 main 时与推送前的 main 比较
+          # PR 与目标分支比较；推送时与这个分支推送前的提交比较
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
         run: |
           if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then

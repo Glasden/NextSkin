@@ -1,4 +1,4 @@
-# 产品发布（ADR-0040）：核对标签、构建和 e2e、镜像冒烟、Windows 解压冒烟，再经 release 环境批准推送镜像、创建草稿。
+# 产品发布（ADR-0040，从维护分支发修订版见 ADR-0047）：核对标签、构建和 e2e、镜像冒烟、Windows 解压冒烟，再经 release 环境批准推送镜像、创建草稿。
 # 草稿发布以后由 release-image-tags.yml 给镜像加上 X.Y、X、latest。
 # 第三方 action 固定到提交 SHA，升级时连同注释里的版本号一起改（同 ci.yml、release.yml）。
 name: Release site
@@ -39,7 +39,14 @@ jobs:
             echo '::error::标签必须等于 v + launcher 版本号，且版本号不能是 0.0.0'
             exit 1
           fi
-          git merge-base --is-ancestor "$GITHUB_SHA^{commit}" origin/main
+          # 标签指向的提交在 main 上，或在这个次版本的维护分支 release/X.Y 上（ADR-0047）
+          maintenance="origin/release/$(echo "$version" | cut -d. -f1,2)"
+          if ! git merge-base --is-ancestor "$GITHUB_SHA^{commit}" origin/main &&
+            ! { git rev-parse -q --verify "$maintenance" > /dev/null &&
+              git merge-base --is-ancestor "$GITHUB_SHA^{commit}" "$maintenance"; }; then
+            echo "::error::标签指向的提交既不在 main 上，也不在 ${maintenance#origin/} 上"
+            exit 1
+          fi
           prerelease=false
           if [[ "$version" == *-* ]]; then prerelease=true; fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
