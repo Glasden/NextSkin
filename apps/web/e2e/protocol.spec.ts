@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { expect, test } from '@playwright/test'
 
 // 协议响应本身由 e2e/contract.spec.ts 回放契约用例守护；这里只测 Next 这一层的行为。
@@ -8,6 +10,14 @@ test('/api/yggdrasil/ 不被 308 跳转（authlib-injector 请求元数据时带
     expect(res.status(), path).toBe(200)
     expect((await res.json()) as unknown).toHaveProperty('signaturePublickey')
   }
+})
+
+test('元数据的 implementationVersion 是发行目录的版本号（server/VERSION）', async ({ request }) => {
+  const { version } = JSON.parse(
+    readFileSync(fileURLToPath(new URL('../../../dist/nextskin/package.json', import.meta.url)), 'utf8'),
+  ) as { version: string }
+  const res = await request.get('/api/yggdrasil')
+  expect(((await res.json()) as { meta: { implementationVersion: string } }).meta.implementationVersion).toBe(version)
 })
 
 test('页面带 X-Authlib-Injector-API-Location，启动器填首页地址就能找到 API', async ({ request }) => {

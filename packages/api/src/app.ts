@@ -19,8 +19,9 @@ import { allowedDuringMaintenance } from './maintenance.ts'
 import { createMemoryRateLimiter } from './rest/rate-limit.ts'
 
 /** 所有非页面的 HTTP 端点；只依赖领域查询，不直接访问数据库。 */
-export function createApp(options: { core: Core; importer?: ImportGateway }) {
-  const { core, importer } = options
+/** `version`：产品版本号，外置登录的元数据里报给启动器；没有发行目录的版本标记时（开发、测试）是 `dev` */
+export function createApp(options: { core: Core; importer?: ImportGateway; version?: string }) {
+  const { core, importer, version = 'dev' } = options
   const uploadRateLimiter = createMemoryRateLimiter(Date.now, { limit: 10, windowMs: 60_000 })
   // 末尾带斜杠的路径与不带斜杠的相同：BS（nginx + Laravel）就是这样，authlib-injector 请求元数据时会带上斜杠
   const app = new Hono<AppEnv>({ strict: false })
@@ -92,7 +93,7 @@ export function createApp(options: { core: Core; importer?: ImportGateway }) {
   )
   app.get('/api/health', (c) => c.json({ status: 'ok' }))
   registerAuth(app, core)
-  registerYggdrasil(app, core, uploadRateLimiter)
+  registerYggdrasil(app, core, uploadRateLimiter, version)
   registerTextures(app, core)
   registerLegacy(app, core)
   registerUsm(app, core)

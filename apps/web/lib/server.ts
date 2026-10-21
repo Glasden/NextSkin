@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { createImportService, type ImportService } from '@nextskin/importer'
 import { createApp } from '@nextskin/api'
@@ -32,6 +33,15 @@ export function openedServer(): Promise<Server> | undefined {
   return holder.nextskinServer
 }
 
+/** 发行目录的版本标记 `server/VERSION`（ADR-0040），启动器启动前已经核对过；源码里运行时没有它 */
+async function releaseVersion(): Promise<string | undefined> {
+  try {
+    return (await readFile(resolve(process.cwd(), '../../VERSION'), 'utf8')).trim() || undefined
+  } catch {
+    return undefined
+  }
+}
+
 async function open(): Promise<Server> {
   const production = process.env.NODE_ENV === 'production'
   const config = coreConfigFromEnv(process.env, { cwd: process.cwd(), production })
@@ -62,7 +72,7 @@ async function open(): Promise<Server> {
       },
       onImported: () => core.setup.removeCode(),
     })
-    return { core, importer, app: createApp({ core, importer }) }
+    return { core, importer, app: createApp({ core, importer, version: await releaseVersion() }) }
   } catch (error) {
     await opened.close()
     throw error

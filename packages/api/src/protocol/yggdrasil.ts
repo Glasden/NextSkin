@@ -92,7 +92,12 @@ function profileProperties(player: PlayerView, root: string, key: SigningKey | n
   ].map((property) => (key ? { ...property, signature: key.sign(property.value) } : property))
 }
 
-export function registerYggdrasil(app: Hono<AppEnv>, core: Core, uploadRateLimiter: RateLimiter): void {
+export function registerYggdrasil(
+  app: Hono<AppEnv>,
+  core: Core,
+  uploadRateLimiter: RateLimiter,
+  version: string,
+): void {
   const prefix = '/api/yggdrasil'
   app.all(prefix, async (c) => {
     const settings = await core.settings.read(['site.name', 'site.url', 'yggdrasil.skinDomains'])
@@ -104,7 +109,7 @@ export function registerYggdrasil(app: Hono<AppEnv>, core: Core, uploadRateLimit
       meta: {
         serverName: settings['site.name'],
         implementationName: 'NextSkin',
-        implementationVersion: '0.0.0',
+        implementationVersion: version,
         links: { homepage: root, register: `${root}/auth/register` },
         'feature.non_email_login': true,
         ...(openIdConfigurationUrl ? { 'feature.openid_configuration_url': openIdConfigurationUrl } : {}),

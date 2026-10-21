@@ -23,7 +23,7 @@ const player: PlayerView = {
 }
 const auth = { accessToken: 'token', clientToken: 'client', availableProfiles: [] }
 
-function setup(settings: Partial<Record<CoreSettingKey, unknown>> = {}) {
+function setup(settings: Partial<Record<CoreSettingKey, unknown>> = {}, version?: string) {
   const methods = {
     authenticate: vi.fn().mockResolvedValue(auth),
     refresh: vi.fn().mockResolvedValue(auth),
@@ -58,7 +58,7 @@ function setup(settings: Partial<Record<CoreSettingKey, unknown>> = {}) {
     auth: { openIdConfigurationUrl, getSessionUser: vi.fn().mockResolvedValue({ uid: 42 }) },
     textures: { upload },
   } as unknown as Core
-  const app = createApp({ core })
+  const app = createApp({ core, version })
   const request = (path: string, body: unknown = {}, headers = {}) =>
     app.request(`http://example.test${prefix}${path}`, {
       method: 'POST',
@@ -229,6 +229,20 @@ test('join 接受表单并 trim，只采信受信代理的 IP；其他 Content-T
     body: '{"accessToken":"token"}',
   })
   expect(methods.join).toHaveBeenLastCalledWith({ accessToken: null, selectedProfile: null, serverId: null, ip: null })
+})
+
+test('元数据报告产品版本号，没有给出时是 dev', async () => {
+  for (const [version, expected] of [
+    ['0.1.0', '0.1.0'],
+    [undefined, 'dev'],
+  ] as const) {
+    const { app } = setup({}, version)
+    const response = await app.request(`http://example.test${prefix}`)
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      meta: { implementationName: 'NextSkin', implementationVersion: expected },
+    })
+  }
 })
 
 test('hasJoined 参数取最后一个、数组不当作字符串；成功签名并使用站点地址，缺密钥返回 400', async () => {
