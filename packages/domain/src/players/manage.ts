@@ -1,5 +1,6 @@
 import { deletePlayerAuthorizations } from '../oauth/revoke.ts'
 import {
+  countRows,
   isUniqueViolation,
   toIsoTimestamp,
   transactionWithRetry,
@@ -9,6 +10,7 @@ import {
 import type { Actor, Player } from '@nextskin/plugin-sdk'
 import type { Kysely, Selectable, Transaction } from 'kysely'
 import type { PlayersTable } from '@nextskin/db'
+import { hasAdminAccess } from '../access/permissions.ts'
 import { DomainError } from '../errors.ts'
 import type { Events } from '../events/emit.ts'
 import { adjustScore } from '../score/adjust.ts'
@@ -134,14 +136,22 @@ export function createPlayerManagement(
       'player.nameRegex',
       'player.nameLength',
       'player.uuidAlgorithm',
+      'player.maxPerUser',
       'score.perPlayer',
       'auth.requireEmailVerification',
     ])
-    const name = validatePlayerName(input.name, values)
     return retryOnPlayerUuidRace(db, () =>
       transactionWithRetry(db, async (tx) => {
         const user = await lockUser(tx, actor.uid)
         assertPlayerManagementAllowed(user, values['auth.requireEmailVerification'])
+        const limit = values['player.maxPerUser']
+        if (
+          limit > 0 &&
+          !hasAdminAccess(user.role) &&
+          (await countRows(tx.selectFrom('players').where('user_id', '=', actor.uid))) >= limit
+        )
+          throw new DomainError('player_limit_reached', { limit })
+        const name = validatePlayerName(input.name, values)
         const now = toIsoTimestamp(clock())
         // 插件运行时落地后，在这里调用 player.create 拦截器（同一事务）。
         const player = await createPlayer(tx, {

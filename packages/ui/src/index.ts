@@ -32,6 +32,7 @@ export {
 } from './menu/menu.tsx'
 export { NameTag, type NameTagProps } from './name-tag/name-tag.tsx'
 export { Nav, NavItem, type NavItemProps, type NavProps } from './nav/nav.tsx'
+export { Notice, type NoticeProps } from './notice/notice.tsx'
 export { Pagination, type PaginationLinkProps, type PaginationProps } from './pagination/pagination.tsx'
 export { PlayerCard, type PlayerCardProps } from './player-card/player-card.tsx'
 export { PlayerHead, type PlayerHeadProps } from './player-head/player-head.tsx'

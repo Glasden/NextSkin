@@ -92,6 +92,8 @@
     "player_name_length": "Player name must be between {min} and {max} characters.",
     "player_name_taken": "This player name is already taken. Try another one.",
     "player_name_rule_misconfigured": "The player name rule on this site is misconfigured. Contact the administrator.",
+    "player_limit_reached": "You've reached this site's player limit ({limit}). Delete a player you no longer use to add a new one.",
+    "player_transfer_limit_reached": "The new owner has reached this site's player limit ({limit}). Ask them to delete a player they no longer use, or raise the limit.",
     "ip_limit_reached": "This IP address has reached the account limit ({limit}). If you already have an account, sign in instead.",
     "mail_not_configured": "This site hasn't set up email delivery, so emails can't be sent right now. Contact the site administrator.",
     "score_insufficient": "Not enough points: you need {required}, but your current balance is {balance}.",
@@ -127,6 +129,7 @@
     "setup_code_invalid": "The setup code is incorrect. You can find it in the setup-code file in the data directory.",
     "setup_code_required": "You need to verify the setup code first. Enter the code from the setup-code file in the data directory.",
     "maintenance": "The site is importing data and is temporarily unavailable. Please try again later.",
+    "site_maintenance": "The site is down for maintenance and only administrators can use it right now. Please try again later.",
     "import_running": "An import is already running. Wait for it to finish before starting another.",
     "import_not_running": "This import has finished and cannot be cancelled. You can view its report.",
     "import_run_not_found": "This import could not be found. Start again from setup or the admin page.",
@@ -408,6 +411,7 @@
       "title": "Players",
       "description": "A player is your name in the game. Each player has its own UUID, skin and cape.",
       "count": "{count}",
+      "countWithLimit": "{count} / {limit}",
       "add": "Add player",
       "cost": "Adding a player costs {cost} points. You have {score} points.",
       "free": "Adding a player doesn't cost any points.",
@@ -439,6 +443,7 @@
       "emptyTitle": "You don't have any players",
       "emptyDescription": "Add a player to get a name to use in the game.",
       "verifyFirst": "Verify your email before adding, renaming or deleting players.",
+      "limitReached": "Each user can have up to {limit} players on this site, and you have reached the limit. Delete a player you no longer use to add a new one.",
       "failed": "That didn't work. Try again later.",
       "changeSkin": "Change skin",
       "changeCape": "Change cape",
@@ -863,6 +868,11 @@
       "system": "System",
       "light": "Light",
       "dark": "Dark"
+    },
+    "maintenance": {
+      "label": "Maintenance notice",
+      "notice": "{protocols, select, blocked {Maintenance mode is on: everyone except admins sees the maintenance page, and external login and skin loading are paused.} other {Maintenance mode is on: everyone except admins sees the maintenance page. External login and skin loading still work.}}",
+      "settings": "Maintenance settings"
     },
     "footer": {
       "columns": {
@@ -1478,6 +1488,7 @@
         "content": "Players & textures",
         "mail": "Email",
         "yggdrasil": "Yggdrasil",
+        "maintenance": "Maintenance",
         "advanced": "Advanced"
       },
       "save": "Save",
@@ -1747,6 +1758,10 @@
               "offline": "Derived from the name (same as offline mode)",
               "random": "Random"
             }
+          },
+          "maxPerUser": {
+            "label": "Players per user",
+            "help": "How many players a regular user can have. 0 means no limit. Admins and super admins are not limited. Transferring a player in the admin panel also checks this limit; after lowering it, existing players are kept, but users over the limit cannot add more."
           }
         },
         "texture": {
@@ -1844,6 +1859,20 @@
           "loginIntervalMs": {
             "label": "Login request interval",
             "help": "Milliseconds. Sign-in and sign-out share an interval per username. 0 means no limit."
+          }
+        },
+        "maintenance": {
+          "enabled": {
+            "label": "Maintenance mode",
+            "help": "Everyone except admins and super admins sees the maintenance page, and the API returns 503. The sign-in page stays open so admins can sign in, do their work and turn this off."
+          },
+          "blockProtocols": {
+            "label": "Also stop game services",
+            "help": "During maintenance, external login (Yggdrasil and Yggdrasil Connect) and CSL and USM skin loading also return 503: players cannot join servers that use this site for login, and skins do not show up in game. When unchecked, they keep working."
+          },
+          "message": {
+            "label": "Maintenance message",
+            "help": "Shown on the maintenance page. You can explain why and when you expect to be done. Leave it empty to show the default message."
           }
         },
         "network": {
@@ -2442,7 +2471,13 @@
     "title": "Down for maintenance",
     "description": "The site owner is importing data, so the site is unavailable for now. This usually takes a few minutes.",
     "refresh": "This page refreshes every 30 seconds and takes you back to the page you wanted once the import is done.",
-    "illustration": "The default skin standing on a stage"
+    "illustration": "The default skin standing on a stage",
+    "manualDescription": "The site owner is doing maintenance. Only administrators can use the site for now.",
+    "protocolsOpen": "External login and skin loading still work, so playing is not affected.",
+    "protocolsBlocked": "External login and skin loading are paused too, so you cannot join servers that use this site for login.",
+    "manualRefresh": "This page refreshes every 30 seconds and takes you back to the page you wanted once maintenance is over.",
+    "adminSignIn": "Admin sign-in",
+    "notAdmin": "The account you are signed in with is not an administrator, so you can only see this page during maintenance."
   },
   "import": {
     "wizard": {

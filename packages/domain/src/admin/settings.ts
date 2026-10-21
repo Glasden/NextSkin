@@ -234,6 +234,10 @@ export function createAdminSettings(options: {
       const { updated } = await update(null, { 'captcha.provider': 'none' })
       return { changed: updated.length > 0 }
     },
+    async setMaintenanceAsSystem(enabled: boolean): Promise<{ changed: boolean }> {
+      const { updated } = await update(null, { 'maintenance.enabled': enabled })
+      return { changed: updated.length > 0 }
+    },
     async testCaptcha(actor: AdminActor, input: CaptchaInput) {
       await transactionWithRetry(db, (tx) => authorize(tx, actor, 'settings.manage'))
       // 核对在授权事务提交之后，不能占着 SQLite 的写锁等网络。

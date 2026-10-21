@@ -89,6 +89,7 @@ location / {
 | `set-role <邮箱> <身份>`                                 | 身份：`banned`、`user`、`admin`、`superadmin`                                              |
 | `set-password <邮箱或 uid>`、`disable-2fa <邮箱或 uid>` | 找回超级管理员（后台改不了超级管理员）                                                     |
 | `disable-captcha`                                       | 验证码配错、自己也登不进去时关掉它                                                         |
+| `maintenance [on\|off]` | 查看或开关手动维护模式：除了管理员，别人只能看到维护页（ADR-0044）。备份、整理数据之前先挂上 |
 | `migrate`                                               | 只执行迁移；平时 `start` 会自动执行                                                        |
 | `import blessing-skin …`                                | 从 BS v6 导入，服务要停着，见 MIGRATION.md                                                  |
 

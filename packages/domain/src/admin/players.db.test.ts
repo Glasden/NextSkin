@@ -937,3 +937,49 @@ test.each(['transfer', 'admin-delete', 'self-delete'] as const)(
       ])
   },
 )
+
+test.each<UserRole>(['user', 'banned'])(
+  '转给达到角色上限的 %s 被拒，两个主人、角色和其他记录均不变',
+  async (recipientRole) => {
+    await configureMail()
+    const target = await player(env.owner.uid, 'Before', await env.texture('steve', false))
+    await player(env.actor.uid, 'Existing')
+    await launcherToken(env.owner.uid, target.pid)
+    await selection(env.owner.uid, target.pid)
+    await role(env.actor.uid, recipientRole)
+    await env.setting('player.maxPerUser', 1)
+    await unchanged(
+      () => env.core.admin.transferPlayer(admin, target.pid, env.actor.uid),
+      'player_transfer_limit_reached',
+      { limit: 1 },
+    )
+    // 转给原主人是无改动操作，已经达到上限也不拒绝。
+    const before = await snapshot()
+    expect(await env.core.admin.transferPlayer(admin, target.pid, env.owner.uid)).toEqual(target)
+    expect(await snapshot()).toEqual(before)
+  },
+)
+
+test('超级管理员转给管理员不受角色上限限制', async () => {
+  const target = await player()
+  await player(admin.uid, 'Existing')
+  await env.setting('player.maxPerUser', 1)
+  expect(await env.core.admin.transferPlayer(superadmin, target.pid, admin.uid)).toMatchObject({
+    pid: target.pid,
+    uid: admin.uid,
+    uuid: target.uuid,
+  })
+  expect(await countRows(env.db().selectFrom('players').where('user_id', '=', admin.uid))).toBe(2)
+})
+
+test('角色上限为 0 时转让不限数量', async () => {
+  const target = await player()
+  await player(env.actor.uid, 'Existing')
+  await env.setting('player.maxPerUser', 0)
+  expect(await env.core.admin.transferPlayer(admin, target.pid, env.actor.uid)).toMatchObject({
+    pid: target.pid,
+    uid: env.actor.uid,
+    uuid: target.uuid,
+  })
+  expect(await countRows(env.db().selectFrom('players').where('user_id', '=', env.actor.uid))).toBe(2)
+})

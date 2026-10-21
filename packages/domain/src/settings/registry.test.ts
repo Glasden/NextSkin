@@ -29,3 +29,28 @@ test('首页设置的长度和关键词数量有边界，默认值通过校验',
   for (const value of [[''], ['x'.repeat(65)], Array(33).fill('x'), 'word'])
     expect(keywords.safeParse(value).success).toBe(false)
 })
+
+test('角色数量上限默认不限，只接受 0 到 1000 的整数', () => {
+  const definition = coreSettingsRegistry['player.maxPerUser']
+  expect(definition.default).toBe(0)
+  expect(definition.section).toBe('content')
+  expect(definition.secret).toBe(false)
+  for (const value of [0, 1, 1000]) expect(definition.schema.safeParse(value).success).toBe(true)
+  for (const value of [-1, 0.5, 1001, '1']) expect(definition.schema.safeParse(value).success).toBe(false)
+})
+
+test('维护默认关闭，说明最长 2000 字且使用 Markdown 控件', () => {
+  for (const key of ['maintenance.enabled', 'maintenance.blockProtocols', 'maintenance.message'] as const) {
+    const definition = coreSettingsRegistry[key]
+    expect(definition.section).toBe('maintenance')
+    expect(definition.secret).toBe(false)
+    expect(definition.schema.safeParse(definition.default).success).toBe(true)
+  }
+  expect(coreSettingsRegistry['maintenance.enabled'].default).toBe(false)
+  expect(coreSettingsRegistry['maintenance.blockProtocols'].default).toBe(false)
+  expect(coreSettingsRegistry['maintenance.message'].default).toBe('')
+  const message = coreSettingsRegistry['maintenance.message'].schema
+  expect(message.safeParse('x'.repeat(2000)).success).toBe(true)
+  expect(message.safeParse('x'.repeat(2001)).success).toBe(false)
+  expect(message.meta()).toMatchObject({ contentMediaType: 'text/markdown' })
+})

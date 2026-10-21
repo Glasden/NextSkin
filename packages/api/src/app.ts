@@ -15,6 +15,7 @@ import { registerPluginRoutes } from './plugins.ts'
 import { registerRender } from './render.ts'
 import { registerSiteImages } from './site-images.ts'
 import { createRestApp } from './rest/app.ts'
+import { allowedDuringMaintenance } from './maintenance.ts'
 import { createMemoryRateLimiter } from './rest/rate-limit.ts'
 
 /** 所有非页面的 HTTP 端点；只依赖领域查询，不直接访问数据库。 */
@@ -51,18 +52,44 @@ export function createApp(options: { core: Core; importer?: ImportGateway }) {
         : c.text('Service Unavailable', 503)
     }),
   )
-  app.use('*', async (c, next) => {
-    const settings = importer?.maintenance()
-      ? { 'yggdrasil.apiLocationIndication': false }
-      : await core.settings.read(['yggdrasil.apiLocationIndication'])
-    const root = requestRoot(c.req.raw)
-    c.set('requestRoot', root)
-    await next()
-    if (!c.res.headers.has('Cache-Control')) c.header('Cache-Control', 'no-cache, private')
-    if (settings['yggdrasil.apiLocationIndication'] && !c.get('omitAli')) {
-      c.header('X-Authlib-Injector-API-Location', `${c.get('profileRoot') ?? root}/api/yggdrasil`)
-    }
-  })
+  app.use(
+    '*',
+    createMiddleware<AppEnv>(async (c, next) => {
+      const settings = importer?.maintenance()
+        ? {
+            'yggdrasil.apiLocationIndication': false,
+            'maintenance.enabled': false,
+            'maintenance.blockProtocols': false,
+          }
+        : await core.settings.read([
+            'yggdrasil.apiLocationIndication',
+            'maintenance.enabled',
+            'maintenance.blockProtocols',
+          ])
+      const root = requestRoot(c.req.raw)
+      c.set('requestRoot', root)
+      if (
+        settings['maintenance.enabled'] &&
+        !(await allowedDuringMaintenance(
+          core,
+          'endpoint',
+          { path: c.req.path, headers: c.req.raw.headers, root },
+          settings['maintenance.blockProtocols'],
+        ))
+      ) {
+        const path = c.req.path.replace(/\/+$/, '')
+        c.header('Cache-Control', 'no-cache, private')
+        c.res =
+          path.startsWith('/api/') && path !== '/api/yggdrasil' && !path.startsWith('/api/yggdrasil/')
+            ? await createErrorResponse(core)(c, 'site_maintenance')
+            : c.text('Service Unavailable', 503)
+      } else await next()
+      if (!c.res.headers.has('Cache-Control')) c.header('Cache-Control', 'no-cache, private')
+      if (settings['yggdrasil.apiLocationIndication'] && !c.get('omitAli')) {
+        c.header('X-Authlib-Injector-API-Location', `${c.get('profileRoot') ?? root}/api/yggdrasil`)
+      }
+    }),
+  )
   app.get('/api/health', (c) => c.json({ status: 'ok' }))
   registerAuth(app, core)
   registerYggdrasil(app, core, uploadRateLimiter)

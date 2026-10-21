@@ -416,3 +416,47 @@ test('两个超级管理员同时保存同一项：后提交的为准，审计�
   expect(same.map((result) => result.updated.length).sort()).toEqual([0, 1])
   expect(await audits()).toHaveLength(1)
 })
+
+test('system 开关手动维护，记录审计；重复设置无改动，其他维护设置保留', async () => {
+  await env.setting('maintenance.blockProtocols', true)
+  await env.setting('maintenance.message', '维护说明')
+  expect(await env.core.admin.setMaintenanceAsSystem(true)).toEqual({ changed: true })
+  expect(await env.core.admin.setMaintenanceAsSystem(true)).toEqual({ changed: false })
+  expect(
+    await env.core.settings.read(['maintenance.enabled', 'maintenance.blockProtocols', 'maintenance.message']),
+  ).toEqual({
+    'maintenance.enabled': true,
+    'maintenance.blockProtocols': true,
+    'maintenance.message': '维护说明',
+  })
+  expect(await env.core.admin.setMaintenanceAsSystem(false)).toEqual({ changed: true })
+  expect(await env.core.admin.setMaintenanceAsSystem(false)).toEqual({ changed: false })
+  expect(await env.core.settings.read(['maintenance.enabled'])).toEqual({ 'maintenance.enabled': false })
+  expect(
+    await env.db().selectFrom('settings').select('key').where('key', '=', 'maintenance.enabled').execute(),
+  ).toEqual([])
+  expect(
+    (await audits()).map(({ actor_type, actor_user_id, ip, action, details }) => ({
+      actor_type,
+      actor_user_id,
+      ip,
+      action,
+      details,
+    })),
+  ).toEqual([
+    {
+      actor_type: 'system',
+      actor_user_id: null,
+      ip: null,
+      action: 'setting.update',
+      details: { key: 'maintenance.enabled', from: false, to: true },
+    },
+    {
+      actor_type: 'system',
+      actor_user_id: null,
+      ip: null,
+      action: 'setting.update',
+      details: { key: 'maintenance.enabled', from: true, to: false },
+    },
+  ])
+})

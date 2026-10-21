@@ -26,25 +26,31 @@ function mockCore(stored: Partial<Record<CoreSettingKey, unknown>> = {}) {
   })
   const findByName = vi.fn().mockResolvedValue(player)
   const findByUuid = vi.fn().mockResolvedValue(player)
+  const getSessionUser = vi.fn<Core['auth']['getSessionUser']>().mockResolvedValue(null)
+  const getSigningKey = vi.fn<Core['yggdrasil']['getSigningKey']>().mockResolvedValue(null)
+  const handle = vi.fn((request: Request, root: string) => Promise.resolve(Response.json({ url: request.url, root })))
   const core = {
     settings: { read },
     players: { findByName, findByUuid },
-    yggdrasil: { getSigningKey: vi.fn().mockResolvedValue(null) },
+    yggdrasil: { getSigningKey },
     auth: {
+      getSessionUser,
       openIdConfigurationUrl: vi.fn().mockResolvedValue(null),
-      handle: vi.fn((request: Request, root: string) => Promise.resolve(Response.json({ url: request.url, root }))),
+      handle,
     },
   } as unknown as Core
-  return { core, read, findByName, findByUuid }
+  return { core, read, findByName, findByUuid, getSessionUser, getSigningKey, handle }
 }
 
 describe('createApp', () => {
-  it('健康端点应用默认缓存和 ALI；全局只读 ALI 开关', async () => {
+  it('健康端点应用默认缓存和 ALI；维护开关与 ALI 一起读取', async () => {
     const { core, read } = mockCore()
     const res = await createApp({ core }).request('http://example.test/api/health')
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ status: 'ok' })
-    expect(read.mock.calls).toEqual([[['yggdrasil.apiLocationIndication']]])
+    expect(read.mock.calls).toEqual([
+      [['yggdrasil.apiLocationIndication', 'maintenance.enabled', 'maintenance.blockProtocols']],
+    ])
     expect(res.headers.get('content-type')).toBe('application/json')
     expect(res.headers.get('cache-control')).toBe('no-cache, private')
     expect(res.headers.get('x-authlib-injector-api-location')).toBe('http://example.test/api/yggdrasil')
@@ -70,7 +76,10 @@ describe('createApp', () => {
     const csl = await app.request('http://example.test/Alice.json')
     expect(csl.status).toBe(200)
     expect(await csl.json()).toEqual({ username: 'Alice', skins: { default: null }, cape: null })
-    expect(read.mock.calls).toEqual([[['yggdrasil.apiLocationIndication']], [['cache.publicMaxAge']]])
+    expect(read.mock.calls).toEqual([
+      [['yggdrasil.apiLocationIndication', 'maintenance.enabled', 'maintenance.blockProtocols']],
+      [['cache.publicMaxAge']],
+    ])
     const metadata = await app.request('http://example.test/api/yggdrasil')
     expect(metadata.status).toBe(500)
     expect(await metadata.text()).toBe('Internal Server Error')
@@ -133,7 +142,113 @@ describe('路由边界', () => {
     expect(response.status).toBe(405)
     expect(response.headers.get('allow')).toBe('GET, HEAD')
     expect(response.headers.get('x-authlib-injector-api-location')).toBe('http://example.test/api/yggdrasil')
-    expect(read.mock.calls).toEqual([[['yggdrasil.apiLocationIndication']]])
+    expect(read.mock.calls).toEqual([
+      [['yggdrasil.apiLocationIndication', 'maintenance.enabled', 'maintenance.blockProtocols']],
+    ])
     expect(findByName).not.toHaveBeenCalled()
+  })
+})
+
+describe('手动维护', () => {
+  test('匿名 REST 请求返回本地化 site_maintenance，缓存和 ALI 正常，不带 Retry-After', async () => {
+    const { core, read, getSessionUser } = mockCore({ 'maintenance.enabled': true })
+    const response = await createApp({ core }).request('http://example.test/api/openapi.json', {
+      headers: { 'accept-language': 'en' },
+    })
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({
+      error: { code: 'site_maintenance', message: createTranslator('en')('errors.site_maintenance') },
+    })
+    expect(response.headers.get('cache-control')).toBe('no-cache, private')
+    expect(response.headers.get('x-authlib-injector-api-location')).toBe('http://example.test/api/yggdrasil')
+    expect(response.headers.has('retry-after')).toBe(false)
+    expect(getSessionUser).not.toHaveBeenCalled()
+    expect(read.mock.calls[0]).toEqual([
+      ['yggdrasil.apiLocationIndication', 'maintenance.enabled', 'maintenance.blockProtocols'],
+    ])
+  })
+
+  test.each(['admin', 'superadmin', 'user', 'banned', null] as const)('REST 按会话身份放行：%s', async (role) => {
+    const { core, getSessionUser } = mockCore({ 'maintenance.enabled': true })
+    getSessionUser.mockResolvedValue(
+      role ? { uid: 1, sessionId: 1, nickname: 'User', email: 'user@example.test', locale: null, role } : null,
+    )
+    const response = await createApp({ core }).request('http://example.test/api/openapi.json', {
+      headers: { cookie: 'session=placeholder' },
+    })
+    expect(response.status).toBe(role === 'admin' || role === 'superadmin' ? 200 : 503)
+    expect(getSessionUser).toHaveBeenCalledExactlyOnceWith(expect.any(Headers), 'http://example.test')
+  })
+
+  test('登录端点始终放行，不查询会话', async () => {
+    const { core, getSessionUser, handle } = mockCore({
+      'maintenance.enabled': true,
+      'maintenance.blockProtocols': true,
+    })
+    const response = await createApp({ core }).request('http://example.test/api/auth/sign-in/email', { method: 'POST' })
+    expect(response.status).toBe(200)
+    expect(handle).toHaveBeenCalledOnce()
+    expect(getSessionUser).not.toHaveBeenCalled()
+  })
+
+  test('协议开关决定 Yggdrasil 是否照常处理，挡住时纯文本 503 并带 ALI', async () => {
+    for (const block of [false, true]) {
+      const { core, getSessionUser, getSigningKey } = mockCore({
+        'maintenance.enabled': true,
+        'maintenance.blockProtocols': block,
+      })
+      getSigningKey.mockResolvedValue({ publicKey: 'test-public-key' } as Awaited<
+        ReturnType<Core['yggdrasil']['getSigningKey']>
+      >)
+      const app = createApp({ core })
+      for (const path of ['/api/yggdrasil', '/api/yggdrasil/']) {
+        const response = await app.request('http://example.test' + path)
+        expect(response.status).toBe(block ? 503 : 200)
+        if (block) {
+          expect(await response.text()).toBe('Service Unavailable')
+          expect(response.headers.get('content-type')).toContain('text/plain')
+        } else expect(await response.json()).toHaveProperty('meta.serverName', 'NextSkin')
+        expect(response.headers.get('cache-control')).toBe('no-cache, private')
+        expect(response.headers.get('x-authlib-injector-api-location')).toBe('http://example.test/api/yggdrasil')
+        expect(response.headers.has('retry-after')).toBe(false)
+      }
+      expect(getSessionUser).not.toHaveBeenCalled()
+    }
+  })
+
+  test('管理员在游戏服务停用时仍能访问协议', async () => {
+    const { core, getSessionUser } = mockCore({ 'maintenance.enabled': true, 'maintenance.blockProtocols': true })
+    getSessionUser.mockResolvedValue({
+      uid: 1,
+      sessionId: 1,
+      nickname: 'Admin',
+      email: 'admin@example.test',
+      locale: null,
+      role: 'admin',
+    })
+    const response = await createApp({ core }).request('http://example.test/Alice.json', {
+      headers: { cookie: 'session=placeholder' },
+    })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toHaveProperty('username', 'Alice')
+  })
+
+  test('插件路由对匿名返回纯文本 503，ALI 关闭时不加头', async () => {
+    const { core, getSessionUser } = mockCore({ 'maintenance.enabled': true, 'yggdrasil.apiLocationIndication': false })
+    const response = await createApp({ core }).request('http://example.test/plugins/example/game')
+    expect(response.status).toBe(503)
+    expect(await response.text()).toBe('Service Unavailable')
+    expect(response.headers.get('cache-control')).toBe('no-cache, private')
+    expect(response.headers.has('x-authlib-injector-api-location')).toBe(false)
+    expect(response.headers.has('retry-after')).toBe(false)
+    expect(getSessionUser).not.toHaveBeenCalled()
+  })
+
+  test('维护关闭时不检查会话，协议停用开关不起作用', async () => {
+    const { core, getSessionUser } = mockCore({ 'maintenance.enabled': false, 'maintenance.blockProtocols': true })
+    const app = createApp({ core })
+    expect((await app.request('http://example.test/api/openapi.json')).status).toBe(200)
+    expect((await app.request('http://example.test/Alice.json')).status).toBe(200)
+    expect(getSessionUser).not.toHaveBeenCalled()
   })
 })

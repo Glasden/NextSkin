@@ -12,7 +12,7 @@ export interface AddPlayerDialogProps {
   cost: number
   score: number
   nameRule: PlayerNameRules
-  /** 需要先验证邮箱 */
+  /** 需要先验证邮箱，或者角色已经达到上限（ADR-0043） */
   disabled: boolean
 }
 

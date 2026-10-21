@@ -4,10 +4,10 @@
  * 返回 player_not_found。设置、邮件是否配置在事务外读好：读它们用的是 db，SQLite 只有一个连接，在事务里读会死锁
  */
 import { deletePlayerAuthorizations } from '../oauth/revoke.ts'
-import { isUniqueViolation, toIsoTimestamp, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
+import { countRows, isUniqueViolation, toIsoTimestamp, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
 import type { Player } from '@nextskin/plugin-sdk'
 import type { Transaction } from 'kysely'
-import { outranks } from '../access/permissions.ts'
+import { hasAdminAccess, outranks } from '../access/permissions.ts'
 import { audit } from '../audit/write.ts'
 import { DomainError } from '../errors.ts'
 import { validatePlayerName } from '../players/create.ts'
@@ -106,6 +106,7 @@ export function createAdminPlayers(options: AdminOptions) {
    * 加锁：自己 → 原主人和新主人按 uid 升序 → 材质。所有改角色的写入都先锁主人，锁住两个主人之后角色不会再变
    */
   async function transferPlayer(actor: AdminActor, pid: number, uid: number): Promise<Player> {
+    const { 'player.maxPerUser': limit } = await settings.read(['player.maxPerUser'])
     const notice = await readNoticeContext(mail, settings)
     return transactionWithRetry(db, async (tx) => {
       const eventActor = await authorize(tx, actor, 'players.manage')
@@ -122,6 +123,12 @@ export function createAdminPlayers(options: AdminOptions) {
       if (!outranks(eventActor.role, owner.role) || !outranks(eventActor.role, recipient.role))
         throw new DomainError('user_not_manageable')
       if (recipient.id === owner.id) return toPlayer(row)
+      if (
+        limit > 0 &&
+        !hasAdminAccess(recipient.role) &&
+        (await countRows(tx.selectFrom('players').where('user_id', '=', recipient.id))) >= limit
+      )
+        throw new DomainError('player_transfer_limit_reached', { limit })
 
       // 别人上传的私有材质新主人看不到，包括原主人的；公开材质和新主人自己的私有材质留着
       const hidden = new Set<number>()

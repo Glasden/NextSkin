@@ -175,3 +175,15 @@ test('空 POST 同样检查 Origin，角色 JSON 的类型错误返回字段 nam
   })
   expect(methods.create).not.toHaveBeenCalled()
 })
+
+test('添加角色达到上限时返回本地化 403，不挂在字段下', async () => {
+  const { request, methods } = setup()
+  methods.create.mockRejectedValue(new DomainError('player_limit_reached', { limit: 1 }))
+  const response = await request('POST', '/api/players', { name: 'Steve' }, { 'accept-language': 'en' })
+  expect(response.status).toBe(403)
+  const body: unknown = await response.json()
+  expect(body).toMatchObject({
+    error: { code: 'player_limit_reached', message: expect.stringContaining('1') as unknown },
+  })
+  expect(body).not.toHaveProperty('error.fields')
+})

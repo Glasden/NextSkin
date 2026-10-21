@@ -13,3 +13,5 @@ export type {
   ImportCheckResult,
   ImportEnvForm,
 } from './import-gateway.ts'
+export { classifyMaintenance, allowedDuringMaintenance } from './maintenance.ts'
+export type { MaintenanceClass } from './maintenance.ts'

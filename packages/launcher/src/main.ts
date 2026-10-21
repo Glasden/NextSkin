@@ -45,6 +45,8 @@ async function main(): Promise<number> {
       return (await import('./commands/disable-2fa.ts')).run(argv, read)
     case 'disable-captcha':
       return (await import('./commands/disable-captcha.ts')).run(argv, read)
+    case 'maintenance':
+      return (await import('./commands/maintenance.ts')).run(argv, read)
     case 'import':
       return (await import('./commands/import.ts')).run(argv, read)
     default:

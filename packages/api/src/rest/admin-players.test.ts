@@ -175,6 +175,7 @@ const failures = [
   ['player_not_found', 404, 'transferPlayer', {}],
   ['user_not_found', 404, 'transferPlayer', {}],
   ['user_not_manageable', 403, 'transferPlayer', {}],
+  ['player_transfer_limit_reached', 403, 'transferPlayer', { limit: 1 }],
   ['player_not_found', 404, 'deletePlayer', {}],
   ['permission_denied', 403, 'lookupUser', {}],
   ['user_not_found', 404, 'lookupUser', {}],

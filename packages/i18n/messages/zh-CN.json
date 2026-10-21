@@ -92,6 +92,8 @@
     "player_name_length": "角色名长度要在 {min} 到 {max} 个字符之间。",
     "player_name_taken": "这个角色名已被占用，换一个试试。",
     "player_name_rule_misconfigured": "本站的角色名规则设置有误，请联系管理员。",
+    "player_limit_reached": "你的角色已经达到本站的上限（{limit} 个），删除不用的角色后才能添加。",
+    "player_transfer_limit_reached": "新主人的角色已经达到本站的上限（{limit} 个）。请对方先删掉不用的角色，或者调高上限。",
     "ip_limit_reached": "这个 IP 地址注册的账号已经达到上限（{limit} 个）。已有账号的话，请直接登录。",
     "mail_not_configured": "本站没有配置邮件发送，暂时无法发送邮件。请联系站点管理员。",
     "score_insufficient": "积分不够：需要 {required}，当前只有 {balance}。",
@@ -127,6 +129,7 @@
     "setup_code_invalid": "安装码不对。安装码在数据目录的 setup-code 文件里，复制过来再试一次。",
     "setup_code_required": "先输入安装码。安装码在数据目录的 setup-code 文件里。",
     "maintenance": "站点正在导入数据，暂时不能使用，稍后再试。",
+    "site_maintenance": "站点正在维护，暂时只有管理员能使用，稍后再试。",
     "import_running": "已经有一次导入在运行，等它结束后再开始。",
     "import_not_running": "这次运行已经结束，不能再取消。",
     "import_run_not_found": "找不到这次运行，可能服务重启过。从安装向导或后台重新开始。",
@@ -408,6 +411,7 @@
       "title": "角色",
       "description": "角色就是你在游戏里的名字，每个角色有自己的 UUID、皮肤和披风。",
       "count": "{count} 个",
+      "countWithLimit": "{count} / {limit} 个",
       "add": "添加角色",
       "cost": "添加一个角色要 {cost} 积分，你现在有 {score} 积分。",
       "free": "添加角色不需要积分。",
@@ -439,6 +443,7 @@
       "emptyTitle": "你还没有角色",
       "emptyDescription": "添加一个角色，就有了在游戏里用的名字。",
       "verifyFirst": "验证邮箱之后，才能添加、改名和删除角色。",
+      "limitReached": "本站每个用户最多 {limit} 个角色，你已经达到上限。删除不用的角色后才能添加。",
       "failed": "没有成功，请稍后重试。",
       "changeSkin": "换皮肤",
       "changeCape": "换披风",
@@ -863,6 +868,11 @@
       "system": "跟随系统",
       "light": "亮色",
       "dark": "暗色"
+    },
+    "maintenance": {
+      "label": "维护提示",
+      "notice": "{protocols, select, blocked {维护模式已开启：除了管理员，别人打开站点只能看到维护页，外置登录和皮肤加载也已暂停。} other {维护模式已开启：除了管理员，别人打开站点只能看到维护页。外置登录和皮肤加载照常。}}",
+      "settings": "维护设置"
     },
     "footer": {
       "columns": {
@@ -1478,6 +1488,7 @@
         "content": "角色和材质",
         "mail": "邮件",
         "yggdrasil": "Yggdrasil",
+        "maintenance": "维护",
         "advanced": "高级"
       },
       "save": "保存",
@@ -1747,6 +1758,10 @@
               "offline": "按角色名计算（与离线模式相同）",
               "random": "随机生成"
             }
+          },
+          "maxPerUser": {
+            "label": "每个用户的角色上限",
+            "help": "普通用户最多能有几个角色，0 表示不限。管理员和超级管理员不受限制。后台转让角色时也按这个上限检查；调低以后，已经超出的角色保留，只是不能再添加。"
           }
         },
         "texture": {
@@ -1844,6 +1859,20 @@
           "loginIntervalMs": {
             "label": "登录请求间隔",
             "help": "毫秒。同一用户名的登录和退出请求共用间隔；0 表示不限。"
+          }
+        },
+        "maintenance": {
+          "enabled": {
+            "label": "开启维护模式",
+            "help": "除了管理员和超级管理员，别人打开站点只能看到维护页，接口返回 503。登录页照常开放，管理员可以登录进来，做完再关掉。"
+          },
+          "blockProtocols": {
+            "label": "同时停用游戏服务",
+            "help": "维护期间外置登录（Yggdrasil 和 Yggdrasil Connect）、CSL 和 USM 的皮肤加载也返回 503，玩家暂时进不了用本站外置登录的服务器，游戏里也看不到皮肤。不勾选时它们照常工作。"
+          },
+          "message": {
+            "label": "维护说明",
+            "help": "显示在维护页上，可以写维护的原因和预计结束的时间。留空时显示默认的说明。"
           }
         },
         "network": {
@@ -2442,7 +2471,13 @@
     "title": "站点正在维护",
     "description": "服主正在导入数据，站点暂时不能使用。通常几分钟就好。",
     "refresh": "这个页面每 30 秒刷新一次，导入结束后会自动回到你原来要打开的页面。",
-    "illustration": "站在展台上的默认皮肤"
+    "illustration": "站在展台上的默认皮肤",
+    "manualDescription": "站长正在维护站点，暂时只有管理员能使用。",
+    "protocolsOpen": "外置登录和皮肤加载照常可用，游戏里不受影响。",
+    "protocolsBlocked": "外置登录和皮肤加载也暂停了，暂时进不了用本站外置登录的服务器。",
+    "manualRefresh": "这个页面每 30 秒刷新一次，维护结束后会自动回到你原来要打开的页面。",
+    "adminSignIn": "管理员登录",
+    "notAdmin": "你登录的账号不是管理员，维护期间只能看到这一页。"
   },
   "import": {
     "wizard": {

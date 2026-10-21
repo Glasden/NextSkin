@@ -13,6 +13,7 @@ export const settingSections = [
   'content',
   'mail',
   'yggdrasil',
+  'maintenance',
   'advanced',
 ] as const
 export type SettingSection = (typeof settingSections)[number]
@@ -146,6 +147,7 @@ export const coreSettingsRegistry = {
     section: 'content',
     secret: false,
   },
+  'player.maxPerUser': { schema: z.int().min(0).max(1000), default: 0, section: 'content', secret: false },
   'texture.maxFileSizeKb': { schema: z.int().min(1).max(8192), default: 1024, section: 'content', secret: false },
   'texture.nameRegex': { schema: z.string(), check: validRegex, default: '', section: 'content', secret: false },
   'texture.contentPolicy': {
@@ -207,6 +209,14 @@ export const coreSettingsRegistry = {
     schema: z.int().min(0).max(600000),
     default: 1000,
     section: 'yggdrasil',
+    secret: false,
+  },
+  'maintenance.enabled': { schema: z.boolean(), default: false, section: 'maintenance', secret: false },
+  'maintenance.blockProtocols': { schema: z.boolean(), default: false, section: 'maintenance', secret: false },
+  'maintenance.message': {
+    schema: z.string().max(2000).meta({ contentMediaType: 'text/markdown' }),
+    default: '',
+    section: 'maintenance',
     secret: false,
   },
   // 默认信任回环地址，让同机的 nginx 等反向代理开箱可用（ADR-0018）。

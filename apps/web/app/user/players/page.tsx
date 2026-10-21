@@ -1,3 +1,4 @@
+import { hasAdminAccess } from '@nextskin/domain'
 import { Alert, EmptyState, FigurePlaceholder, PlayerCard, SkinFigure } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
@@ -34,6 +35,7 @@ export default async function PlayersPage() {
       'score.perPlayer',
       'score.refundOnDelete',
       'auth.requireEmailVerification',
+      'player.maxPerUser',
     ]),
     getTranslations('user.players'),
     getFormatter(),
@@ -42,10 +44,13 @@ export default async function PlayersPage() {
   if (!overview) redirect('/sign-in')
   // 写操作由用例检查（ADR-0022）；这里只是不让用户点了才知道不行
   const locked = settings['auth.requireEmailVerification'] && !overview.emailVerified
+  // 角色上限只管普通用户，0 表示不限（ADR-0043）；调低以后超出的角色保留，只是不能再加
+  const limit = hasAdminAccess(user.role) ? 0 : settings['player.maxPerUser']
+  const full = limit > 0 && players.length >= limit
   const cost = settings['score.perPlayer']
   const refund = settings['score.refundOnDelete']
   const nameRule = { rule: settings['player.nameRule'], ...settings['player.nameLength'] }
-  const add = <AddPlayerDialog cost={cost} score={overview.score} nameRule={nameRule} disabled={locked} />
+  const add = <AddPlayerDialog cost={cost} score={overview.score} nameRule={nameRule} disabled={locked || full} />
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,8 +58,13 @@ export default async function PlayersPage() {
         <div className="flex flex-col gap-1">
           <h1 className="flex items-baseline gap-3 font-pixel text-pixel-2 text-text">
             {t('title')}
-            {players.length > 0 && (
-              <span className="text-pixel-1 text-text-muted tabular-nums">{t('count', { count: players.length })}</span>
+            {/* 受限的用户没有角色时也写上限："0 / 3 个" */}
+            {(players.length > 0 || limit > 0) && (
+              <span className="text-pixel-1 text-text-muted tabular-nums">
+                {limit > 0
+                  ? t('countWithLimit', { count: players.length, limit })
+                  : t('count', { count: players.length })}
+              </span>
             )}
           </h1>
           <p className="text-sm text-pretty text-text-muted">{t('description')}</p>
@@ -68,6 +78,7 @@ export default async function PlayersPage() {
         {players.length > 0 && <div className="shrink-0">{add}</div>}
       </header>
       {locked && <Alert tone="warning">{t('verifyFirst')}</Alert>}
+      {full && <Alert>{t('limitReached', { limit })}</Alert>}
       {players.length ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {players.map((player) => (

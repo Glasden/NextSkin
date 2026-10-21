@@ -10,6 +10,7 @@ export function run(_argv: string[], context: LauncherContext): number {
   set-password             重设用户密码、收回账号
   disable-2fa              关闭用户的两步验证
   disable-captcha          关闭站点验证码
+  maintenance [on|off]     查看或开关手动维护模式
   import blessing-skin     从 Blessing Skin v6 导入
   version                  显示版本
   help                     显示帮助`)

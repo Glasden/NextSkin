@@ -7,6 +7,7 @@ import { expect, test, vi } from 'vitest'
 import metadata from '../package.json' with { type: 'json' }
 import { run as disable2fa } from './commands/disable-2fa.ts'
 import { run as disableCaptcha } from './commands/disable-captcha.ts'
+import { run as maintenance } from './commands/maintenance.ts'
 import { run as doctor } from './commands/doctor.ts'
 import { run as importBlessingSkin } from './commands/import.ts'
 import { run as setPassword } from './commands/set-password.ts'
@@ -58,6 +59,7 @@ test('version 和 help 不需要配置或数据库，兼容 pnpm 的 --', async 
     const result = await run(...argv)
     expect(result.code).toBe(0)
     expect(result.output).toContain('pnpm nextskin <命令>')
+    expect(result.output).toContain('maintenance [on|off]')
   }
 })
 
@@ -72,6 +74,8 @@ test('命令先检查参数、处理 --help，再读配置', async () => {
     () => setPassword([], read),
     () => disable2fa([], read),
     () => disableCaptcha(['extra'], read),
+    () => maintenance(['extra'], read),
+    () => maintenance(['on', 'off'], read),
   ]) {
     const result = await capture(call)
     expect(result.code).toBe(1)
@@ -114,4 +118,8 @@ test('doctor 先处理帮助和参数，不读取配置', async () => {
     expect(result).toEqual({ code: 0, output: '用法：nextskin doctor' })
   }
   expect(await capture(() => doctor(['extra'], context, options))).toEqual({ code: 1, output: '用法：nextskin doctor' })
+})
+
+test('maintenance 命令已登记，错误参数给出专用用法', async () => {
+  expect(await run('maintenance', 'invalid')).toEqual({ code: 1, output: '用法：nextskin maintenance [on|off]\n' })
 })
