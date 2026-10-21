@@ -839,7 +839,11 @@ const admissionInput = {
   serverId: 'minecraft-server-id',
   ip: '192.0.2.1',
 }
-const admissionScope = { actor: { kind: 'user' as const, uid: 123, role: 'user' as const }, locale: 'en', ip: '192.0.2.1' }
+const admissionScope = {
+  actor: { kind: 'user' as const, uid: 123, role: 'user' as const },
+  locale: 'en',
+  ip: '192.0.2.1',
+}
 const serverAdmission = () => env.core.plugins.interceptServerAdmission(admissionInput, admissionScope)
 
 test('服务器准入没有插件时失败关闭', async () => {

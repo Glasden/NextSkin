@@ -87,7 +87,10 @@ export function createApp(options: { core: Core; importer?: ImportGateway; versi
       } else await next()
       if (!c.res.headers.has('Cache-Control')) c.header('Cache-Control', 'no-cache, private')
       if (settings['yggdrasil.apiLocationIndication'] && !c.get('omitAli')) {
-        c.header('X-Authlib-Injector-API-Location', c.get('apiLocation') ?? `${c.get('profileRoot') ?? root}/api/yggdrasil`)
+        c.header(
+          'X-Authlib-Injector-API-Location',
+          c.get('apiLocation') ?? `${c.get('profileRoot') ?? root}/api/yggdrasil`,
+        )
       }
     }),
   )

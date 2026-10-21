@@ -59,14 +59,16 @@ export function createSessions(options: {
         throw forbidden('profile_mismatch', token.locale)
       tokens.assertOwned(token)
       tokens.assertNotBanned(token)
-      if (!(await admitted(input, 'join', {
-        uid: token.user_id,
-        pid: token.player_id,
-        uuid: token.uuid!,
-        name: token.name!,
-        role: token.role,
-        locale: token.locale,
-      })))
+      if (
+        !(await admitted(input, 'join', {
+          uid: token.user_id,
+          pid: token.player_id,
+          uuid: token.uuid!,
+          name: token.name!,
+          role: token.role,
+          locale: token.locale,
+        }))
+      )
         throw forbidden('token_invalid', token.locale)
       await cache.set(
         sessionCacheKey(input.serverId ?? '', input.serverKey ?? null),
@@ -87,14 +89,16 @@ export function createSessions(options: {
       if (!row) return null
       const player = await players.findByUuid(row.uuid)
       if (!player || player.pid !== session.pid || player.name !== input.username) return null
-      if (!(await admitted(input, 'hasJoined', {
-        uid: row.user_id,
-        pid: session.pid,
-        uuid: player.uuid,
-        name: player.name,
-        role: row.role,
-        locale: row.locale,
-      })))
+      if (
+        !(await admitted(input, 'hasJoined', {
+          uid: row.user_id,
+          pid: session.pid,
+          uuid: player.uuid,
+          name: player.name,
+          role: row.role,
+          locale: row.locale,
+        }))
+      )
         return null
       if (events.hasSubscribers('yggdrasil.serverJoined'))
         await transactionWithRetry(db, (tx) =>
