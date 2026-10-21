@@ -16,6 +16,16 @@ export interface PngLimits {
   maxInflatedBytes: number
 }
 
+/**
+ * 已存材质的解码上限。上传的不超过 1024×1024（ADR-0025），导入的旧文件不受这条约束，最大 4096×4096（ADR-0031）。
+ * 出图和 3D 预览要能处理任何一个已存的文件，都按它解码；4096×4096 的 RGBA 是 64 MiB
+ */
+export const STORED_TEXTURE_LIMITS: Readonly<PngLimits> = {
+  maxWidth: 4096,
+  maxHeight: 4096,
+  maxInflatedBytes: 4096 * (4096 * 4 + 1),
+}
+
 export interface ParsedPng {
   width: number
   height: number

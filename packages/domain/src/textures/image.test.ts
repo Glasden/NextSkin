@@ -135,3 +135,15 @@ test('出图结果等于纯 RGBA 渲染器；头像使用 steve', async () => {
     renderHead(image, 'steve', 1),
   )
 })
+
+test('超过上传上限的导入文件也能出图', () => {
+  // 导入的旧文件不受上传的 1024 上限约束（ADR-0031），出图要能解码它们
+  const image = { width: 1280, height: 640, data: new Uint8Array(1280 * 640 * 4).map((_, i) => (i * 37) % 251) },
+    bytes = encodeTexturePng(image)
+  expect(() => processUpload(bytes, 'cape')).toThrow(
+    new DomainError('texture_size_invalid', { width: 1280, height: 640 }),
+  )
+  expect(decodeTexturePng(renderTexture({ kind: 'figure', bytes, type: 'cape', k: 4 }))).toEqual(
+    renderFigure(image, 'cape', 4),
+  )
+})

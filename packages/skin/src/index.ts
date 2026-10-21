@@ -261,6 +261,7 @@ export {
   decodePngScanlines,
   decodePng,
   normalizeTexture,
+  STORED_TEXTURE_LIMITS,
   type PngLimits,
   type ParsedPng,
 } from './png.ts'

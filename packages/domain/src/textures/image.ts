@@ -8,6 +8,7 @@ import {
   normalizeTexture,
   renderFigure,
   renderHead,
+  STORED_TEXTURE_LIMITS,
   type Rgba,
   type TextureType,
   type PngLimits,
@@ -144,9 +145,6 @@ export function processUpload(bytes: Uint8Array, type: TextureType): UploadImage
   }
 }
 
-// 导入的旧文件不受上传的尺寸上限约束（尺寸不合规则的照样导入），但解码的内存仍要有上限：4096×4096 的 RGBA 是 64 MiB
-const importLimits: PngLimits = { maxWidth: 4096, maxHeight: 4096, maxInflatedBytes: 4096 * (4096 * 4 + 1) }
-
 export interface InspectedImage {
   pixelHash: string
   width: number
@@ -161,7 +159,8 @@ export interface InspectedImage {
 export function inspectTexture(bytes: Uint8Array, type: TextureType): InspectedImage {
   let image: Rgba
   try {
-    image = decodeTexturePng(bytes, importLimits)
+    // 导入的旧文件不受上传的尺寸上限约束（尺寸不合规则的照样导入）
+    image = decodeTexturePng(bytes, STORED_TEXTURE_LIMITS)
   } catch (error) {
     if (error instanceof PngError) throw new DomainError('texture_file_invalid')
     throw error
@@ -182,6 +181,7 @@ export interface RenderInput {
   k: number
 }
 export function renderTexture({ kind, bytes, type, k }: RenderInput): Uint8Array {
-  const image = decodeTexturePng(bytes)
+  // 不能用上传的上限：导入的旧文件可以更大
+  const image = decodeTexturePng(bytes, STORED_TEXTURE_LIMITS)
   return encodeTexturePng(kind === 'figure' ? renderFigure(image, type, k) : renderHead(image, 'steve', k))
 }

@@ -1,6 +1,13 @@
 'use client'
 
-import { decodePng, normalizeTexture, prepareSkin, type Rgba, type TextureType } from '@nextskin/skin'
+import {
+  decodePng,
+  normalizeTexture,
+  prepareSkin,
+  STORED_TEXTURE_LIMITS,
+  type Rgba,
+  type TextureType,
+} from '@nextskin/skin'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type * as Skinview3d from 'skinview3d'
 import { SegmentedControl } from '../segmented-control/segmented-control.tsx'
@@ -36,9 +43,6 @@ export interface SkinViewerProps {
 
 type Animation = 'idle' | 'walk' | 'run'
 
-// 与服务端出图相同的解码上限（ADR-0008）
-const limits = { maxWidth: 1024, maxHeight: 1024, maxInflatedBytes: 9 * 1024 * 1024 }
-
 /**
  * 取回 PNG，用 JS 解码器解码，皮肤按游戏的规则前处理（基础层强制不透明）后画到 canvas 上交给 skinview3d。
  * 不让它自己加载图片：canvas 按预乘 alpha 存像素，透明像素原有的 RGB 会丢，而游戏会把基础层的这些像素显示出来
@@ -47,8 +51,10 @@ const limits = { maxWidth: 1024, maxHeight: 1024, maxInflatedBytes: 9 * 1024 * 1
 async function loadTexture(src: string, type: TextureType, signal: AbortSignal): Promise<HTMLCanvasElement> {
   const response = await fetch(src, { signal })
   if (!response.ok) throw new Error(`材质加载失败：HTTP ${response.status}`)
-  const decoded = await decodePng(new Uint8Array(await response.arrayBuffer()), limits)
-  const image: Rgba = type === 'cape' ? normalizeTexture(decoded, 'cape') : prepareSkin(decoded)
+  // 与服务端出图相同的上限（ADR-0008）：导入的旧文件可以超过上传的 1024
+  const decoded = await decodePng(new Uint8Array(await response.arrayBuffer()), STORED_TEXTURE_LIMITS)
+  const image: Rgba =
+    type === 'cape' ? normalizeTexture(decoded, 'cape', STORED_TEXTURE_LIMITS.maxWidth) : prepareSkin(decoded)
   const canvas = document.createElement('canvas')
   canvas.width = image.width
   canvas.height = image.height
