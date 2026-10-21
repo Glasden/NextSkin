@@ -1,5 +1,12 @@
 # @nextskin/plugin-cli
 
+## 1.0.0-rc.2
+
+### Minor Changes
+
+- e24ed56: 新增事务外、失败时拒绝的拦截点 `user.action`，供插件限制用户本人管理角色、材质、OAuth 应用和举报（ADR-0046）。
+- 2652da7: 新增事务外、失败时拒绝的拦截点 `yggdrasil.issueToken`，覆盖启动器登录、刷新和 Connect 带 Join 的令牌签发（ADR-0045）。
+
 ## 1.0.0-rc.1
 
 ### Minor Changes

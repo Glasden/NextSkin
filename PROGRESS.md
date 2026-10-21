@@ -47,7 +47,7 @@
 
 ## 还没做
 
-- **插件 SDK 1.0**（ADR-0035）：冻结前的调整、打包和发布流程、作者文档（`packages/plugin-sdk/docs/`）已经做完；两个包的 `1.0.0-rc.0` 已经由维护者在本地发到 npm（2026-10-19，预发布模式 `rc`，没有来源证明），仓库已经公开，npm 的可信发布和 GitHub 的 environment `npm`（要维护者批准）已经配好，之后的候选版由 CI 发：`1.0.0-rc.1` 已经由 CI 经可信发布发出（2026-10-21，带来源证明；runner 上没有 git 身份，标签没建出来，是手动补推的，工作流已修）。候选期在仓库外迁 share-registration-link（ADR-0041）：先用 `pnpm pack` 出来的包迁了一遍，构建命令不认 `fromQuery`（已修），作者文档补了辅助函数里 ctx 的类型、类型检查的配置、`site.url` 可能为空；rc.1 发出来之后照入门装 npm 上的 `@rc`，类型检查和构建都通过。rc.1 之后新增了拦截点 `yggdrasil.issueToken`（ADR-0045）和 `user.action`（ADR-0046），changeset 已写，还没发候选版。还没做：收集作者意见；退出预发布时去掉 README 和入门里的 `@rc`。
+- **插件 SDK 1.0**（ADR-0035）：冻结前的调整、打包和发布流程、作者文档（`packages/plugin-sdk/docs/`）已经做完；两个包的 `1.0.0-rc.0` 已经由维护者在本地发到 npm（2026-10-19，预发布模式 `rc`，没有来源证明），仓库已经公开，npm 的可信发布和 GitHub 的 environment `npm`（要维护者批准）已经配好，之后的候选版由 CI 发：`1.0.0-rc.1` 已经由 CI 经可信发布发出（2026-10-21，带来源证明；runner 上没有 git 身份，标签没建出来，是手动补推的，工作流已修）。候选期在仓库外迁 share-registration-link（ADR-0041）：先用 `pnpm pack` 出来的包迁了一遍，构建命令不认 `fromQuery`（已修），作者文档补了辅助函数里 ctx 的类型、类型检查的配置、`site.url` 可能为空；rc.1 发出来之后照入门装 npm 上的 `@rc`，类型检查和构建都通过。`1.0.0-rc.2`（新增拦截点 `yggdrasil.issueToken`、`user.action`，ADR-0045、ADR-0046）推到 main，由 CI 发布。还没做：收集作者意见；退出预发布时去掉 README 和入门里的 `@rc`。
 - **第三方登录的字段核对**：四家的 subject、`emailVerified` 还要用真实账号核对一遍（ADR-0034"首批插件"）。
 - **插件 API 推迟的部分**：其余写核心数据的能力（以指定 UUID 建角色、发通知等，见 ADR-0041 的"以后的写能力"）、草案里的其余五个拦截点、运行时组件和插槽等，见 ADR-0033 的"推迟"表。
 - **第一次发布**（ADR-0040）：两个发布工作流还没真正跑过，amd64 镜像还没运行过；仓库公开了，ZIP 和镜像的构建来源证明（`actions/attest-build-provenance`）可以加了，第一次推镜像之后要核对 GHCR 的 `nextskin` 包是公开的；部署文档里标了"未实测"的条目（宝塔和 1Panel 的反向代理、Windows 的 Ctrl+C 和 NSSM、Docker 里导入）等真实环境核对；国内的下载渠道等第一版发出后再定。
