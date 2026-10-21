@@ -69,7 +69,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 | `packages/domain` | 领域用例与查询服务，按业务领域分目录（users、players、textures、closet……） |
 | `packages/db` | Kysely 实例、迁移、方言辅助函数 |
 | `packages/ui` | 组件库与设计 token（`src/theme.css` 是 token 的唯一来源） |
-| `packages/skin` | 材质的前处理和 2D 渲染，纯函数，服务端出图和浏览器上传页共用（ADR-0017） |
+| `packages/skin` | 材质的前处理和出图（皮肤的 3D 人物、披风的 2D 正背面、头像），纯函数，服务端出图和浏览器上传页共用（ADR-0017、ADR-0048） |
 | `packages/i18n` | 界面文案（`messages/<语言>.json`）和语言解析，网页和领域层共用（ADR-0019） |
 | `packages/email` | 邮件模板，无依赖的 HTML 模板函数（ADR-0020） |
 | `packages/plugin-sdk`、`plugin-host` | 插件 API（公开面，ADR-0033）；插件侧的运行时：host 进程的入口和帧协议、加载插件定义、构造 `ctx`、插件包的格式和校验。核心侧的注册表、网关、换代和安装在 `packages/domain/src/plugins/` |

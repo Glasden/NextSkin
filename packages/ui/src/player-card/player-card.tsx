@@ -14,12 +14,12 @@ export interface PlayerCardProps {
 }
 
 /**
- * 角色管理里的一个角色：上面是展台，下面是名字、信息和操作。鼠标移到卡片上时，展台上的皮肤转身。
+ * 角色管理里的一个角色：上面是展台，下面是名字、信息和操作。鼠标移到卡片上时，展台上的皮肤抬手。
  * 材质用 TextureCard，账号用 PlayerHead 加昵称
  */
 export function PlayerCard({ name, headingLevel: Heading = 'h2', figure, children, actions }: PlayerCardProps) {
   return (
-    <article className="group/turn flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface">
+    <article className="group/raise flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface">
       <div className="grid h-44 place-items-center border-b border-border bg-stage">{figure}</div>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <Heading className="truncate text-xl font-medium text-text">{name}</Heading>

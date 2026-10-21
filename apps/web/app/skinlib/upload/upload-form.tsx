@@ -149,12 +149,14 @@ export function UploadForm({ disabled, score, maxFileSizeKb, nameRegex, prices }
               <Stage grid>
                 {fits ? (
                   <SkinFigure
-                    src={(k) => preview.urls.get(k) ?? ''}
+                    src={(n, _view, raise) =>
+                      preview.urls.get(type === 'cape' ? String(n) : `${n}${raise ? '-raise' : ''}`) ?? ''
+                    }
                     type={type}
                     textureScale={preview.textureScale}
                     scale={5}
                     alt={t('previewAlt', { type: types(type) })}
-                    turnOnHover
+                    raiseOnHover
                     loading="eager"
                   />
                 ) : (

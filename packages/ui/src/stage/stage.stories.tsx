@@ -22,12 +22,12 @@ export const Default: Story = {
   ),
 }
 
-/** 登录页插图：大展台加网格，皮肤按 ×8 显示。站点还没有材质时用随核心发布的默认皮肤 */
+/** 登录页插图：大展台加网格，皮肤只显示正面、按 ×8 显示。站点还没有材质时用随核心发布的默认皮肤 */
 export const Grid: Story = {
   render: () => (
     <div className="h-88 w-80">
       <Stage grid>
-        <SkinFigure {...fixture('default-skin')} scale={8} alt="cxchency 的皮肤" loading="eager" />
+        <SkinFigure {...fixture('default-skin')} scale={8} view="front" alt="cxchency 的皮肤" loading="eager" />
       </Stage>
     </div>
   ),

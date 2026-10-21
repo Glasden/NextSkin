@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent } from 'storybook/test'
 import { Link } from '../link/link.tsx'
-import { fixture, type FixtureName } from '../skin-figure/fixtures.ts'
+import { fixture, raiseSettled, type FixtureName } from '../skin-figure/fixtures.ts'
 import { SkinFigure } from '../skin-figure/skin-figure.tsx'
 import { Podium, type PodiumPlace } from './podium.tsx'
 
@@ -17,7 +17,7 @@ type Story = StoryObj<typeof meta>
 function place(rank: number, name: string, texture: FixtureName, gain: number): PodiumPlace {
   return {
     name,
-    figure: <SkinFigure {...fixture(texture)} scale={5} alt={`${name}的皮肤`} />,
+    figure: <SkinFigure {...fixture(texture)} scale={5} view="front" alt={`${name}的皮肤`} />,
     score: `♥ +${gain}`,
     label: `第 ${rank} 名：${name}，最近 7 天 ${gain} 人收藏`,
     render: <a href={`#${texture}`} />,
@@ -37,7 +37,7 @@ export const Full: Story = {
       <Podium title="本周收藏最多" period="10.12 – 10.18" places={top} vacantLabel="这个名次还空着" />
     </div>
   ),
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     // 读屏软件按名次读，链接的名字里有名次、材质名和数字
     await expect(canvas.getAllByRole('link').map((link) => link.getAttribute('aria-label'))).toEqual(
       top.map((item) => item.label),
@@ -49,6 +49,7 @@ export const Full: Story = {
     await userEvent.tab()
     await expect(canvas.getByRole('link', { name: top[0]!.label })).toHaveFocus()
     ;(document.activeElement as HTMLElement).blur()
+    await raiseSettled(canvasElement)
   },
 }
 
@@ -59,9 +60,10 @@ export const Partial: Story = {
       <Podium title="本周收藏最多" period="10.12 – 10.18" places={top.slice(0, 1)} vacantLabel="这个名次还空着" />
     </div>
   ),
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getAllByRole('link')).toHaveLength(1)
     await expect(canvas.getAllByRole('img', { name: '这个名次还空着' })).toHaveLength(2)
+    await raiseSettled(canvasElement)
   },
 }
 
@@ -82,9 +84,10 @@ export const Empty: Story = {
       />
     </div>
   ),
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getAllByRole('img', { name: '这个名次还空着' })).toHaveLength(3)
     await expect(canvas.getByRole('link', { name: '去皮肤库看看' })).toBeVisible()
+    await raiseSettled(canvasElement)
   },
 }
 

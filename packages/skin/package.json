@@ -2,7 +2,7 @@
   "name": "@nextskin/skin",
   "version": "0.0.0",
   "private": true,
-  "description": "纯 RGBA 材质前处理与 2D 渲染（ADR-0017）",
+  "description": "纯 RGBA 材质前处理与出图（ADR-0017、ADR-0048）",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

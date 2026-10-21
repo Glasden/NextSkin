@@ -18,7 +18,7 @@ type Story = StoryObj<typeof meta>
 
 export const Scales: Story = {
   render: () => (
-    <div className="h-80 w-140">
+    <div className="h-80 w-200">
       <Stage>
         <div className="flex items-end gap-8">
           {([3, 4, 5, 8] as const).map((scale) => (
@@ -28,16 +28,33 @@ export const Scales: Story = {
       </Stage>
     </div>
   ),
-  // 背面那张图只是转身用的，对读屏软件隐藏：每个人物只有一张图
+  // 每个人物只有一张图；出图密度等于显示倍数乘设备像素比，浏览器不缩放。静态构建的文件名带 hash，所以不匹配到扩展名
   play: async ({ canvas }) => {
     await expect(canvas.getAllByRole('img')).toHaveLength(4)
-    await expect(canvas.getByRole('img', { name: '初音未来的皮肤，×8' })).toHaveAttribute('width', '256')
+    const large = canvas.getByRole<HTMLImageElement>('img', { name: '初音未来的皮肤，×8' })
+    await expect(large.getAttribute('src')).toMatch(/hatsune_miku-both-p8[.-]/)
+    await waitFor(() => expect(large.naturalWidth).toBe(Number(large.getAttribute('width'))))
   },
+}
+
+/** 正背面并排（材质卡片、角色卡）和只有正面（领奖台、插图、迷你卡片） */
+export const Views: Story = {
+  render: () => (
+    <div className="h-48 w-120">
+      <Stage>
+        <div className="flex items-end gap-12">
+          <SkinFigure {...miku} scale={4} alt="初音未来的皮肤，正背面" />
+          <SkinFigure {...miku} scale={5} view="front" alt="初音未来的皮肤，正面" />
+          <SkinFigure {...miku} scale={3} view="front" alt="初音未来的皮肤，正面 ×3" />
+        </div>
+      </Stage>
+    </div>
+  ),
 }
 
 export const Types: Story = {
   render: () => (
-    <div className="h-48 w-140">
+    <div className="h-48 w-240">
       <Stage>
         <div className="flex items-end gap-8">
           <SkinFigure {...fixture('haka')} scale={4} alt="Haka 的皮肤（经典）" />
@@ -50,35 +67,36 @@ export const Types: Story = {
       </Stage>
     </div>
   ),
-  // 高清皮肤（s = 8）在 ×4 下取 k = 4、2x 屏取 k = 8；普通皮肤只有 k = 1，不给 srcset
+  // 皮肤按出图密度取图，和材质的分辨率无关；披风还是按分辨率 k 取 2D 拼图，普通披风只有 k = 1，不给 srcset
   play: async ({ canvas }) => {
     const hd = canvas.getByRole('img', { name: '红金装甲的皮肤（高清）' })
-    await expect(hd.getAttribute('src')).toMatch(/ironman_hd-k4\.png/)
-    await expect(hd.getAttribute('srcset')).toMatch(/ironman_hd-k8\.png[^,]* 2x$/)
-    await expect(canvas.getByRole('img', { name: 'Haka 的皮肤（经典）' })).not.toHaveAttribute('srcset')
+    await expect(hd.getAttribute('src')).toMatch(/ironman_hd-both-p4[.-]/)
+    await expect(hd.getAttribute('srcset')).toMatch(/ 2x$/)
+    await expect(canvas.getByRole('img', { name: 'Mojang 披风' })).not.toHaveAttribute('srcset')
   },
 }
 
-export const Turn: Story = {
-  // 材质卡片的做法：可以聚焦的祖先元素带 group/turn，鼠标移上去或键盘聚焦时转到背面
+export const Raise: Story = {
+  // 材质卡片的做法：可以聚焦的祖先元素带 group/raise，鼠标移上去或键盘聚焦时才下载抬手拼图，下载好就抬手
   render: (args) => (
-    <a href="#turn" className={`group/turn block rounded-md ${focusRing}`}>
-      <div className="h-48 w-40">
+    <a href="#raise" className={`group/raise block rounded-md ${focusRing}`}>
+      <div className="h-48 w-64">
         <Stage>
           <SkinFigure {...args} />
         </Stage>
       </div>
     </a>
   ),
-  play: async ({ canvas }) => {
-    const front = canvas.getByRole('img', { name: '初音未来的皮肤' }).parentElement!
-    const back = front.nextElementSibling!
-    await expect(getComputedStyle(back).scale).toBe('0 1')
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvasElement.querySelector('img[data-raise]')).toBeNull()
     await userEvent.tab()
     await expect(canvas.getByRole('link')).toHaveFocus()
-    await waitFor(async () => {
-      await expect(getComputedStyle(front).scale).toBe('0 1')
-      await expect(getComputedStyle(back).scale).toBe('1')
-    })
+    await waitFor(() => expect(canvasElement.querySelector('img[data-ready]')).not.toBeNull())
+    const sprite = canvasElement.querySelector('img[data-ready]')!
+    await expect(sprite.getAttribute('src')).toMatch(/hatsune_miku-both-raise-p4[.-]/)
+    // 拼图向左挪四帧，停在最后一帧；静止图留着替代文字，只是透明
+    const frame = sprite.parentElement!.getBoundingClientRect()
+    await waitFor(() => expect(sprite.getBoundingClientRect().left - frame.left).toBe(-4 * frame.width))
+    await expect(canvas.getByRole('img', { name: '初音未来的皮肤' })).toHaveClass('opacity-0')
   },
 }

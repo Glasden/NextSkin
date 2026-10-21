@@ -3,7 +3,7 @@ import { MoreVertical } from 'pixelarticons/react/MoreVertical.js'
 import { expect, userEvent } from 'storybook/test'
 import { Badge } from '../badge/badge.tsx'
 import { IconButton } from '../icon-button/icon-button.tsx'
-import { fixture, type FixtureName } from '../skin-figure/fixtures.ts'
+import { fixture, raiseSettled, type FixtureName } from '../skin-figure/fixtures.ts'
 import { SkinFigure } from '../skin-figure/skin-figure.tsx'
 import { TextureCard, type TextureCardProps } from './texture-card.tsx'
 
@@ -52,7 +52,7 @@ export const Library: Story = {
       ))}
     </div>
   ),
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(
       library.map((item) => item.props.name),
     )
@@ -61,19 +61,21 @@ export const Library: Story = {
     await expect(miku).toHaveAttribute('href', '#hatsune_miku')
     await expect(miku).toHaveAccessibleName(/已在衣柜/)
     await expect(canvas.getByRole('link', { name: /^Haka/ })).not.toHaveAccessibleName(/已在衣柜/)
+    await raiseSettled(canvasElement)
   },
 }
 
-/** 键盘聚焦：显示焦点框，皮肤转身 */
+/** 键盘聚焦：显示焦点框，皮肤抬手 */
 export const Focused: Story = {
   render: () => (
     <div className="w-48">
       <TextureCard {...card('Haka', 'haka', 'Steve · 36 人收藏').props} />
     </div>
   ),
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await userEvent.tab()
     await expect(canvas.getByRole('link')).toHaveFocus()
+    await raiseSettled(canvasElement)
   },
 }
 
@@ -95,8 +97,9 @@ export const WithActions: Story = {
       ))}
     </div>
   ),
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     const more = canvas.getByRole('button', { name: '上学穿的更多操作' })
     await expect(canvas.getByRole('link', { name: /上学穿/ })).not.toContainElement(more)
+    await raiseSettled(canvasElement)
   },
 }

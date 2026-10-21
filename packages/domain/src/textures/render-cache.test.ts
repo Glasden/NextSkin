@@ -2,9 +2,16 @@ import { mkdtemp, mkdir, readdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { removeTestDirectory } from '@nextskin/db/testing'
-import { RENDERER_VERSION } from '@nextskin/skin'
+import { MAX_POSE_DENSITY, RENDERER_VERSION } from '@nextskin/skin'
 import { afterAll, beforeAll, expect, test } from 'vitest'
-import { createLocalRenderCache, createMemoryRenderCache, type RenderCache, type RenderKey } from './render-cache.ts'
+import {
+  createLocalRenderCache,
+  createMemoryRenderCache,
+  POSE_KINDS,
+  renderKey,
+  type RenderCache,
+  type RenderKey,
+} from './render-cache.ts'
 
 let directory: string
 beforeAll(async () => {
@@ -19,16 +26,33 @@ async function verify(cache: RenderCache) {
     another = { ...key, hash: 'b'.repeat(64) }
   expect(await cache.get(key)).toBeNull()
   await Promise.all([cache.put(key, bytes), cache.put({ ...key, kind: 'head' }, bytes), cache.put(another, bytes)])
+  for (const kind of POSE_KINDS) {
+    const pose = { ...key, kind, k: 3 }
+    expect(await cache.get(pose)).toBeNull()
+    await cache.put(pose, Uint8Array.of(4))
+    expect(new Uint8Array((await cache.get(pose))!)).toEqual(Uint8Array.of(4))
+  }
   expect(new Uint8Array((await cache.get(key))!)).toEqual(bytes)
   await cache.deleteHash(key.hash)
   expect(await cache.get(key)).toBeNull()
   expect(await cache.get({ ...key, kind: 'head' })).toBeNull()
+  for (const kind of POSE_KINDS) expect(await cache.get({ ...key, kind, k: 3 })).toBeNull()
   expect(new Uint8Array((await cache.get(another))!)).toEqual(bytes)
   await cache.deleteHash(key.hash)
   await cache.pruneOtherVersions()
   await expect(cache.get({ ...key, hash: '../outside' })).rejects.toThrow()
   await expect(cache.put({ ...key, model: '../outside' as 'alex' }, bytes)).rejects.toThrow()
 }
+test.each(POSE_KINDS)('%s 缓存键只允许皮肤模型和 1 到最大密度的整数', (kind) => {
+  for (const model of ['steve', 'alex'] as const) {
+    for (const k of [1, 3, MAX_POSE_DENSITY])
+      expect(renderKey({ ...key, kind, model, k })).toBe(`${key.hash}/${kind}-${model}-${k}.png`)
+  }
+  for (const k of [0, -1, 1.5, MAX_POSE_DENSITY + 1, NaN, Infinity])
+    expect(() => renderKey({ ...key, kind, k })).toThrow()
+  expect(() => renderKey({ ...key, kind, model: 'cape' })).toThrow()
+  expect(() => renderKey({ ...key, kind: 'unknown' as RenderKey['kind'] })).toThrow()
+})
 test('本地缓存：完整键、临时文件改名、按 hash 删除、保留其他 hash', async () => {
   await verify(createLocalRenderCache(directory))
   expect(await readdir(join(directory, `v${RENDERER_VERSION}`, 'b'.repeat(64)))).toEqual(['figure-alex-1.png'])

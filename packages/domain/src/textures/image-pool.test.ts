@@ -4,6 +4,7 @@ import { DomainError } from '../errors.ts'
 import { createImagePool, type ImagePool } from './image-pool.ts'
 import { processSiteImage } from '../site-images/image.ts'
 import { decodeTexturePng, inspectTexture, processUpload, renderTexture } from './image.ts'
+import { POSE_KINDS } from './render-cache.ts'
 
 const pools: ImagePool[] = []
 const pool = (options?: Parameters<typeof createImagePool>[0]) => {
@@ -52,6 +53,17 @@ test('导入检查在 worker 里执行，解码不了的保留领域 code', asyn
   await expect(p.inspect({ bytes: new Uint8Array(8), type: 'steve' })).rejects.toMatchObject({
     code: 'texture_file_invalid',
   })
+})
+
+test('四种 3D 出图经过真 worker，传回的 PNG 与同步编码相同', async () => {
+  const p = pool({ size: 1 })
+  for (const kind of POSE_KINDS) {
+    const task = { ...(await input()), kind, type: 'alex' as const, k: 2 },
+      expected = renderTexture(task)
+    const result = p.render(task)
+    expect(task.bytes.byteLength).toBe(0)
+    expect(await result).toEqual(expected)
+  }
 })
 
 test('站点图片在 worker 里处理，两份 PNG 都转回来，尺寸错误保留宽高', async () => {

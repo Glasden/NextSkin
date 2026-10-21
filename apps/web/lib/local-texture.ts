@@ -1,4 +1,4 @@
-// 上传页在浏览器里处理本地文件：解码、推断类型、出 2D 预览（ADR-0017、ADR-0025）。
+// 上传页在浏览器里处理本地文件：解码、推断类型、出预览（ADR-0017、ADR-0025、ADR-0048）。
 // 只为预览和提前提示，服务端会按 ADR-0008 重新把关；解码不用 canvas，见 packages/skin/AGENTS.md
 
 import {
@@ -7,6 +7,7 @@ import {
   normalizeTexture,
   pickResolution,
   renderFigure,
+  renderPose,
   textureScale,
   type Rgba,
   type TextureType,
@@ -44,8 +45,19 @@ export function isAmbiguous(image: Rgba): boolean {
 export interface LocalPreview {
   type: TextureType
   textureScale: number
-  /** k → blob URL，交给 SkinFigure 的 src */
-  urls: ReadonlyMap<number, string>
+  /** 皮肤是"出图密度 p"或"p-raise"（抬手拼图），披风是分辨率 k → blob URL，交给 SkinFigure 的 src */
+  urls: ReadonlyMap<string, string>
+}
+
+async function toBlobUrl(image: Rgba): Promise<string | null> {
+  const canvas = document.createElement('canvas')
+  canvas.width = image.width
+  canvas.height = image.height
+  canvas
+    .getContext('2d')!
+    .putImageData(new ImageData(new Uint8ClampedArray(image.data), image.width, image.height), 0, 0)
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
+  return blob && URL.createObjectURL(blob)
 }
 
 /** 按选定的类型规范化并出图；这个类型放不下这张图时返回 null（例如 64×32 选了 Alex） */
@@ -57,18 +69,23 @@ export async function renderLocalPreview(image: Rgba, type: TextureType): Promis
     return null
   }
   const s = textureScale(type, normalized.width, normalized.height)
-  const urls = new Map<number, string>()
-  // 上传页的预览按 ×5 显示（领奖台的大小），1x、2x 两档
-  for (const k of new Set([pickResolution(s, 5, 1), pickResolution(s, 5, 2)])) {
-    const figure = renderFigure(normalized, type, k)
-    const canvas = document.createElement('canvas')
-    canvas.width = figure.width
-    canvas.height = figure.height
-    canvas
-      .getContext('2d')!
-      .putImageData(new ImageData(new Uint8ClampedArray(figure.data), figure.width, figure.height), 0, 0)
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
-    if (blob) urls.set(k, URL.createObjectURL(blob))
+  const urls = new Map<string, string>()
+  // 上传页的预览按 ×5 显示（领奖台的大小），1x、2x 两档；皮肤是正背面并排的 3D 出图，连抬手拼图一起出
+  const renders: [string, () => Rgba][] =
+    type === 'cape'
+      ? [...new Set([pickResolution(s, 5, 1), pickResolution(s, 5, 2)])].map((k) => [
+          String(k),
+          () => renderFigure(normalized, 'cape', k),
+        ])
+      : [5, 10].flatMap((p) =>
+          [false, true].map((raise): [string, () => Rgba] => [
+            `${p}${raise ? '-raise' : ''}`,
+            () => renderPose(normalized, type, 'both', p, raise),
+          ]),
+        )
+  for (const [key, render] of renders) {
+    const url = await toBlobUrl(render())
+    if (url) urls.set(key, url)
   }
   return { type, textureScale: s, urls }
 }

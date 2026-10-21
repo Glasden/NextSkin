@@ -4,6 +4,7 @@ import {
   inferSkinModel,
   renderFigure,
   renderHead,
+  renderPose,
   resolutions,
   textureScale,
   type Rgba,
@@ -44,7 +45,14 @@ export function goldenCases(): GoldenCase[] {
     const selected = type === 'cape' ? [1] : [...new Set([1, ks[Math.floor(ks.length / 2)]!, s])]
     for (const k of selected)
       cases.push({ name: `${name}-figure-k${k}.png`, render: () => renderFigure(image, type, k) })
-    if (type !== 'cape') cases.push({ name: `${name}-head-k1.png`, render: () => renderHead(image, type, 1) })
+    if (type === 'cape') return
+    cases.push({ name: `${name}-head-k1.png`, render: () => renderHead(image, type, 1) })
+    // 3D 出图：抬手拼图的第 0 帧就是静止图，所以只存拼图；高清皮肤再存一张 p 等于 s 的。
+    // 合成的花纹材质几乎压不动，3D 出图只用真实材质
+    if (name.startsWith('synthetic')) return
+    cases.push({ name: `${name}-both-raise-p4.png`, render: () => renderPose(image, type, 'both', 4, true) })
+    cases.push({ name: `${name}-front-raise-p3.png`, render: () => renderPose(image, type, 'front', 3, true) })
+    if (s > 1) cases.push({ name: `${name}-both-p${s}.png`, render: () => renderPose(image, type, 'both', s, false) })
   }
   for (const file of Object.keys(fixtures)) {
     const image = readPng(new URL(`./fixtures/${file}`, import.meta.url))
@@ -56,7 +64,7 @@ export function goldenCases(): GoldenCase[] {
   return cases
 }
 
-/** 随核心发布的材质（assets/）预先渲染的拼图，网页直接当静态文件引用。材质的出图路由落地前，登录页插图用它 */
+/** 随核心发布的材质（assets/）预先渲染的出图，网页直接当静态文件引用：空站点的登录页、安装页、维护页插图用它 */
 export const assetFigureDirectory = new URL('../assets/figures/', import.meta.url)
 export const assetInstruction =
   '随核心发布的材质拼图过期了。渲染器升级后运行 pnpm --filter @nextskin/skin assets（AGENTS.md）'
@@ -67,6 +75,8 @@ export interface AssetFigureManifest {
 }
 
 const ASSET_SKINS = ['default-skin'] as const
+// 插图只显示正面，按 ×4、×8 显示，1x、2x 两档
+export const ASSET_DENSITIES = [4, 8, 16] as const
 
 export function assetFigures() {
   return ASSET_SKINS.map((name) => {
@@ -77,7 +87,12 @@ export function assetFigures() {
       name,
       type,
       textureScale: s,
-      files: resolutions(s).map((k) => ({ file: `${name}-k${k}.png`, render: () => renderFigure(image, type, k) })),
+      files: ASSET_DENSITIES.flatMap((p) =>
+        [false, true].map((raise) => ({
+          file: `${name}-front${raise ? '-raise' : ''}-p${p}.png`,
+          render: () => renderPose(image, type, 'front', p, raise),
+        })),
+      ),
     }
   })
 }

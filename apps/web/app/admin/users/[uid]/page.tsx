@@ -504,17 +504,18 @@ async function ClosetList({
           key: item.tid,
           cells: {
             texture: (
-              <span className="grid h-26 w-14 shrink-0 place-items-center rounded-sm bg-stage">
+              <span className="grid h-28 w-16 shrink-0 place-items-center rounded-sm bg-stage">
                 {texture ? (
                   <SkinFigure
                     src={figureSrc(texture.hash, texture.type)}
                     type={texture.type}
                     textureScale={texture.scale}
                     scale={3}
+                    view="front"
                     alt={skinlib('figureAlt', { name: texture.name, type: skinlib(`types.${texture.type}`) })}
                   />
                 ) : (
-                  <FigurePlaceholder scale={3} label={t('hidden', { tid: item.tid })} />
+                  <FigurePlaceholder scale={3} view="front" label={t('hidden', { tid: item.tid })} />
                 )}
               </span>
             ),

@@ -62,17 +62,18 @@ export default async function AdminReportsPage({
     return (
       <span className="flex min-w-48 items-center gap-3 py-1">
         {/* 迷你展台：×3 的正面（DESIGN.md §5），看得清材质才好判断 */}
-        <span className="grid h-26 w-14 shrink-0 place-items-center rounded-sm bg-stage">
+        <span className="grid h-28 w-16 shrink-0 place-items-center rounded-sm bg-stage">
           {texture ? (
             <SkinFigure
               src={figureSrc(texture.hash, texture.type)}
               type={texture.type}
               textureScale={texture.scale}
               scale={3}
+              view="front"
               alt={skinlib('figureAlt', { name: texture.name, type: type! })}
             />
           ) : (
-            <FigurePlaceholder scale={3} label={t('textureGone')} />
+            <FigurePlaceholder scale={3} view="front" label={t('textureGone')} />
           )}
         </span>
         {texture ? (

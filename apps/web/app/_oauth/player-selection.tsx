@@ -54,14 +54,15 @@ export function PlayerStage({
       <NameTag>{player.name}</NameTag>
       {player.skin ? (
         <SkinFigure
-          // 换角色时换掉整个人物，转身的动画不会从上一个角色接着播
+          // 换角色时换掉整个人物，抬手的动画不会从上一个角色接着播
           key={player.pid}
           src={figureSrc(player.skin.hash, player.skin.type)}
           type={player.skin.type}
           textureScale={player.skin.scale}
           scale={scale}
           alt={t('figure', { name: player.name })}
-          turnOnHover
+          view="front"
+          raiseOnHover
           loading="eager"
         />
       ) : (

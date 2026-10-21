@@ -66,18 +66,20 @@ export default async function AdminPlayersPage({
     }
     return (
       <span className="flex items-center gap-3 py-1">
-        <span className="flex h-26 w-24 shrink-0 items-center justify-center gap-1 rounded-sm bg-stage">
+        <span className="flex h-28 w-32 shrink-0 items-center justify-center gap-1 rounded-sm bg-stage">
           {skin && skin.scale !== null ? (
             <SkinFigure
               src={figureSrc(skin.hash, model)}
               type={model}
               textureScale={skin.scale}
               scale={3}
+              view="front"
               alt={skinlib('figureAlt', { name: player.name, type: skinlib(`types.${model}`) })}
             />
           ) : (
             <FigurePlaceholder
               scale={3}
+              view="front"
               label={
                 !player.skin
                   ? t('noSkin')

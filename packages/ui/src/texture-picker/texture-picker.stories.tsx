@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, fn, userEvent } from 'storybook/test'
-import { fixture, type FixtureName } from '../skin-figure/fixtures.ts'
+import { fixture, raiseSettled, type FixtureName } from '../skin-figure/fixtures.ts'
 import { SkinFigure } from '../skin-figure/skin-figure.tsx'
 import { TexturePicker } from './texture-picker.tsx'
 
 const option = (value: string, name: string, texture: FixtureName) => ({
   value,
   name,
-  figure: <SkinFigure {...fixture(texture)} scale={3} alt={name} />,
+  figure: <SkinFigure {...fixture(texture)} scale={3} view="front" alt={name} />,
 })
 
 const skins = [
@@ -52,7 +52,7 @@ export const Default: Story = {
       />
     )
   },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     const group = canvas.getByRole('radiogroup', { name: '选择皮肤' })
     await expect(canvas.getAllByRole('radio')).toHaveLength(5)
     await expect(canvas.queryByRole('radio', { checked: true })).toBeNull()
@@ -64,14 +64,16 @@ export const Default: Story = {
     await expect(onValueChange).toHaveBeenLastCalledWith('31')
     ;(document.activeElement as HTMLElement | null)?.blur()
     await expect(group).toBeVisible()
+    await raiseSettled(canvasElement)
   },
 }
 
 /** 打开时选中角色正在用的那一件 */
 export const Selected: Story = {
   args: { defaultValue: '12' },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getByRole('radio', { name: '上学穿' })).toBeChecked()
+    await raiseSettled(canvasElement)
   },
 }
 
@@ -87,8 +89,9 @@ export const Capes: Story = {
 /** 键盘聚焦时的焦点框 */
 export const Focused: Story = {
   args: { defaultValue: '12' },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await userEvent.tab()
     await expect(canvas.getByRole('radio', { name: '上学穿' })).toHaveFocus()
+    await raiseSettled(canvasElement)
   },
 }

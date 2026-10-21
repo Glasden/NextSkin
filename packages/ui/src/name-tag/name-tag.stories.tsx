@@ -16,9 +16,15 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 const lineup = [
-  { name: 'Hatsune_Miku', figure: <SkinFigure {...fixture('hatsune_miku')} scale={4} alt="Hatsune_Miku 的皮肤" /> },
-  { name: 'Steve', figure: <FigurePlaceholder scale={4} label="Steve 还没有皮肤" /> },
-  { name: 'A_very_long_name_x', figure: <FigurePlaceholder scale={4} label="A_very_long_name_x 还没有皮肤" /> },
+  {
+    name: 'Hatsune_Miku',
+    figure: <SkinFigure {...fixture('hatsune_miku')} scale={4} view="front" alt="Hatsune_Miku 的皮肤" />,
+  },
+  { name: 'Steve', figure: <FigurePlaceholder scale={4} view="front" label="Steve 还没有皮肤" /> },
+  {
+    name: 'A_very_long_name_x',
+    figure: <FigurePlaceholder scale={4} view="front" label="A_very_long_name_x 还没有皮肤" />,
+  },
 ]
 
 /** 名牌在人物头顶，和人物居中对齐；名字太长时截断 */
