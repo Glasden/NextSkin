@@ -13,8 +13,13 @@ export interface Server {
 // Route Handler 和 proxy 可能各自打包出一份模块，靠 globalThis 共用同一个连接池；next dev 热更新后也不会重复连接
 const holder = globalThis as typeof globalThis & { nextskinServer?: Promise<Server> }
 
-/** 第一次调用时连接数据库并执行迁移（由核心进程负责）。失败后下一次调用会重试 */
+/**
+ * 第一次调用时连接数据库并执行迁移（由核心进程负责）。失败后下一次调用会重试。
+ * `next build` 期间一律拒绝：构建的环境里有密钥时，打开核心会对构建时配置的库执行迁移
+ */
 export function getServer(): Promise<Server> {
+  if (process.env.NEXT_PHASE === 'phase-production-build')
+    return Promise.reject(new Error('构建期间不打开核心：页面应当动态渲染（app/layout.tsx）'))
   holder.nextskinServer ??= open().catch((error: unknown) => {
     holder.nextskinServer = undefined
     throw error

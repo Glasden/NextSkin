@@ -9,6 +9,10 @@ import { iconsMetadata, siteIconHash } from '../lib/site-icons'
 import { ColorModeProvider } from './color-mode-menu'
 import './globals.css'
 
+// 每一页都读站点设置和 Cookie，没有能预渲染的页面。不声明的话，构建时 Next 会逐页试着预渲染，
+// 先调用 getServer() 的页面会在构建期间打开核心
+export const dynamic = 'force-dynamic'
+
 // 站点描述同时是首页主标题下的一句话和 meta description；没写时用首页的默认介绍（ADR-0032）。
 // 图标总是写在这里，不用 Next 的文件约定：那样的 favicon.ico 总排在最前面，换不掉（ADR-0042）
 export async function generateMetadata(): Promise<Metadata> {
