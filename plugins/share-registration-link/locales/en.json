@@ -1,0 +1,46 @@
+{
+  "plugin": {
+    "name": "Share registration link",
+    "description": "Users create sign-up links with a share code in the user center. When someone signs up through a link, both the sharer and the new user get score. You can cap how many times each sharer is rewarded."
+  },
+  "field": {
+    "code": "Share code",
+    "codeHelp": "Filled in when you open a link someone shared. Leave it empty if you don't have one."
+  },
+  "page": {
+    "links": "Share sign-up"
+  },
+  "column": {
+    "link": "Sign-up link",
+    "registrations": "Signed up",
+    "createdAt": "Created"
+  },
+  "action": {
+    "generate": "Create link",
+    "delete": "Delete"
+  },
+  "confirm": {
+    "delete": "Sign-ups through this link will no longer be rewarded. Accounts already created through it are not affected."
+  },
+  "error": {
+    "tooMany": "You can have at most {max} links. Delete one you no longer use first."
+  },
+  "score": {
+    "sharer": "Invited a new user",
+    "sharee": "Signed up through a shared link"
+  },
+  "settings": {
+    "sharerScore": {
+      "label": "Score for the sharer",
+      "help": "Score the sharer gets for each new user who signs up through their link. 0 gives none."
+    },
+    "shareeScore": {
+      "label": "Score for the new user",
+      "help": "Extra score for a new user who signs up through a link. 0 gives none."
+    },
+    "maxRewardsPerSharer": {
+      "label": "Rewards per sharer",
+      "help": "After this many, sign-ups through the sharer's links still succeed but neither side gets score. 0 means no limit."
+    }
+  }
+}

@@ -2,6 +2,7 @@ import { expect, test } from 'vitest'
 import { definePlugin } from '@nextskin/plugin-sdk'
 import invitation from '../../../../plugins/invitation-codes/src/official.ts'
 import cdn from '../../../../plugins/cdn-refresh/src/official.ts'
+import share from '../../../../plugins/share-registration-link/src/official.ts'
 import { buildManifest } from '../manifest.ts'
 import { parsePluginManifest } from './manifest-schema.ts'
 import { PluginPackageError } from './error.ts'
@@ -13,6 +14,7 @@ test('官方插件的清单都能通过严格校验', () => {
   const manifests = [
     buildManifest(invitation.definition, invitation.package),
     buildManifest(cdn.definition, cdn.package),
+    buildManifest(share.definition, share.package),
   ]
   for (const manifest of manifests) {
     const complete = { ...manifest, entry: { server: 'server.mjs' }, integrity: { 'server.mjs': 'a'.repeat(64) } }
@@ -170,6 +172,21 @@ test.each([
   const ui = { formFields: [{ form: 'auth.register', field: { name: 'x', label: 'x', ...properties } }] }
   expect(() => buildManifest({ capabilities: [], ui } as never, pkg)).toThrow(/字段/)
   expect(() => parsePluginManifest({ ...base, ui })).toThrow(/ui/)
+})
+
+test('注册字段的 fromQuery 构建和安装都认，password、boolean 字段不能声明', () => {
+  const text = { name: 'code', type: 'text', label: 'x' }
+  const manifest = buildManifest(
+    { capabilities: [], ui: { formFields: [{ form: 'auth.register', fromQuery: true, field: text }] } } as never,
+    pkg,
+  )
+  expect(parsePluginManifest({ ...base, ui: manifest.ui }).ui.formFields).toEqual([
+    { form: 'auth.register', fromQuery: true, field: text },
+  ])
+  for (const type of ['password', 'boolean']) {
+    const ui = { formFields: [{ form: 'auth.register', fromQuery: true, field: { ...text, type } }] }
+    expect(() => parsePluginManifest({ ...base, ui })).toThrow('fromQuery')
+  }
 })
 
 test('安装时检查完整任务名的 128 字符上限', () => {

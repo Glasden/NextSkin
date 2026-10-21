@@ -24,6 +24,7 @@
     "@nextskin/plugin-oauth-github": "workspace:*",
     "@nextskin/plugin-oauth-google": "workspace:*",
     "@nextskin/plugin-oauth-littleskin": "workspace:*",
-    "@nextskin/plugin-oauth-microsoft": "workspace:*"
+    "@nextskin/plugin-oauth-microsoft": "workspace:*",
+    "@nextskin/plugin-share-registration-link": "workspace:*"
   }
 }

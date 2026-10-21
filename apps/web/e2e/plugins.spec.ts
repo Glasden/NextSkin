@@ -40,7 +40,7 @@ const pluginId = (id: string, host: boolean) => (host ? `host-${id}` : id)
 test.beforeAll(({ pluginHost }) => {
   if (!pluginHost) return
   // 和插件作者一样用 nextskin-plugin build 打包；只换 package.json 里的 id
-  for (const id of ['invitation-codes', 'cdn-refresh', 'authme-password']) {
+  for (const id of ['invitation-codes', 'share-registration-link', 'cdn-refresh', 'authme-password']) {
     const dir = mkdtempSync(join(tmpdir(), `nextskin-e2e-${id}-`))
     const source = join(repository, 'plugins', id)
     cpSync(join(source, 'src'), join(dir, 'src'), { recursive: true })
@@ -280,6 +280,106 @@ test('邀请码：启用后注册要填邀请码，每个码只能用一次；�
   const gone = log.getByRole('row').filter({ hasText: t('admin.audit.subjects.plugin', { name: id }) })
   await expect(gone.getByRole('cell', { name: t('admin.audit.actions.pluginInstall'), exact: true })).toBeVisible()
   await expect(gone.getByRole('cell', { name: t('admin.audit.actions.pluginUninstall'), exact: true })).toBeVisible()
+})
+
+test('分享注册链接：经链接打开的注册页填好了分享码，注册之后双方的积分记录写着插件的原因', async ({
+  page,
+  browser,
+  pluginHost,
+}) => {
+  const sr = pluginText('share-registration-link')
+  const name = sr('plugin.name')
+  const id = pluginId('share-registration-link', pluginHost)
+  const history = (target: Page) => target.getByRole('region', { name: t('user.dashboard.history') })
+  setRole(await register(page, '203.0.113.170', `Share${suffix}`), 'superadmin', pluginHost)
+  if (pluginHost)
+    await upload(
+      page,
+      'share-registration-link',
+      name,
+      t('admin.plugins.upload.highRisk', { list: t('admin.plugins.capabilities.users.score') }),
+    )
+
+  // 默认只给分享人加分，这里让新用户也得 10 分
+  await page.goto(`/admin/plugins/${id}`)
+  const settings = page.getByRole('form', { name: t('admin.plugins.settings.label', { name }) })
+  await settings.getByLabel(sr('settings.shareeScore.label'), { exact: true }).fill('10')
+  await settings.getByRole('button', { name: t('admin.settings.save') }).click()
+  await expect(page.getByText(t('admin.settings.saved', { count: 1 }))).toBeVisible()
+  await toggle(page, id, name, 'enable')
+  restore = () => page.request.post(`/api/admin/plugins/${id}/disable`)
+
+  // 用户中心的导航里多了插件的页面：生成一个链接，链接的参数是插件 id 加字段名
+  await page.goto('/user')
+  await page
+    .getByRole('navigation', { name: t('user.nav.label') })
+    .getByRole('link', { name: sr('page.links') })
+    .click()
+  await expect(page).toHaveURL(`/user/plugins/${id}/links`)
+  const table = page.getByRole('table', { name: sr('page.links') })
+  await expect(table.getByText(t('pluginView.empty'))).toBeVisible()
+  await page.getByRole('button', { name: sr('action.generate') }).click()
+  await expect(page.getByText(t('pluginView.done'))).toBeVisible()
+  await expect(table.locator('tbody tr')).toHaveCount(1)
+  const link = new URL((await table.locator('tbody code').textContent()) ?? '')
+  expect(link.pathname).toBe('/sign-up')
+  const code = link.searchParams.get(`${id}.code`)
+  expect(code).toMatch(/^[A-HJ-NP-Z2-9]{16}$/)
+
+  // 访客打开链接：分享码已经填好，照常注册
+  const visitorContext = await browser.newContext({ locale: 'zh-CN' })
+  const visitor = await visitorContext.newPage()
+  await visitor.context().setExtraHTTPHeaders({ 'x-forwarded-for': '203.0.113.171' })
+  await visitor.goto(`${link.pathname}${link.search}`)
+  await expect(visitor.getByLabel(sr('field.code'))).toHaveValue(code!)
+  const visitorName = `Shared${suffix}`
+  await visitor.getByLabel(t('auth.email')).fill(`${visitorName.toLowerCase()}@example.test`)
+  await visitor.getByLabel(t('auth.password')).fill(password)
+  await visitor.getByLabel(t('auth.signUp.playerName')).fill(visitorName)
+  await visitor.getByRole('button', { name: t('auth.signUp.submit') }).click()
+  await visitor.waitForURL('/user')
+
+  // 积分由 user.registered 事件在注册提交之后发，要等任务跑完；先给分享人、再给新用户
+  await expect(async () => {
+    await visitor.reload()
+    await expect(history(visitor).getByText(sr('score.sharee'))).toBeVisible({ timeout: 1000 })
+  }).toPass()
+  await page.goto('/user')
+  await expect(history(page).getByText(sr('score.sharer'))).toBeVisible()
+  await page.goto(`/user/plugins/${id}/links`)
+  await expect(table.getByRole('cell', { name: '1', exact: true })).toBeVisible()
+
+  // 后台的插件详情页：累计加了 60 分，最近的记录里是这两笔
+  await page.goto(`/admin/plugins/${id}`)
+  await expect(page.getByText(t('admin.plugins.score.added'), { exact: true }).locator('..')).toContainText('60')
+  const ledger = page.getByRole('table', { name: t('admin.plugins.score.tableLabel') })
+  await expect(ledger.getByRole('cell', { name: sr('score.sharer'), exact: true })).toBeVisible()
+  await expect(ledger.getByRole('cell', { name: sr('score.sharee'), exact: true })).toBeVisible()
+
+  // 删掉链接：先确认
+  await page.goto(`/user/plugins/${id}/links`)
+  await page.getByRole('button', { name: new RegExp(`^${sr('action.delete')} `) }).click()
+  const confirm = page.getByRole('alertdialog', { name: sr('action.delete') })
+  await expect(confirm).toContainText(sr('confirm.delete'))
+  await confirm.getByRole('button', { name: sr('action.delete') }).click()
+  await expect(table.getByText(t('pluginView.empty'))).toBeVisible()
+
+  await toggle(page, id, name, 'disable')
+  restore = undefined
+  if (!pluginHost) {
+    await visitorContext.close()
+    return
+  }
+
+  // 卸载之后翻译不了插件的原因，积分记录写"来自插件"和插件 id
+  await page.goto(`/admin/plugins/${id}`)
+  await page.getByRole('button', { name: t('admin.plugins.uninstall.button') }).click()
+  const uninstall = page.getByRole('alertdialog', { name: t('admin.plugins.uninstall.dialogTitle', { name }) })
+  await uninstall.getByRole('button', { name: t('admin.plugins.uninstall.confirm'), exact: true }).click()
+  await expect(page.getByText(t('admin.plugins.uninstall.done', { name }))).toBeVisible()
+  await visitor.reload()
+  await expect(history(visitor).getByText(t('score.fromPlugin', { name: id }))).toBeVisible()
+  await visitorContext.close()
 })
 
 test('CDN 刷新：设置里的密钥不回显；插件的表单页把插件给的错误显示出来', async ({ page, pluginHost }) => {

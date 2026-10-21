@@ -1,0 +1,31 @@
+{
+  "name": "@nextskin/plugin-share-registration-link",
+  "version": "1.0.0",
+  "private": true,
+  "description": "分享注册链接：用户生成带分享码的注册链接，新用户经链接注册后双方得积分（官方插件，ADR-0041 的参考插件）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./official": "./src/official.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run",
+    "test:db": "vitest run --config vitest.db.config.ts"
+  },
+  "nextskin": {
+    "id": "share-registration-link"
+  },
+  "dependencies": {
+    "@nextskin/plugin-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@nextskin/db": "workspace:*",
+    "@nextskin/domain": "workspace:*",
+    "@nextskin/plugin-host": "workspace:*",
+    "@types/node": "catalog:",
+    "kysely": "catalog:",
+    "vitest": "catalog:"
+  }
+}
