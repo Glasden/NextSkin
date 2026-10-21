@@ -1,5 +1,5 @@
 import type { OwnedPlayer, ScoreEntry } from '@nextskin/domain'
-import { Alert, cx, FigurePlaceholder, Link, Markdown, NameTag, Stage } from '@nextskin/ui'
+import { Alert, cx, FigurePlaceholder, Link, Markdown, NameTag, SkinFigure, Stage } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation'
 import { getServer } from '../../lib/server'
 import { scoreReasonText } from '../../lib/score-reason'
 import { getRequestRoot, requireUser } from '../../lib/session'
+import { figureSrc } from '../../lib/textures'
 import { yggdrasilApiUrl } from '../../lib/yggdrasil'
 import { CheckInButton } from './check-in-button'
 import { LauncherCopyButton } from './launcher-copy-button'
@@ -171,7 +172,7 @@ export default async function DashboardPage() {
   )
 }
 
-/** 展台上一排角色，头顶是名牌（DESIGN.md §2.2）。出图接口落地之前，皮肤一律先用剪影代替（ADR-0022） */
+/** 展台上一排角色，头顶是名牌（DESIGN.md §2.2）。只放正面，鼠标移上去时抬手；还没有皮肤的用剪影代替 */
 async function Lineup({
   players,
   more,
@@ -192,10 +193,20 @@ async function Lineup({
           className={cx('flex w-20 flex-col items-center gap-3', index === LINEUP - 1 && 'max-sm:hidden')}
         >
           <NameTag>{player.name}</NameTag>
-          <FigurePlaceholder
-            scale={4}
-            label={player.skin ? t('figure', { name: player.name }) : t('figureEmpty', { name: player.name })}
-          />
+          {player.skin ? (
+            <SkinFigure
+              src={figureSrc(player.skin.hash, player.skin.type)}
+              type={player.skin.type}
+              textureScale={player.skin.scale}
+              scale={4}
+              view="front"
+              alt={t('figure', { name: player.name })}
+              raiseOnHover
+              loading="eager"
+            />
+          ) : (
+            <FigurePlaceholder scale={4} view="front" label={t('figureEmpty', { name: player.name })} />
+          )}
         </div>
       ))}
       {rest > 0 && <p className="self-center text-sm text-text-muted">{more(rest)}</p>}

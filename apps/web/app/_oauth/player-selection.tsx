@@ -66,7 +66,7 @@ export function PlayerStage({
           loading="eager"
         />
       ) : (
-        <FigurePlaceholder scale={scale} label={t('figureEmpty', { name: player.name })} />
+        <FigurePlaceholder scale={scale} view="front" label={t('figureEmpty', { name: player.name })} />
       )}
     </div>
   )
