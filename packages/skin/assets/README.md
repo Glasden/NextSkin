@@ -2,8 +2,8 @@
 
 | 文件 | 用途 | 模型 | 来源 |
 |---|---|---|---|
-| `default-skin.png` | 站点还没有材质时的登录页插图（ADR-0017） | 纤细（alex），64×64 | 项目协作者 cxchency 的皮肤，2026-10-18 加入 |
+| `default-skin.png` | 站点还没有材质时的登录页插图（ADR-0017、ADR-0048） | 纤细（alex），64×64 | 项目协作者 cxchency 的皮肤，2026-10-18 加入 |
 
-`figures/` 是这些材质预先渲染的正背面拼图，网页当静态文件引用，由 `pnpm --filter @nextskin/skin assets` 生成。
+`figures/` 是这些材质预先渲染的正面 3D 出图（静止图和抬手拼图，p = 4、8、16），网页当静态文件引用，由 `pnpm --filter @nextskin/skin assets` 生成。
 
 这里的材质跟着发行包分发，必须是项目自己的或者有明确授权的，不能用 Mojang 的 Steve 和 Alex。项目选定许可证时，一并写明这些材质的授权。页面上提到这张皮肤时（替代文字、插图说明），写“cxchency 的皮肤”。

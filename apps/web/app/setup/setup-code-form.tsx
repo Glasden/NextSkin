@@ -1,19 +1,11 @@
 'use client'
 
-import type { TextureType } from '@nextskin/skin'
-import figure from '@nextskin/skin/assets/figures/default-skin-k1.png'
-import figures from '@nextskin/skin/assets/figures/manifest.json'
 import { Alert, Button, Field, Form, Input, SkinFigure, Stage } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { apiError, formErrors, postJson } from '../../lib/api-client'
-
-const defaultSkin = {
-  type: figures.figures['default-skin'].type as TextureType,
-  textureScale: figures.figures['default-skin'].textureScale,
-  src: () => figure.src,
-}
+import { defaultSkin } from '../../lib/default-skin'
 
 /**
  * 进入向导先输入安装码：公网上刚装好的站点谁都能打开 /setup，安装码证明你能读到服务器上的文件（ADR-0031）。
@@ -65,7 +57,7 @@ export function SetupCodeForm() {
       </div>
       <div className="hidden h-80 w-64 shrink-0 md:block">
         <Stage grid>
-          <SkinFigure {...defaultSkin} scale={4} alt={t('illustration')} turnOnHover loading="eager" />
+          <SkinFigure {...defaultSkin} scale={4} alt={t('illustration')} raiseOnHover loading="eager" />
         </Stage>
       </div>
     </div>

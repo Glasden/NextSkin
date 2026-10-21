@@ -129,10 +129,11 @@ function ReportRow({
             type={texture.type}
             textureScale={texture.scale}
             scale={3}
+            view="front"
             alt={labels.figure}
           />
         ) : (
-          <FigurePlaceholder scale={3} label={labels.figure} />
+          <FigurePlaceholder scale={3} view="front" label={labels.figure} />
         )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2">

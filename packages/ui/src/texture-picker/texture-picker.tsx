@@ -29,7 +29,7 @@ export interface TexturePickerProps<Value extends string> {
 
 // 悬停时抬起：向左上挪 2px，露出 2px 的硬边阴影（DESIGN.md §2）
 const optionClass = cx(
-  'group/turn relative flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface text-left',
+  'group/raise relative flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface text-left',
   'transition-[translate,box-shadow] duration-fast ease-step motion-reduce:transition-none',
   'hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-pixel',
   // 选中：和 TextureCard 一样，向内再画一圈 2px 的描边，加左上角的勾选角标

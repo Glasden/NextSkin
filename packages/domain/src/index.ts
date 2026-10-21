@@ -51,11 +51,13 @@ export type { IsoTimestamp } from '@nextskin/db'
 export type { ChangeEmailResult } from './users/manage.ts'
 export type { PrivateUser } from '@nextskin/plugin-sdk'
 
-export { RENDERER_VERSION } from '@nextskin/skin'
+export { MAX_POSE_DENSITY, RENDERER_VERSION } from '@nextskin/skin'
 export { createImagePool, type ImagePool } from './textures/image-pool.ts'
 export {
   createMemoryRenderCache,
   createLocalRenderCache,
+  POSE_KINDS,
+  type PoseKind,
   type RenderCache,
   type RenderKey,
 } from './textures/render-cache.ts'

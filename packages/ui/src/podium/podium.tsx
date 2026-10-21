@@ -10,7 +10,7 @@ import { focusRing, stageGrid } from '../styles.ts'
 export interface PodiumPlace {
   /** 名牌上的材质名。用户产生的内容，用正文字体（DESIGN.md §4） */
   name: string
-  /** ×5 的 SkinFigure */
+  /** ×5、只有正面（view="front"）的 SkinFigure */
   figure: ReactNode
   /** 台阶上名次下面的一行，例如“♥ +214” */
   score: string
@@ -45,7 +45,7 @@ const steps = {
 
 /**
  * 首页的领奖台：前三名的皮肤站在台阶上，头顶有名牌，台阶上写名次和数字（DESIGN.md §2.2）。
- * 鼠标移到角色上或键盘聚焦时转身；不满三个时，空着的台阶上放人形剪影
+ * 鼠标移到角色上或键盘聚焦时抬手；不满三个时，空着的台阶上放人形剪影
  */
 export function Podium({ title, headingLevel: Heading = 'h2', period, places, vacantLabel, empty }: PodiumProps) {
   return (
@@ -60,7 +60,7 @@ export function Podium({ title, headingLevel: Heading = 'h2', period, places, va
           const place = places[rank - 1]
           return (
             <li key={rank} className={cx('flex w-24 min-w-0 flex-col items-center sm:w-30', steps[rank].order)}>
-              {place ? <PlaceLink place={place} /> : <FigurePlaceholder scale={5} label={vacantLabel} />}
+              {place ? <PlaceLink place={place} /> : <FigurePlaceholder scale={5} view="front" label={vacantLabel} />}
               {/* 名次和数字已经在链接的名字里，读屏软件不再读台阶 */}
               <div
                 aria-hidden
@@ -91,8 +91,8 @@ function PlaceLink({ place }: { place: PodiumPlace }) {
     render: place.render,
     props: {
       'aria-label': place.label,
-      // 链接带 group/turn：鼠标移上去或键盘聚焦时皮肤转身（SkinFigure）
-      className: cx('group/turn flex max-w-full flex-col items-center gap-2 rounded-sm', focusRing),
+      // 链接带 group/raise：鼠标移上去或键盘聚焦时皮肤抬手（SkinFigure）
+      className: cx('group/raise flex max-w-full flex-col items-center gap-2 rounded-sm', focusRing),
       children: (
         <>
           <NameTag>{place.name}</NameTag>

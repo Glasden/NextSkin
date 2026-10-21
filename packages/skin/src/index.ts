@@ -1,3 +1,5 @@
+import { over } from './composite.ts'
+
 /** 解码好的 RGBA8 像素，按行存储，data.length === width * height * 4。 */
 export interface Rgba {
   readonly width: number
@@ -9,7 +11,7 @@ export interface Rgba {
 export type TextureType = 'steve' | 'alex' | 'cape'
 
 /** 任何函数的输出像素变化时加 1；出图地址和缓存键包含它（ADR-0017）。 */
-export const RENDERER_VERSION = 1
+export const RENDERER_VERSION = 2
 
 /** 材质形状或渲染分辨率不合法。 */
 export class TextureShapeError extends Error {
@@ -168,23 +170,6 @@ export function figureSize(type: TextureType, k: number): { width: number; heigh
   return type === 'cape' ? { width: 20 * k, height: 16 * k } : { width: 32 * k, height: 32 * k }
 }
 
-// S4 over：归一化和中间结果的 float32 舍入、最终截断顺序均不可改变。
-// 直接传数组和偏移，热循环不分配颜色元组或 subarray。
-function over(dst: Uint8Array, p: number, src: Uint8Array, q: number): void {
-  const f = Math.fround
-  const a = f(src[q + 3]! / 255)
-  if (!a) return
-  const b = f(dst[p + 3]! / 255)
-  const t = f(1 - a)
-  const oa = f(a + f(b * t))
-  for (let c = 0; c < 3; c++) {
-    const source = f(f(src[q + c]! / 255) * a)
-    const dest = f(f(dst[p + c]! / 255) * b)
-    dst[p + c] = Math.max(0, Math.min(255, Math.trunc(f(f(f(source + t * dest) / oa) * 255))))
-  }
-  dst[p + 3] = Math.trunc(f(oa * 255))
-}
-
 // 按中心采样一个 UV 矩形；前处理在调用前已完成。每层独立取样与合成后取样等价。
 function draw(
   out: Rgba,
@@ -265,3 +250,15 @@ export {
   type PngLimits,
   type ParsedPng,
 } from './png.ts'
+
+export {
+  RAISE_FRAMES,
+  MAX_POSE_DENSITY,
+  poseLayout,
+  poseSilhouette,
+  poseSize,
+  renderPose,
+  type PoseLayout,
+  type PoseSilhouetteFace,
+  type PoseView,
+} from './pose.ts'

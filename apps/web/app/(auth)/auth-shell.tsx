@@ -1,6 +1,3 @@
-import type { TextureType } from '@nextskin/skin'
-import figure from '@nextskin/skin/assets/figures/default-skin-k1.png'
-import figures from '@nextskin/skin/assets/figures/manifest.json'
 import { Logo, SkinFigure, Stage } from '@nextskin/ui'
 import { getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -8,14 +5,8 @@ import type { ReactNode } from 'react'
 import { getServer } from '../../lib/server'
 import { siteImageUrl } from '../../lib/site-images'
 import { ColorModeMenu } from '../color-mode-menu'
+import { defaultSkin } from '../../lib/default-skin'
 
-// 默认皮肤只有 k = 1 一种分辨率（64×64 的材质），预先渲染好随核心发布（packages/skin/assets）。
-// 材质的出图路由落地后，插图可以换成站点里的材质
-const defaultSkin = {
-  type: figures.figures['default-skin'].type as TextureType,
-  textureScale: figures.figures['default-skin'].textureScale,
-  src: () => figure.src,
-}
 const DEFAULT_SKIN_OWNER = 'cxchency'
 
 /** 认证页默认的插图：展台上的默认皮肤，下面一行注明作者 */
@@ -24,7 +15,7 @@ export async function DefaultIllustration({ scale }: { readonly scale: 4 | 8 }) 
   const caption = t('illustration', { name: DEFAULT_SKIN_OWNER })
   return (
     <figure className="flex flex-col items-center gap-6">
-      <SkinFigure {...defaultSkin} scale={scale} alt={caption} turnOnHover loading="eager" />
+      <SkinFigure {...defaultSkin} scale={scale} alt={caption} raiseOnHover loading="eager" />
       {/* 图片的替代文字已经是同一句话，读屏软件不再重复读说明 */}
       <figcaption aria-hidden className="text-sm text-text-muted">
         {caption}

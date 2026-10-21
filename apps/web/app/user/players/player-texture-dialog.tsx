@@ -154,6 +154,7 @@ export function PlayerTextureDialog({ pid, name, slot, current, disabled }: Play
                   type={item.type}
                   textureScale={item.scale}
                   scale={3}
+                  view="front"
                   alt={skinlib('figureAlt', { name: item.name, type: skinlib(`types.${item.type}`) })}
                 />
               ),

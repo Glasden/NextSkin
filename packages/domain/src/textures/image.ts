@@ -8,12 +8,14 @@ import {
   normalizeTexture,
   renderFigure,
   renderHead,
+  renderPose,
   STORED_TEXTURE_LIMITS,
   type Rgba,
   type TextureType,
   type PngLimits,
 } from '@nextskin/skin'
 import { DomainError } from '../errors.ts'
+import type { RenderKey } from './render-cache.ts'
 
 const limits: PngLimits = { maxWidth: 1024, maxHeight: 1024, maxInflatedBytes: 9 * 1024 * 1024 }
 const signature = Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10)
@@ -108,6 +110,62 @@ export function encodeTexturePng(image: Rgba): Uint8Array {
   return output
 }
 
+/** 出图优先用 8 位 RGBA 调色板，扫描行滤波 None，zlib level 9；材质存储编码不变。 */
+export function encodeRenderPng(image: Rgba): Uint8Array {
+  const { width, height, data } = image
+  if (
+    !Number.isSafeInteger(width) ||
+    !Number.isSafeInteger(height) ||
+    width <= 0 ||
+    height <= 0 ||
+    data.length !== width * height * 4
+  ) {
+    throw new TextureShapeError('RGBA 尺寸或像素长度不合法')
+  }
+  const colors = new Map<number, number>(),
+    palette: number[] = [],
+    alpha: number[] = [],
+    raw = new Uint8Array((width + 1) * height)
+  let transparent = 0
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4,
+        r = data[i]!,
+        g = data[i + 1]!,
+        b = data[i + 2]!,
+        a = data[i + 3]!
+      // 透明像素的 RGB 也参与键；同 RGB、不同 alpha 仍是不同颜色。
+      const color = (r << 24) | (g << 16) | (b << 8) | a
+      let index = colors.get(color)
+      if (index === undefined) {
+        if (colors.size === 256) return encodeTexturePng(image)
+        index = colors.size
+        colors.set(color, index)
+        palette.push(r, g, b)
+        alpha.push(a)
+        if (a < 255) transparent = index + 1
+      }
+      raw[y * (width + 1) + x + 1] = index
+    }
+  }
+  const ihdr = new Uint8Array(13),
+    view = new DataView(ihdr.buffer)
+  view.setUint32(0, width)
+  view.setUint32(4, height)
+  ihdr[8] = 8
+  ihdr[9] = 3
+  const parts = [signature, chunk('IHDR', ihdr), chunk('PLTE', Uint8Array.from(palette))]
+  if (transparent) parts.push(chunk('tRNS', Uint8Array.from(alpha.slice(0, transparent))))
+  parts.push(chunk('IDAT', new Uint8Array(deflateSync(raw, { level: 9 }))), chunk('IEND'))
+  const output = new Uint8Array(parts.reduce((n, part) => n + part.length, 0))
+  let offset = 0
+  for (const part of parts) {
+    output.set(part, offset)
+    offset += part.length
+  }
+  return output
+}
+
 export function pixelHash(image: Rgba): string {
   const dimensions = new Uint8Array(8),
     view = new DataView(dimensions.buffer)
@@ -175,7 +233,7 @@ export function inspectTexture(bytes: Uint8Array, type: TextureType): InspectedI
 }
 
 export interface RenderInput {
-  kind: 'figure' | 'head'
+  kind: RenderKey['kind']
   bytes: Uint8Array
   type: TextureType
   k: number
@@ -183,5 +241,10 @@ export interface RenderInput {
 export function renderTexture({ kind, bytes, type, k }: RenderInput): Uint8Array {
   // 不能用上传的上限：导入的旧文件可以更大
   const image = decodeTexturePng(bytes, STORED_TEXTURE_LIMITS)
-  return encodeTexturePng(kind === 'figure' ? renderFigure(image, type, k) : renderHead(image, 'steve', k))
+  if (kind === 'figure') return encodeRenderPng(renderFigure(image, type, k))
+  if (kind === 'head') return encodeRenderPng(renderHead(image, 'steve', k))
+  if (type === 'cape') throw new TextureShapeError('披风没有 3D 出图')
+  const view = kind === 'both' || kind === 'both-raise' ? 'both' : 'front',
+    raise = kind === 'both-raise' || kind === 'front-raise'
+  return encodeRenderPng(renderPose(image, type, view, k, raise))
 }

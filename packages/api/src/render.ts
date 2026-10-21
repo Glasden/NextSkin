@@ -1,16 +1,19 @@
-import { DomainError, RENDERER_VERSION, type Core } from '@nextskin/domain'
+import { DomainError, MAX_POSE_DENSITY, POSE_KINDS, RENDERER_VERSION, type Core } from '@nextskin/domain'
 import type { Hono } from 'hono'
 import type { AppEnv } from './env.ts'
 import { errorPage, protocolMethodResponse } from './protocol/http.ts'
 
 export function registerRender(app: Hono<AppEnv>, core: Core): void {
-  app.on('ALL', ['/render/:version/figure/:model/:k/:file', '/render/:version/head/:k/:file'], async (c) => {
-    const { version, model, k, file } = c.req.param()
+  app.on('ALL', ['/render/:version/:kind/:model/:k/:file', '/render/:version/head/:k/:file'], async (c) => {
+    const { version, kind, model, k, file } = c.req.param(),
+      poseKind = POSE_KINDS.find((value) => value === kind)
     if (
       version !== `v${RENDERER_VERSION}` ||
       !/^[1-9]\d{0,3}$/.test(k) ||
       !/^[0-9a-f]{64}\.png$/.test(file) ||
-      (model !== undefined && model !== 'steve' && model !== 'alex' && model !== 'cape')
+      (model !== undefined && model !== 'steve' && model !== 'alex' && model !== 'cape') ||
+      (model !== undefined && kind !== 'figure' && !poseKind) ||
+      (poseKind !== undefined && (model === 'cape' || Number(k) > MAX_POSE_DENSITY))
     )
       return errorPage(404)
     // 新端点的 OPTIONS 也返回 405，不沿用 BS 协议端点的 OPTIONS 200 特例。
@@ -21,7 +24,9 @@ export function registerRender(app: Hono<AppEnv>, core: Core): void {
       const bytes =
         model === undefined
           ? await core.renders.head({ hash, k: Number(k) })
-          : await core.renders.figure({ hash, model: model, k: Number(k) })
+          : poseKind
+            ? await core.renders.pose({ hash, kind: poseKind, model, p: Number(k) })
+            : await core.renders.figure({ hash, model, k: Number(k) })
       if (!bytes) return errorPage(404)
       return new Response(c.req.method === 'HEAD' ? null : Buffer.from(bytes), {
         headers: {

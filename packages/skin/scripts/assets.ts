@@ -1,5 +1,5 @@
 /**
- * 把随核心发布的材质（assets/）渲染成正背面拼图，写进 assets/figures/。网页把它们当静态文件引用（登录页插图），
+ * 把随核心发布的材质（assets/）渲染成插图用的正面 3D 出图和抬手拼图，写进 assets/figures/。网页把它们当静态文件引用（登录页插图），
  * 材质的出图路由落地后改走路由。渲染器升级（RENDERER_VERSION 变了）后运行，否则 src/assets.test.ts 会失败
  */
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'

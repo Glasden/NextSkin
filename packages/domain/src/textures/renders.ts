@@ -3,7 +3,7 @@ import { pickResolution, textureScale, TextureShapeError, type TextureType } fro
 import type { Kysely } from 'kysely'
 import { DomainError } from '../errors.ts'
 import type { ImagePool } from './image-pool.ts'
-import { renderKey, type RenderCache, type RenderKey } from './render-cache.ts'
+import { renderKey, type PoseKind, type RenderCache, type RenderKey } from './render-cache.ts'
 import type { TextureStorage } from './storage.ts'
 
 export function createRenders({
@@ -46,6 +46,12 @@ export function createRenders({
     return bytes
   }
   async function render(key: RenderKey): Promise<Uint8Array | null> {
+    let id: string
+    try {
+      id = renderKey(key)
+    } catch {
+      return null
+    }
     // 即使命中缓存或有正在生成的任务，每个请求仍先核对 active 行。
     const row = await find(key.hash)
     if (!row || row.width === null || row.height === null) return null
@@ -56,8 +62,7 @@ export function createRenders({
       if (error instanceof TextureShapeError) return null
       throw error
     }
-    if (!Number.isSafeInteger(key.k) || key.k < 1 || s % key.k !== 0) return null
-    const id = renderKey(key)
+    if ((key.kind === 'figure' || key.kind === 'head') && s % key.k !== 0) return null
     const existing = pending.get(id)
     if (existing) return existing
     const promise = generate(key).finally(() => pending.delete(id))
@@ -67,9 +72,12 @@ export function createRenders({
   const figure = ({ hash, model, k }: { hash: string; model: TextureType; k: number }) =>
     render({ hash, model, k, kind: 'figure' })
   const head = ({ hash, k }: { hash: string; k: number }) => render({ hash, model: 'steve', k, kind: 'head' })
+  const pose = ({ hash, kind, model, p }: { hash: string; kind: PoseKind; model: TextureType; p: number }) =>
+    render({ hash, kind, model, k: p })
   return {
     figure,
     head,
+    pose,
     warm(hash: string, type: TextureType): void {
       void (async () => {
         const row = await find(hash)
@@ -78,12 +86,18 @@ export function createRenders({
         const figures = new Set<number>(),
           heads = new Set<number>()
         for (const dpr of [1, 2]) {
-          for (const n of [3, 4, 5, 8]) figures.add(pickResolution(s, n, dpr))
+          if (type === 'cape') for (const n of [3, 4, 5, 8]) figures.add(pickResolution(s, n, dpr))
           if (type !== 'cape') for (const n of [2, 3, 4, 6]) heads.add(pickResolution(s, n, dpr))
         }
         const results = await Promise.all([
           ...Array.from(figures, (k) => figure({ hash, model: type, k })),
           ...Array.from(heads, (k) => head({ hash, k })),
+          ...(type === 'cape'
+            ? []
+            : [
+                ...[3, 4, 6, 8].map((p) => pose({ hash, kind: 'both', model: type, p })),
+                ...[4, 8].map((p) => pose({ hash, kind: 'both-raise', model: type, p })),
+              ]),
         ])
         if (results.some((bytes) => bytes === null)) throw new Error('出图预热失败')
       })().catch(() => console.warn('材质出图缓存预热失败'))

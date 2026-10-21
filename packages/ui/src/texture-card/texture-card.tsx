@@ -29,9 +29,9 @@ const lift = cx(
   'transition-[translate,box-shadow] duration-fast ease-step motion-reduce:transition-none',
   'group-hover/card:-translate-x-0.5 group-hover/card:-translate-y-0.5',
 )
-// 链接自己也带 group/turn：键盘聚焦它时皮肤转身（SkinFigure 看的是 group/turn 上的 focus-visible）
+// 链接自己也带 group/raise：键盘聚焦它时皮肤抬手（SkinFigure 看的是 group/raise 上的 focus-visible）
 const cardClass = cx(
-  'group/turn flex h-full min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface',
+  'group/raise flex h-full min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface',
   'group-hover/card:shadow-pixel-lg',
   lift,
   focusRing,
@@ -41,7 +41,7 @@ const selectedClass = 'border-accent outline-2 -outline-offset-2 outline-accent'
 
 /**
  * 皮肤库、衣柜里的一件材质：上面是展台，下面是名字和信息，整张卡片是去详情页的链接。
- * 鼠标移上去或键盘聚焦时，展台上的皮肤转身。站内跳转用 render 换成框架的链接组件，
+ * 鼠标移上去或键盘聚焦时，展台上的皮肤抬手。站内跳转用 render 换成框架的链接组件，
  * 例如 `render={<NextLink href="/skinlib/12" />}`
  */
 export function TextureCard({
@@ -86,8 +86,8 @@ export function TextureCard({
     ),
   })
   return (
-    // 外层也带 group/turn：鼠标停在右上角的操作上时，皮肤不转回去
-    <article className="group/card group/turn relative min-w-0">
+    // 外层也带 group/raise：鼠标停在右上角的操作上时，皮肤不放下手
+    <article className="group/card group/raise relative min-w-0">
       {link}
       {actions && <div className={cx('absolute top-2 right-2', lift)}>{actions}</div>}
     </article>

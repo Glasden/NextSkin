@@ -195,6 +195,7 @@ async function HomePodium({ podium, period }: { podium: PodiumData; period: stri
             type={entry.type}
             textureScale={entry.scale}
             scale={5}
+            view="front"
             alt={skinlib('figureAlt', { name: entry.name, type: skinlib(`types.${entry.type}`) })}
             loading="eager"
           />

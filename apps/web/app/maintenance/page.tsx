@@ -1,7 +1,4 @@
 import { hasAdminAccess } from '@nextskin/domain'
-import type { TextureType } from '@nextskin/skin'
-import figure from '@nextskin/skin/assets/figures/default-skin-k1.png'
-import figures from '@nextskin/skin/assets/figures/manifest.json'
 import { Markdown, SkinFigure, Stage } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
@@ -15,12 +12,7 @@ import { RunPanel } from '../_import/run-panel'
 import { SignOutButton } from '../user/user-menu'
 import { AdminSignInLink } from './admin-sign-in-link'
 import { AutoRefresh } from './auto-refresh'
-
-const defaultSkin = {
-  type: figures.figures['default-skin'].type as TextureType,
-  textureScale: figures.figures['default-skin'].textureScale,
-  src: () => figure.src,
-}
+import { defaultSkin } from '../../lib/default-skin'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('maintenance')
@@ -103,7 +95,7 @@ function Layout({ title, illustration, children }: { title: string; illustration
         </div>
         <div className="h-72 md:w-72 md:shrink-0">
           <Stage grid>
-            <SkinFigure {...defaultSkin} scale={4} alt={illustration} turnOnHover loading="eager" />
+            <SkinFigure {...defaultSkin} scale={4} alt={illustration} raiseOnHover loading="eager" />
           </Stage>
         </div>
       </div>

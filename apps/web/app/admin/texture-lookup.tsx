@@ -70,13 +70,14 @@ export function TexturePreview({ input, owner, slot }: { input: string; owner: n
   const wrongSlot = slot !== undefined && 'type' in texture && (slot === 'cape') !== (texture.type === 'cape')
   return (
     <div className="flex items-center gap-3" role="status">
-      <span className="grid h-26 w-14 shrink-0 place-items-center rounded-sm bg-stage">
+      <span className="grid h-28 w-16 shrink-0 place-items-center rounded-sm bg-stage">
         {'hash' in texture && texture.scale !== null && (
           <SkinFigure
             src={figureSrc(texture.hash, texture.type)}
             type={texture.type}
             textureScale={texture.scale}
             scale={3}
+            view="front"
             alt={skinlib('figureAlt', { name: texture.name, type: skinlib(`types.${texture.type}`) })}
           />
         )}

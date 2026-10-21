@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
-import { deflateSync } from 'node:zlib'
-import { renderFigure, renderHead } from '@nextskin/skin'
+import { deflateSync, inflateSync } from 'node:zlib'
+import { parsePng, renderFigure, renderHead, renderPose } from '@nextskin/skin'
 import { expect, test } from 'vitest'
 import {
   chunk,
@@ -11,9 +11,19 @@ import {
   signature,
 } from '../../../skin/test/png-corpus.ts'
 import { DomainError } from '../errors.ts'
-import { decodeTexturePng, encodeTexturePng, inspectTexture, pixelHash, processUpload, renderTexture } from './image.ts'
+import {
+  decodeTexturePng,
+  encodeRenderPng,
+  encodeTexturePng,
+  inspectTexture,
+  pixelHash,
+  processUpload,
+  renderTexture,
+} from './image.ts'
+import { POSE_KINDS } from './render-cache.ts'
 
 const fixture = () => readFile(new URL('../../../skin/test/fixtures/haka.png', import.meta.url))
+const pngLimits = { maxWidth: 1024, maxHeight: 1024, maxInflatedBytes: 9 * 1024 * 1024 }
 
 test('服务端解码所有格式；固定编码字节与 S4 相同，RGBA 往返不变', () => {
   for (const [ct, depths] of formats)
@@ -25,6 +35,47 @@ test('服务端解码所有格式；固定编码字节与 S4 相同，RGBA 往�
         expect(encoded).toEqual(new Uint8Array(referenceEncodeS4(expected)))
         expect(decodeTexturePng(encoded)).toEqual(expected)
       }
+})
+
+test('出图调色板按 RGBA 首次出现排序，tRNS 去掉末尾 255，每行用 None，字节确定', () => {
+  const image = {
+    width: 3,
+    height: 2,
+    data: Uint8Array.of(90, 80, 70, 255, 1, 2, 3, 0, 4, 5, 6, 0, 1, 2, 3, 128, 90, 80, 70, 255, 7, 8, 9, 255),
+  }
+  const bytes = encodeRenderPng(image),
+    parsed = parsePng(bytes, pngLimits)
+  expect(parsed).toMatchObject({
+    depth: 8,
+    colorType: 3,
+    palette: Uint8Array.of(90, 80, 70, 1, 2, 3, 4, 5, 6, 1, 2, 3, 7, 8, 9),
+    transparency: Uint8Array.of(255, 0, 0, 128),
+  })
+  expect(new Uint8Array(inflateSync(parsed.idat))).toEqual(Uint8Array.of(0, 0, 1, 2, 0, 3, 0, 4))
+  expect(encodeRenderPng(image)).toEqual(bytes)
+  expect(decodeTexturePng(bytes)).toEqual(image)
+})
+
+test.each([1, 256])('不透明的 %d 色出图是 8 位调色板 PNG，不写 tRNS', (count) => {
+  const image = { width: count, height: 2, data: new Uint8Array(count * 2 * 4) }
+  for (let i = 0; i < count * 2; i++) image.data.set([i % count, 17, 3, 255], i * 4)
+  const bytes = encodeRenderPng(image),
+    parsed = parsePng(bytes, pngLimits)
+  expect(parsed.colorType).toBe(3)
+  expect(parsed.depth).toBe(8)
+  expect(parsed.palette).toHaveLength(count * 3)
+  expect(parsed.transparency).toBeNull()
+  expect(decodeTexturePng(bytes)).toEqual(image)
+})
+
+test('超过 256 种 RGBA 颜色退回材质编码，完全透明像素的 RGB 也参与计数', () => {
+  const image = { width: 257, height: 1, data: new Uint8Array(257 * 4) }
+  for (let i = 0; i < 257; i++) image.data.set([i % 256, i >>> 8, 19, 0], i * 4)
+  const bytes = encodeRenderPng(image)
+  expect(parsePng(bytes, pngLimits).colorType).toBe(6)
+  expect(bytes).toEqual(encodeTexturePng(image))
+  expect(encodeRenderPng(image)).toEqual(bytes)
+  expect(decodeTexturePng(bytes)).toEqual(image)
 })
 
 test('编码器字节不同、同像素 hash 相同，透明像素 RGB 参与 hash', async () => {
@@ -134,6 +185,26 @@ test('出图结果等于纯 RGBA 渲染器；头像使用 steve', async () => {
   expect(decodeTexturePng(renderTexture({ kind: 'head', bytes, type: 'alex', k: 1 }))).toEqual(
     renderHead(image, 'steve', 1),
   )
+  expect(renderTexture({ kind: 'figure', bytes, type: 'alex', k: 1 })).toEqual(
+    encodeRenderPng(renderFigure(image, 'alex', 1)),
+  )
+  expect(renderTexture({ kind: 'head', bytes, type: 'alex', k: 1 })).toEqual(
+    encodeRenderPng(renderHead(image, 'steve', 1)),
+  )
+})
+
+test.each(POSE_KINDS)('%s 按请求模型和密度渲染，用出图编码器保留全部像素', async (kind) => {
+  const bytes = await fixture(),
+    image = decodeTexturePng(bytes),
+    view = kind.startsWith('both') ? 'both' : 'front',
+    raise = kind.endsWith('-raise')
+  for (const type of ['steve', 'alex'] as const) {
+    const expected = renderPose(image, type, view, 2, raise),
+      output = renderTexture({ kind, bytes, type, k: 2 })
+    expect(output).toEqual(encodeRenderPng(expected))
+    expect(decodeTexturePng(output)).toEqual(expected)
+  }
+  expect(() => renderTexture({ kind, bytes, type: 'cape', k: 2 })).toThrow()
 })
 
 test('超过上传上限的导入文件也能出图', () => {
