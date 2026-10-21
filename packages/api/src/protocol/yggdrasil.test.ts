@@ -23,7 +23,11 @@ const player: PlayerView = {
 }
 const auth = { accessToken: 'token', clientToken: 'client', availableProfiles: [] }
 
-function setup(settings: Partial<Record<CoreSettingKey, unknown>> = {}, version?: string) {
+function setup(
+  settings: Partial<Record<CoreSettingKey, unknown>> = {},
+  version?: string,
+  admission = vi.fn().mockResolvedValue({ action: 'allow' }),
+) {
   const methods = {
     authenticate: vi.fn().mockResolvedValue(auth),
     refresh: vi.fn().mockResolvedValue(auth),
@@ -54,6 +58,7 @@ function setup(settings: Partial<Record<CoreSettingKey, unknown>> = {}, version?
         ),
     },
     yggdrasil: methods,
+    plugins: { interceptServerAdmission: admission },
     players: { findByUuid: vi.fn().mockResolvedValue(player) },
     auth: { openIdConfigurationUrl, getSessionUser: vi.fn().mockResolvedValue({ uid: 42 }) },
     textures: { upload },
@@ -71,7 +76,7 @@ function setup(settings: Partial<Record<CoreSettingKey, unknown>> = {}, version?
     body.set('model', ' slim ')
     return body
   }
-  return { app, request, methods, form, upload, openIdConfigurationUrl }
+  return { app, request, methods, plugins: core.plugins, form, upload, openIdConfigurationUrl }
 }
 
 test('authserver 递归 trim，保留原密码；异常字符串参数交给领域层为 null', async () => {
@@ -243,6 +248,32 @@ test('元数据报告产品版本号，没有给出时是 dev', async () => {
       meta: { implementationName: 'NextSkin', implementationVersion: expected },
     })
   }
+})
+
+test('服务器专属路径没有准入插件许可时返回 404 且不泄露 API Location', async () => {
+  const admission = vi.fn().mockResolvedValue({ action: 'deny', plugin: 'admission', reason: 'unknown_server' })
+  const { app } = setup({}, undefined, admission)
+  const response = await app.request(`http://example.test${prefix}/server/server-key-123456`)
+  expect(response.status).toBe(404)
+  expect(response.headers.has('x-authlib-injector-api-location')).toBe(false)
+})
+
+test('服务器专属路径由核心交给准入拦截器，并把路径作为 API Location 返回', async () => {
+  const { app, methods, plugins } = setup({ 'site.url': 'http://site.test/base' })
+  const key = 'server-key-123456'
+  const response = await app.request(`http://example.test${prefix}/server/${key}`)
+  expect(response.status).toBe(200)
+  expect(response.headers.get('x-authlib-injector-api-location')).toBe(`http://site.test/base${prefix}/server/${key}`)
+  expect(plugins.interceptServerAdmission).toHaveBeenCalledWith(
+    { phase: 'metadata', serverKey: key },
+    expect.objectContaining({ actor: { kind: 'system' } }),
+  )
+  methods.hasJoined.mockResolvedValue(player)
+  const hasJoined = await app.request(
+    `http://example.test${prefix}/server/${key}/sessionserver/session/minecraft/hasJoined?username=Steve&serverId=x`,
+  )
+  expect(hasJoined.status).toBe(200)
+  expect(methods.hasJoined).toHaveBeenCalledWith({ username: 'Steve', serverId: 'x', ip: null, serverKey: key })
 })
 
 test('hasJoined 参数取最后一个、数组不当作字符串；成功签名并使用站点地址，缺密钥返回 400', async () => {

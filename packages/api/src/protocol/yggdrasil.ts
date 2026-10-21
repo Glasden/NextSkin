@@ -92,13 +92,45 @@ function profileProperties(player: PlayerView, root: string, key: SigningKey | n
   ].map((property) => (key ? { ...property, signature: key.sign(property.value) } : property))
 }
 
-export function registerYggdrasil(
+function registerYggdrasilAt(
   app: Hono<AppEnv>,
   core: Core,
   uploadRateLimiter: RateLimiter,
   version: string,
+  prefix: string,
+  dynamicServerKey: boolean,
 ): void {
-  const prefix = '/api/yggdrasil'
+  const serverKey = (c: ProtocolContext): string | null => {
+    if (!dynamicServerKey) return null
+    const key = c.req.param('serverKey')
+    return key && /^[A-Za-z0-9_-]{16,128}$/.test(key) ? key : null
+  }
+  const configureServerRoute = async (c: ProtocolContext): Promise<boolean> => {
+    if (!dynamicServerKey) return true
+    const key = serverKey(c)
+    if (!key) return false
+    const root = c.get('requestRoot')
+    const settings = await core.settings.read(['site.url'])
+    const publicRoot = siteRoot(settings['site.url'], root)
+    const location = `${publicRoot}/api/yggdrasil/server/${key}`
+    c.set('apiLocation', location)
+    const result = await core.plugins.interceptServerAdmission(
+      { phase: 'metadata', serverKey: key },
+      { actor: { kind: 'system' }, locale: null, ip: null },
+    )
+    return result.action === 'allow'
+  }
+  const serverRouteMiddleware = async (c: ProtocolContext, next: () => Promise<void>) => {
+    if (!(await configureServerRoute(c))) {
+      c.set('omitAli', true)
+      return c.body(null, 404)
+    }
+    return next()
+  }
+  if (dynamicServerKey) {
+    app.use(prefix, serverRouteMiddleware)
+    app.use(`${prefix}/*`, serverRouteMiddleware)
+  }
   app.all(prefix, async (c) => {
     const settings = await core.settings.read(['site.name', 'site.url', 'yggdrasil.skinDomains'])
     const key = await core.yggdrasil.getSigningKey()
@@ -212,11 +244,13 @@ export function registerYggdrasil(
     const methodResponse = protocolMethodResponse(c.req.method, 'POST')
     if (methodResponse) return methodResponse
     const body = normalizeProtocolInput(await requestObject(c)) as Record<string, unknown>
+    const routeKey = serverKey(c)
     await core.yggdrasil.join({
       accessToken: stringInput(body.accessToken),
       selectedProfile: stringInput(body.selectedProfile),
       serverId: stringInput(body.serverId),
       ip: await clientIp(c, core),
+      ...(routeKey ? { serverKey: routeKey } : {}),
     })
     return c.body(null, 204)
   })
@@ -225,10 +259,12 @@ export function registerYggdrasil(
     if (methodResponse) return methodResponse
     const query = new URL(c.req.url).searchParams
     const input = (name: string) => stringInput(normalizeProtocolInput(protocolQuery(query, name)))
+    const routeKey = serverKey(c)
     const player = await core.yggdrasil.hasJoined({
       username: input('username'),
       serverId: input('serverId'),
       ip: input('ip'),
+      ...(routeKey ? { serverKey: routeKey } : {}),
     })
     if (!player) return c.body(null, 204)
     const key = await core.yggdrasil.getSigningKey()
@@ -280,4 +316,14 @@ export function registerYggdrasil(
     )
     return c.body(null, 204)
   })
+}
+
+export function registerYggdrasil(
+  app: Hono<AppEnv>,
+  core: Core,
+  uploadRateLimiter: RateLimiter,
+  version: string,
+): void {
+  registerYggdrasilAt(app, core, uploadRateLimiter, version, '/api/yggdrasil', false)
+  registerYggdrasilAt(app, core, uploadRateLimiter, version, '/api/yggdrasil/server/:serverKey', true)
 }

@@ -7,6 +7,7 @@ export type AppEnv = {
     user?: SessionUser
     requestRoot: string
     profileRoot?: string
+    apiLocation?: string
     omitAli: boolean
   }
 }

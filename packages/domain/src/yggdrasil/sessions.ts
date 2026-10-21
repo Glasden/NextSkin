@@ -11,6 +11,11 @@ export interface YggdrasilSessionCache {
   set(serverId: string, value: JoinSession, ttlMs: number): Promise<void>
 }
 
+/** The game server id is only unique inside one API route; isolate route contexts. */
+export function sessionCacheKey(serverId: string, serverKey: string | null): string {
+  return `${serverKey ?? ''}\u0000${serverId}`
+}
+
 export function createMemorySessionCache(now: () => Date): YggdrasilSessionCache {
   const entries = new Map<string, { value: JoinSession; expiresAt: number }>()
   return {

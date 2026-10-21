@@ -1,4 +1,4 @@
-import type { Actor, ExtraFields, Uid } from './dto.ts'
+import type { Actor, ExtraFields, Pid, Uid } from './dto.ts'
 
 /** 用户本人的受限操作；次版本可能加成员。 */
 export type UserAction =
@@ -73,6 +73,27 @@ export interface CoreInterceptors {
     /** 只能拒绝，不能修改令牌或输入 */
     patch: never
   }
+  /** 服务器专属 API 路径的 hasJoined 准入；核心解析角色后调用，失败关闭。 */
+  'yggdrasil.serverAdmission': {
+    input:
+      | {
+          phase: 'metadata'
+          /** 路径中的不透明服务器标识；业务插件负责解释和存储 */
+          serverKey: string
+        }
+      | {
+          phase: 'join' | 'hasJoined'
+          /** 路径中的不透明服务器标识；业务插件负责解释和存储 */
+          serverKey: string
+          uid: Uid
+          pid: Pid
+          playerUuid: string
+          playerName: string
+          serverId: string | null
+          ip: string
+        }
+    patch: never
+  }
 }
 
 export type InterceptorName = keyof CoreInterceptors
@@ -94,6 +115,7 @@ export const interceptorPolicies = {
   'user.action': { onFailure: 'closed', timeoutMs: 2000, transactional: false },
   'user.register': { onFailure: 'closed', timeoutMs: 300, transactional: true },
   'yggdrasil.issueToken': { onFailure: 'closed', timeoutMs: 2000, transactional: false },
+  'yggdrasil.serverAdmission': { onFailure: 'closed', timeoutMs: 2000, transactional: false },
 } as const satisfies Record<InterceptorName, InterceptorPolicy>
 
 export interface Deny {

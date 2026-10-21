@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vitest'
-import { createMemorySessionCache, normalizeIp } from './sessions.ts'
+import { createMemorySessionCache, normalizeIp, sessionCacheKey } from './sessions.ts'
 import { setup } from './yggdrasil.test-helper.ts'
 
 const s = setup()
@@ -11,6 +11,11 @@ const join = (
 ) => s.core.yggdrasil.join({ accessToken, selectedProfile, ip, serverId })
 const hasJoined = (username: string | null = 'Steve', ip: string | null = null, serverId: string | null = 'server') =>
   s.core.yggdrasil.hasJoined({ username, ip, serverId })
+
+test('服务器路径隔离同名游戏 serverId 的 session cache', () => {
+  expect(sessionCacheKey('same', null)).not.toBe(sessionCacheKey('same', 'server-a'))
+  expect(sessionCacheKey('same', 'server-a')).not.toBe(sessionCacheKey('same', 'server-b'))
+})
 
 test('IP 规范化保留 null 和非法输入，统一 IPv4 映射和 IPv6 压缩', () => {
   expect(normalizeIp(null)).toBeNull()
