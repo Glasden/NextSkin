@@ -14,6 +14,7 @@ import {
   Input,
   LogoMark,
   Markdown,
+  SaveBar,
   Select,
   Textarea,
   useToast,
@@ -176,23 +177,16 @@ export function SettingsForm({
             </div>
           ))}
         </div>
-        {/* 不做成粘在视口底部：会挡住下面几项获得焦点的输入框 */}
-        <div className="flex flex-col gap-3 rounded-b-md border-t border-border bg-surface-sunken px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6">
-          {failure ? (
-            <p role="alert" className="text-sm text-danger sm:mr-auto">
-              {failure}
-            </p>
-          ) : (
-            changed.length > 0 && (
-              <p className="text-sm text-text-muted sm:mr-auto">{t('dirty', { count: changed.length })}</p>
-            )
-          )}
-          <div>
-            <Button type="submit" loading={pending}>
-              {t('save')}
-            </Button>
-          </div>
-        </div>
+        {/* 有改动时吸在视口底部：长分区改了上面的一项，不用翻到末尾保存 */}
+        <SaveBar
+          dirty={changed.length > 0}
+          status={changed.length > 0 && t('dirty', { count: changed.length })}
+          error={failure}
+        >
+          <Button type="submit" loading={pending}>
+            {t('save')}
+          </Button>
+        </SaveBar>
       </div>
     </Form>
   )

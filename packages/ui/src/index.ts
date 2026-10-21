@@ -40,6 +40,7 @@ export { PlayerPicker, type PlayerPickerOption, type PlayerPickerProps } from '.
 export { Podium, type PodiumPlace, type PodiumProps } from './podium/podium.tsx'
 export { ProgressBar, type ProgressBarProps } from './progress-bar/progress-bar.tsx'
 export { QrCode, type QrCodeProps } from './qr-code/qr-code.tsx'
+export { SaveBar, type SaveBarProps } from './save-bar/save-bar.tsx'
 export {
   SegmentedControl,
   type SegmentedControlOption,

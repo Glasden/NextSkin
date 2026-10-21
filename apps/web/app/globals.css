@@ -2,3 +2,13 @@
 @import '@nextskin/ui/theme.css';
 @import '@nextskin/ui/fonts.css';
 @source '../../../packages/ui/src';
+
+/*
+ * 滚动条总是占着位置：在长短不一的页面之间切换、页面内容变长变短时，内容不左右跳。
+ * Base UI 打开对话框锁住滚动时也按这个处理，同样不跳
+ */
+@layer base {
+  html {
+    scrollbar-gutter: stable;
+  }
+}
