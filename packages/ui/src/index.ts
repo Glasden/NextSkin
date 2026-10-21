@@ -15,7 +15,8 @@ export { IconButton, type IconButtonProps } from './icon-button/icon-button.tsx'
 export { ImageInput, type ImageInputProps } from './image-input/image-input.tsx'
 export { Input, type InputProps } from './input/input.tsx'
 export { Link, type LinkProps } from './link/link.tsx'
-export { Logo, LogoMark, type LogoProps } from './logo/logo.tsx'
+export { Logo, type LogoProps } from './logo/logo.tsx'
+export { LogoMark } from './logo/logo-mark.tsx'
 export { Markdown, type MarkdownProps } from './markdown/markdown.tsx'
 export {
   Menu,

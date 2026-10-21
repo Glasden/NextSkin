@@ -73,6 +73,7 @@ export function ApplyTextureDialog({ open, onOpenChange, texture, players, locke
                 <PlayerHead
                   src={player.head ? headSrc(player.head.hash) : undefined}
                   textureScale={player.head?.scale}
+                  fallback="blank"
                   size={32}
                   alt=""
                 />

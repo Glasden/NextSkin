@@ -1,12 +1,18 @@
 import { pickResolution } from '@nextskin/skin'
 import { cx } from '../cx.ts'
+import { LogoMark } from '../logo/logo-mark.tsx'
 
 export interface PlayerHeadProps {
   /**
    * 头像的出图地址：服务端渲染的正脸加帽子层（ADR-0025），按分辨率 k 返回。
-   * 还没有头像时不传，显示同样大小的占位
+   * 还没有头像时不传，按 fallback 显示同样大小的占位
    */
   src?: (k: number) => string
+  /**
+   * 不传 src 时的占位。`logo`（默认）是标志的像素图形，给还没设头像的用户；
+   * `blank` 是和 FigurePlaceholder 同样画法的空白脸，给还没有皮肤的角色和已经注销的用户，表示这里没有东西
+   */
+  fallback?: 'logo' | 'blank'
   /** 皮肤的倍数 s：宽度 ÷ 64。不传 src 时忽略 */
   textureScale?: number
   /** 显示成 16、24、32、48px：脸是 8×8 个标准像素，只做整数倍放大（DESIGN.md §5） */
@@ -17,9 +23,9 @@ export interface PlayerHeadProps {
 
 /**
  * 用户和角色的头像。一律是方形：圆形裁切会切掉边缘的像素（DESIGN.md §5）。
- * 没有头像时显示一块和 FigurePlaceholder 同样画法的空白脸
+ * 没有头像时显示标志的图形，或者一块和 FigurePlaceholder 同样画法的空白脸
  */
-export function PlayerHead({ src, textureScale = 1, size, alt }: PlayerHeadProps) {
+export function PlayerHead({ src, textureScale = 1, size, alt, fallback = 'logo' }: PlayerHeadProps) {
   const frame = 'block shrink-0 rounded-none'
   if (!src) {
     return (
@@ -29,11 +35,15 @@ export function PlayerHead({ src, textureScale = 1, size, alt }: PlayerHeadProps
         aria-hidden={alt ? undefined : true}
         className={cx(
           frame,
-          // 和 FigurePlaceholder 一样由 text 混入 stage 得到（DESIGN.md §2.2）
-          'border border-dashed border-[color-mix(in_srgb,var(--color-text)_24%,var(--color-stage))] bg-[color-mix(in_srgb,var(--color-text)_10%,var(--color-stage))]',
+          fallback === 'blank' &&
+            // 和 FigurePlaceholder 一样由 text 混入 stage 得到（DESIGN.md §2.2）
+            'border border-dashed border-[color-mix(in_srgb,var(--color-text)_24%,var(--color-stage))] bg-[color-mix(in_srgb,var(--color-text)_10%,var(--color-stage))]',
         )}
         style={{ width: size, height: size }}
-      />
+      >
+        {/* 标志也是 8×8 的网格，四种尺寸都是整数倍 */}
+        {fallback === 'logo' && <LogoMark cell={size / 8} />}
+      </span>
     )
   }
   const scale = size / 8

@@ -182,7 +182,7 @@ export default async function TexturePage({ params }: { params: Promise<{ tid: s
               </>
             ) : (
               <>
-                <PlayerHead size={32} alt="" />
+                <PlayerHead fallback="blank" size={32} alt="" />
                 <span className="text-sm text-text-muted">{t('detail.uploaderGone')}</span>
               </>
             )}

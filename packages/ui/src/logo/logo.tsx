@@ -3,7 +3,8 @@
 import { useRender } from '@base-ui/react/use-render'
 import { cx } from '../cx.ts'
 import { focusRing } from '../styles.ts'
-import { LOGO_MARK_SIZE, logoMarkRects, type LogoMarkColor } from './mark.ts'
+import { LogoMark } from './logo-mark.tsx'
+import { LOGO_MARK_SIZE } from './mark.ts'
 
 export interface LogoProps {
   /** 站点名，取自站点设置 */
@@ -25,41 +26,6 @@ export interface LogoProps {
 const sizes = {
   sm: { cell: 3, name: 'text-pixel-1', gap: 'gap-2' },
   md: { cell: 4, name: 'text-pixel-2', gap: 'gap-3' },
-}
-
-const fills: Record<LogoMarkColor, string> = {
-  accent: 'fill-accent',
-  'accent-fg': 'fill-accent-fg',
-  'text-muted': 'fill-text-muted',
-  'border-strong': 'fill-border-strong',
-}
-
-const rects = logoMarkRects()
-
-/** 内置的像素图形，每格 cell 像素。站点设置里的图片控件拿它当没有上传时的预览 */
-export function LogoMark({ cell }: { cell: number }) {
-  const px = LOGO_MARK_SIZE * cell
-  return (
-    <svg
-      aria-hidden
-      width={px}
-      height={px}
-      viewBox={`0 0 ${LOGO_MARK_SIZE} ${LOGO_MARK_SIZE}`}
-      shapeRendering="crispEdges"
-      className="block shrink-0"
-    >
-      {rects.map((rect) => (
-        <rect
-          key={`${rect.x},${rect.y}`}
-          x={rect.x}
-          y={rect.y}
-          width={rect.width}
-          height={1}
-          className={fills[rect.color]}
-        />
-      ))}
-    </svg>
-  )
 }
 
 /**

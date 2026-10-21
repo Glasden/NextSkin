@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor } from 'storybook/test'
 import { uploadedLogo } from '../logo/fixtures.ts'
-import { LogoMark } from '../logo/logo.tsx'
+import { LogoMark } from '../logo/logo-mark.tsx'
 import { ImageInput } from './image-input.tsx'
 
 const onFile = fn()

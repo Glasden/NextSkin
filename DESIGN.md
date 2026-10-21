@@ -212,7 +212,7 @@
 | FigurePlaceholder | 还没有皮肤时，在 SkinFigure 的位置放一个同样尺寸、同样视角的人形剪影 | 不用 Steve、Alex 代替：它们是 Mojang 的材质 |
 | NameTag | 站在展台上的角色头顶的名牌，例如仪表盘的“你的角色”、领奖台 | 列表里的角色名，直接写文字 |
 | PlayerCard | 角色管理里的一个角色：展台、名字、UUID 和操作 | 材质改用 TextureCard |
-| PlayerHead | 用户和角色的头像 | — |
+| PlayerHead | 用户和角色的头像；还没设头像的用户显示标志的图形，还没有皮肤的角色和已经注销的用户传 `fallback="blank"`，显示和 FigurePlaceholder 同样画法的空白脸 | — |
 | PlayerPicker | 从自己的角色里选一个，例如启动器授权时选用哪个角色进服：竖排，每行是方框、32px 头像、角色名和一行补充，选中的加粗边框并打勾 | 管理角色，改用 PlayerCard；要看穿着时在旁边放展台 |
 | PlayerChip（未落地） | 角色名加头像，例如“正在使用的角色” | 用户（账号），改用 PlayerHead 加昵称 |
 | Podium | 首页的“本周收藏最多”：前三名站在台阶上，空着的名次放人形剪影 | 其他排行，改用列表 |

@@ -175,6 +175,7 @@ export default async function AdminPlayersPage({
                   <PlayerHead
                     src={visibleSkin && visibleSkin.scale !== null ? headSrc(visibleSkin.hash) : undefined}
                     textureScale={visibleSkin?.scale ?? undefined}
+                    fallback="blank"
                     size={24}
                     alt=""
                   />

@@ -46,7 +46,7 @@ export const Skins: Story = {
   },
 }
 
-/** 还没有头像：同样大小的空白脸，画法与 FigurePlaceholder 一致 */
+/** 还没设头像的用户：标志的像素图形，和头像一样是 8×8 的网格，按整数倍放大 */
 export const Placeholder: Story = {
   render: () => (
     <div className="flex items-end gap-4">
@@ -56,7 +56,25 @@ export const Placeholder: Story = {
     </div>
   ),
   play: async ({ canvas }) => {
-    await expect(canvas.getAllByRole('img')).toHaveLength(4)
+    const heads = canvas.getAllByRole('img')
+    await expect(heads).toHaveLength(4)
+    await expect(heads[3]!.querySelector('svg')).toHaveAttribute('width', '48')
+  },
+}
+
+/** 还没有皮肤的角色、已经注销的用户：同样大小的空白脸，画法与 FigurePlaceholder 一致 */
+export const Blank: Story = {
+  render: () => (
+    <div className="flex items-end gap-4">
+      {([16, 24, 32, 48] as const).map((size) => (
+        <PlayerHead key={size} fallback="blank" size={size} alt={`还没有皮肤，${size}px`} />
+      ))}
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const heads = canvas.getAllByRole('img')
+    await expect(heads).toHaveLength(4)
+    await expect(heads[0]!.querySelector('svg')).toBeNull()
   },
 }
 
@@ -71,6 +89,10 @@ export const WithName: Story = {
       <span className="flex items-center gap-2 text-sm text-text">
         <PlayerHead size={24} alt="" />
         还没有设头像的用户
+      </span>
+      <span className="flex items-center gap-2 text-sm text-text">
+        <PlayerHead fallback="blank" size={24} alt="" />
+        还没有皮肤的角色
       </span>
     </div>
   ),

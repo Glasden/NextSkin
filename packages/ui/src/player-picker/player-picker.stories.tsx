@@ -19,7 +19,7 @@ const players = [
     head: <PlayerHead {...headFixture('ironman_hd')} size={32} alt="" />,
     description: '一行放不下的补充说明会在末尾截断，不会把这一行撑高',
   },
-  { value: '21', name: 'NoSkinYet', head: <PlayerHead size={32} alt="" />, description: '还没有皮肤' },
+  { value: '21', name: 'NoSkinYet', head: <PlayerHead fallback="blank" size={32} alt="" />, description: '还没有皮肤' },
 ]
 
 const onValueChange = fn()
