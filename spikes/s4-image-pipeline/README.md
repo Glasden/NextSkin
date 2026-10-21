@@ -11,8 +11,10 @@
 
 ## 运行
 
+lockfile 已删除（里面的 sharp、uuid 有安全告警，spike 不再维护），`npm install` 装到的是 package.json 范围内的最新版本，可能和得出结论时的版本不同。
+
 ```bash
-npm ci
+npm install
 npm run fixtures      # 按固定提交下载 11 张真实材质（校验 sha256），生成 12 张合成材质
 npm run check         # tsc
 npm test              # 像素测试 + 健壮性矩阵（45 个语料 × 4 条路径，每个在独立子进程里跑），约 40 秒

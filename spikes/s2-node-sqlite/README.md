@@ -12,8 +12,10 @@ S5 遗留的两个 SQLite 风险，答案都在连接架构上，与驱动无关
 
 ## 运行
 
+lockfile 已删除（里面的 sharp、uuid 有安全告警，spike 不再维护），`npm install` 装到的是 package.json 范围内的最新版本，可能和得出结论时的版本不同。
+
 ```bash
-npm ci
+npm install
 node src/probe.ts                       # 功能探测（Node 24 默认开启类型剥离，直接运行 .ts）
 node src/micro.ts "$(node -e 'import("./src/schema.ts").then(m=>console.log(m.freshCopy("micro")))')"   # 单条查询的开销
 node src/terminate.ts data/micro.db     # 失控查询能否中断
