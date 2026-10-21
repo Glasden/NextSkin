@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent, waitFor } from 'storybook/test'
+import { expect, spyOn, userEvent, waitFor } from 'storybook/test'
 import { Stage } from '../stage/stage.tsx'
 import { focusRing } from '../styles.ts'
 import { fixture } from './fixtures.ts'
@@ -89,8 +89,25 @@ export const Raise: Story = {
   ),
   play: async ({ canvas, canvasElement }) => {
     await expect(canvasElement.querySelector('img[data-raise]')).toBeNull()
-    await userEvent.tab()
-    await expect(canvas.getByRole('link')).toHaveFocus()
+    // 拼图下载好、还没解码完时不换：静止图先透明、拼图还没画出来，人物会消失一帧（闪白）。先拦住解码
+    let release = () => {}
+    const decoded = new Promise<void>((resolve) => (release = resolve))
+    const requested: Element[] = []
+    const decode = spyOn(HTMLImageElement.prototype, 'decode').mockImplementation(function (this: HTMLImageElement) {
+      requested.push(this)
+      return decoded
+    })
+    try {
+      await userEvent.tab()
+      await expect(canvas.getByRole('link')).toHaveFocus()
+      await waitFor(() => expect(requested).toContain(canvasElement.querySelector('img[data-raise]')))
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      await expect(canvasElement.querySelector('img[data-ready]')).toBeNull()
+      await expect(canvas.getByRole('img', { name: '初音未来的皮肤' })).not.toHaveClass('opacity-0')
+    } finally {
+      decode.mockRestore()
+      release()
+    }
     await waitFor(() => expect(canvasElement.querySelector('img[data-ready]')).not.toBeNull())
     const sprite = canvasElement.querySelector('img[data-ready]')!
     await expect(sprite.getAttribute('src')).toMatch(/hatsune_miku-both-raise-p4[.-]/)

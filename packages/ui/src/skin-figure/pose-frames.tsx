@@ -92,7 +92,12 @@ export function PoseFrames({ still, sprite, alt, width, height, left, top, loadi
           draggable={false}
           data-raise
           data-ready={ready || undefined}
-          onLoad={() => setState('ready')}
+          // load 只说明下载完了。decoding="async" 的大图第一次露面时，浏览器可能先画一帧没有它的画面（高分屏上拼图解码后有两三 MB），
+          // 这时静止图已经透明，人物消失一帧、露出展台底色，看着像闪白。解码好再换；解码失败也照换，load 成功说明图本身没坏
+          onLoad={(event) => {
+            const show = () => setState('ready')
+            event.currentTarget.decode().then(show, show)
+          }}
           className={cx(image, raise, !ready && 'opacity-0')}
           style={{ width: width * RAISE_FRAMES, height }}
         />
