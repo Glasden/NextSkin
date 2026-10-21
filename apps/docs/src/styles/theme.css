@@ -1,0 +1,183 @@
+/*
+ * 对齐主站视觉（DESIGN.md）：钻石青强调色、冷灰中性色、2/4px 圆角、硬边位移阴影。
+ * 色值取自 packages/ui/src/theme.css；主站换 token 时这里跟着改。
+ */
+
+html:root {
+  --sl-font:
+    -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  --sl-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --sl-color-bg: #f2f3f5;
+  --sl-color-bg-nav: #ffffff;
+  --sl-color-bg-sidebar: #ffffff;
+  --sl-color-bg-inline-code: #e9ebef;
+  --sl-color-text: #14171c;
+  --sl-color-text-accent: #08736b;
+  --sl-color-text-invert: #ffffff;
+  --sl-color-accent: #08736b;
+  --sl-color-accent-low: #e1eeed;
+  --sl-color-accent-high: #064f4a;
+  --sl-color-hairline: #d5d8de;
+  --sl-color-hairline-light: #e3e6ea;
+  --sl-color-hairline-shade: #d5d8de;
+
+  --pixel-shadow: 2px 2px 0 0 #1d2127;
+  --pixel-shadow-lg: 4px 4px 0 0 #1d2127;
+
+  /* 左侧导航比默认略宽，分组名和版本徽章不用挤在一行 */
+  --sl-sidebar-width: 19rem;
+}
+
+/* 目录是 position: fixed，默认 width: 100% 按视口算会溢出到屏幕外；
+   收窄后必须让它按容器宽度排版，长标题才会换行。 */
+html:root[data-has-toc] .right-sidebar {
+  width: 14rem;
+  inset-inline-end: 0;
+}
+
+/* 右侧目录比默认窄，把省下的宽度给正文；正文在宽出来的区域里居中。
+   只对带目录的页面生效，没有目录的首页仍按原布局摆放。 */
+@media (min-width: 72rem) {
+  html:root[data-has-toc] .right-sidebar-container {
+    width: 14rem;
+  }
+
+  html:root[data-has-toc] .right-sidebar-container .sl-container {
+    width: auto;
+    max-width: none;
+  }
+
+  html:root[data-has-toc] .main-pane {
+    --sl-content-width: 50rem;
+    width: calc(100% - 14rem);
+    --sl-content-margin-inline: auto;
+  }
+}
+
+html:root[data-theme='dark'] {
+  --sl-color-bg: #0e1013;
+  --sl-color-bg-nav: #16191d;
+  --sl-color-bg-sidebar: #16191d;
+  --sl-color-bg-inline-code: #0b0c0f;
+  --sl-color-text: #e7e9ec;
+  --sl-color-text-accent: #3dd6c4;
+  --sl-color-text-invert: #0e1013;
+  --sl-color-accent: #3dd6c4;
+  --sl-color-accent-low: #1c3738;
+  --sl-color-accent-high: #8ff0e2;
+  --sl-color-hairline: #2b3037;
+  --sl-color-hairline-light: #23282e;
+  --sl-color-hairline-shade: #0b0c0f;
+
+  --pixel-shadow: 2px 2px 0 0 #3b424c;
+  --pixel-shadow-lg: 4px 4px 0 0 #3b424c;
+}
+
+body {
+  font-family: var(--sl-font);
+}
+
+.site-title {
+  font-weight: 700;
+}
+
+.site-title img {
+  image-rendering: pixelated;
+}
+
+/* 正文链接只在下划线处用强调色，悬停才变实 */
+.sl-markdown-content a:not(.sl-link-button) {
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 2px;
+}
+
+/* 侧栏当前项：强调色淡底，和主站导航选中态一致 */
+.sidebar-content a[aria-current='page'] {
+  background: var(--sl-color-accent-low);
+  color: var(--sl-color-accent-high);
+  border-radius: 2px;
+}
+
+.group-label .large {
+  font-weight: 700;
+}
+
+/* 按钮：小圆角 + 硬边位移阴影 */
+.sl-link-button {
+  border-radius: 2px;
+}
+
+.sl-link-button.primary {
+  box-shadow: var(--pixel-shadow);
+}
+
+.sl-link-button.primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* 卡片和代码块：4px 圆角，悬停抬起用硬边阴影而不是弥散阴影 */
+.card {
+  border-radius: 4px;
+}
+
+.card:hover {
+  box-shadow: var(--pixel-shadow-lg);
+}
+
+.sl-markdown-content pre,
+.sl-markdown-content :not(pre) > code {
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: 4px;
+}
+
+.sl-markdown-content :not(pre) > code {
+  border-radius: 2px;
+}
+
+::selection {
+  background: var(--sl-color-accent-low);
+}
+
+/* 标志在页头按 32px 显示；SVG 本身按 8×8 网格绘制，放大了才是清晰的像素块 */
+.site-title img {
+  height: 2rem;
+  width: 2rem;
+}
+
+.sl-badge {
+  border-radius: 2px;
+}
+
+
+/* 主站页头是文字色，不是强调色 */
+a.site-title {
+  color: var(--sl-color-text);
+}
+
+/* 搜索框靠右：标题栏让出空间，搜索贴在右侧图标组前面 */
+html:root .header > .header > .sl-flex:has(site-search) {
+  margin-inline-start: auto;
+}
+
+/* 页脚的文档版本行：比正文小一号，居中放在翻页链接下面 */
+.docs-meta {
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  margin: 1rem 0 1.5rem;
+  font-size: var(--sl-text-xs);
+  color: var(--sl-color-gray-3);
+}
+
+.docs-meta a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--sl-color-hairline);
+  text-underline-offset: 2px;
+}
+
+.docs-meta a:hover {
+  color: var(--sl-color-white);
+}

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.astro/
+.DS_Store
+
+# 构建时从主仓同步，不提交
+src/content/docs/plugins/reference/
+src/data/
+
+.artifacts/
