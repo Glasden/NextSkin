@@ -6,7 +6,13 @@
 - 强杀启动器后，systemd 清掉剩下的核心并重启，3 秒后恢复；
 - 配置错误退出 78，单元停在 failed，不重启。
 
-单元文件本身（`User=`、开机自启）未实测。公共部分见 [README.md](README.md)。
+按下面的步骤和单元文件（`User=nextskin`）在 Ubuntu 24.04（systemd 255，arm64，Node 24.21）上实测过，程序用的是 `pnpm build` 出来的发行目录，没有经过 ZIP：
+
+- 以服务用户运行的 `doctor` 没有失败项；
+- `enable --now` 后约 2 秒健康检查返回 200，监听地址按 `.env` 只有 `127.0.0.1:3000`；
+- `restart` 正常停止（`Deactivated successfully`）后重新启动，数据目录里的文件都属于 `nextskin`。
+
+开机自启未实测。公共部分见 [README.md](README.md)。
 
 ## 安装
 

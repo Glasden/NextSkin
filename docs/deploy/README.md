@@ -7,7 +7,7 @@
 | 宝塔面板的"Node 项目" | [baota.md](baota.md)                     | 宝塔 13.0：启动、停止、重启；nginx 配置只读了模板和面板源码 |
 | 1Panel 的 Node.js 运行环境 | [1panel.md](1panel.md)              | 1Panel v2.4.0：启动、停止；反向代理未实测                   |
 | Docker、Compose       | [docker.md](docker.md)、[compose.yaml](compose.yaml) | arm64：只读运行、停止、健康检查；amd64 待 CI 首次运行   |
-| systemd               | [systemd.md](systemd.md)                 | 临时单元：停止、强杀后重启、退出码 78 不重启                |
+| systemd               | [systemd.md](systemd.md)                 | 临时单元：停止、强杀后重启、退出码 78 不重启；单元文件：启动、重启；开机自启未实测 |
 | Windows               | [windows.md](windows.md)                 | 从发行目录启动；Ctrl+C 停止和做成服务未实测                 |
 
 ## 发行包
