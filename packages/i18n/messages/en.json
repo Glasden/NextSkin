@@ -1845,6 +1845,10 @@
             "label": "Send API location indication",
             "help": "Adds the X-Authlib-Injector-API-Location header to responses, so entering the site’s home page in a launcher also finds the external login API."
           },
+          "serverAdmissionEnabled": {
+            "label": "Enable server-specific admission paths",
+            "help": "Enable the server-specific Yggdrasil path using its server key for the admission plugin to handle membership, bans, and profile policies. Disabled paths return 404; the existing shared authentication endpoint is unaffected."
+          },
           "tokenValidSeconds": {
             "label": "Token validity",
             "help": "Seconds. Tokens can join servers, validate and change textures during this period. Applies to launcher logins and authorized apps."

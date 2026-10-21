@@ -1,6 +1,6 @@
 import { countRows, dialectOf, toIsoTimestamp, writeAuthDate } from '@nextskin/db'
 import { loadPlugin, remoteDialect, type CoreRpc, type InvocationContext, type PluginCall } from '@nextskin/plugin-host'
-import { definePlugin, deny, table } from '@nextskin/plugin-sdk'
+import { definePlugin, deny, table, type CoreInterceptors } from '@nextskin/plugin-sdk'
 import { Kysely } from 'kysely'
 import { afterEach, expect, test, vi } from 'vitest'
 import { DomainError } from '../errors.ts'
@@ -829,6 +829,39 @@ test('registerFields 把 fromQuery 交给网页，旧声明默认为 false', asy
 const issueInput = { uid: 123, via: 'authenticate' as const }
 const issueScope = { actor: { kind: 'user' as const, uid: 123, role: 'user' as const }, locale: 'en', ip: '192.0.2.1' }
 const issueToken = () => env.core.plugins.interceptIssueToken(issueInput, issueScope)
+const admissionInput = {
+  phase: 'hasJoined' as const,
+  serverKey: 'server-key-123456',
+  uid: 123,
+  pid: 456,
+  playerUuid: 'a'.repeat(32),
+  playerName: 'Steve',
+  serverId: 'minecraft-server-id',
+  ip: '192.0.2.1',
+}
+const admissionScope = {
+  actor: { kind: 'user' as const, uid: 123, role: 'user' as const },
+  locale: 'en',
+  ip: '192.0.2.1',
+}
+const serverAdmission = () => env.core.plugins.interceptServerAdmission(admissionInput, admissionScope)
+
+test('服务器准入没有插件时失败关闭', async () => {
+  await env.boot([])
+  await expect(serverAdmission()).resolves.toEqual({ action: 'unavailable' })
+})
+
+test('服务器准入拦截器收到路径和角色上下文，并可拒绝', async () => {
+  const handler = vi.fn(({ input }: { input: CoreInterceptors['yggdrasil.serverAdmission']['input'] }) =>
+    Promise.resolve(deny('server_banned', `denied:${input.serverKey}`)),
+  )
+  await env.boot([
+    official('a', definePlugin({ capabilities: [], intercept: { 'yggdrasil.serverAdmission': handler } })),
+  ])
+  await enable('a')
+  await expect(serverAdmission()).resolves.toMatchObject({ action: 'deny', plugin: 'a', reason: 'server_banned' })
+  expect(handler).toHaveBeenCalledWith(expect.objectContaining({ input: admissionInput }))
+})
 
 test('签发拦截器放行、完整 scope、ctx.kv 在事务外可用', async () => {
   const handler = vi.fn()

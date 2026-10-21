@@ -44,6 +44,13 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 
 单元测试和 story 测试跑在 Chromium 里，第一次运行前要装浏览器：`pnpm --filter @nextskin/web exec playwright install chromium`。
 
+### PR 检查注意事项
+
+- PR 至少确认 `pnpm check` 通过；涉及数据库、Next 配置、视觉基线或发布包时，也要查看 CI 的 `test:db`、`build + e2e`、`test:visual`、`test:pack` 和 `changeset` 结果。只看本地单项测试通过不代表 PR 全部检查通过。
+- Windows 若设置了 `core.autocrlf=true`，工作区 CRLF 可能让全仓 `prettier --check .` 报大量行尾差异。不要用 `prettier --write .` 扫全仓；先对本次修改文件运行 `pnpm exec prettier --check <files>`，并查看 `git diff`，避免把无关文件或整仓行尾转换带进 PR。最终以 Linux CI 的检查结果为准。
+- 插件 SDK 公开 API 改动除更新 `packages/plugin-sdk/etc/plugin-sdk.api.md` 和 changeset 外，还要验证 `pnpm --filter @nextskin/plugin-sdk test` 与 `pnpm test:pack`。新增 SDK 作者文档放在 `packages/plugin-sdk/docs/`，不要放进临时目录（例如 `docs/pre/`），否则会被 npm pack 收录。
+- CI 失败时先查看对应 job 的失败步骤和 annotations；视觉测试要看 expected/actual/diff，区分交互时序 flaky 与有意的视觉变化，不要未审阅就更新截图基线。
+
 ## 不变量
 
 每一条都写明"为什么"以及"由什么守护"；由 lint 守护的条目，原因写在规则的报错里。破坏任何一条都等于引入线上事故。

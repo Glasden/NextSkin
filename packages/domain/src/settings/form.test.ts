@@ -72,6 +72,7 @@ const expected = {
   'yggdrasil.skinDomains': lines,
   'yggdrasil.profileSearchLimit': integer(null),
   'yggdrasil.apiLocationIndication': boolean,
+  'yggdrasil.serverAdmissionEnabled': boolean,
   'yggdrasil.tokenValidSeconds': integer(1, 31536000),
   'yggdrasil.tokenRefreshableSeconds': integer(1, 31536000),
   'yggdrasil.tokensPerUser': integer(1, 1000),

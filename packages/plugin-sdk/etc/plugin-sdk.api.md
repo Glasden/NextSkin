@@ -190,6 +190,22 @@ export interface CoreInterceptors {
         };
         patch: never;
     };
+    'yggdrasil.serverAdmission': {
+        input: {
+            phase: 'metadata';
+            serverKey: string;
+        } | {
+            phase: 'join' | 'hasJoined';
+            serverKey: string;
+            uid: Uid;
+            pid: Pid;
+            playerUuid: string;
+            playerName: string;
+            serverId: string | null;
+            ip: string;
+        };
+        patch: never;
+    };
 }
 
 // @public (undocumented)
@@ -314,6 +330,11 @@ export const interceptorPolicies: {
         readonly transactional: true;
     };
     readonly 'yggdrasil.issueToken': {
+        readonly onFailure: 'closed';
+        readonly timeoutMs: 2000;
+        readonly transactional: false;
+    };
+    readonly 'yggdrasil.serverAdmission': {
         readonly onFailure: 'closed';
         readonly timeoutMs: 2000;
         readonly transactional: false;

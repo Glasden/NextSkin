@@ -88,6 +88,11 @@ export type IssueTokenInterceptor = (
   scope: { actor: { kind: 'user'; uid: number; role: UserRole }; locale: string | null; ip: string | null },
 ) => Promise<IssueTokenDecision>
 
+export type ServerAdmissionInterceptor = (
+  input: CoreInterceptors['yggdrasil.serverAdmission']['input'],
+  scope: { actor: RequestScope['actor']; locale: string | null; ip: string | null },
+) => Promise<IssueTokenDecision>
+
 /** 随发行包分发的官方插件：`plugins/*` 里的包 */
 export interface OfficialPlugin {
   definition: AnyPluginDefinition
@@ -1510,6 +1515,29 @@ export function createPluginSystem(options: {
           ip: scope.ip ?? '',
         }),
       )) satisfies IssueTokenInterceptor,
+
+    /**
+     * 服务器专属路径的 hasJoined 准入。没有任何已启用的准入拦截器时也按不可用处理，
+     * 防止只配置了路径却没有业务插件时意外放行。
+     */
+    interceptServerAdmission: (async (input, scope) => {
+      const name = 'yggdrasil.serverAdmission'
+      if (
+        !activeWith('interceptors', (items) => items.some((item) => item.name === name)).length &&
+        ![...unavailable.values()].some((names) => names.has(name))
+      )
+        return { action: 'unavailable' }
+      return intercept(
+        name,
+        () => input,
+        async () => ({
+          requestId: randomUUID(),
+          actor: scope.actor,
+          locale: scope.locale ?? (await options.settings.read(['site.locale']))['site.locale'],
+          ip: scope.ip ?? '',
+        }),
+      )
+    }) satisfies ServerAdmissionInterceptor,
 
     /**
      * passwordHasher：哈希既不是当前算法、也不是 BS 旧格式时由 auth/password.ts 调用。先在本进程内按 detect 匹配，

@@ -1845,6 +1845,10 @@
             "label": "返回 API 地址指示",
             "help": "在响应里带上 X-Authlib-Injector-API-Location 头。这样在启动器里填本站首页的地址，也能找到外置登录的接口。"
           },
+          "serverAdmissionEnabled": {
+            "label": "启用服务器专属准入路径",
+            "help": "开放服务器专属 Yggdrasil 准入路径（路径中包含服务器密钥），交给准入插件处理成员、封禁和角色策略。关闭后新路径返回 404；现有总站认证地址不受影响。"
+          },
           "tokenValidSeconds": {
             "label": "令牌有效期",
             "help": "秒。有效期内可进服、校验令牌和修改材质。启动器登录和已授权应用的令牌都按它算。"
