@@ -24,11 +24,12 @@ export interface PoseFramesProps {
 }
 
 const image = 'absolute top-0 left-0 block max-w-none [image-rendering:pixelated]'
-// 抬手分四格（DESIGN.md §2.2）：拼图向左挪四帧。只在拼图下载好以后（data-ready）才挪，第一次悬浮也从站立开始播
+// 抬手分四格（DESIGN.md §2.2）：拼图向左挪四帧。只在拼图下载好以后（data-ready）才挪，第一次悬浮也从站立开始播。
+// 过渡的是整数帧号 --raise-frame（theme.css），不直接过渡位移：位移的过渡被打断后，从半路接着分四格走，会停在两帧之间
 const raise = cx(
-  'transition-transform duration-slow ease-step',
-  'motion-safe:group-hover/raise:data-ready:-translate-x-4/5',
-  'motion-safe:group-focus-visible/raise:data-ready:-translate-x-4/5',
+  '[translate:calc(var(--raise-frame)*-20%)_0] [transition-property:--raise-frame] duration-slow ease-step',
+  'motion-safe:group-hover/raise:data-ready:[--raise-frame:4]',
+  'motion-safe:group-focus-visible/raise:data-ready:[--raise-frame:4]',
 )
 
 /**

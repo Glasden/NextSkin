@@ -82,9 +82,11 @@
   --ease-*: initial;
   --ease-step: steps(4, end); /* 阶跃：按下、选中块移动、角色抬手 */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); /* 少数需要平滑的过渡，例如面板展开 */
-  --duration-fast: 80ms; /* 按下、悬停 */
-  --duration-base: 160ms; /* 开关 */
-  --duration-slow: 240ms; /* 分段选择的选中块、角色抬手 */
+  /* duration-* 工具类读的是 --transition-duration-*，写成 --duration-* 不会生成 duration-slow 这些类 */
+  --transition-duration-*: initial;
+  --transition-duration-fast: 80ms; /* 按下、悬停 */
+  --transition-duration-base: 160ms; /* 开关 */
+  --transition-duration-slow: 240ms; /* 分段选择的选中块、角色抬手 */
 
   --animate-*: initial;
   --animate-loading: loading 900ms steps(1, end) infinite; /* 提交中：三个方块依次亮起 */
@@ -112,6 +114,14 @@
   100% {
     opacity: 0.3;
   }
+}
+
+/* 抬手播到第几帧（SkinFigure）。登记成整数，过渡的每一刻都落在整帧上：悬浮到一半移开或移回来，
+   过渡从当前帧接着走，拼图不会停在两帧之间，看着像人物左右滑动 */
+@property --raise-frame {
+  syntax: '<integer>';
+  inherits: false;
+  initial-value: 0;
 }
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));

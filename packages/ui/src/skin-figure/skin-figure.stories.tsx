@@ -98,5 +98,22 @@ export const Raise: Story = {
     const frame = sprite.parentElement!.getBoundingClientRect()
     await waitFor(() => expect(sprite.getBoundingClientRect().left - frame.left).toBe(-4 * frame.width))
     await expect(canvas.getByRole('img', { name: '初音未来的皮肤' })).toHaveClass('opacity-0')
+    // 放到一半又聚焦回来：过渡从半路接着走，每一刻都要停在整帧上，停在两帧之间看着像人物左右滑动
+    const link = canvas.getByRole('link')
+    const offsets: number[] = []
+    let sampling = true
+    const sample = () => {
+      offsets.push((sprite.getBoundingClientRect().left - frame.left) / frame.width)
+      if (sampling) requestAnimationFrame(sample)
+    }
+    sample()
+    link.blur()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    link.focus()
+    await waitFor(() => expect(sprite.getBoundingClientRect().left - frame.left).toBe(-4 * frame.width))
+    sampling = false
+    // 中间帧要露过面，否则过渡根本没播（例如时长的 token 没生成工具类）
+    await expect(offsets.some((offset) => offset > -4 && offset < 0)).toBe(true)
+    await expect(offsets.filter((offset) => Math.abs(offset - Math.round(offset)) > 0.01)).toEqual([])
   },
 }

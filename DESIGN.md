@@ -122,9 +122,9 @@
 | `text-pixel-4` | `48px / 64px` | 像素字体 ×4：首页主标题 |
 | `ease-step` | `steps(4, end)` | 阶跃：按下、选中块移动、角色抬手 |
 | `ease-out` | `cubic-bezier(0.2, 0.8, 0.2, 1)` | 少数需要平滑的过渡，例如面板展开 |
-| `duration-fast` | `80ms` | 按下、悬停 |
-| `duration-base` | `160ms` | 开关 |
-| `duration-slow` | `240ms` | 分段选择的选中块、角色抬手 |
+| `transition-duration-fast` | `80ms` | 按下、悬停 |
+| `transition-duration-base` | `160ms` | 开关 |
+| `transition-duration-slow` | `240ms` | 分段选择的选中块、角色抬手 |
 | `animate-loading` | `loading 900ms steps(1, end) infinite` | 提交中：三个方块依次亮起 |
 | `animate-progress` | `progress 1200ms linear infinite` | 进度未知：进度条的方块半亮，一组亮块从左走到右 |
 <!-- design:sync:end -->
