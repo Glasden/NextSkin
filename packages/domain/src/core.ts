@@ -265,6 +265,7 @@ export function createCore(options: CoreOptions) {
       events,
       now,
       cache: options.yggdrasilSessionCache ?? createMemorySessionCache(now),
+      interceptServerAdmission: plugins.interceptServerAdmission,
     }),
     ...createProfileTextures({ db: options.db, settings, tokens, upload, closet, players }),
   }
