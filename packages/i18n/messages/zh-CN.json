@@ -2038,6 +2038,9 @@
       "interceptors": {
         "user": {
           "register": "注册：可以拒绝"
+        },
+        "yggdrasil": {
+          "issueToken": "外置登录：可以拒绝"
         }
       },
       "providers": {
@@ -2392,6 +2395,8 @@
   },
   "yggdrasil": {
     "errors": {
+      "plugin_denied": "{message}",
+      "plugin_unavailable": "外置登录暂时不可用，请稍后再试。",
       "credentials_required": "用户名和密码都要填写。",
       "invalid_credentials": "用户名、密码或验证码不对。开了两步验证的账号，要在密码后面直接接上验证器上的 6 位数字。",
       "too_frequent": "请求太频繁了，请 {seconds, plural, other {# 秒}}后再试。",

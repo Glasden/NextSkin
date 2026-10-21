@@ -10,6 +10,7 @@ import {
 import { readClient, type OAuthClientSummary } from '../oauth/devices.ts'
 import { DomainError } from '../errors.ts'
 import type { CaptchaService } from '../captcha/service.ts'
+import type { IssueTokenInterceptor } from '../plugins/system.ts'
 import type { Kysely } from 'kysely'
 import type { MailService } from '../mail/service.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
@@ -43,6 +44,8 @@ export interface AuthServiceOptions {
   production: boolean
   mail: MailService
   captcha?: Pick<CaptchaService, 'verify'>
+  /** 签发带 Join 的 Connect 令牌之前的插件判定（ADR-0045） */
+  interceptIssueToken?: IssueTokenInterceptor
   /** passwordHasher 插件（ADR-0033） */
   passwordPlugins?: PluginPasswordVerifier
   onPasswordChanged?: (uid: number) => Promise<void>
@@ -99,6 +102,7 @@ export function createAuthService(options: AuthServiceOptions) {
         tokensPerUser: async () => (await settings.read(['yggdrasil.tokensPerUser']))['yggdrasil.tokensPerUser'],
         legacyPasswordSalt: async () => (await settings.read(['auth.legacyPasswordSalt']))['auth.legacyPasswordSalt'],
         passwordPlugins: options.passwordPlugins,
+        interceptIssueToken: options.interceptIssueToken,
         mail: options.mail,
         captcha: options.captcha,
         onPasswordChanged: options.onPasswordChanged,

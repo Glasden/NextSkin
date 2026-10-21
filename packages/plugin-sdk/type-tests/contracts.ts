@@ -121,7 +121,7 @@ definePlugin({
 definePlugin({
   capabilities: [],
   intercept: {
-    // @ts-expect-error 只有 user.register 一个拦截点
+    // @ts-expect-error 不存在的拦截点
     'player.create': async () => {},
   },
 })
@@ -560,5 +560,24 @@ definePlugin({
       },
       { form: 'auth.register', field: { type: 'boolean', name: 'accept', label: 'accept' }, fromQuery: false },
     ],
+  },
+})
+
+// 事务外的签发拦截器有完整上下文，via 允许次版本扩展，仍然只能拒绝。
+definePlugin({
+  capabilities: ['storage.kv'],
+  intercept: {
+    'yggdrasil.issueToken': async ({ input, ctx }) => {
+      if (input.via === 'authenticate') await ctx.kv.set(String(input.uid), true)
+      void ctx.fetch
+      void ctx.jobs
+    },
+  },
+})
+definePlugin({
+  capabilities: [],
+  intercept: {
+    // @ts-expect-error 签发拦截器不能返回 patch
+    'yggdrasil.issueToken': async () => ({ action: 'patch', patch: {} }),
   },
 })

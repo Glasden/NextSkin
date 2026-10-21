@@ -2038,6 +2038,9 @@
       "interceptors": {
         "user": {
           "register": "Sign-up: can refuse"
+        },
+        "yggdrasil": {
+          "issueToken": "Launcher login: can refuse"
         }
       },
       "providers": {
@@ -2392,6 +2395,8 @@
   },
   "yggdrasil": {
     "errors": {
+      "plugin_denied": "{message}",
+      "plugin_unavailable": "Launcher login is temporarily unavailable. Please try again later.",
       "credentials_required": "Enter both a username and a password.",
       "invalid_credentials": "Incorrect username, password or code. If two-step verification is on, type the 6-digit code from your authenticator right after your password.",
       "too_frequent": "Too many requests. Try again in {seconds, plural, one {# second} other {# seconds}}.",

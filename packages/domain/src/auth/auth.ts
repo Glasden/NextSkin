@@ -30,6 +30,7 @@ import {
 import { serialSafety } from './serial-safety.ts'
 import { captchaGuard } from './captcha.ts'
 import type { CaptchaService } from '../captcha/service.ts'
+import type { IssueTokenInterceptor } from '../plugins/system.ts'
 
 /** Better Auth 挂在这个路径下（Hono 的 /api/auth/*） */
 export const AUTH_BASE_PATH = '/api/auth'
@@ -49,6 +50,8 @@ export interface AuthConfig {
   /** BS 的全站盐（旧站 .env 的 SALT），只有校验旧摘要格式的密码时才读 */
   legacyPasswordSalt: () => Promise<string>
   captcha?: Pick<CaptchaService, 'verify'>
+  /** 签发带 Join 的 Connect 令牌之前的插件判定（ADR-0045） */
+  interceptIssueToken?: IssueTokenInterceptor
   /** passwordHasher 插件（ADR-0033）；没有时插件格式的哈希一律不通过 */
   passwordPlugins?: PluginPasswordVerifier
   mail?: MailService
@@ -337,6 +340,7 @@ export function authOptions(config: AuthConfig) {
         config.tokensPerUser ?? (() => Promise.resolve(10)),
         config.siteUrl,
         config.requireEmailVerification ?? (() => Promise.resolve(false)),
+        config.interceptIssueToken,
       ),
       withNamingConvention(twoFactor({ issuer: config.siteName })),
       withNamingConvention(passkey({ rpID: site.hostname, rpName: config.siteName, origin: site.origin })),

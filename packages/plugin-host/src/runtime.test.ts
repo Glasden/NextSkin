@@ -196,3 +196,44 @@ test('只申请读取能力时没有 adjustScore', async () => {
   await plugin.invoke({ kind: 'job', name: 'read', payload: {}, attempt: 1 }, context)
   plugin.unload()
 })
+
+test('事务外签发拦截器提供 fetch、kv、jobs 和按能力提供的完整上下文', async () => {
+  let keys: string[] = []
+  const rpc = vi.fn<CoreRpc>().mockResolvedValue(null)
+  const plugin = load(
+    definePlugin({
+      capabilities: ['storage.tables', 'storage.kv', 'users.read', 'players.read', 'textures.read'],
+      intercept: {
+        'yggdrasil.issueToken': async ({ ctx }) => {
+          keys = Object.keys(ctx).sort()
+          expect(Object.isFrozen(ctx)).toBe(true)
+          await ctx.kv.get('binding')
+        },
+      },
+    }),
+    rpc,
+  )
+  expect(
+    await plugin.invoke(
+      { kind: 'intercept', name: 'yggdrasil.issueToken', input: { uid: 1, via: 'oauth' }, scope: call.scope },
+      context,
+    ),
+  ).toBeNull()
+  expect(keys).toEqual([
+    'db',
+    'fetch',
+    'jobs',
+    'kv',
+    'log',
+    'players',
+    'plugin',
+    'settings',
+    'signal',
+    'site',
+    't',
+    'textures',
+    'users',
+  ])
+  expect(rpc).toHaveBeenCalledWith('invocation', 'kv.get', { key: 'binding' })
+  plugin.unload()
+})

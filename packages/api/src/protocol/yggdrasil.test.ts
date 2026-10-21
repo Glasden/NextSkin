@@ -88,6 +88,7 @@ test('authserver 递归 trim，保留原密码；异常字符串参数交给领�
   ).toBe(200)
   expect(methods.authenticate).toHaveBeenCalledWith({
     username: 'Steve',
+    ip: null,
     password: 'secret',
     rawPassword: ' secret\n',
     clientToken: null,
@@ -108,6 +109,7 @@ test('authserver 递归 trim，保留原密码；异常字符串参数交给领�
     clientToken: null,
     selectedProfile: { id: 'abc', name: null },
     requestUser: false,
+    ip: null,
   })
   await request('/authserver/signout', { username: 12, password: ['secret'] })
   expect(methods.signout).toHaveBeenCalledWith({ username: null, password: null, rawPassword: null })
@@ -125,6 +127,7 @@ test.each(['{', 'null', '[]', 'true', '42', '"text"'])('非法或非对象 JSON 
     ).status,
   ).toBe(200)
   expect(methods.authenticate).toHaveBeenCalledWith({
+    ip: null,
     username: null,
     password: null,
     rawPassword: null,
@@ -386,3 +389,15 @@ test.each([null, 'https://skin.example.test/api/auth/.well-known/openid-configur
     else expect(body.meta).not.toHaveProperty('feature.openid_configuration_url')
   },
 )
+
+test.each(['authenticate', 'refresh'] as const)('%s 拒绝显示插件 message，返回 403', async (action) => {
+  const { request, methods } = setup()
+  methods[action].mockRejectedValue(
+    new YggdrasilError('ForbiddenOperationException', 'yggdrasil.errors.plugin_denied', 'en', {
+      message: '请先绑定 QQ',
+    }),
+  )
+  const response = await request(`/authserver/${action}`)
+  expect(response.status).toBe(403)
+  expect(await response.json()).toEqual({ error: 'ForbiddenOperationException', errorMessage: '请先绑定 QQ' })
+})

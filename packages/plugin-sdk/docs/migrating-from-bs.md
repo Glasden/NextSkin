@@ -17,7 +17,7 @@
 | player.owner.updated | player.transferred |
 | PlayerWillBeAdded/Deleted、TextureDeleting | 第一版没有对应的前置拦截器；完成后可订阅 player.created/deleted、texture.deleted |
 | PlayerRetrieved | 没有读取时任意改核心结果的 filter；用只读 players API，不能替换协议返回 |
-| UserAuthenticated、UserLoggedIn、UserTryToLogin | 没有通用登录事件或登录拦截点；外部密码用 passwordHasher，第三方登录用 login Provider |
+| UserAuthenticated、UserLoggedIn、UserTryToLogin | 没有通用登录事件或登录拦截点；能进服的令牌签发用 yggdrasil.issueToken，外部密码用 passwordHasher，第三方登录用 login Provider |
 | Filter 的 can_register、Rejection | intercept 的 user.register、deny(code, message)，只能拒绝，不能改字段 |
 | verify_password | passwordHasher；用 detect 认领自包含的 hash，不再接收整个用户模型 |
 | user_password | 不提供自定义核心写入密码算法；新密码由核心生成，旧格式按 Provider 验证后迁移 |
@@ -33,7 +33,7 @@
 |---|---|
 | option()和插件配置表单 | settings: z.object，读取 ctx.settings；机密顶层 secret() |
 | trans()、lang 目录 | locales/zh-CN.json、en.json，ctx.t；使用 ICU 格式 |
-| Filter::add 或注入的$filter->add | 注册限制用 intercept；密码识别用 Provider；没有可任意改数据的通用 filter |
+| Filter::add 或注入的$filter->add | 注册和外置登录限制用 intercept；密码识别用 Provider；没有可任意改数据的通用 filter |
 | Laravel 队列、定时命令 | jobs、ctx.jobs.enqueue、cron，载荷可 JSON 序列化，处理函数幂等 |
 | Eloquent、DB::table | 只读核心数据用 ctx.users/players/textures；自有表用 table、migrations、ctx.db |
 | 写核心数据 | 改积分已经可以（`users.score`、`ctx.users.adjustScore`），其余写核心数据的能力还没有 |
@@ -68,7 +68,7 @@
 | 浏览器执行代码、自定义组件和插槽 | 第一版只有声明式 UI，不提供 ui.script，也不允许 HTML 注入 | 表格、表单、统计、Markdown、注册字段；超出范围等后续 API |
 | 外部数据库 | host 没有外部数据库凭据或任意连接能力，ctx.db 只能访问插件自有表 | 先离线迁入自有表，或由独立服务提供受鉴权 HTTPS API；后者只能在允许网络的调用点使用 |
 | 常驻连接（机器人、WebSocket 客户端等） | 没有 setup 生命周期，host 会整代切换，ctx 仅在单次调用有效 | 独立服务，或有期限的 jobs/cron 轮询；不要在顶层偷偷创建常驻连接 |
-| 事务内访问外部系统再决定放行 | user.register 只给本地成员和插件 db，写锁内不能等网络，副作用无法回滚 | 预先同步到插件表；不能接受快照的规则要等待新的事务外拦截点 |
+| 事务内访问外部系统再决定放行 | user.register 只给本地成员和插件 db，写锁内不能等网络，副作用无法回滚 | 注册限制预先同步到插件表；外置登录签发用事务外的 yggdrasil.issueToken |
 
 ## 示例：邀请码插件
 

@@ -1,4 +1,4 @@
-import type { Actor, ExtraFields } from './dto.ts'
+import type { Actor, ExtraFields, Uid } from './dto.ts'
 
 /**
  * 拦截器：在操作发生**之前**同步调用，可以拒绝。
@@ -26,6 +26,22 @@ export interface CoreInterceptors {
     /** 不能改字段：昵称在事务之前校验，注册时还可能同时建同名角色 */
     patch: never
   }
+  /**
+   * 签发能进服的令牌之前，在事务外调用：启动器密码登录、启动器刷新，以及 Connect 令牌端点带 Join 的签发。
+   * authenticate 在密码、封禁、邮箱验证和 clientToken 检查通过后调用；refresh 在令牌、封禁和角色归属检查后调用。
+   * 不经过 validate、join、hasJoined、invalidate、signout，也不拦网页登录、第三方登录或通行密钥。
+   * 上下文是按能力提供的完整 ctx；失败时拒绝。启动器显示 deny 的 message，Connect 返回 invalid_grant。
+   * 已签发的令牌在有效期内仍可进服。
+   */
+  'yggdrasil.issueToken': {
+    input: {
+      uid: Uid
+      /** authenticate：启动器密码登录；refresh：启动器刷新；oauth：Connect 令牌端点。次版本可能加成员 */
+      via: 'authenticate' | 'refresh' | 'oauth' | (string & {})
+    }
+    /** 只能拒绝，不能修改令牌或输入 */
+    patch: never
+  }
 }
 
 export type InterceptorName = keyof CoreInterceptors
@@ -45,6 +61,7 @@ export interface InterceptorPolicy {
 /** 每个拦截点的失败策略与时间预算由核心规定，属于插件 API 契约的一部分。 */
 export const interceptorPolicies = {
   'user.register': { onFailure: 'closed', timeoutMs: 300, transactional: true },
+  'yggdrasil.issueToken': { onFailure: 'closed', timeoutMs: 2000, transactional: false },
 } as const satisfies Record<InterceptorName, InterceptorPolicy>
 
 export interface Deny {

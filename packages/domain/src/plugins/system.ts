@@ -46,6 +46,7 @@ import {
   type ExtraFields,
   type Field,
   type Json,
+  type InterceptorName,
   type RequestScope,
 } from '@nextskin/plugin-sdk'
 import type { Kysely } from 'kysely'
@@ -75,6 +76,15 @@ import {
 import { createPluginKv, MAX_KV_VALUE_BYTES } from './kv.ts'
 import type { LocalPluginPackage, PluginPackages } from './packages.ts'
 import { createPluginSettings, settingProperties, type PluginSettingProperty } from './settings.ts'
+
+/** 协议入口各自把判定翻译成错误；插件系统不抛协议错误。 */
+export type IssueTokenDecision =
+  { action: 'allow' } | { action: 'deny'; plugin: string; reason: string; message: string } | { action: 'unavailable' }
+
+export type IssueTokenInterceptor = (
+  input: CoreInterceptors['yggdrasil.issueToken']['input'],
+  scope: { actor: { kind: 'user'; uid: number; role: UserRole }; locale: string | null; ip: string | null },
+) => Promise<IssueTokenDecision>
 
 /** 随发行包分发的官方插件：`plugins/*` 里的包 */
 export interface OfficialPlugin {
@@ -332,10 +342,10 @@ export function createPluginSystem(options: {
   let lock: Promise<unknown> = Promise.resolve()
   const warned = new Set<string>()
   /**
-   * 表里启用了、本实例却登记不上的插件（取不到包、manifest 不对、登记时出错）。值是要不要因此关闭注册：
-   * 连 manifest 都没有时不知道它拦不拦截注册，按拦截处理（失败策略 closed，ADR-0033）
+   * 表里启用了、本实例却登记不上的插件（取不到包、manifest 不对、登记时出错）。值是它拦截的失败时拒绝的点：
+   * 连包都没有时按拦截全部 closed 点处理；有 manifest 时按声明处理（ADR-0045）
    */
-  const unavailable = new Map<string, boolean>()
+  const unavailable = new Map<string, ReadonlySet<InterceptorName>>()
 
   for (const plugin of options.official) {
     const manifest = buildManifest(plugin.definition, plugin.package)
@@ -1061,13 +1071,17 @@ export function createPluginSystem(options: {
     unavailable.clear()
     for (const row of rows) {
       if (row.is_enabled !== 1 || active.has(row.id)) continue
-      // 没有包就不知道这个版本拦不拦截注册：按拦截处理，注册按失败策略关闭
       const plugin = known.get(row.id)
+      const missing = !plugin || (!plugin.official && !plugin.local)
       unavailable.set(
         row.id,
-        !plugin ||
-          (!plugin.official && !plugin.local) ||
-          plugin.manifest.interceptors.some((item) => item.name === 'user.register'),
+        new Set(
+          (Object.keys(interceptorPolicies) as InterceptorName[]).filter(
+            (name) =>
+              interceptorPolicies[name].onFailure === 'closed' &&
+              (missing || plugin.manifest.interceptors.some((item) => item.name === name)),
+          ),
+        ),
       )
     }
     await reconcile(rows, candidate)
@@ -1120,6 +1134,81 @@ export function createPluginSystem(options: {
 
   function activeWith<K extends keyof PluginManifest>(key: K, test: (value: PluginManifest[K]) => boolean) {
     return [...active.values()].filter((plugin) => test(plugin.known.manifest[key]))
+  }
+
+  /** 共同的排序、熔断、调用和返回值校验；没有拦截器时不准备 scope，也不读设置。 */
+  async function intercept(
+    name: InterceptorName,
+    input: (id: string) => CoreInterceptors[InterceptorName]['input'],
+    requestScope: () => Promise<RequestScope>,
+    tx?: Kysely<CoreDatabase>,
+  ): Promise<IssueTokenDecision> {
+    const policy = interceptorPolicies[name]
+    for (const [id, names] of unavailable)
+      if (names.has(name)) {
+        log(`[plugins] ${id} intercept_failed ${name} unavailable`)
+        return { action: 'unavailable' }
+      }
+    const list = activeWith('interceptors', (items) => items.some((item) => item.name === name))
+      .map((plugin) => ({
+        plugin,
+        priority: plugin.known.manifest.interceptors.find((item) => item.name === name)!.priority,
+      }))
+      .sort((a, b) => a.priority - b.priority || a.plugin.known.manifest.id.localeCompare(b.plugin.known.manifest.id))
+    if (!list.length) return { action: 'allow' }
+    let scope: RequestScope
+    try {
+      scope = await requestScope()
+    } catch {
+      // 准备 scope（例如读站点默认语言）出错也按不可用处理，失败时拒绝的点不能因此漏过去
+      log(`[plugins] intercept_failed ${name} scope_error`)
+      return { action: 'unavailable' }
+    }
+    for (const { plugin } of list) {
+      const id = plugin.known.manifest.id
+      const key = breakerKey(id, `intercept:${name}`)
+      if (breakerOpen(key)) return { action: 'unavailable' }
+      let outcome: unknown
+      try {
+        outcome = await invoke(
+          plugin,
+          { kind: 'intercept', name, input: input(id), scope },
+          { timeoutMs: policy.timeoutMs, locale: scope.locale, ...(policy.transactional ? { transaction: tx } : {}) },
+        )
+      } catch (error) {
+        recordFailure(key)
+        // 插件抛出的消息由插件负责，留给作者排查；核心自己的错误消息里不带请求数据
+        log(
+          error instanceof PluginInvocationError
+            ? `[plugins] ${id} intercept_failed ${name} ${error.reason} ${[...error.message].slice(0, 300).join('')}`
+            : `[plugins] ${id} intercept_failed ${name} error`,
+        )
+        return { action: 'unavailable' }
+      }
+      // 插件侧可能被完全控制：返回值在这里再检查一遍，合法的返回值才清掉失败计数
+      const deny = outcome as InterceptOutcome
+      if (deny === null) {
+        breakers.delete(key)
+        continue
+      }
+      if (
+        typeof deny === 'object' &&
+        deny.action === 'deny' &&
+        typeof deny.code === 'string' &&
+        typeof deny.message === 'string'
+      ) {
+        breakers.delete(key)
+        return {
+          action: 'deny',
+          plugin: id,
+          reason: [...deny.code].slice(0, 64).join(''),
+          message: [...deny.message].slice(0, 200).join(''),
+        }
+      }
+      recordFailure(key)
+      return { action: 'unavailable' }
+    }
+    return { action: 'allow' }
   }
 
   /** 启用中的插件里声明了这个 login Provider 的那一个 */
@@ -1345,63 +1434,33 @@ export function createPluginSystem(options: {
       extra: ReadonlyMap<string, ExtraFields>,
       scope: RequestScope,
     ): Promise<void> {
-      const name = 'user.register'
-      const policy = interceptorPolicies[name]
-      for (const [id, closes] of unavailable)
-        if (closes) {
-          log(`[plugins] ${id} intercept_failed ${name} unavailable`)
-          throw new DomainError('plugin_unavailable')
-        }
-      const list = activeWith('interceptors', (items) => items.some((item) => item.name === name))
-        .map((plugin) => ({
-          plugin,
-          priority: plugin.known.manifest.interceptors.find((item) => item.name === name)!.priority,
-        }))
-        .sort((a, b) => a.priority - b.priority || a.plugin.known.manifest.id.localeCompare(b.plugin.known.manifest.id))
-      for (const { plugin } of list) {
-        const id = plugin.known.manifest.id
-        const key = breakerKey(id, `intercept:${name}`)
-        if (breakerOpen(key)) throw new DomainError('plugin_unavailable')
-        let outcome: unknown
-        try {
-          outcome = await invoke(
-            plugin,
-            { kind: 'intercept', name, input: { ...input, extra: extra.get(id) ?? {} }, scope },
-            { timeoutMs: policy.timeoutMs, locale: scope.locale, transaction: policy.transactional ? tx : undefined },
-          )
-        } catch (error) {
-          recordFailure(key)
-          // 插件抛出的消息由插件负责，留给作者排查；核心自己的错误消息里不带请求数据
-          log(
-            error instanceof PluginInvocationError
-              ? `[plugins] ${id} intercept_failed ${name} ${error.reason} ${[...error.message].slice(0, 300).join('')}`
-              : `[plugins] ${id} intercept_failed ${name} error`,
-          )
-          throw new DomainError('plugin_unavailable')
-        }
-        // 插件侧可能被完全控制：返回值在这里再检查一遍，合法的返回值才清掉失败计数
-        const deny = outcome as InterceptOutcome
-        if (deny === null) {
-          breakers.delete(key)
-          continue
-        }
-        if (
-          typeof deny === 'object' &&
-          deny.action === 'deny' &&
-          typeof deny.code === 'string' &&
-          typeof deny.message === 'string'
-        ) {
-          breakers.delete(key)
-          throw new DomainError('registration_denied', {
-            plugin: id,
-            reason: [...deny.code].slice(0, 64).join(''),
-            message: [...deny.message].slice(0, 200).join(''),
-          })
-        }
-        recordFailure(key)
-        throw new DomainError('plugin_unavailable')
-      }
+      const result = await intercept(
+        'user.register',
+        (id) => ({ ...input, extra: extra.get(id) ?? {} }),
+        () => Promise.resolve(scope),
+        tx,
+      )
+      if (result.action === 'unavailable') throw new DomainError('plugin_unavailable')
+      if (result.action === 'deny')
+        throw new DomainError('registration_denied', {
+          plugin: result.plugin,
+          reason: result.reason,
+          message: result.message,
+        })
     },
+
+    /** 签发前在事务外调用，未知 IP 用空串，用户未选语言时才读站点默认语言。 */
+    interceptIssueToken: (async (input, scope) =>
+      intercept(
+        'yggdrasil.issueToken',
+        () => input,
+        async () => ({
+          requestId: randomUUID(),
+          actor: scope.actor,
+          locale: scope.locale ?? (await options.settings.read(['site.locale']))['site.locale'],
+          ip: scope.ip ?? '',
+        }),
+      )) satisfies IssueTokenInterceptor,
 
     /**
      * passwordHasher：哈希既不是当前算法、也不是 BS 旧格式时由 auth/password.ts 调用。先在本进程内按 detect 匹配，

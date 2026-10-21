@@ -179,7 +179,14 @@ export function registerYggdrasil(app: Hono<AppEnv>, core: Core, uploadRateLimit
           rawPassword: stringInput(raw.password),
         }
         if (action === 'authenticate')
-          return c.json(await core.yggdrasil.authenticate({ ...credentials, clientToken, requestUser }))
+          return c.json(
+            await core.yggdrasil.authenticate({
+              ...credentials,
+              clientToken,
+              requestUser,
+              ip: await clientIp(c, core),
+            }),
+          )
         await core.yggdrasil.signout(credentials)
       } else if (action === 'refresh') {
         return c.json(
@@ -188,6 +195,7 @@ export function registerYggdrasil(app: Hono<AppEnv>, core: Core, uploadRateLimit
             clientToken,
             requestUser,
             selectedProfile: body.selectedProfile,
+            ip: await clientIp(c, core),
           }),
         )
       } else if (action === 'validate') await core.yggdrasil.validate({ accessToken, clientToken })

@@ -176,6 +176,13 @@ export interface CoreInterceptors {
         };
         patch: never;
     };
+    'yggdrasil.issueToken': {
+        input: {
+            uid: Uid;
+            via: 'authenticate' | 'refresh' | 'oauth' | (string & {});
+        };
+        patch: never;
+    };
 }
 
 // @public (undocumented)
@@ -293,6 +300,11 @@ export const interceptorPolicies: {
         readonly onFailure: 'closed';
         readonly timeoutMs: 300;
         readonly transactional: true;
+    };
+    readonly 'yggdrasil.issueToken': {
+        readonly onFailure: 'closed';
+        readonly timeoutMs: 2000;
+        readonly transactional: false;
     };
 };
 

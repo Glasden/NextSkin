@@ -1,9 +1,10 @@
-import { countRows, dialectOf } from '@nextskin/db'
+import { countRows, dialectOf, toIsoTimestamp } from '@nextskin/db'
 import { loadPlugin, remoteDialect, type CoreRpc, type InvocationContext, type PluginCall } from '@nextskin/plugin-host'
 import { definePlugin, deny, table } from '@nextskin/plugin-sdk'
 import { Kysely } from 'kysely'
 import { afterEach, expect, test, vi } from 'vitest'
 import { DomainError } from '../errors.ts'
+import { unavailableError } from './host.ts'
 import { missUuidPrecheckOnce } from '../players/uuid-race.test-helper.ts'
 import { official, pluginEnvironment } from './plugins.test-helper.ts'
 
@@ -824,3 +825,176 @@ test('registerFields 把 fromQuery 交给网页，旧声明默认为 false', asy
     { pluginId: 'a', field: { name: 'accept', type: 'boolean', label: 'accept' }, fromQuery: false },
   ])
 })
+
+const issueInput = { uid: 123, via: 'authenticate' as const }
+const issueScope = { actor: { kind: 'user' as const, uid: 123, role: 'user' as const }, locale: 'en', ip: '192.0.2.1' }
+const issueToken = () => env.core.plugins.interceptIssueToken(issueInput, issueScope)
+
+test('签发拦截器放行、完整 scope、ctx.kv 在事务外可用', async () => {
+  const handler = vi.fn()
+  await env.boot([
+    official(
+      'a',
+      definePlugin({
+        capabilities: ['storage.kv'],
+        intercept: {
+          'yggdrasil.issueToken': async ({ ctx, scope, input }) => {
+            handler()
+            expect(input).toEqual(issueInput)
+            expect(scope).toEqual({ ...issueScope, requestId: expect.any(String) as string })
+            expect(typeof ctx.fetch).toBe('function')
+            await ctx.kv.set('checked', input.uid)
+            expect(await ctx.kv.get('checked')).toBe(123)
+          },
+        },
+      }),
+    ),
+  ])
+  await enable('a')
+  await expect(issueToken()).resolves.toEqual({ action: 'allow' })
+  expect(handler).toHaveBeenCalledOnce()
+})
+
+test('准备签发拦截器的 scope 时读站点默认语言出错，按不可用处理、不调用插件', async () => {
+  const handler = vi.fn()
+  await env.boot([official('a', definePlugin({ capabilities: [], intercept: { 'yggdrasil.issueToken': handler } }))])
+  await enable('a')
+  const settings = env.core.settings
+  const read = settings.read.bind(settings)
+  vi.spyOn(settings, 'read').mockImplementation((async (keys: readonly string[]) => {
+    if (keys.length === 1 && keys[0] === 'site.locale') throw new Error('settings unavailable')
+    return read(keys as never)
+  }) as typeof settings.read)
+  await expect(env.core.plugins.interceptIssueToken(issueInput, { ...issueScope, locale: null })).resolves.toEqual({
+    action: 'unavailable',
+  })
+  expect(handler).not.toHaveBeenCalled()
+  expect(env.lines.some((line) => line.includes('intercept_failed yggdrasil.issueToken scope_error'))).toBe(true)
+})
+
+test('签发拒绝按码点截断 reason/message；priority、id 排序并短路', async () => {
+  const order: string[] = []
+  const plugin = (id: string, priority: number, blocked = false) =>
+    official(
+      id,
+      definePlugin({
+        capabilities: [],
+        intercept: {
+          'yggdrasil.issueToken': {
+            priority,
+            handler: () => {
+              order.push(id)
+              return Promise.resolve(blocked ? deny('🧩'.repeat(70), '🧩'.repeat(210)) : undefined)
+            },
+          },
+        },
+      }),
+    )
+  await env.boot([plugin('d', 20), plugin('b', 10, true), plugin('a', 10), plugin('c', 1)])
+  await enable('a', 'b', 'c', 'd')
+  await expect(issueToken()).resolves.toEqual({
+    action: 'deny',
+    plugin: 'b',
+    reason: '🧩'.repeat(64),
+    message: '🧩'.repeat(200),
+  })
+  expect(order).toEqual(['c', 'a', 'b'])
+})
+
+test.each(['throw', 'invalid', 'unavailable'] as const)(
+  '签发拦截器 %s 失败关闭，三次后熔断；冷却后恢复',
+  async (kind) => {
+    const run = vi.fn<() => Promise<unknown>>(() =>
+      kind === 'throw'
+        ? Promise.reject(new Error('failure'))
+        : kind === 'unavailable'
+          ? Promise.reject(unavailableError())
+          : Promise.resolve({ action: 'allow' }),
+    )
+    await env.boot(
+      [official('a', definePlugin({ capabilities: [], intercept: { 'yggdrasil.issueToken': async () => {} } }))],
+      {
+        plugins: { load: injected(run) },
+      },
+    )
+    await enable('a')
+    for (let n = 0; n < 4; n++) await expect(issueToken()).resolves.toEqual({ action: 'unavailable' })
+    expect(run).toHaveBeenCalledTimes(3)
+    expect(env.lines.some((line) => line.includes('intercept:yggdrasil.issueToken'))).toBe(true)
+    const now = Date.now()
+    vi.spyOn(Date, 'now').mockImplementation(() => now + 30_001)
+    run.mockImplementation(() => Promise.resolve(null))
+    await expect(issueToken()).resolves.toEqual({ action: 'allow' })
+    expect(run).toHaveBeenCalledTimes(4)
+  },
+)
+
+test('签发拦截器超时 2000ms，abort 后返回也不放行', async () => {
+  vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] })
+  const entered = Promise.withResolvers<void>()
+  await env.boot([
+    official(
+      'a',
+      definePlugin({
+        capabilities: [],
+        intercept: {
+          'yggdrasil.issueToken': async ({ ctx }) => {
+            entered.resolve()
+            await new Promise<void>((resolve) => ctx.signal.addEventListener('abort', () => resolve(), { once: true }))
+          },
+        },
+      }),
+    ),
+  ])
+  await enable('a')
+  const result = issueToken()
+  await entered.promise
+  await vi.advanceTimersByTimeAsync(2000)
+  await expect(result).resolves.toEqual({ action: 'unavailable' })
+})
+
+test('启用着却取不到包时注册和签发都关闭', async () => {
+  await env.boot([])
+  await env.db
+    .insertInto('plugins')
+    .values({
+      id: 'missing',
+      version: '1.0.0',
+      is_enabled: 1,
+      capabilities: '[]',
+      installed_at: toIsoTimestamp(new Date()),
+      updated_at: toIsoTimestamp(new Date()),
+    })
+    .execute()
+  await env.core.plugins.sync()
+  await expect(issueToken()).resolves.toEqual({ action: 'unavailable' })
+  await expect(env.core.users.register(env.input())).rejects.toMatchObject({ code: 'plugin_unavailable' })
+})
+
+test.each(['user.register', 'yggdrasil.issueToken'] as const)(
+  '有 manifest 但激活失败时只关闭声明的 %s',
+  async (name) => {
+    await env.boot([
+      official(
+        'a',
+        definePlugin({
+          capabilities: [],
+          jobs: { noop: { handler: async () => {} } },
+          cron: [{ schedule: '99 * * * *', job: 'noop' }],
+          intercept: { [name]: async () => {} },
+        }),
+      ),
+    ])
+    const time = toIsoTimestamp(new Date())
+    await env.db
+      .insertInto('plugins')
+      .values({ id: 'a', version: '1.0.0', is_enabled: 1, capabilities: '[]', installed_at: time, updated_at: time })
+      .execute()
+    await env.core.plugins.sync()
+    expect(env.core.plugins.isActive('a')).toBe(false)
+    await expect(issueToken()).resolves.toEqual({ action: name === 'yggdrasil.issueToken' ? 'unavailable' : 'allow' })
+    const registration = env.core.users.register(env.input())
+    if (name === 'user.register') await expect(registration).rejects.toMatchObject({ code: 'plugin_unavailable' })
+    else await expect(registration).resolves.toMatchObject({ uid: expect.any(Number) as number })
+  },
+)

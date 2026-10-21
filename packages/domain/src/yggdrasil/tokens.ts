@@ -6,6 +6,7 @@ import {
   transactionWithRetry,
   type CoreDatabase,
   type IsoTimestamp,
+  type UserRole,
 } from '@nextskin/db'
 import type { Kysely } from 'kysely'
 import { sha256 } from '../auth/auth.ts'
@@ -13,6 +14,7 @@ import { JOIN_SCOPE, parsePlayerReference, readScopes } from '../oauth/scopes.ts
 import { normalizeNameLookup } from '../players/queries.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import type { PluginPasswordVerifier } from '../auth/password.ts'
+import type { IssueTokenInterceptor } from '../plugins/system.ts'
 import { createCredentials, type CredentialsInput } from './credentials.ts'
 import { forbidden, YggdrasilError } from './errors.ts'
 
@@ -38,12 +40,16 @@ export interface LauncherLogin {
 export interface AuthenticateInput extends CredentialsInput {
   clientToken: string | null
   requestUser: boolean
+  /** 未提供时按未知 IP 处理，保留核心内部调用的兼容性 */
+  ip?: string | null
 }
 export interface RefreshInput {
   accessToken: string | null
   clientToken: string | null
   requestUser: boolean
   selectedProfile: unknown
+  /** 未提供时按未知 IP 处理，保留核心内部调用的兼容性 */
+  ip?: string | null
 }
 export interface ValidateInput {
   accessToken: string | null
@@ -74,6 +80,7 @@ export function createTokens(options: {
   secretKey: string
   now: () => Date
   passwordPlugins?: PluginPasswordVerifier
+  interceptIssueToken?: IssueTokenInterceptor
 }) {
   const { db, settings, now } = options
   const credentials = createCredentials(options)
@@ -260,6 +267,24 @@ export function createTokens(options: {
     await db.deleteFrom('yggdrasil_tokens').where('user_id', '=', uid).execute()
   }
 
+  async function checkIssuance(
+    uid: number,
+    user: { role: UserRole; locale: string | null },
+    via: 'authenticate' | 'refresh',
+    ip: string | null | undefined,
+  ) {
+    if (!options.interceptIssueToken) return
+    const result = await options.interceptIssueToken(
+      { uid, via },
+      { actor: { kind: 'user', uid, role: user.role }, locale: user.locale, ip: ip ?? null },
+    )
+    if (result.action === 'deny')
+      throw new YggdrasilError('ForbiddenOperationException', 'yggdrasil.errors.plugin_denied', user.locale, {
+        message: result.message,
+      })
+    if (result.action === 'unavailable') throw forbidden('plugin_unavailable', user.locale)
+  }
+
   const service = {
     async authenticate(input: AuthenticateInput): Promise<AuthResponse> {
       const { user, passwordHash } = await credentials(input)
@@ -270,6 +295,7 @@ export function createTokens(options: {
       // 列宽 255；PostgreSQL 的文本里不能有 NUL
       if (input.clientToken !== null && (input.clientToken.length > 255 || input.clientToken.includes('\0')))
         throw new YggdrasilError('IllegalArgumentException', 'yggdrasil.errors.client_token_invalid', user.locale)
+      await checkIssuance(user.id, user, 'authenticate', input.ip)
       const values = await tokenSettings()
       return transactionWithRetry(db, async (tx) => {
         if (!(await lockOwner(tx, user.id, passwordHash))) throw forbidden('invalid_credentials')
@@ -311,6 +337,7 @@ export function createTokens(options: {
         if (!owned) throw forbidden('profile_not_owned', token.locale)
         playerId = selectedPid = owned.pid
       }
+      await checkIssuance(token.user_id, token, 'refresh', input.ip)
       const values = await tokenSettings()
       return transactionWithRetry(db, async (tx) => {
         if (!(await lockOwner(tx, token.user_id))) throw forbidden('token_invalid', token.locale)

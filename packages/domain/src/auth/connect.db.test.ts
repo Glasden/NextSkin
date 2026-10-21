@@ -22,6 +22,7 @@ import { markSiteInitialized } from '../setup/initialized.test-helper.ts'
 import { createAuthService } from './service.ts'
 import { Browser } from './security.test-helper.ts'
 import { authOptions, createAuth, sha256 } from './auth.ts'
+import type { IssueTokenInterceptor } from '../plugins/system.ts'
 
 const secretKey = 'test-only-secret-key-with-at-least-32-characters'
 const ROOT = 'https://skin.example.test'
@@ -1068,4 +1069,105 @@ test('grant_type 两端带空白时同样检查 scope、记快照，刷新后旧
     client_id: 'shared',
   })
   expect(polled.status).toBe(200)
+})
+
+function tokenService(interceptIssueToken: IssueTokenInterceptor) {
+  const auth = createAuthService({
+    db: database.db,
+    settings: core.settings,
+    secretKey,
+    production: false,
+    mail: core.mail,
+    interceptIssueToken,
+  })
+  return (form: Record<string, string>) =>
+    auth.handle(
+      new Request(`${ROOT}/api/auth/oauth2/token`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(form).toString(),
+      }),
+      ROOT,
+      '192.0.2.45',
+    )
+}
+
+test.each(['deny', 'unavailable'] as const)(
+  'Connect Join 签发 %s 返回 invalid_grant，删除访问和刷新令牌',
+  async (action) => {
+    const intercept = vi
+      .fn<IssueTokenInterceptor>()
+      .mockResolvedValue(
+        action === 'deny'
+          ? { action: 'deny', plugin: 'a', reason: 'binding', message: '请先绑定 QQ' }
+          : { action: 'unavailable' },
+      )
+    const exchange = tokenService(intercept)
+    await database.db.updateTable('users').set({ locale: 'en', role: 'admin' }).where('id', '=', uid).execute()
+    const code = await device()
+    await approve(code)
+    const response = await exchange({
+      grant_type: DEVICE_CODE_GRANT_TYPE,
+      client_id: 'shared',
+      device_code: code.device_code,
+    })
+    expect(response.status).toBe(400)
+    expect(await json(response)).toEqual({
+      error: 'invalid_grant',
+      error_description: action === 'deny' ? '请先绑定 QQ' : 'Token issuance is temporarily unavailable',
+    })
+    expect(await database.db.selectFrom('oauth_access_tokens').select('id').execute()).toEqual([])
+    expect(await database.db.selectFrom('oauth_refresh_tokens').select('id').execute()).toEqual([])
+    expect(intercept).toHaveBeenCalledExactlyOnceWith(
+      { uid, via: 'oauth' },
+      { actor: { kind: 'user', uid, role: 'admin' }, locale: 'en', ip: '192.0.2.45' },
+    )
+  },
+)
+
+test('Connect 没有 Join 时不调用拦截器，Join 的 refresh_token grant 仍拦截', async () => {
+  const intercept = vi
+    .fn<IssueTokenInterceptor>()
+    .mockResolvedValue({ action: 'deny', plugin: 'a', reason: 'binding', message: 'Bind first' })
+  const exchange = tokenService(intercept)
+  const code = await device('openid offline_access')
+  await approve(code, false)
+  expect(
+    (await exchange({ grant_type: DEVICE_CODE_GRANT_TYPE, client_id: 'shared', device_code: code.device_code })).status,
+  ).toBe(200)
+  expect(intercept).not.toHaveBeenCalled()
+  const tokens = await issue()
+  const beforeAccess = await database.db.selectFrom('oauth_access_tokens').select('id').execute()
+  const beforeRefresh = await database.db.selectFrom('oauth_refresh_tokens').select('id').execute()
+  const response = await exchange({
+    grant_type: 'refresh_token',
+    client_id: 'shared',
+    refresh_token: tokens.refresh_token,
+  })
+  expect(response.status).toBe(400)
+  expect(await json(response)).toEqual({ error: 'invalid_grant', error_description: 'Bind first' })
+  expect(intercept).toHaveBeenCalledOnce()
+  // 只撤回刚签发的令牌对；此前已签发的访问令牌仍在有效期内。
+  const accesses = await database.db.selectFrom('oauth_access_tokens').select('id').execute()
+  const refreshes = await database.db.selectFrom('oauth_refresh_tokens').select('id').execute()
+  expect(accesses.every((row) => beforeAccess.some((old) => old.id === row.id))).toBe(true)
+  expect(refreshes.every((row) => beforeRefresh.some((old) => old.id === row.id))).toBe(true)
+  await core.yggdrasil.validate({ accessToken: tokens.access_token, clientToken: null })
+})
+
+test('Connect 没有刷新令牌的 Join 签发被拒绝时删除访问令牌', async () => {
+  const exchange = tokenService(() =>
+    Promise.resolve({ action: 'deny', plugin: 'a', reason: 'binding', message: 'Bind first' }),
+  )
+  const code = await device(SCOPE.replace('offline_access ', ''))
+  await approve(code)
+  const response = await exchange({
+    grant_type: DEVICE_CODE_GRANT_TYPE,
+    client_id: 'shared',
+    device_code: code.device_code,
+  })
+  expect(response.status).toBe(400)
+  expect(await json(response)).toMatchObject({ error: 'invalid_grant' })
+  expect(await database.db.selectFrom('oauth_access_tokens').select('id').execute()).toEqual([])
+  expect(await database.db.selectFrom('oauth_refresh_tokens').select('id').execute()).toEqual([])
 })

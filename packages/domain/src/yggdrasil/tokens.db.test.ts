@@ -3,7 +3,11 @@ import { sha256 } from '../auth/auth.ts'
 import { Browser } from '../auth/security.test-helper.ts'
 import { YggdrasilError } from './errors.ts'
 import { email, password, setup } from './yggdrasil.test-helper.ts'
-import { userUuid } from './tokens.ts'
+import { createTokens, userUuid } from './tokens.ts'
+import { secretKey } from './yggdrasil.test-helper.ts'
+import { definePlugin, deny } from '@nextskin/plugin-sdk'
+import type { IssueTokenInterceptor } from '../plugins/system.ts'
+import { official } from '../plugins/plugins.test-helper.ts'
 
 const s = setup()
 const validate = (accessToken: string | null, clientToken: string | null = null) =>
@@ -323,4 +327,135 @@ test('clientToken 超过 255 个字符或含 NUL 返回 400；用户名含 NUL �
       failure('client_token_invalid', 'IllegalArgumentException'),
     )
   await expect(s.login({ username: 'Ste\0ve' })).rejects.toMatchObject(failure('invalid_credentials'))
+})
+
+function interceptedTokens(interceptIssueToken?: IssueTokenInterceptor) {
+  return createTokens({ db: s.db(), settings: s.core.settings, secretKey, now: s.now, interceptIssueToken }).service
+}
+const loginInput = {
+  username: email,
+  password,
+  rawPassword: password,
+  clientToken: null,
+  requestUser: false,
+  ip: '192.0.2.45',
+}
+
+test('authenticate 插件拒绝不写令牌、不增加失败计数，via 和用户 scope 正确', async () => {
+  const intercept = vi
+    .fn<IssueTokenInterceptor>()
+    .mockResolvedValue({ action: 'deny', plugin: 'a', reason: 'binding', message: '请先绑定' })
+  const tokens = interceptedTokens(intercept)
+  for (let n = 0; n < 6; n++)
+    await expect(tokens.authenticate(loginInput)).rejects.toMatchObject({
+      ...failure('plugin_denied'),
+      locale: 'en',
+      params: { message: '请先绑定' },
+    })
+  expect(await s.db().selectFrom('yggdrasil_tokens').select('id').execute()).toEqual([])
+  expect(intercept).toHaveBeenLastCalledWith(
+    { uid: s.uid, via: 'authenticate' },
+    { actor: { kind: 'user', uid: s.uid, role: 'user' }, locale: 'en', ip: '192.0.2.45' },
+  )
+  intercept.mockResolvedValue({ action: 'allow' })
+  expect((await tokens.authenticate(loginInput)).accessToken).toEqual(expect.any(String))
+})
+
+test('refresh 拒绝保留旧令牌，绑定后仍能刷新；unavailable 使用核心错误', async () => {
+  const original = await s.login()
+  const intercept = vi
+    .fn<IssueTokenInterceptor>()
+    .mockResolvedValue({ action: 'deny', plugin: 'a', reason: 'binding', message: '请先绑定' })
+  const tokens = interceptedTokens(intercept)
+  const input = {
+    accessToken: original.accessToken,
+    clientToken: original.clientToken,
+    selectedProfile: null,
+    requestUser: false,
+    ip: null,
+  }
+  await expect(tokens.refresh(input)).rejects.toMatchObject(failure('plugin_denied'))
+  await validate(original.accessToken)
+  expect(await s.db().selectFrom('yggdrasil_tokens').select('id').execute()).toHaveLength(1)
+  expect(intercept).toHaveBeenLastCalledWith(
+    { uid: s.uid, via: 'refresh' },
+    { actor: { kind: 'user', uid: s.uid, role: 'user' }, locale: 'en', ip: null },
+  )
+  intercept.mockResolvedValue({ action: 'unavailable' })
+  await expect(tokens.refresh(input)).rejects.toMatchObject(failure('plugin_unavailable'))
+  await expect(tokens.authenticate(loginInput)).rejects.toMatchObject(failure('plugin_unavailable'))
+  intercept.mockResolvedValue({ action: 'allow' })
+  await tokens.refresh(input)
+  await expect(validate(original.accessToken)).rejects.toMatchObject(failure('token_invalid'))
+})
+
+test('密码、clientToken、封禁和新选角色检查不通过时不调用签发拦截器', async () => {
+  const original = await s.login()
+  const intercept = vi.fn<IssueTokenInterceptor>().mockResolvedValue({ action: 'allow' })
+  const tokens = interceptedTokens(intercept)
+  await expect(tokens.authenticate({ ...loginInput, password: 'wrong', rawPassword: 'wrong' })).rejects.toMatchObject(
+    failure('invalid_credentials'),
+  )
+  await expect(tokens.authenticate({ ...loginInput, clientToken: '\0' })).rejects.toMatchObject(
+    failure('client_token_invalid', 'IllegalArgumentException'),
+  )
+  await expect(
+    tokens.refresh({
+      accessToken: original.accessToken,
+      clientToken: 'wrong',
+      selectedProfile: null,
+      requestUser: false,
+    }),
+  ).rejects.toMatchObject(failure('client_token_mismatch'))
+  await expect(
+    tokens.refresh({
+      accessToken: original.accessToken,
+      clientToken: null,
+      selectedProfile: { name: 'Missing' },
+      requestUser: false,
+    }),
+  ).rejects.toMatchObject(failure('player_not_found', 'IllegalArgumentException'))
+  await s.db().updateTable('users').set({ role: 'banned' }).where('id', '=', s.uid).execute()
+  await expect(tokens.authenticate(loginInput)).rejects.toMatchObject(failure('user_banned'))
+  expect(intercept).not.toHaveBeenCalled()
+})
+
+test('核心接线补齐 requestId、默认语言和未知 IP；无拦截器不读默认语言', async () => {
+  const seen = vi.fn()
+  const core = s.makeCore({
+    plugins: {
+      official: [
+        official(
+          'a',
+          definePlugin({
+            capabilities: [],
+            intercept: {
+              'yggdrasil.issueToken': ({ scope }) => {
+                seen(scope)
+                return Promise.resolve(deny('binding', 'Bind first'))
+              },
+            },
+          }),
+        ),
+      ],
+    },
+  })
+  await core.plugins.start()
+  await s.db().updateTable('users').set({ role: 'superadmin', locale: null }).where('id', '=', s.uid).execute()
+  await s.setting('site.locale', 'zh-CN')
+  await core.plugins.admin.enable({ uid: s.uid, ip: '192.0.2.1' }, 'a')
+  await expect(s.login({}, core)).rejects.toMatchObject(failure('plugin_denied'))
+  expect(seen).toHaveBeenLastCalledWith({
+    requestId: expect.any(String) as string,
+    actor: { kind: 'user', uid: s.uid, role: 'superadmin' },
+    locale: 'zh-CN',
+    ip: '',
+  })
+  await core.plugins.admin.disable({ uid: s.uid, ip: '192.0.2.1' }, 'a')
+  const read = vi.spyOn(core.settings, 'read')
+  await s.login({}, core)
+  expect(read.mock.calls.some(([keys]) => keys.includes('site.locale'))).toBe(false)
+  read.mockRestore()
+  // 可选依赖缺省时沿用原来的签发流程。
+  expect((await interceptedTokens().authenticate(loginInput)).accessToken).toEqual(expect.any(String))
 })

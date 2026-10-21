@@ -107,7 +107,13 @@ export function ManifestList({
           label={t('manifest.interceptors')}
           none={t('manifest.none')}
           items={manifest.interceptors.map(({ name }) => (
-            <span key={name}>{name === 'user.register' ? t('interceptors.user.register') : name}</span>
+            <span key={name}>
+              {name === 'user.register'
+                ? t('interceptors.user.register')
+                : name === 'yggdrasil.issueToken'
+                  ? t('interceptors.yggdrasil.issueToken')
+                  : name}
+            </span>
           ))}
         />
         <ManifestRow

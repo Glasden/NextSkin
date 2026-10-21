@@ -193,7 +193,11 @@ export function loadPlugin(options: {
         const handler = typeof registration === 'function' ? registration : registration.handler
         const transactional = interceptorPolicies[call.name].transactional
         const result = await handler({
-          input: Object.freeze({ ...call.input, extra: Object.freeze({ ...call.input.extra }) }),
+          input: Object.freeze(
+            'extra' in call.input
+              ? { ...call.input, extra: Object.freeze({ ...call.input.extra }) }
+              : { ...call.input },
+          ),
           scope: Object.freeze({ ...call.scope }),
           ctx: buildContext(context, signal, transactional),
         })

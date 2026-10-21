@@ -208,6 +208,7 @@ export function createCore(options: CoreOptions) {
     mail,
     captcha,
     passwordPlugins,
+    interceptIssueToken: plugins.interceptIssueToken,
     onPasswordChanged: async (uid) => {
       // 吊销启动器和 OAuth 凭据单独提交：事件入队失败会回滚它所在的事务，而改密码已经成功了（ADR-0030）
       await transactionWithRetry(options.db, async (tx) => {
@@ -240,7 +241,14 @@ export function createCore(options: CoreOptions) {
   const players = { ...createPlayerQueries(options.db), ...createPlayerManagement(options.db, settings, events, now) }
   const closet = createCloset(textureOptions)
   const upload = createTextureUpload(textureOptions)
-  const tokens = createTokens({ db: options.db, settings, secretKey: options.secretKey, now, passwordPlugins })
+  const tokens = createTokens({
+    db: options.db,
+    settings,
+    secretKey: options.secretKey,
+    now,
+    passwordPlugins,
+    interceptIssueToken: plugins.interceptIssueToken,
+  })
   const yggdrasil = {
     getSigningKey,
     ...tokens.service,

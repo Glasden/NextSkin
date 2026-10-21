@@ -11,6 +11,7 @@ import { APIError, createAuthMiddleware, getSessionFromCtx, isAPIError } from 'b
 import type { Kysely } from 'kysely'
 import {
   DEVICE_CODE_GRANT_TYPE,
+  JOIN_SCOPE,
   isValidScopeSet,
   OAUTH_SCOPES,
   parsePlayerReference,
@@ -20,7 +21,8 @@ import {
   splitScopes,
   YGGDRASIL_SCOPES,
 } from '../oauth/scopes.ts'
-import { sha256 } from './auth.ts'
+import { CLIENT_IP_HEADER, sha256 } from './auth.ts'
+import type { IssueTokenInterceptor } from '../plugins/system.ts'
 import { connectClaims } from './connect-claims.ts'
 import { authorizationClient, authorizationError, splitPrompt } from './authorization.ts'
 
@@ -132,6 +134,7 @@ export function yggdrasilConnect(
   tokensPerUser: () => Promise<number>,
   siteUrl: string,
   requireEmailVerification: () => Promise<boolean>,
+  interceptIssueToken?: IssueTokenInterceptor,
 ) {
   const { picture } = connectClaims(db, siteUrl)
   return {
@@ -454,6 +457,7 @@ export function yggdrasilConnect(
             const returned: unknown = ctx.context.returned
             if (isAPIError(returned)) return
             let valid: boolean
+            let denialDescription: string | undefined
             try {
               if (ctx.path === '/oauth2/userinfo' && returned && typeof returned === 'object') {
                 const claims = { ...returned } as Record<string, unknown>
@@ -484,84 +488,114 @@ export function yggdrasilConnect(
               const limit = await tokensPerUser()
               const token = sha256(returned.access_token)
               const issued = await db
-                .selectFrom('oauth_access_tokens')
-                .select(['token', 'user_id'])
-                .where('token', '=', token)
+                .selectFrom('oauth_access_tokens as issued')
+                .leftJoin('users', 'users.id', 'issued.user_id')
+                .select([
+                  'issued.id',
+                  'issued.refresh_id',
+                  'issued.token',
+                  'issued.user_id',
+                  'issued.scopes',
+                  'users.role',
+                  'users.locale',
+                ])
+                .where('issued.token', '=', token)
                 .executeTakeFirst()
               if (issued?.token !== token || issued.user_id === null) {
                 valid = false
               } else {
                 const uid = issued.user_id
-                valid = await transactionWithRetry(db, async (tx) => {
-                  await tx
-                    .updateTable('users')
-                    .set((eb) => ({ role: eb.ref('role') }))
-                    .where('id', '=', uid)
-                    .execute()
-                  const current = await tx
-                    .selectFrom('oauth_access_tokens')
-                    .selectAll()
-                    .where('token', '=', token)
-                    .executeTakeFirst()
-                  if (current?.token !== token) return false
-                  const remove = async (row: { id: number; refresh_id: number | null }) => {
-                    if (row.refresh_id !== null)
-                      await tx.deleteFrom('oauth_refresh_tokens').where('id', '=', row.refresh_id).execute()
-                    else await tx.deleteFrom('oauth_access_tokens').where('id', '=', row.id).execute()
-                  }
-                  const user = await tx
-                    .selectFrom('users')
-                    .select(['role', 'oauth_version'])
-                    .where('id', '=', uid)
-                    .executeTakeFirst()
-                  const snapshot = await grantOwner.get()
-                  if (
-                    !user ||
-                    user.role === 'banned' ||
-                    !snapshot ||
-                    snapshot.uid !== current.user_id ||
-                    snapshot.version !== user.oauth_version
-                  ) {
-                    await remove(current)
-                    return false
-                  }
-                  const body = ctx.body as Record<string, string>
-                  if (body.grant_type?.trim() === 'refresh_token' && typeof body.refresh_token === 'string') {
-                    const oldHash = sha256(body.refresh_token)
-                    const old = await tx
-                      .selectFrom('oauth_refresh_tokens')
-                      .select(['id', 'token'])
-                      .where('token', '=', oldHash)
+                // 先在事务外等插件，不能握着 SQLite 写锁发 RPC。
+                const decision =
+                  interceptIssueToken && readScopes(issued.scopes).includes(JOIN_SCOPE) && issued.role !== null
+                    ? await interceptIssueToken(
+                        { uid, via: 'oauth' },
+                        {
+                          actor: { kind: 'user', uid, role: issued.role },
+                          locale: issued.locale,
+                          ip: ctx.headers?.get(CLIENT_IP_HEADER) ?? null,
+                        },
+                      )
+                    : { action: 'allow' as const }
+                if (decision.action !== 'allow') {
+                  if (issued.refresh_id !== null)
+                    await db.deleteFrom('oauth_refresh_tokens').where('id', '=', issued.refresh_id).execute()
+                  else await db.deleteFrom('oauth_access_tokens').where('id', '=', issued.id).execute()
+                  valid = false
+                  denialDescription =
+                    decision.action === 'deny' ? decision.message : 'Token issuance is temporarily unavailable'
+                } else {
+                  valid = await transactionWithRetry(db, async (tx) => {
+                    await tx
+                      .updateTable('users')
+                      .set((eb) => ({ role: eb.ref('role') }))
+                      .where('id', '=', uid)
+                      .execute()
+                    const current = await tx
+                      .selectFrom('oauth_access_tokens')
+                      .selectAll()
+                      .where('token', '=', token)
                       .executeTakeFirst()
-                    if (old?.token === oldHash)
-                      await tx.deleteFrom('oauth_access_tokens').where('refresh_id', '=', old.id).execute()
-                  }
-                  const pid = parsePlayerReference(current.reference_id)
-                  if (
-                    pid !== null &&
-                    !(await tx
-                      .selectFrom('players')
-                      .select('id')
-                      .where('id', '=', pid)
+                    if (current?.token !== token) return false
+                    const remove = async (row: { id: number; refresh_id: number | null }) => {
+                      if (row.refresh_id !== null)
+                        await tx.deleteFrom('oauth_refresh_tokens').where('id', '=', row.refresh_id).execute()
+                      else await tx.deleteFrom('oauth_access_tokens').where('id', '=', row.id).execute()
+                    }
+                    const user = await tx
+                      .selectFrom('users')
+                      .select(['role', 'oauth_version'])
+                      .where('id', '=', uid)
+                      .executeTakeFirst()
+                    const snapshot = await grantOwner.get()
+                    if (
+                      !user ||
+                      user.role === 'banned' ||
+                      !snapshot ||
+                      snapshot.uid !== current.user_id ||
+                      snapshot.version !== user.oauth_version
+                    ) {
+                      await remove(current)
+                      return false
+                    }
+                    const body = ctx.body as Record<string, string>
+                    if (body.grant_type?.trim() === 'refresh_token' && typeof body.refresh_token === 'string') {
+                      const oldHash = sha256(body.refresh_token)
+                      const old = await tx
+                        .selectFrom('oauth_refresh_tokens')
+                        .select(['id', 'token'])
+                        .where('token', '=', oldHash)
+                        .executeTakeFirst()
+                      if (old?.token === oldHash)
+                        await tx.deleteFrom('oauth_access_tokens').where('refresh_id', '=', old.id).execute()
+                    }
+                    const pid = parsePlayerReference(current.reference_id)
+                    if (
+                      pid !== null &&
+                      !(await tx
+                        .selectFrom('players')
+                        .select('id')
+                        .where('id', '=', pid)
+                        .where('user_id', '=', uid)
+                        .executeTakeFirst())
+                    ) {
+                      await remove(current)
+                      return false
+                    }
+                    const excess = await tx
+                      .selectFrom('oauth_access_tokens')
+                      .select(['id', 'refresh_id'])
                       .where('user_id', '=', uid)
-                      .executeTakeFirst())
-                  ) {
-                    await remove(current)
-                    return false
-                  }
-                  const excess = await tx
-                    .selectFrom('oauth_access_tokens')
-                    .select(['id', 'refresh_id'])
-                    .where('user_id', '=', uid)
-                    .where('client_id', '=', current.client_id)
-                    .orderBy('created_at', 'desc')
-                    .orderBy('id', 'desc')
-                    .limit(2147483647)
-                    .offset(limit)
-                    .execute()
-                  for (const row of excess) await remove(row)
-                  return true
-                })
+                      .where('client_id', '=', current.client_id)
+                      .orderBy('created_at', 'desc')
+                      .orderBy('id', 'desc')
+                      .limit(2147483647)
+                      .offset(limit)
+                      .execute()
+                    for (const row of excess) await remove(row)
+                    return true
+                  })
+                }
               }
             } catch {
               console.warn('[auth] oauth_token_check_failed')
@@ -570,6 +604,9 @@ export function yggdrasilConnect(
                 error_description: 'Token check failed',
               })
             }
+            // 清理失败仍由上面的 catch 报 server_error；合法拒绝在 catch 外返回，保留插件文案。
+            if (denialDescription !== undefined)
+              throw new APIError('BAD_REQUEST', { error: 'invalid_grant', error_description: denialDescription })
             if (!valid) invalidGrant()
           }),
         },
