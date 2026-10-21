@@ -192,6 +192,7 @@ export const coreSettingsRegistry = {
     secret: false,
   },
   'yggdrasil.apiLocationIndication': { schema: z.boolean(), default: true, section: 'yggdrasil', secret: false },
+  'yggdrasil.serverAdmissionEnabled': { schema: z.boolean(), default: true, section: 'yggdrasil', secret: false },
   'yggdrasil.tokenValidSeconds': {
     schema: z.int().min(1).max(31536000),
     default: 259200,

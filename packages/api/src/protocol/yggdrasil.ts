@@ -110,7 +110,8 @@ function registerYggdrasilAt(
     const key = serverKey(c)
     if (!key) return false
     const root = c.get('requestRoot')
-    const settings = await core.settings.read(['site.url'])
+    const settings = await core.settings.read(['site.url', 'yggdrasil.serverAdmissionEnabled'])
+    if (!settings['yggdrasil.serverAdmissionEnabled']) return false
     const publicRoot = siteRoot(settings['site.url'], root)
     const location = `${publicRoot}/api/yggdrasil/server/${key}`
     c.set('apiLocation', location)
