@@ -1847,7 +1847,7 @@
           },
           "serverAdmissionEnabled": {
             "label": "Enable server-specific admission paths",
-            "help": "Open /api/yggdrasil/server/<server-key> for the server admission plugin to handle membership, bans, and profile policies. Disabled paths return 404; the existing shared authentication endpoint is unaffected."
+            "help": "Enable the server-specific Yggdrasil path using its server key for the admission plugin to handle membership, bans, and profile policies. Disabled paths return 404; the existing shared authentication endpoint is unaffected."
           },
           "tokenValidSeconds": {
             "label": "Token validity",
