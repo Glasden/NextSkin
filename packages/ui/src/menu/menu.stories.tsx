@@ -56,7 +56,8 @@ export const UserMenu: Story = {
     ])
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(menu).not.toBeVisible())
-    await expect(trigger).toHaveFocus()
+    // 菜单一开始退场就不可见了，焦点要稍后才回到按钮；CI 上直接断言偶尔会扑空
+    await waitFor(() => expect(trigger).toHaveFocus())
     await userEvent.keyboard('{ArrowDown}')
     await waitFor(() => expect(screen.getByRole('menuitem', { name: '用户中心' })).toHaveFocus())
     await userEvent.keyboard('{End}{Enter}')

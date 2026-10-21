@@ -4,6 +4,7 @@ import { headFixture } from '../skin-figure/fixtures.ts'
 import { PlayerHead } from './player-head.tsx'
 
 const miku = headFixture('hatsune_miku')
+const ironman = headFixture('ironman_hd')
 
 const meta = {
   title: 'Components/PlayerHead',
@@ -34,14 +35,15 @@ export const Skins: Story = {
     <div className="flex items-center gap-4">
       <PlayerHead {...headFixture('haka')} size={48} alt="Haka 的头像" />
       <PlayerHead {...headFixture('sethbling')} size={48} alt="SethBling 的头像（旧版 64×32）" />
-      <PlayerHead {...headFixture('ironman_hd')} size={32} alt="红金装甲的头像（高清）" />
+      <PlayerHead {...ironman} size={32} alt="红金装甲的头像（高清）" />
       <PlayerHead {...headFixture('default-skin')} size={48} alt="默认皮肤的头像" />
     </div>
   ),
   play: async ({ canvas }) => {
+    // 和 fixture 给出的地址比，不按文件名匹配：静态构建会把小图内联成 data URI
     const hd = canvas.getByRole('img', { name: '红金装甲的头像（高清）' })
-    await expect(hd.getAttribute('src')).toMatch(/ironman_hd-head-k4\.png/)
-    await expect(hd.getAttribute('srcset')).toMatch(/ironman_hd-head-k8\.png[^,]* 2x$/)
+    await expect(hd).toHaveAttribute('src', ironman.src(4))
+    await expect(hd).toHaveAttribute('srcset', `${ironman.src(4)} 1x, ${ironman.src(8)} 2x`)
     await expect(canvas.getByRole('img', { name: 'Haka 的头像' })).not.toHaveAttribute('srcset')
   },
 }
