@@ -203,7 +203,8 @@
       "closetItemRemoved": "Closet removal refund",
       "reportCreated": "Texture reported",
       "adminAdjusted": "Adjusted by an administrator"
-    }
+    },
+    "fromPlugin": "From plugin {name}"
   },
   "auth": {
     "illustration": "Skin by {name}",
@@ -1963,13 +1964,15 @@
         "cron": "Scheduled jobs",
         "pages": "Pages it adds",
         "formFields": "Fields it adds to the sign-up form",
+        "fromQuery": "Can be prefilled from a link",
         "none": "None",
         "routeAuth": "{auth, select, user {signed in} other {public}}"
       },
       "capabilities": {
         "users": {
           "read": "Read users' nicknames, roles and avatars",
-          "readPrivate": "Read users' email addresses, score and language"
+          "readPrivate": "Read users' email addresses, score and language",
+          "score": "Add to or deduct from any user’s score, and see balances"
         },
         "players": {
           "read": "Read players"
@@ -2039,6 +2042,22 @@
         "callback": "Callback URL",
         "bindings": "{count, plural, =0 {No linked accounts} one {# linked account} other {# linked accounts}}",
         "notHttps": "The site URL is not HTTPS. The provider sends the authorization code to this site through the callback URL, and without encryption it can be intercepted; Google and Microsoft also reject non-HTTPS callback URLs. Change the site URL to HTTPS in Settings first."
+      },
+      "score": {
+        "title": "Score",
+        "description": "Score this plugin has added to or taken from users. Points a plugin gave out by mistake aren’t taken back automatically: disable the plugin first, then deduct them on each user’s detail page.",
+        "added": "Total added",
+        "deducted": "Total deducted",
+        "recent": "Last 10 entries",
+        "tableLabel": "Recent score entries written by this plugin",
+        "empty": "No score changes yet.",
+        "columns": {
+          "user": "User",
+          "reason": "Reason",
+          "delta": "Change",
+          "balance": "Balance after",
+          "createdAt": "Time"
+        }
       }
     },
     "errors": {
@@ -2113,7 +2132,8 @@
         "noteHint": "Only recorded in the audit log. The user can’t see it.",
         "empty": "No score history yet.",
         "recent": "Last 10 entries",
-        "balanceAfter": "Balance {balance}"
+        "balanceAfter": "Balance {balance}",
+        "viaPlugin": "Plugin {name}"
       },
       "security": {
         "title": "Sign-in & security",

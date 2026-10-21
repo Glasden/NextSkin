@@ -7,6 +7,7 @@ import {
   countRows,
   isUniqueViolation,
   toIsoTimestamp,
+  toNumber,
   transactionWithRetry,
   type CoreDatabase,
   type IsoTimestamp,
@@ -59,7 +60,26 @@ export interface PluginLoginBindings {
   bindings: number
 }
 
+export interface PluginScoreSummary {
+  /** 这个插件写的流水里 delta > 0 的和 */
+  added: number
+  /** delta < 0 的和的绝对值 */
+  deducted: number
+  /** 最近 10 笔，新的在前 */
+  recent: {
+    id: number
+    uid: number
+    nickname: string
+    delta: number
+    balance: number
+    /** 插件的文案键 */
+    reason: string
+    createdAt: IsoTimestamp
+  }[]
+}
+
 export interface PluginDetail extends PluginSummary {
+  score: PluginScoreSummary | null
   manifest: PluginManifest
   /** 安装界面要醒目提示的：高风险能力，以及接触明文密码、第三方身份的 Provider */
   highRisk: readonly string[]
@@ -150,6 +170,35 @@ export function createPluginAdmin(options: {
         bindings: await countRows(db.selectFrom('accounts').where('provider_id', '=', `plugin:${id}:${provider.id}`)),
       })),
     )
+  }
+
+  async function scoreSummary(id: string, manifest: PluginManifest): Promise<PluginScoreSummary | null> {
+    const recent = await db
+      .selectFrom('score_transactions')
+      .innerJoin('users', 'users.id', 'score_transactions.user_id')
+      .select([
+        'score_transactions.id',
+        'user_id as uid',
+        'users.nickname',
+        'delta',
+        'balance',
+        'reason',
+        'score_transactions.created_at as createdAt',
+      ])
+      .where('plugin_id', '=', id)
+      .orderBy('score_transactions.id', 'desc')
+      .limit(10)
+      .execute()
+    if (!manifest.capabilities.includes('users.score') && !recent.length) return null
+    const total = await db
+      .selectFrom('score_transactions')
+      .select((eb) => [
+        eb.fn.sum(eb.case().when('delta', '>', 0).then(eb.ref('delta')).else(0).end()).as('added'),
+        eb.fn.sum(eb.case().when('delta', '<', 0).then(eb.ref('delta')).else(0).end()).as('deducted'),
+      ])
+      .where('plugin_id', '=', id)
+      .executeTakeFirstOrThrow()
+    return { added: toNumber(total.added ?? 0), deducted: Math.abs(toNumber(total.deducted ?? 0)), recent }
   }
 
   async function summaries(): Promise<PluginSummary[]> {
@@ -443,9 +492,10 @@ export function createPluginAdmin(options: {
       await authorizeRead(actor)
       const known = plugin(id)
       const summary = (await summaries()).find((item) => item.id === id)!
-      const [logins, stranded] = await Promise.all([
+      const [logins, stranded, score] = await Promise.all([
         loginBindings(id, known.manifest.providers.login),
         known.official ? 0 : options.externalLogin.strandedByUninstall(id),
+        scoreSummary(id, known.manifest),
       ])
       return {
         ...summary,
@@ -453,6 +503,7 @@ export function createPluginAdmin(options: {
         highRisk: highRisk(known.manifest),
         logins,
         strandedOnUninstall: stranded,
+        score,
       }
     },
     async hostStatus(actor: AdminActor): Promise<PluginHostStatus> {

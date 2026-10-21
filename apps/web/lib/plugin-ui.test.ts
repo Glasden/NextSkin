@@ -2,6 +2,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { callPlugin, fillRoute } from '../app/_plugins/plugin-request'
 import { pluginSettingText } from './plugin-settings'
 import { pluginSourceQuery, pluginUrl } from './plugin-url'
+import { registerFieldPrefill } from './register-prefill'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -62,4 +63,33 @@ test('动作请求不跟随重定向：插件的路由回 3xx 时按失败处理
     '/plugins/example/go',
     expect.objectContaining({ method: 'POST', redirect: 'error' }),
   )
+})
+
+test('注册页只预填声明了 fromQuery 的字段，参数名带插件 id，明显通不过校验的值不填', () => {
+  const field = (name: string, extra: object = {}) => ({ name, type: 'text' as const, label: name, ...extra })
+  const fields = [
+    { pluginId: 'share', field: field('code', { maxLength: 4 }), fromQuery: true },
+    { pluginId: 'share', field: field('note'), fromQuery: false },
+    { pluginId: 'other', field: field('code'), fromQuery: true },
+    {
+      pluginId: 'other',
+      field: field('plan', { type: 'select', options: [{ value: 'a', label: 'A' }] }),
+      fromQuery: true,
+    },
+    { pluginId: 'other', field: field('age', { type: 'number' }), fromQuery: true },
+  ]
+  expect(
+    registerFieldPrefill(fields, {
+      'share.code': ' AB12 ',
+      'share.note': 'x',
+      code: 'bare',
+      'other.code': ['first', 'second'],
+      'other.plan': 'b',
+      'other.age': 'old',
+    }),
+  ).toEqual({ 'share.code': 'AB12', 'other.code': 'first' })
+  expect(registerFieldPrefill(fields, { 'share.code': 'TOO-LONG', 'other.plan': 'a', 'other.age': '18' })).toEqual({
+    'other.plan': 'a',
+    'other.age': '18',
+  })
 })

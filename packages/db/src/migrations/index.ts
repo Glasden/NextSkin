@@ -52,6 +52,8 @@ import * as insertSharedOauthClient from './0042_insert_shared_oauth_client.ts'
 import * as createOauthReferenceIdIndexes from './0043_create_oauth_reference_id_indexes.ts'
 import * as addUsersOauthVersion from './0044_add_users_oauth_version.ts'
 
+import * as addScoreTransactionsPluginColumns from './0045_add_score_transactions_plugin_columns.ts'
+
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
   '0002_create_texture_files': createTextureFiles,
@@ -97,4 +99,5 @@ export const coreMigrations: Record<string, Migration> = {
   '0042_insert_shared_oauth_client': insertSharedOauthClient,
   '0043_create_oauth_reference_id_indexes': createOauthReferenceIdIndexes,
   '0044_add_users_oauth_version': addUsersOauthVersion,
+  '0045_add_score_transactions_plugin_columns': addScoreTransactionsPluginColumns,
 }

@@ -107,7 +107,7 @@ export { createMemorySessionCache, type YggdrasilSessionCache, type JoinSession 
 export type { PodiumEntry, Podium, SiteStats } from './home/queries.ts'
 
 export type { OfficialPlugin, PluginFormField, PluginHostStatus, PluginRouteRequest } from './plugins/system.ts'
-export type { PluginSummary, PluginDetail, PluginPackagePreview } from './plugins/admin.ts'
+export type { PluginSummary, PluginDetail, PluginScoreSummary, PluginPackagePreview } from './plugins/admin.ts'
 export type { PluginHostEntry } from './plugins/host.ts'
 export { hostNetworkRestricted, probePluginHost, HostStartError } from './plugins/host.ts'
 export { pluginHostEntry } from '@nextskin/plugin-host'

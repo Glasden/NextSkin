@@ -5,6 +5,7 @@ import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { redirect } from 'next/navigation'
 import { getServer } from '../../lib/server'
+import { scoreReasonText } from '../../lib/score-reason'
 import { getRequestRoot, requireUser } from '../../lib/session'
 import { yggdrasilApiUrl } from '../../lib/yggdrasil'
 import { CheckInButton } from './check-in-button'
@@ -23,23 +24,25 @@ const LAUNCHER_STEPS = ['add', 'login', 'twoFactor'] as const
 export default async function DashboardPage() {
   const user = await requireUser('/user')
   const { core } = await getServer()
-  const [overview, players, history, settings, mailConfigured, hasPassword, root, t, format] = await Promise.all([
-    core.users.overview(user.uid),
-    core.players.listOwned(user.uid),
-    core.score.recent(user.uid),
-    core.settings.read([
-      'checkIn.score',
-      'score.perPlayer',
-      'auth.requireEmailVerification',
-      'site.announcement',
-      'site.url',
-    ]),
-    core.mail.configured(),
-    core.externalLogin.hasPassword(user.uid),
-    getRequestRoot(),
-    getTranslations('user.dashboard'),
-    getFormatter(),
-  ])
+  const [overview, players, history, settings, mailConfigured, hasPassword, root, t, format, reasonOf] =
+    await Promise.all([
+      core.users.overview(user.uid),
+      core.players.listOwned(user.uid),
+      core.score.recent(user.uid),
+      core.settings.read([
+        'checkIn.score',
+        'score.perPlayer',
+        'auth.requireEmailVerification',
+        'site.announcement',
+        'site.url',
+      ]),
+      core.mail.configured(),
+      core.externalLogin.hasPassword(user.uid),
+      getRequestRoot(),
+      getTranslations('user.dashboard'),
+      getFormatter(),
+      scoreReasonText(),
+    ])
   // 会话还在、用户已经被删掉的极少数情况
   if (!overview) redirect('/sign-in')
   const { min, max } = settings['checkIn.score']
@@ -151,6 +154,7 @@ export default async function DashboardPage() {
               <HistoryRow
                 key={entry.id}
                 entry={entry}
+                reason={reasonOf(entry)}
                 time={dateTime(entry.createdAt)}
                 delta={`${entry.delta > 0 ? '+' : ''}${format.number(entry.delta)}`}
                 balance={t('balance', { balance: format.number(entry.balance) })}
@@ -199,21 +203,20 @@ async function Lineup({
   )
 }
 
-async function HistoryRow({
+/** reason 已经翻译好（`lib/score-reason.ts`：核心的原因和插件写的原因） */
+function HistoryRow({
   entry,
+  reason,
   time,
   delta,
   balance,
 }: {
   entry: ScoreEntry
+  reason: string
   time: string
   delta: string
   balance: string
 }) {
-  const reasons = await getTranslations('score.reasons')
-  // 原因存的是文案键（score.reasons.*）；插件写的原因以后在插件自己的命名空间里，翻译不了时原样显示
-  const key = entry.reason.replace(/^score\.reasons\./, '')
-  const reason = reasons.has(key as 'initial') ? reasons(key as 'initial') : entry.reason
   return (
     <li className="flex items-center justify-between gap-4 px-4 py-3">
       <div className="flex min-w-0 flex-col">

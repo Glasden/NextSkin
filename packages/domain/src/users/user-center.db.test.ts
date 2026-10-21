@@ -442,9 +442,14 @@ test('overview、recent 和 listOwned 的字段、排序和所有权过滤', asy
   )
   const all = await ledger()
   expect(await core.score.recent(actor.uid)).toEqual(
-    all
-      .reverse()
-      .map((x) => ({ id: x.id, delta: x.delta, balance: x.balance, reason: x.reason, createdAt: x.created_at })),
+    all.reverse().map((x) => ({
+      id: x.id,
+      delta: x.delta,
+      balance: x.balance,
+      reason: x.reason,
+      pluginId: x.plugin_id,
+      createdAt: x.created_at,
+    })),
   )
   expect(await core.score.recent(actor.uid, 1)).toHaveLength(1)
   expect(await core.score.recent(actor.uid, 0)).toEqual([])

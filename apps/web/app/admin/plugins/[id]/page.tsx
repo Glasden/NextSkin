@@ -1,5 +1,5 @@
 import { externalCallbackPath, type PluginSummary } from '@nextskin/domain'
-import { Alert, Badge, Link, Table } from '@nextskin/ui'
+import { Alert, Badge, cx, Link, Table } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -128,6 +128,7 @@ export default async function AdminPluginPage({ params }: { params: Promise<{ id
     return key ? t(key) : item
   })
   const prefix = `plugin:${id}:`
+  const score = detail.score
 
   return (
     <div className="flex flex-col gap-8">
@@ -195,6 +196,55 @@ export default async function AdminPluginPage({ params }: { params: Promise<{ id
                 </li>
               ))}
             </ul>
+          </div>
+        </Section>
+      )}
+
+      {score && (
+        <Section title={t('score.title')} description={t('score.description')}>
+          <div className="flex flex-col gap-4">
+            <dl className="grid max-w-3xl grid-cols-2 gap-4">
+              {(['added', 'deducted'] as const).map((kind) => (
+                <div key={kind} className="flex flex-col gap-1 rounded-md border border-border bg-surface p-4">
+                  <dt className="text-sm text-text-muted">{t(`score.${kind}`)}</dt>
+                  <dd className="font-pixel text-pixel-2 text-text tabular-nums">{format.number(score[kind])}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm text-text-muted">{t('score.recent')}</h3>
+              <Table<'user' | 'reason' | 'delta' | 'balance' | 'createdAt'>
+                label={t('score.tableLabel')}
+                empty={t('score.empty')}
+                columns={[
+                  { key: 'user', header: t('score.columns.user') },
+                  { key: 'reason', header: t('score.columns.reason') },
+                  { key: 'delta', header: t('score.columns.delta'), align: 'end', shrink: true },
+                  { key: 'balance', header: t('score.columns.balance'), align: 'end', shrink: true },
+                  { key: 'createdAt', header: t('score.columns.createdAt'), shrink: true },
+                ]}
+                rows={score.recent.map((entry) => ({
+                  key: entry.id,
+                  cells: {
+                    user: (
+                      <span className="inline-flex flex-wrap items-baseline gap-2">
+                        <Link render={<NextLink href={`/admin/users/${entry.uid}`} />}>{entry.nickname}</Link>
+                        <span className="text-xs text-text-muted tabular-nums">#{entry.uid}</span>
+                      </span>
+                    ),
+                    // 插件的文案键；插件升级后删掉了这个键时显示键名
+                    reason: translate(entry.reason),
+                    delta: (
+                      <span className={cx('tabular-nums', entry.delta > 0 ? 'text-success' : 'text-text')}>
+                        {`${entry.delta > 0 ? '+' : ''}${format.number(entry.delta)}`}
+                      </span>
+                    ),
+                    balance: <span className="tabular-nums">{format.number(entry.balance)}</span>,
+                    createdAt: format.dateTime(new Date(entry.createdAt), { dateStyle: 'short', timeStyle: 'short' }),
+                  },
+                }))}
+              />
+            </div>
           </div>
         </Section>
       )}

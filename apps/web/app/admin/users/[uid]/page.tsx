@@ -14,7 +14,8 @@ import NextLink from 'next/link'
 import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { localeOptions } from '../../../../lib/locales'
-import { pluginIcon } from '../../../../lib/plugins'
+import { pluginIcon, pluginName } from '../../../../lib/plugins'
+import { scoreReasonText } from '../../../../lib/score-reason'
 import { getServer } from '../../../../lib/server'
 import { getRequestRoot, requireAdmin } from '../../../../lib/session'
 import { figureSrc, headSrc } from '../../../../lib/textures'
@@ -388,10 +389,12 @@ async function ScoreHistory({
   entries: AdminUserDetail['recentScore']
   dateTime: (iso: string) => string
 }) {
-  const [t, reasons, format] = await Promise.all([
+  const [t, reasonOf, format, { core }, locale] = await Promise.all([
     getTranslations('admin.userDetail.score'),
-    getTranslations('score.reasons'),
+    scoreReasonText(),
     getFormatter(),
+    getServer(),
+    getLocale(),
   ])
   if (!entries.length) return <p className="text-sm text-text-muted">{t('empty')}</p>
   return (
@@ -399,16 +402,21 @@ async function ScoreHistory({
       <h3 className="text-sm text-text-muted">{t('recent')}</h3>
       <ol className="divide-y divide-border rounded-sm border border-border">
         {entries.map((entry) => {
-          // 原因存的是文案键（score.reasons.*）；翻译不了时原样显示
-          const key = entry.reason.replace(/^score\.reasons\./, '')
-          const reason = reasons.has(key as 'initial') ? reasons(key as 'initial') : entry.reason
+          // 插件写的流水标出是哪个插件（ADR-0041）；插件已经卸载时只剩 id
+          const plugin =
+            entry.pluginId === null
+              ? null
+              : core.plugins.get(entry.pluginId)
+                ? pluginName(core, entry.pluginId, locale)
+                : entry.pluginId
           return (
             <li key={entry.id} className="flex items-center justify-between gap-4 px-4 py-3">
               <div className="flex min-w-0 flex-col">
-                <span className="truncate text-sm text-text">{reason}</span>
-                <time dateTime={entry.createdAt} className="text-xs text-text-muted">
-                  {dateTime(entry.createdAt)}
-                </time>
+                <span className="truncate text-sm text-text">{reasonOf(entry)}</span>
+                <span className="text-xs text-text-muted">
+                  <time dateTime={entry.createdAt}>{dateTime(entry.createdAt)}</time>
+                  {plugin !== null && ` · ${t('viaPlugin', { name: plugin })}`}
+                </span>
               </div>
               <div className="flex shrink-0 flex-col items-end">
                 <span

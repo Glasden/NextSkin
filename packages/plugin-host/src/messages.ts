@@ -47,3 +47,8 @@ function lookup(catalog: Readonly<Record<string, unknown>>, key: string): unknow
   }
   return value
 }
+
+/** 键在插件任意语言里对应字符串文案；嵌套路径与 translatePlugin 一致。 */
+export function hasPluginMessage(messages: PluginMessages, key: string): boolean {
+  return Object.values(messages).some((catalog) => typeof lookup(catalog, key) === 'string')
+}

@@ -37,12 +37,19 @@ export function pluginDescription(core: Core, pluginId: string, locale: string):
   return text === 'plugin.description' ? null : text
 }
 
-/** 插件加在注册表单上的字段（ADR-0033），文案在服务端翻译好。注册页和第三方登录的"完成注册"页共用 */
-export function registerFormFields(core: Core, locale: string): { pluginId: string; field: PluginFieldText }[] {
-  return core.plugins.registerFields().map(({ pluginId, field }) => {
+/**
+ * 插件加在注册表单上的字段（ADR-0033），文案在服务端翻译好。注册页和第三方登录的"完成注册"页共用。
+ * fromQuery：注册页能从地址栏预填它（ADR-0041，见 registerFieldPrefill）
+ */
+export function registerFormFields(
+  core: Core,
+  locale: string,
+): { pluginId: string; field: PluginFieldText; fromQuery: boolean }[] {
+  return core.plugins.registerFields().map(({ pluginId, field, fromQuery }) => {
     const translate = pluginTranslator(core, pluginId, locale)
     return {
       pluginId,
+      fromQuery,
       field: {
         name: field.name,
         type: field.type,

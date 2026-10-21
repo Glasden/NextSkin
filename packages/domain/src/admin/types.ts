@@ -88,7 +88,14 @@ export type PublicTexturesOnDelete = 'keep' | 'delete'
 export interface AdminUserDetail {
   user: AdminUser & { locale: string | null; twoFactorEnabled: boolean }
   /** 最近 10 条积分流水 */
-  recentScore: { id: number; delta: number; balance: number; reason: string; createdAt: IsoTimestamp }[]
+  recentScore: {
+    pluginId: string | null
+    id: number
+    delta: number
+    balance: number
+    reason: string
+    createdAt: IsoTimestamp
+  }[]
   hasPassword: boolean
   counts: {
     /** 未过期的网页会话 */

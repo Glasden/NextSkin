@@ -51,6 +51,19 @@ export type Field = FieldBase &
     | { readonly type: 'boolean' }
   )
 
+/**
+ * 核心注册表单的附加字段。
+ * fromQuery 为 true 时，打开 `/sign-up` 用查询参数 `<插件 id>.<字段名>` 作初始值，用户看得到、改得了，提交后照常校验。
+ * 只允许 text、textarea、number、select；第三方登录的“完成注册”页没有初始值。
+ */
+export type FormFieldContribution = { readonly form: FormName } & (
+  | { readonly field: Field; readonly fromQuery?: false }
+  | {
+      readonly field: Field & { readonly type: 'text' | 'textarea' | 'number' | 'select' }
+      readonly fromQuery: boolean
+    }
+)
+
 export interface Column {
   readonly key: string
   readonly label: MessageKey
@@ -132,5 +145,5 @@ export interface UiContributions<P> {
       }
     >
   >
-  readonly formFields?: readonly { readonly form: FormName; readonly field: Field }[]
+  readonly formFields?: readonly FormFieldContribution[]
 }

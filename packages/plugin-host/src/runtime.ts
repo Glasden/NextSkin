@@ -116,10 +116,20 @@ export function loadPlugin(options: {
       const response = await rpc(call, 'fetch', await serializeRequest(request, MAX_FETCH_BODY_BYTES))
       return deserializeResponse(response)
     }
-    if (granted.has('users.read') || granted.has('users.readPrivate')) {
+    if (granted.has('users.read') || granted.has('users.readPrivate') || granted.has('users.score')) {
       ctx.users = Object.freeze({
-        get: (uid: number) => rpc(call, 'users.get', { uid }),
-        getMany: (uids: readonly number[]) => rpc(call, 'users.getMany', { uids: [...uids] }),
+        ...(granted.has('users.read') || granted.has('users.readPrivate')
+          ? {
+              get: (uid: number) => rpc(call, 'users.get', { uid }),
+              getMany: (uids: readonly number[]) => rpc(call, 'users.getMany', { uids: [...uids] }),
+            }
+          : {}),
+        ...(granted.has('users.score')
+          ? {
+              adjustScore: (uid: number, delta: number, options: { reason: string; key: string }) =>
+                rpc(call, 'users.adjustScore', { uid, delta, reason: options?.reason, key: options?.key }),
+            }
+          : {}),
         ...(granted.has('users.readPrivate')
           ? { findByEmail: (email: string) => rpc(call, 'users.findByEmail', { email }) }
           : {}),

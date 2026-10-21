@@ -31,6 +31,8 @@ export interface SignUpFormProps {
   verificationNotice: boolean
   /** 插件加的字段（ADR-0033）：值按插件 id 分组提交，出错的字段名是 `<插件 id>.<字段名>` */
   pluginFields: readonly { pluginId: string; field: PluginFieldText }[]
+  /** 插件字段的初始值，键是 `<插件 id>.<字段名>`：注册页从地址栏预填的（ADR-0041） */
+  prefill?: Readonly<Record<string, string>>
   /** 注册后去的站内路径（页面检查过）；第三方登录的"完成注册"用 external.next */
   next?: string
   external?: ExternalSignUp
@@ -43,6 +45,7 @@ export function SignUpForm({
   playerName,
   verificationNotice,
   pluginFields,
+  prefill,
   next = '/user',
   external,
   captcha: captchaConfig = null,
@@ -56,7 +59,10 @@ export function SignUpForm({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [extra, setExtra] = useState<Record<string, PluginFieldValue>>(() =>
     Object.fromEntries(
-      pluginFields.map(({ pluginId, field }) => [`${pluginId}.${field.name}`, initialFieldValue(field)]),
+      pluginFields.map(({ pluginId, field }) => {
+        const key = `${pluginId}.${field.name}`
+        return [key, initialFieldValue(field, prefill?.[key])]
+      }),
     ),
   )
 

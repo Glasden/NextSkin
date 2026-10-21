@@ -15,9 +15,16 @@
 import type { UserRole } from '@nextskin/db'
 import type { ExtractedPluginManifest as PluginManifest } from '@nextskin/plugin-host'
 import { randomUUID } from 'node:crypto'
-import { ExclusiveLockBusyError, withExclusiveLock, type CoreDatabase, type IsoTimestamp } from '@nextskin/db'
+import {
+  ExclusiveLockBusyError,
+  withExclusiveLock,
+  toIsoTimestamp,
+  type CoreDatabase,
+  type IsoTimestamp,
+} from '@nextskin/db'
 import {
   buildManifest,
+  hasPluginMessage,
   loadPlugin,
   translatePlugin,
   type AnyPluginDefinition,
@@ -49,6 +56,8 @@ import { JobDeferredError, type JobHandler, type JobRunner } from '../jobs/runne
 import type { createScheduler } from '../jobs/schedules.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import type { TextureStorage } from '../textures/storage.ts'
+import { adjustPluginScore } from '../score/plugin.ts'
+import { scoreAdjustInput } from './core-writes.ts'
 import { createPluginCoreData } from './core-data.ts'
 import { PluginCallRejected, PluginInvocationError } from './errors.ts'
 import { pluginFetch } from './fetch.ts'
@@ -94,6 +103,7 @@ export interface PluginDbExecutor {
 
 /** 插件里注册表单的一个字段，`pluginId` 区分不同插件的同名字段 */
 export interface PluginFormField {
+  fromQuery: boolean
   pluginId: string
   field: Field
 }
@@ -622,6 +632,14 @@ export function createPluginSystem(options: {
             network: invocation.known.manifest.network,
             signal: invocation.controller.signal,
             fetch: options.fetch,
+          })
+        case 'users.adjustScore':
+          require(invocation, 'users.score')
+          remaining(invocation)
+          return adjustPluginScore(db, {
+            ...scoreAdjustInput(a, invocation.known.messages),
+            pluginId: id,
+            now: toIsoTimestamp(now()),
           })
         case 'users.get':
           require(invocation, 'users.read', 'users.readPrivate')
@@ -1309,7 +1327,11 @@ export function createPluginSystem(options: {
         .flatMap((plugin) =>
           (plugin.known.manifest.ui.formFields ?? [])
             .filter((item) => item.form === 'auth.register')
-            .map((item) => ({ pluginId: plugin.known.manifest.id, field: item.field })),
+            .map((item) => ({
+              pluginId: plugin.known.manifest.id,
+              field: item.field,
+              fromQuery: item.fromQuery === true,
+            })),
         )
     },
 
@@ -1588,6 +1610,12 @@ export function createPluginSystem(options: {
       for (const route of plugin.known.manifest.routes)
         if (route.method === method && matchPath(route.path, path)) return route
       return null
+    },
+
+    /** 插件的文案里有没有这个键（任一语言）：translate 翻译不了时原样返回键名，分不出译文恰好就是键名 */
+    hasMessage(pluginId: string, key: string): boolean {
+      const plugin = known.get(pluginId)
+      return plugin !== undefined && hasPluginMessage(plugin.messages, key)
     },
 
     /** 插件的文案；界面上渲染插件声明的标签用 */

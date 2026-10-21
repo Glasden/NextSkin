@@ -2,6 +2,7 @@ import type { CoreDatabase, IsoTimestamp } from '@nextskin/db'
 import type { Kysely } from 'kysely'
 
 export interface ScoreEntry {
+  pluginId: string | null
   id: number
   delta: number
   balance: number
@@ -14,7 +15,7 @@ export function createScoreQueries(db: Kysely<CoreDatabase>) {
     async recent(uid: number, limit = 10): Promise<ScoreEntry[]> {
       return db
         .selectFrom('score_transactions')
-        .select(['id', 'delta', 'balance', 'reason', 'created_at as createdAt'])
+        .select(['id', 'delta', 'balance', 'reason', 'plugin_id as pluginId', 'created_at as createdAt'])
         .where('user_id', '=', uid)
         .orderBy('id', 'desc')
         .limit(limit)

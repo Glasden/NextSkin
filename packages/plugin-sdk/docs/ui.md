@@ -107,12 +107,17 @@ source、load、submit.route、Action.route 都相对于 `/plugins/{id}`，必�
 formFields: [
   {
     form: 'auth.register',
+    fromQuery: true,
     field: { name: 'invitationCode', type: 'text', label: 'field.code', required: true, maxLength: 64 },
   },
 ]
 ```
 
 上段放在 ui 对象中。字段名匹配 `^[A-Za-z][A-Za-z0-9]{0,31}$`，同一插件不能重复。普通注册和第三方“完成注册”页都显示，值只传给本插件拦截器和 user.registered 事件的 extra。
+
+条目可选 `fromQuery: true`，只允许 text、textarea、number、select；password 和 boolean 不允许。打开 `/sign-up` 时，查询参数 `<插件 id>.<字段名>` 的值作为初始值。例如插件 example 的 invitationCode 可用 `/sign-up?example.invitationCode=abc`。参数由插件自己拼（可用 URLSearchParams），核心参数不用带点的名字，不会互相占用。用户看得到、改得了，提交后照常校验，不能把预填值当成可信输入。
+
+从注册页转去第三方登录，参数不经过 OAuth 往返，所以“完成注册”页没有这个初始值。省略 fromQuery 或设为 false 时照旧由用户填写。
 
 这里与插件自己的 form 不同：extra 统一是字符串。文本 trim，默认最多 1000 个 Unicode 码点，禁止 NUL；空值省略，必填空值报错。number 须能转为有限数字，select 须在 options 中。boolean 转成"true"/"false"，required boolean 必须为 true。错误字段键为 `<插件id>.<字段名>`。不要把密码、令牌当成注册 extra，因为它会进入持久事件载荷。
 

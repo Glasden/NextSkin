@@ -359,7 +359,13 @@ export function validateUi(ui: PluginContributions['ui'], permissions: ReadonlyS
     if (page.area !== item.area) fail(`导航项 ${item.page} 的 area 和页面不一致`)
   }
   const names = new Set<string>()
-  for (const { form, field } of ui.formFields ?? []) {
+  for (const item of ui.formFields ?? []) {
+    for (const key of Object.keys(item))
+      if (!['form', 'field', 'fromQuery'].includes(key)) fail(`formFields 条目里没有 ${key} 这一项`)
+    const { form, field, fromQuery } = item
+    if (fromQuery !== undefined && typeof fromQuery !== 'boolean') fail('fromQuery 必须是布尔值')
+    if (fromQuery === true && !['text', 'textarea', 'number', 'select'].includes(field.type))
+      fail('fromQuery 只允许 text、textarea、number、select 字段')
     if (form !== 'auth.register') fail(`只有 auth.register 表单能加字段`)
     if (!/^[A-Za-z][A-Za-z0-9]{0,31}$/.test(field.name) || names.has(field.name))
       fail(`表单字段名 ${JSON.stringify(field.name)} 格式不对或重复`)

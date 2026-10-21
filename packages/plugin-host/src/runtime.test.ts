@@ -38,6 +38,7 @@ test('事务内拦截器只有本地上下文和 db，即使申请了其他能�
         'storage.kv',
         'users.read',
         'users.readPrivate',
+        'users.score',
         'players.read',
         'textures.read',
         'textures.readFile',
@@ -145,5 +146,53 @@ test('fetch 只读 method、headers、body，忽略手写 JS 的其他选项', a
     body: new TextEncoder().encode('payload'),
   })
   expect((args as SerializedRequest).headers).toContainEqual(['x-test', 'yes'])
+  plugin.unload()
+})
+
+test.each([false, true])('users.score 和读取能力合并为一个冻结对象（read=%s）', async (read) => {
+  const rpc = vi.fn<CoreRpc>().mockResolvedValue({ status: 'applied', balance: 5 })
+  const plugin = load(
+    definePlugin({
+      capabilities: read ? ['users.score', 'users.read'] : ['users.score'],
+      jobs: {
+        reward: {
+          async handler({ ctx }) {
+            expect(Object.isFrozen(ctx.users)).toBe(true)
+            expect(Object.keys(ctx.users).sort()).toEqual(read ? ['adjustScore', 'get', 'getMany'] : ['adjustScore'])
+            expect(await ctx.users.adjustScore(1, 5, { reason: 'reward', key: 'once' })).toEqual({
+              status: 'applied',
+              balance: 5,
+            })
+          },
+        },
+      },
+    }),
+    rpc,
+  )
+  await plugin.invoke({ kind: 'job', name: 'reward', payload: {}, attempt: 1 }, context)
+  expect(rpc).toHaveBeenCalledWith('invocation', 'users.adjustScore', {
+    uid: 1,
+    delta: 5,
+    reason: 'reward',
+    key: 'once',
+  })
+  plugin.unload()
+})
+
+test('只申请读取能力时没有 adjustScore', async () => {
+  const plugin = load(
+    definePlugin({
+      capabilities: ['users.read'],
+      jobs: {
+        read: {
+          handler({ ctx }) {
+            expect(Object.keys(ctx.users).sort()).toEqual(['get', 'getMany'])
+            return Promise.resolve()
+          },
+        },
+      },
+    }),
+  )
+  await plugin.invoke({ kind: 'job', name: 'read', payload: {}, attempt: 1 }, context)
   plugin.unload()
 })

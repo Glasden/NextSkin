@@ -9,6 +9,7 @@ import type { MessageKey } from './ui.ts'
  */
 export interface PluginContextLocal<S> {
   readonly plugin: { readonly id: string; readonly version: string }
+  /** url 去掉了末尾斜杠；管理员没有填站点地址时是空串。 */
   readonly site: { readonly url: string; readonly name: string }
   /** 当前设置；管理员修改后，下一次调用就能看到新值。 */
   readonly settings: Readonly<S>
@@ -69,6 +70,39 @@ export interface UsersPrivateApi {
   /** 最多 100 项；按 id 排序、去重，省略不存在的用户。 */
   getMany(uids: readonly Uid[]): Promise<PrivateUser[]>
   findByEmail(email: string): Promise<PrivateUser | null>
+}
+
+/** `users.score`：以插件的身份改积分（ADR-0041）。 */
+export interface UsersScoreApi {
+  /**
+   * 给任何用户加减积分，不检查封禁。uid 须为正安全整数；delta 是非零安全整数，绝对值不超过 2147483647。
+   * reason 必须是本插件任一语言的文案里存在的键（1–128 个码位），不带参数。
+   * key 在本插件内唯一，1–255 个码位，无首尾空白、NUL 和不成对的代理项；随流水永久保存，卸载重装后仍有效。
+   * 同一 key 的 uid、delta 相同返回 duplicate，不同则拒绝；reason 不参与去重。
+   * 业务结果在 status 里，参数不对、超过余额上限或没有能力才抛错。
+   * 返回值包含调用结束时的余额。事务内的拦截器、迁移和设置校验里不能调用。
+   */
+  adjustScore(uid: Uid, delta: number, options: ScoreAdjustOptions): Promise<ScoreAdjustResult>
+}
+
+/** 积分变动的原因和永久幂等键。 */
+export interface ScoreAdjustOptions {
+  /** 本插件的文案键，任何一种语言里存在即可。 */
+  readonly reason: MessageKey
+  /** 本插件内永久的幂等键。 */
+  readonly key: string
+}
+
+/** 改积分的业务结果；参数错误仍抛错。 */
+export interface ScoreAdjustResult {
+  /**
+   * applied：这次已记账；duplicate：同一 key 已记过，本次未改。
+   * insufficient：扣减会低于 0（包括原本为负的余额），什么都没写；userNotFound：用户不存在。
+   * 开放联合：调用方还须处理不认识的 status。
+   */
+  readonly status: 'applied' | 'duplicate' | 'insufficient' | 'userNotFound' | (string & {})
+  /** 调用结束时的余额；用户不存在时为 null */
+  readonly balance: number | null
 }
 
 /** id 须为正安全整数，查询字符串最多 255 字符。 */
@@ -160,6 +194,7 @@ type TexturesApiFor<C extends readonly Capability[]> = Gate<Has<C, 'textures.rea
 /** 按申请的能力裁剪出来的上下文类型。 */
 export type PluginContext<C extends readonly Capability[], S, T extends TableMap> = PluginContextBase<S> &
   Gate<Or<Has<C, 'users.read'>, Has<C, 'users.readPrivate'>>, { readonly users: UsersApiFor<C> }> &
+  Gate<Has<C, 'users.score'>, { readonly users: UsersScoreApi }> &
   Gate<Has<C, 'players.read'>, { readonly players: PlayersApi }> &
   Gate<Or<Has<C, 'textures.read'>, Has<C, 'textures.readFile'>>, { readonly textures: TexturesApiFor<C> }> &
   Gate<Has<C, 'storage.kv'>, { readonly kv: KvApi }> &

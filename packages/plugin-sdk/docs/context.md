@@ -1,20 +1,21 @@
 # 能力和上下文
 
-处理函数通过 `ctx` 使用站点服务。需要读用户、角色、材质，或保存插件数据时，先在 `capabilities` 申请对应能力。
+处理函数通过 `ctx` 使用站点服务。需要读用户、角色、材质、改积分或保存插件数据时，先在 `capabilities` 申请对应能力。
 
-## 七项能力
+## 八项能力
 
 | 能力 | 提供什么 |
 |---|---|
-| `users.read` | `ctx.users.get/getMany`，返回 `PublicUser`：uid、昵称、用户角色、头像材质编号、注册时间 |
+| `users.read` | `ctx.users.get/getMany`，返回 `PublicUser`：uid、昵称、身份、头像材质编号、注册时间 |
 | `users.readPrivate` | 上述方法返回 `PrivateUser`，再加邮箱、邮箱验证状态、积分、语言；增加 `findByEmail`，不必同时申请 `users.read` |
+| `users.score` | `ctx.users.adjustScore`，给任何用户加减积分，结果里带余额 |
 | `players.read` | `ctx.players`，读 Minecraft 角色 |
 | `textures.read` | `ctx.textures.get/findByHash`，读材质元数据 |
 | `textures.readFile` | `ctx.textures.files.read`，读 PNG 原始字节；不会自动获得元数据方法 |
 | `storage.kv` | `ctx.kv`，读写本插件的 KV |
 | `storage.tables` | `ctx.db`，查询本插件声明的表，允许声明迁移 |
 
-`users.readPrivate` 和 `textures.readFile` 是高风险能力。passwordHasher、login 虽然不是能力名，也因接触密码或第三方身份而按高风险展示。七项能力都不能写核心数据。
+`users.readPrivate`、`users.score` 和 `textures.readFile` 是高风险能力。passwordHasher、login 虽然不是能力名，也因接触密码或第三方身份而按高风险展示。除 `users.score` 外，其余能力只读核心数据或读写本插件数据；写核心数据的能力一项对应一个领域用例（ADR-0041）。
 
 事件、路由、Provider、任务、UI 本身已经列在 manifest，不需要额外能力。缺失能力时方法在类型上不存在，运行时 RPC 也会被拒绝。
 
@@ -23,7 +24,7 @@
 | 成员 | 用法和边界 |
 |---|---|
 | `plugin` | 只读 `{ id, version }`，版本是插件自己的版本 |
-| `site` | 只读 `{ url, name }`；url 来自站点设置，去掉末尾斜杠 |
+| `site` | 只读 `{ url, name }`；url 来自站点设置，去掉末尾斜杠。管理员没有填站点地址时是空串，路由里可以退回 `new URL(request.url).origin` |
 | `settings` | 按本插件 zod schema 解析后的只读设置，含已解密机密项。管理员修改后下一次调用可见；无效时不执行 handler，报设置不完整。见[设置](./settings.md) |
 | `t(key, params?, locale?)` | 翻译本插件文案。params 是字符串或数字的记录。请求内默认使用请求语言，其余调用用站点默认语言；显式 locale 可覆盖。找不到或格式化失败时尝试站点默认语言，仍失败就返回键名 |
 | `log.debug/info/warn/error(message, fields?)` | 无需 await，日志带插件 id。message 按 Unicode 码点截到 1000 字符；fields 是 JSON 记录，序列化后截到 2000 字符，截断后不保证仍是合法 JSON。核心不检查是否含机密 |
@@ -32,6 +33,25 @@
 | `fetch` | 核心代发 HTTP，见下文 |
 
 `ctx` 只属于这一次调用。所有 RPC 要在 handler 返回前 await；返回后继续用缓存的 ctx 访问核心会被拒绝。不要用模块全局变量保存 ctx，也不要在后台悬挂 Promise。事务内拦截器的成员更少，见[拦截器](./interceptors.md)。
+
+把处理函数里的逻辑拆进辅助函数时，ctx 的类型用 `PluginContext` 拼出来：先把能力、设置和表提成常量，`definePlugin` 和类型共用它们。
+
+```ts
+import { definePlugin, table, z, type PluginContext } from '@nextskin/plugin-sdk'
+
+const capabilities = ['storage.tables', 'users.score'] as const
+const settings = z.object({ reward: z.number().int().min(0).default(50) })
+const tables = { codes: table<{ code: string; uid: number }>() }
+type Ctx = PluginContext<typeof capabilities, z.output<typeof settings>, typeof tables>
+
+async function reward(ctx: Ctx, uid: number) {
+  await ctx.users.adjustScore(uid, ctx.settings.reward, { reason: 'score.reward', key: `reward:${uid}` })
+}
+
+export default definePlugin({ capabilities, settings, tables /* , on, routes … */ })
+```
+
+事务内拦截器的 ctx 换成 `TransactionalPluginContext`，三个类型参数相同。
 
 ## 读核心数据
 
@@ -51,6 +71,58 @@
 | `textures.files.read(hash)` | 字符串最多 64 个 UTF-16 代码单元；必须匹配 `^[0-9a-f]{64}$`，且文件处于 active 状态，否则 `null`；成功返回 `Uint8Array` |
 
 DTO 字段见类型声明里 `PublicUser`、`PrivateUser`、`Player`、`Texture` 的注释；日期是 ISO 字符串。用户的 `role`、材质的 `type` 是开放字符串联合，要处理未知值，见[版本和兼容](./versioning.md)。
+
+## 改积分
+
+申请 `users.score` 后调用 `ctx.users.adjustScore(uid, delta, { reason, key })`。只申请这一项时，ctx.users 只有 adjustScore；同时申请 users.read 或 users.readPrivate，读写方法合在同一个对象上。
+
+uid 是正安全整数；delta 是非零安全整数，绝对值不超过 2147483647。reason 是本插件任一语言文案中存在的键，按 Unicode 码点计 1–128 字符，不带参数。key 在本插件内唯一，按码点计 1–255 字符，无首尾空白、NUL 和不成对的代理项（写进数据库会变成 U+FFFD，两个不同的键会撞成一个）。键随流水永久保存，停用、卸载、重装同一个插件 id 都不会让已有键失效。
+
+返回 `ScoreAdjustResult`，其中 balance 是调用结束时的余额，用户不存在时为 null：
+
+| status | 含义 |
+|---|---|
+| applied | 这次记上了 |
+| duplicate | 同一 key 已经记过，uid、delta 一样，本次没有修改；reason 不参与去重 |
+| insufficient | 扣减会低于 0，什么都没写；原本为负的导入用户扣任何分也返回这个结果 |
+| userNotFound | 用户不存在，什么都没写 |
+
+status 是开放字符串联合，还要处理不认识的值。同一个 key 的 uid 或 delta 不同、参数无效、加完超过余额上限、没有能力时抛错；业务结果放在 status 里。失败的 insufficient、userNotFound 不占 key，条件满足后可以重试。RPC 超时或返回失败不表示没有提交，用同一个 key 重试。
+
+核心不检查目标用户是否封禁，也不按路由里的用户判断权限。积分和流水在同一事务里提交，不写审计、不发事件。事务内拦截器、迁移、设置校验不能调用。
+
+例如在 `user.registered` 里给邀请人加分（假设本插件已经核实分享码对应的 uid，文案中有 score.invitation）：
+
+```ts
+import { definePlugin } from '@nextskin/plugin-sdk'
+
+export default definePlugin({
+  capabilities: ['users.score'],
+  on: {
+    'user.registered': async ({ ctx, event }) => {
+      // 实际插件应按 extra 中的分享码查自己的表；不要直接信任用户提交的 uid。
+      const sharerUid = 123
+      const result = await ctx.users.adjustScore(sharerUid, 50, {
+        reason: 'score.invitation',
+        key: `sharer:${event.data.user.uid}`,
+      })
+      switch (result.status) {
+        case 'applied':
+        case 'duplicate':
+          return
+        case 'insufficient':
+        case 'userNotFound':
+          ctx.log.info('邀请奖励未记入', { status: result.status })
+          return
+        default:
+          throw new Error('无法识别积分结果')
+      }
+    },
+  },
+})
+```
+
+与插件表配对写入的步骤见[插件表](./tables.md)。
 
 ## KV 和入队
 

@@ -95,6 +95,10 @@ export interface CoreRequests {
     result: null
   }
   fetch: { args: SerializedRequest; result: SerializedResponse }
+  'users.adjustScore': {
+    args: { uid: number; delta: number; reason: string; key: string }
+    result: { status: string; balance: number | null }
+  }
   'users.get': { args: { uid: number }; result: Json | null }
   'users.getMany': { args: { uids: readonly number[] }; result: Json[] }
   'users.findByEmail': { args: { email: string }; result: Json | null }

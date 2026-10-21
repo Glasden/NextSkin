@@ -425,7 +425,7 @@ export function createAdminQueries(
       const ownTextures = db.selectFrom('textures').where('uploader_id', '=', uid)
       const recentScore = await db
         .selectFrom('score_transactions')
-        .select(['id', 'delta', 'balance', 'reason', 'created_at'])
+        .select(['id', 'delta', 'balance', 'reason', 'plugin_id', 'created_at'])
         .where('user_id', '=', uid)
         .orderBy('id', 'desc')
         .limit(10)
@@ -456,6 +456,7 @@ export function createAdminQueries(
           delta: r.delta,
           balance: r.balance,
           reason: r.reason,
+          pluginId: r.plugin_id,
           createdAt: r.created_at,
         })),
         // 同"最后一种登录方式"的判断：密码行在、密码不为空才算有密码（第三方登录建的账号没有这一行）

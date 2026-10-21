@@ -792,6 +792,7 @@ test('userDetail：未过期的会话和令牌、各项计数、有没有密码�
     delta: 11,
     balance: 1066,
     reason: 'score.reasons.adminAdjusted',
+    pluginId: null,
     createdAt: env.now(),
   })
   const auditIds = (

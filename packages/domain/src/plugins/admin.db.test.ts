@@ -2,6 +2,8 @@ import { countRows } from '@nextskin/db'
 import { definePlugin, secret, table, type Json } from '@nextskin/plugin-sdk'
 import { expect, test, vi } from 'vitest'
 import { z } from 'zod'
+import { adjustPluginScore } from '../score/plugin.ts'
+import { toIsoTimestamp } from '@nextskin/db'
 import { official, pluginEnvironment } from './plugins.test-helper.ts'
 
 const env = pluginEnvironment()
@@ -373,4 +375,51 @@ test('任务：未声明名称被拒绝，声明任务收到载荷；死信隔�
     { plugin: 'a', job: again!.id, action: 'delete' },
     { plugin: 'a', job: dead!.id, action: 'retry' },
   ])
+})
+
+test('详情返回插件积分总量和最近 10 笔，无能力但有历史流水也保留统计', async () => {
+  const definition = definePlugin({ capabilities: ['users.score'] })
+  await env.boot([official('a', definition), official('b', empty())])
+  const actor = await env.actor()
+  expect((await env.core.plugins.admin.detail(actor, 'a')).score).toEqual({ added: 0, deducted: 0, recent: [] })
+  expect((await env.core.plugins.admin.detail(actor, 'a')).highRisk).toContain('users.score')
+  expect((await env.core.plugins.admin.detail(actor, 'b')).score).toBeNull()
+  const now = toIsoTimestamp(new Date('2040-01-01T00:00:00.000Z'))
+  for (let i = 0; i < 12; i++)
+    await adjustPluginScore(env.db, {
+      pluginId: 'a',
+      uid: actor.uid,
+      key: String(i),
+      delta: i % 2 === 0 ? 10 : -3,
+      reason: 'reward',
+      now,
+    })
+  await adjustPluginScore(env.db, { pluginId: 'b', uid: actor.uid, key: 'other', delta: 1, reason: 'other', now })
+  const rows = await env.db
+    .selectFrom('score_transactions')
+    .selectAll()
+    .where('plugin_id', '=', 'a')
+    .orderBy('id', 'desc')
+    .limit(10)
+    .execute()
+  const expected = {
+    added: 60,
+    deducted: 18,
+    recent: rows.map((r) => ({
+      id: r.id,
+      uid: actor.uid,
+      nickname: 'superadmin',
+      delta: r.delta,
+      balance: r.balance,
+      reason: 'reward',
+      createdAt: now,
+    })),
+  }
+  expect((await env.core.plugins.admin.detail(actor, 'a')).score).toEqual(expected)
+  expect((await env.core.score.recent(actor.uid))[0]!.pluginId).toBe('b')
+  expect((await env.core.admin.userDetail(actor.uid, actor.uid))!.recentScore[0]!.pluginId).toBe('b')
+  // 升级去掉能力后，流水统计仍然可查。
+  await env.boot([official('a', empty()), official('b', empty())])
+  expect((await env.core.plugins.admin.detail(actor, 'a')).score).toEqual(expected)
+  expect((await env.core.plugins.admin.detail(actor, 'b')).score).toMatchObject({ added: 1, deducted: 0 })
 })

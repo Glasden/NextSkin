@@ -8,6 +8,7 @@ import type { ReactNode } from 'react'
 const capabilities = [
   'users.read',
   'users.readPrivate',
+  'users.score',
   'players.read',
   'textures.read',
   'textures.readFile',
@@ -125,8 +126,11 @@ export function ManifestList({
         <ManifestRow
           label={t('manifest.formFields')}
           none={t('manifest.none')}
-          items={(manifest.ui.formFields ?? []).map(({ field }) => (
-            <span key={field.name}>{translate(field.label)}</span>
+          items={(manifest.ui.formFields ?? []).map(({ field, fromQuery }) => (
+            <span key={field.name} className="inline-flex flex-wrap items-baseline gap-2">
+              {translate(field.label)}
+              {fromQuery && <span className="text-xs text-text-muted">{t('manifest.fromQuery')}</span>}
+            </span>
           ))}
         />
         <ManifestRow

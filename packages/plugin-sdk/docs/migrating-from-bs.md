@@ -36,6 +36,7 @@
 | Filter::add 或注入的$filter->add | 注册限制用 intercept；密码识别用 Provider；没有可任意改数据的通用 filter |
 | Laravel 队列、定时命令 | jobs、ctx.jobs.enqueue、cron，载荷可 JSON 序列化，处理函数幂等 |
 | Eloquent、DB::table | 只读核心数据用 ctx.users/players/textures；自有表用 table、migrations、ctx.db |
+| 写核心数据 | 改积分已经可以（`users.score`、`ctx.users.adjustScore`），其余写核心数据的能力还没有 |
 | session 存临时业务状态 | 优先显式参数或本插件 KV；插件拿不到站点会话存储，不能写 Cookie |
 | Guzzle | ctx.fetch，先在 network 声明 HTTPS origin |
 | abort/json/Response | 路由返回 Web Response；业务错误自己校验，拦截拒绝用 deny |
@@ -53,17 +54,17 @@
 | 验证码 | 核心内置，在后台设置的验证码分区启用（ADR-0038）；支持 Turnstile、hCaptcha 和 reCAPTCHA v2，没有验证码 Provider |
 | 核心已实现（部分） | yggdrasil-connect：设备码流程、公用应用、进服认 OAuth 令牌和安全页的“已授权的应用”已由核心实现（ADR-0037），导入器把 Janus 标记的应用转成公共客户端；授权码流程的同意页和“OAuth 应用”管理页还没做。没有可替代的插件 API |
 | S3 兼容存储驱动 | textures-aliyun-oss、textures-qcloud-cos、textures-qiniu-storage，站长配置存储，不通过插件提供存储驱动 |
-| 已迁为参考插件 | invitation-codes → invitation-codes；refresh-ali-cdn、refresh-qcloud-cdn、purge-azure-global-cdn → cdn-refresh |
+| 已迁为参考插件 | invitation-codes → invitation-codes；share-registration-link → share-registration-link（改积分，注册字段从链接预填，另加每个分享人的奖励次数上限）；refresh-ali-cdn、refresh-qcloud-cdn、purge-azure-global-cdn → cdn-refresh |
 | 密码兼容部分 | authme-integration → authme-password；直接连接 AuthMe 数据库、读写核心 users 表的部分不迁 |
 | 第三方登录 | oauth 及 oauth-github/google/microsoft-live/littleskin → oauth-github、oauth-google、oauth-microsoft、oauth-littleskin，一家一个插件，不再依赖 BS 的 oauth 基座 |
-| 第一版推迟 | mojang-verification 需要写核心数据；forum-integration 还需要外部数据库，没有完整对应实现 |
+| 第一版推迟 | mojang-verification 需要以指定 UUID 建角色；forum-integration 还需要外部数据库，没有完整对应实现 |
 | 不迁移 | hello-dolly、pray-for-kyoto-animation、eruda、hitokoto 等注入内容或脚本类插件；google-adsense、gtag-js 的方向是核心受控统计/广告设置，不是开放浏览器脚本 API，该设置尚非第一版已实现功能 |
 
 ## 第一版迁移不了的部分
 
 | 类别 | 原因 | 可行替代 |
 |---|---|---|
-| 写核心数据（积分、通知、指定 UUID 建角色等） | 只有只读 DTO 能力，写入必须经过专门的领域用例和审计；相应能力未开放 | 删除这部分自动化，使用核心已有管理流程；需要新能力时向核心提扩展点需求，不能用插件表或核心 HTTP 接口冒充用例权限 |
+| 其余写核心数据（通知、指定 UUID 建角色等） | 改积分已经可以（`users.score`），其余写核心数据的能力还没有；每项写能力对应专门的领域用例 | 积分用 `ctx.users.adjustScore` 和永久幂等键；其余使用核心已有管理流程或提扩展点需求，不能用插件表或核心 HTTP 接口冒充用例权限 |
 | 浏览器执行代码、自定义组件和插槽 | 第一版只有声明式 UI，不提供 ui.script，也不允许 HTML 注入 | 表格、表单、统计、Markdown、注册字段；超出范围等后续 API |
 | 外部数据库 | host 没有外部数据库凭据或任意连接能力，ctx.db 只能访问插件自有表 | 先离线迁入自有表，或由独立服务提供受鉴权 HTTPS API；后者只能在允许网络的调用点使用 |
 | 常驻连接（机器人、WebSocket 客户端等） | 没有 setup 生命周期，host 会整代切换，ctx 仅在单次调用有效 | 独立服务，或有期限的 jobs/cron 轮询；不要在顶层偷偷创建常驻连接 |

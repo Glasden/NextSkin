@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { translatePlugin } from './messages.ts'
+import { hasPluginMessage, translatePlugin } from './messages.ts'
 
 const messages = {
   en: { greeting: 'Hello, {name}!', count: '{n, plural, one {# code} other {# codes}}', broken: '{missing}' },
@@ -22,4 +22,13 @@ test('缺语言、缺键或 ICU 失败都尝试后备语言', () => {
 
 test('所有语言都缺键则返回原始键名', () => {
   expect(translate('missing.key')).toBe('missing.key')
+})
+
+test('键在任一语言中对应字符串才算存在，嵌套规则和翻译相同', () => {
+  for (const key of ['greeting', 'count', 'only.here', 'broken']) expect(hasPluginMessage(messages, key)).toBe(true)
+  for (const key of ['only', 'missing.key', 'toString', '__proto__.polluted'])
+    expect(hasPluginMessage(messages, key)).toBe(false)
+  expect(hasPluginMessage({ fr: { empty: '', number: 1, 'literal.dot': '值' } }, 'empty')).toBe(true)
+  expect(hasPluginMessage({ fr: { number: 1 } }, 'number')).toBe(false)
+  expect(hasPluginMessage({ fr: { 'literal.dot': '值' } }, 'literal.dot')).toBe(false)
 })

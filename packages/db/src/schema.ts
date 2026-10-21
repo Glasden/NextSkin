@@ -360,6 +360,9 @@ export interface ScoreTransactionsTable {
   subject_type: string | null
   subject_id: number | null
   created_at: IsoTimestamp
+  /** 插件写的流水：插件 id 和幂等键，两列同时为空或同时不为空（ADR-0041） */
+  plugin_id: string | null
+  plugin_key: string | null
 }
 
 export interface YggdrasilTokensTable {

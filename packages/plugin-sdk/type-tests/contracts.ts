@@ -29,17 +29,43 @@ definePlugin({
       const user = await ctx.users.get(event.data.user.uid)
       // @ts-expect-error email 需要 users.readPrivate
       user?.email
-      // @ts-expect-error 插件不写核心数据（ADR-0033）
+      // @ts-expect-error adjustScore 需要 users.score（ADR-0041）
       ctx.users.adjustScore
     },
   },
 })
 
-// 推迟到以后的能力不存在（ADR-0033）。
+// 改积分按申请能力收窄，事务内仍然不可用（ADR-0041）。
 definePlugin({
-  // @ts-expect-error 写核心数据的能力推迟了
   capabilities: ['users.score'],
+  on: {
+    'user.registered': async ({ ctx, event }) => {
+      await ctx.users.adjustScore(event.data.user.uid, 1, { reason: 'reward', key: 'once' })
+      // @ts-expect-error 只申请 users.score 就没有 get
+      ctx.users.get
+    },
+  },
 })
+definePlugin({
+  capabilities: ['users.read', 'users.score'],
+  on: {
+    'user.registered': async ({ ctx, event }) => {
+      await ctx.users.get(event.data.user.uid)
+      await ctx.users.adjustScore(event.data.user.uid, 1, { reason: 'reward', key: 'once' })
+    },
+  },
+})
+definePlugin({
+  capabilities: ['users.score'],
+  intercept: {
+    'user.register': async ({ ctx }) => {
+      // @ts-expect-error 事务内没有 adjustScore
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- 故意访问不存在的 users，守护事务上下文约束。
+      ctx.users.adjustScore
+    },
+  },
+})
+// 推迟到以后的能力不存在（ADR-0033）。
 definePlugin({
   // @ts-expect-error 运行时组件推迟了
   capabilities: ['ui.script'],
@@ -500,3 +526,39 @@ void absentServer
 // @ts-expect-error 提取出的清单也要求 detect 至少一项
 const emptyManifestDetect: PluginManifest['providers']['passwordHasher'][number]['detect'] = {}
 void emptyManifestDetect
+
+// 密码和同意选项不能从地址栏预填；每个 definePlugin 只有一个结构性错误。
+definePlugin({
+  capabilities: [],
+  ui: {
+    formFields: [
+      // @ts-expect-error password 不能 fromQuery: true
+      { form: 'auth.register', field: { type: 'password', name: 'password', label: 'password' }, fromQuery: true },
+    ],
+  },
+})
+definePlugin({
+  capabilities: [],
+  ui: {
+    formFields: [
+      // @ts-expect-error boolean 不能 fromQuery: true
+      { form: 'auth.register', field: { type: 'boolean', name: 'accept', label: 'accept' }, fromQuery: true },
+    ],
+  },
+})
+definePlugin({
+  capabilities: [],
+  ui: {
+    formFields: [
+      { form: 'auth.register', field: { type: 'text', name: 'code', label: 'code' }, fromQuery: true },
+      { form: 'auth.register', field: { type: 'textarea', name: 'note', label: 'note' }, fromQuery: true },
+      { form: 'auth.register', field: { type: 'number', name: 'n', label: 'n' }, fromQuery: true },
+      {
+        form: 'auth.register',
+        field: { type: 'select', name: 's', label: 's', options: [{ value: 'a', label: 'a' }] },
+        fromQuery: true,
+      },
+      { form: 'auth.register', field: { type: 'boolean', name: 'accept', label: 'accept' }, fromQuery: false },
+    ],
+  },
+})

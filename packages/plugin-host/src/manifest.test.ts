@@ -125,3 +125,26 @@ test.each([
 ])('构建时检查设置能否映射到控件', (settings) => {
   expect(() => buildManifest(definePlugin({ capabilities: [], settings }), pkg)).toThrow(/控件|机密/)
 })
+
+test.each(['text', 'textarea', 'number', 'select', 'password', 'boolean'])(
+  '注册字段 %s 校验 fromQuery 的类型和可用性',
+  (type) => {
+    const field = {
+      type,
+      name: 'code',
+      label: 'field',
+      ...(type === 'select' ? { options: [{ value: 'a', label: 'a' }] } : {}),
+    }
+    const describe = (item: unknown) =>
+      describePlugin({ capabilities: [], ui: { formFields: [item] } } as AnyPluginDefinition)
+    for (const fromQuery of [undefined, false, true]) {
+      const item = { form: 'auth.register', field, ...(fromQuery === undefined ? {} : { fromQuery }) }
+      if (fromQuery === true && ['password', 'boolean'].includes(type))
+        expect(() => describe(item)).toThrow('fromQuery')
+      else expect(describe(item).ui.formFields).toEqual([item])
+    }
+    for (const fromQuery of [null, 1, 'true'])
+      expect(() => describe({ form: 'auth.register', field, fromQuery })).toThrow('fromQuery')
+    expect(() => describe({ form: 'auth.register', field, unknown: true })).toThrow('formFields')
+  },
+)

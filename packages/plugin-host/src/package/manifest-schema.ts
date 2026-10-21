@@ -65,6 +65,8 @@ const ui = z.strictObject({
       z.strictObject({
         form: z.literal('auth.register'),
         field,
+        // 只允许哪几种字段由 validateUi 检查
+        fromQuery: z.boolean().optional(),
       }),
     )
     .optional(),

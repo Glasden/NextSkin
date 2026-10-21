@@ -14,7 +14,7 @@ export {
   type PluginPackageJson,
 } from './manifest.ts'
 export { eventNames } from './events.ts'
-export { translatePlugin, type PluginMessages } from './messages.ts'
+export { hasPluginMessage, translatePlugin, type PluginMessages } from './messages.ts'
 export {
   BodyTooLargeError,
   readBody,

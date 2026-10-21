@@ -92,6 +92,31 @@ npx nextskin-plugin build . --out dist/hello.tgz
 
 SDK 和 zod 在运行时由 host 提供；其他依赖应能打进服务端单文件。安装插件时不会运行 `npm install`，不要依赖本机的文件、原生扩展或未打包的模块。
 
+## 类型检查
+
+构建不检查类型，要自己跑 TypeScript。装上它，在项目根目录放一个 `tsconfig.json`：
+
+```sh
+npm install --save-dev typescript
+```
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src"]
+}
+```
+
+构建之前跑一遍 `npx tsc`。SDK 发布前在 TypeScript 6 和 7、`bundler` 和 `nodenext` 两种模块解析下都检查过，用 `nodenext` 时把 `module` 也改成 `nodenext`。
+
 ## 在本地站点测试
 
 目前核心还没有发行包，测试站需要单独克隆 NextSkin 仓库、安装依赖，在那个仓库运行 `pnpm dev`。默认使用 SQLite，不需要外部数据库。空站先访问 `/setup` 建站，安装码在 `apps/web/data/setup-code`；安装前不能注册。

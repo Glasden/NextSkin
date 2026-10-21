@@ -228,7 +228,8 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 
 另建 `(user_id, id)` 索引。改余额和写流水在同一事务里：先用 `score = score + ?` 原子更新（扣减时带上"余额足够"的条件），再读回余额写流水。
 
-- `plugin_id`、`plugin_key` 要么都为空、要么都不为空（CHECK）；`(plugin_id, plugin_key)` 唯一，核心自己的流水两列都是 NULL，互不冲突。这个索引也供后台的插件详情页按插件统计累计加减的积分。
+- `plugin_id`、`plugin_key` 要么都为空、要么都不为空（CHECK）；`(plugin_id, plugin_key)` 唯一，核心自己的流水两列都是 NULL，互不冲突。
+- 另建 `(plugin_id, id)` 索引：后台的插件详情页按插件统计累计加减的积分、取最近几笔，不用把这个插件的全部流水排序。
 - 插件改积分时先按 `(plugin_id, plugin_key)` 查流水：参数相同就当作已经做过，什么都不改；不同就拒绝。并发的同一个键撞上唯一索引时，整个事务回滚后再查一次（ADR-0041）。插件改积分不写审计。
 
 `users.score` 只经过领域层的 `adjustScore` 修改，导入器例外（ADR-0021）。每个用户流水的 `delta` 之和恒等于 `score`。

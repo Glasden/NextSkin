@@ -7,12 +7,20 @@ export interface ScoreAdjustment {
   delta: number
   reason: string
   subject?: { type: string; id: number } | null
+  plugin?: { id: string; key: string } | null
   now: IsoTimestamp
+}
+
+/** 要调整的用户不存在：调用方先查过用户时，只有并发删除才会走到这里 */
+export class ScoreUserMissingError extends Error {
+  constructor() {
+    super('积分调整引用了不存在的用户')
+  }
 }
 
 export async function adjustScore(tx: Kysely<CoreDatabase>, adjustment: ScoreAdjustment): Promise<{ score: number }> {
   if (!tx.isTransaction) throw new TypeError('积分调整必须在调用方的事务中执行')
-  const { uid, delta, reason, subject, now } = adjustment
+  const { uid, delta, reason, subject, plugin, now } = adjustment
   if (!Number.isSafeInteger(delta) || delta === 0) throw new RangeError('积分变动必须是非零安全整数')
   if ([...reason].length < 1 || [...reason].length > 128) throw new RangeError('积分原因长度必须在 1 到 128 个字符之间')
   // 已校验为安全整数的数值用 SQL 字面量，避免 PG 把超过 int32 的失败条件参数绑定为 integer。
@@ -24,7 +32,7 @@ export async function adjustScore(tx: Kysely<CoreDatabase>, adjustment: ScoreAdj
     delta < 0 ? update.where('score', '>=', sql.lit(-delta)) : update.where('score', '<=', sql.lit(2147483647 - delta))
   const result = await update.executeTakeFirstOrThrow()
   const user = await tx.selectFrom('users').select('score').where('id', '=', uid).executeTakeFirst()
-  if (!user) throw new Error('积分调整引用了不存在的用户')
+  if (!user) throw new ScoreUserMissingError()
   if (result.numUpdatedRows === 0n) {
     if (delta < 0) throw new DomainError('score_insufficient', { required: -delta, balance: user.score })
     throw new RangeError('积分余额超过整数上限')
@@ -33,6 +41,8 @@ export async function adjustScore(tx: Kysely<CoreDatabase>, adjustment: ScoreAdj
     .insertInto('score_transactions')
     .values({
       user_id: uid,
+      plugin_id: plugin?.id ?? null,
+      plugin_key: plugin?.key ?? null,
       delta,
       balance: user.score,
       reason,

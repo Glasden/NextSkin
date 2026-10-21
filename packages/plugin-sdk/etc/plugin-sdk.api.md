@@ -45,7 +45,9 @@ export const capabilities: readonly [
 /** 公开资料：uid、昵称、角色、头像 */
 'users.read',
 /** 额外可见：邮箱、积分、语言 */
-'users.readPrivate', 'players.read',
+'users.readPrivate',
+/** 给任何用户加减积分（`ctx.users.adjustScore`），返回值里带余额；写核心数据，安装时按高风险展示（ADR-0041） */
+'users.score', 'players.read',
 /** 材质元数据 */
 'textures.read',
 /** 材质 PNG 原始字节 */
@@ -250,6 +252,19 @@ export type Field = FieldBase & ({
 });
 
 // @public
+export type FormFieldContribution = {
+    readonly form: FormName;
+} & ({
+    readonly field: Field;
+    readonly fromQuery?: false;
+} | {
+    readonly field: Field & {
+        readonly type: 'text' | 'textarea' | 'number' | 'select';
+    };
+    readonly fromQuery: boolean;
+});
+
+// @public
 export type FormName = 'auth.register';
 
 export { Generated }
@@ -428,6 +443,8 @@ export interface PlayersApi {
 // @public
 export type PluginContext<C extends readonly Capability[], S, T extends TableMap> = PluginContextBase<S> & Gate<Or<Has<C, 'users.read'>, Has<C, 'users.readPrivate'>>, {
     readonly users: UsersApiFor<C>;
+}> & Gate<Has<C, 'users.score'>, {
+    readonly users: UsersScoreApi;
 }> & Gate<Has<C, 'players.read'>, {
     readonly players: PlayersApi;
 }> & Gate<Or<Has<C, 'textures.read'>, Has<C, 'textures.readFile'>>, {
@@ -460,7 +477,6 @@ export interface PluginContextLocal<S> {
     };
     readonly settings: Readonly<S>;
     readonly signal: AbortSignal;
-    // (undocumented)
     readonly site: {
         readonly url: string;
         readonly name: string;
@@ -690,6 +706,18 @@ export type RowsOf<T extends TableMap> = {
 };
 
 // @public
+export interface ScoreAdjustOptions {
+    readonly key: string;
+    readonly reason: MessageKey;
+}
+
+// @public
+export interface ScoreAdjustResult {
+    readonly balance: number | null;
+    readonly status: 'applied' | 'duplicate' | 'insufficient' | 'userNotFound' | (string & {});
+}
+
+// @public
 export function secret(): z.ZodString;
 
 export { Selectable }
@@ -782,10 +810,7 @@ export type TransactionalPluginContext<C extends readonly Capability[], S, T ext
 // @public (undocumented)
 export interface UiContributions<P> {
     // (undocumented)
-    readonly formFields?: readonly {
-        readonly form: FormName;
-        readonly field: Field;
-    }[];
+    readonly formFields?: readonly FormFieldContribution[];
     // (undocumented)
     readonly nav?: readonly {
         readonly area: 'user' | 'admin';
@@ -830,6 +855,11 @@ export interface UsersPublicApi {
     getMany(uids: readonly Uid[]): Promise<PublicUser[]>;
 }
 
+// @public
+export interface UsersScoreApi {
+    adjustScore(uid: Uid, delta: number, options: ScoreAdjustOptions): Promise<ScoreAdjustResult>;
+}
+
 // @public (undocumented)
 export type View = {
     readonly kind: 'table';
@@ -859,8 +889,8 @@ export { z }
 
 // Warnings were encountered during analysis:
 //
-// dist/context.d.ts:141:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
-// dist/context.d.ts:145:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
+// dist/context.d.ts:172:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
+// dist/context.d.ts:178:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
 // dist/routes.d.ts:35:5 - (ae-forgotten-export) The symbol "RouteArgs" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)

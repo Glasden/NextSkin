@@ -203,7 +203,8 @@
       "closetItemRemoved": "移出衣柜退还",
       "reportCreated": "举报材质",
       "adminAdjusted": "管理员调整"
-    }
+    },
+    "fromPlugin": "来自插件 {name}"
   },
   "auth": {
     "illustration": "{name} 的皮肤",
@@ -1963,13 +1964,15 @@
         "cron": "定时任务",
         "pages": "加的页面",
         "formFields": "在注册表单上加的字段",
+        "fromQuery": "可以从链接预填",
         "none": "无",
         "routeAuth": "{auth, select, user {要登录} other {公开}}"
       },
       "capabilities": {
         "users": {
           "read": "读用户的昵称、身份和头像",
-          "readPrivate": "读用户的邮箱、积分和语言"
+          "readPrivate": "读用户的邮箱、积分和语言",
+          "score": "给任何用户加减积分，能看到余额"
         },
         "players": {
           "read": "读角色"
@@ -2039,6 +2042,22 @@
         "callback": "回调地址",
         "bindings": "{count, plural, =0 {还没有绑定} other {已绑定 # 个账号}}",
         "notHttps": "站点地址不是 HTTPS。第三方把授权码经过回调地址交给本站，不加密就可能被别人截获；Google、Microsoft 也不接受 HTTPS 以外的回调地址。请先在设置里把站点地址改成 HTTPS。"
+      },
+      "score": {
+        "title": "积分",
+        "description": "这个插件给用户加减的积分。插件多发的积分不会自动撤回：先停用插件，再到用户详情页逐个扣回。",
+        "added": "累计加分",
+        "deducted": "累计扣分",
+        "recent": "最近 10 笔",
+        "tableLabel": "这个插件最近写的积分记录",
+        "empty": "还没有加减过积分。",
+        "columns": {
+          "user": "用户",
+          "reason": "原因",
+          "delta": "增减",
+          "balance": "变动后余额",
+          "createdAt": "时间"
+        }
       }
     },
     "errors": {
@@ -2113,7 +2132,8 @@
         "noteHint": "只记在审计日志里，用户看不到。",
         "empty": "还没有积分记录。",
         "recent": "最近 10 条",
-        "balanceAfter": "余额 {balance}"
+        "balanceAfter": "余额 {balance}",
+        "viaPlugin": "插件 {name}"
       },
       "security": {
         "title": "登录与安全",

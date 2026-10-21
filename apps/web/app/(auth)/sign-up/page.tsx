@@ -6,6 +6,7 @@ import NextLink from 'next/link'
 import { redirect } from 'next/navigation'
 import { externalProviders } from '../../../lib/external-login'
 import { registerFormFields } from '../../../lib/plugins'
+import { registerFieldPrefill } from '../../../lib/register-prefill'
 import { getServer } from '../../../lib/server'
 import { getSessionUser, safeNextPath } from '../../../lib/session'
 import { AuthHeading } from '../auth-heading'
@@ -20,7 +21,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** next：注册后去的站内路径，例如从 /device 过来的启动器授权（ADR-0037），和登录页一样检查过才用 */
 export default async function SignUpPage({ searchParams }: PageProps<'/sign-up'>) {
-  const next = safeNextPath((await searchParams).next)
+  const query = await searchParams
+  const next = safeNextPath(query.next)
   if (await getSessionUser()) redirect(next)
   const [{ core }, t, locale] = await Promise.all([getServer(), getTranslations('auth.signUp'), getLocale()])
   const [settings, mailConfigured, initialized, providers, captcha] = await Promise.all([
@@ -61,11 +63,14 @@ export default async function SignUpPage({ searchParams }: PageProps<'/sign-up'>
       </>
     )
   const pluginFields = registerFormFields(core, locale)
+  // 插件声明了 fromQuery 的字段从地址栏预填，例如分享链接带来的分享码（ADR-0041）
+  const prefill = registerFieldPrefill(pluginFields, query)
   return (
     <>
       {heading}
       <SignUpForm
         pluginFields={pluginFields}
+        prefill={prefill}
         password={{ min: MIN_PASSWORD_LENGTH, max: MAX_PASSWORD_LENGTH }}
         playerName={
           settings['auth.registration.withPlayerName']

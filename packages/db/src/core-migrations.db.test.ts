@@ -160,6 +160,7 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0042_insert_shared_oauth_client',
     '0043_create_oauth_reference_id_indexes',
     '0044_add_users_oauth_version',
+    '0045_add_score_transactions_plugin_columns',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -475,7 +476,18 @@ test('任务、死信和积分流水的列与 schema 一致', async () => {
     job_schedules: ['name', 'cron', 'time_zone', 'next_run_at'],
     jobs: ['id', 'name', 'payload', 'dedupe_key', 'run_at', 'lease_id', 'attempts', 'last_error', 'created_at'],
     failed_jobs: ['id', 'name', 'payload', 'dedupe_key', 'attempts', 'last_error', 'created_at', 'failed_at'],
-    score_transactions: ['id', 'user_id', 'delta', 'balance', 'reason', 'subject_type', 'subject_id', 'created_at'],
+    score_transactions: [
+      'id',
+      'user_id',
+      'delta',
+      'balance',
+      'reason',
+      'subject_type',
+      'subject_id',
+      'plugin_id',
+      'plugin_key',
+      'created_at',
+    ],
   }
   for (const [name, expected] of Object.entries(columns)) {
     const table = tables.find((table) => table.name === name)!
@@ -487,7 +499,7 @@ test('任务、死信和积分流水的列与 schema 一致', async () => {
           ? ['dedupe_key', 'lease_id', 'last_error']
           : name === 'failed_jobs'
             ? ['dedupe_key', 'last_error']
-            : ['subject_type', 'subject_id']
+            : ['subject_type', 'subject_id', 'plugin_id', 'plugin_key']
     expect(
       table.columns
         .filter((column) => column.name !== 'id' && column.isNullable)
@@ -554,7 +566,12 @@ test('积分流水保留非外键的关联对象，删除用户时级联删除�
     created_at: timestamp,
   }
   const id = await insertReturningId(db, 'score_transactions', row)
-  expect(await db.selectFrom('score_transactions').selectAll().executeTakeFirstOrThrow()).toEqual({ ...row, id })
+  expect(await db.selectFrom('score_transactions').selectAll().executeTakeFirstOrThrow()).toEqual({
+    ...row,
+    id,
+    plugin_id: null,
+    plugin_key: null,
+  })
   await expect(
     db
       .insertInto('score_transactions')
@@ -935,4 +952,61 @@ test('衣柜时间索引可以撤销并重建', async () => {
   const schema = db as unknown as Kysely<unknown>
   await dropClosetTimeIndex(schema)
   await createClosetTimeIndex(schema)
+})
+
+test('积分插件列迁移保留旧流水，CHECK 要求两列成对，唯一索引按插件隔离', async () => {
+  const upgrade = await createTestDatabase<CoreDatabase>()
+  try {
+    const migration = '0045_add_score_transactions_plugin_columns'
+    await migrateToLatest(
+      upgrade.db,
+      Object.fromEntries(Object.entries(coreMigrations).filter(([name]) => name < migration)),
+    )
+    const now = writeAuthDate(upgrade.db, timestamp)
+    const uid = await insertReturningId(upgrade.db, 'users', {
+      nickname: '旧用户',
+      email: 'upgrade@example.test',
+      email_verified: false,
+      created_at: now,
+      updated_at: now,
+    })
+    const row = {
+      user_id: uid,
+      delta: 1,
+      balance: 1,
+      reason: 'reward',
+      subject_type: null,
+      subject_id: null,
+      created_at: timestamp,
+    }
+    const id = await insertReturningId(upgrade.db, 'score_transactions', row)
+    expect(await migrateToLatest(upgrade.db, coreMigrations)).toEqual([migration])
+    expect(await upgrade.db.selectFrom('score_transactions').selectAll().execute()).toEqual([
+      { ...row, id, plugin_id: null, plugin_key: null },
+    ])
+    for (const plugin of [
+      { plugin_id: 'a', plugin_key: null },
+      { plugin_id: null, plugin_key: 'key' },
+    ]) {
+      await expect(
+        upgrade.db
+          .insertInto('score_transactions')
+          .values({ ...row, ...plugin })
+          .execute(),
+      ).rejects.toThrow()
+      await expect(
+        upgrade.db.updateTable('score_transactions').set(plugin).where('id', '=', id).execute(),
+      ).rejects.toThrow()
+    }
+    const pluginRow = { ...row, plugin_id: 'a', plugin_key: 'key' }
+    await upgrade.db.insertInto('score_transactions').values(pluginRow).execute()
+    await expect(upgrade.db.insertInto('score_transactions').values(pluginRow).execute()).rejects.toThrow()
+    await upgrade.db
+      .insertInto('score_transactions')
+      .values([{ ...pluginRow, plugin_id: 'b' }, { ...pluginRow, plugin_key: 'Key' }, row, row])
+      .execute()
+    expect(await upgrade.db.selectFrom('score_transactions').select('id').execute()).toHaveLength(6)
+  } finally {
+    await upgrade.cleanup()
+  }
 })

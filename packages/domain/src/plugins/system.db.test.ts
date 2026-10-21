@@ -254,29 +254,33 @@ test('完全受控插件的非法拦截返回值也按失败处理', async () =>
 
 test('完全受控插件：事务内拒绝 kv/fetch/jobs/users RPC，允许 db.query', async () => {
   const denied: string[] = []
-  await env.boot([official('a', { ...recorder(), capabilities: ['storage.tables', 'storage.kv', 'users.read'] })], {
-    plugins: {
-      load: injected(async (_, context, rpc) => {
-        for (const [method, args] of [
-          ['kv.get', { key: 'key' }],
-          ['fetch', { method: 'GET', url: 'https://api.example.test', headers: [], body: null }],
-          ['jobs.enqueue', { name: 'missing', payload: {} }],
-          ['users.get', { uid: 1 }],
-        ] as const) {
-          await expect(rpc(context.invocationId, method, args)).rejects.toMatchObject({ name: 'PluginCallRejected' })
-          denied.push(method)
-        }
-        const db = new Kysely<{ records: { value: string } }>({
-          dialect: remoteDialect(dialectOf(env.db), (node) => rpc(context.invocationId, 'db.query', { node })),
-        })
-        await db.insertInto('records').values({ value: 'allowed' }).execute()
-        return null
-      }),
+  await env.boot(
+    [official('a', { ...recorder(), capabilities: ['storage.tables', 'storage.kv', 'users.read', 'users.score'] })],
+    {
+      plugins: {
+        load: injected(async (_, context, rpc) => {
+          for (const [method, args] of [
+            ['kv.get', { key: 'key' }],
+            ['fetch', { method: 'GET', url: 'https://api.example.test', headers: [], body: null }],
+            ['jobs.enqueue', { name: 'missing', payload: {} }],
+            ['users.get', { uid: 1 }],
+            ['users.adjustScore', { uid: 1, delta: 1, reason: 'reward', key: 'once' }],
+          ] as const) {
+            await expect(rpc(context.invocationId, method, args)).rejects.toMatchObject({ name: 'PluginCallRejected' })
+            denied.push(method)
+          }
+          const db = new Kysely<{ records: { value: string } }>({
+            dialect: remoteDialect(dialectOf(env.db), (node) => rpc(context.invocationId, 'db.query', { node })),
+          })
+          await db.insertInto('records').values({ value: 'allowed' }).execute()
+          return null
+        }),
+      },
     },
-  })
+  )
   await enable('a')
   await env.core.users.register(env.input())
-  expect(denied).toEqual(['kv.get', 'fetch', 'jobs.enqueue', 'users.get'])
+  expect(denied).toEqual(['kv.get', 'fetch', 'jobs.enqueue', 'users.get', 'users.adjustScore'])
   expect(await records()).toEqual([{ value: 'allowed' }])
 })
 
@@ -298,6 +302,9 @@ test('完全受控插件：未授予能力、过期和伪造 invocationId 都拒
         await expect(send(oldId, 'users.findByEmail', { email: 'a@example.test' })).rejects.toMatchObject({
           name: 'PluginCallRejected',
         })
+        await expect(
+          send(oldId, 'users.adjustScore', { uid: 1, delta: 1, reason: 'reward', key: 'once' }),
+        ).rejects.toMatchObject({ name: 'PluginCallRejected' })
         expect(await send(oldId, 'users.get', { uid: 2147483647 })).toBeNull()
         return { status: 200, statusText: 'OK', headers: [], body: null }
       }),
@@ -680,4 +687,140 @@ test('login Provider 的 authorize 和 exchange 默认使用请求语言', async
     locale: 'en',
   })
   expect(seen).toEqual(['Hello', 'Hello'])
+})
+
+test('users.adjustScore 的 RPC 校验参数、永久 key，并接受任一语言的文案', async () => {
+  const definition = definePlugin({
+    capabilities: ['users.score'],
+    routes: { 'GET /': { auth: 'public', handler: () => Promise.resolve(new Response()) } },
+  })
+  const plugin = official('a', definition)
+  plugin.messages = { fr: { score: { reward: 'Récompense' }, ['🪙'.repeat(128)]: '上限' } }
+  const actor = await env.actor()
+  let accepted = false
+  await env.boot([plugin], {
+    plugins: {
+      load: injected(async (_, context, rpc) => {
+        const args = { uid: actor.uid, delta: 1, reason: 'score.reward', key: 'once' }
+        const bad: Record<string, unknown>[] = [
+          { uid: 0 },
+          { uid: -1 },
+          { uid: 1.1 },
+          { uid: '1' },
+          { uid: Number.MAX_SAFE_INTEGER + 1 },
+          { delta: 0 },
+          { delta: 1.1 },
+          { delta: 2147483648 },
+          { delta: -2147483648 },
+          { delta: '1' },
+          { reason: '' },
+          { reason: 'missing' },
+          { reason: 'score' },
+          { reason: 1 },
+          { reason: '🪙'.repeat(129) },
+          { key: '' },
+          { key: ' leading' },
+          { key: 'trailing ' },
+          { key: '\tkey' },
+          { key: 'x'.repeat(256) },
+          { key: 'a\0b' },
+          // 不成对的代理项写进数据库会变成 U+FFFD
+          { key: '\ud800' },
+          { key: 'a\udc00' },
+          { key: '🪙'.repeat(256) },
+          { key: 1 },
+        ]
+        for (const patch of bad)
+          await expect(rpc(context.invocationId, 'users.adjustScore', { ...args, ...patch })).rejects.toMatchObject({
+            name: 'PluginCallRejected',
+          })
+        expect(
+          await rpc(context.invocationId, 'users.adjustScore', {
+            ...args,
+            reason: '🪙'.repeat(128),
+            key: '🪙'.repeat(255),
+          }),
+        ).toEqual({ status: 'applied', balance: 1 })
+        accepted = true
+        return { status: 200, statusText: 'OK', headers: [], body: null }
+      }),
+    },
+  })
+  await env.core.plugins.admin.enable(actor, 'a')
+  await env.core.plugins.route(routeInput('/'))
+  expect(accepted).toBe(true)
+  expect(await env.db.selectFrom('score_transactions').select('plugin_id').execute()).toEqual([{ plugin_id: 'a' }])
+  // 网页按它决定显示插件的文案还是"来自插件"：任一语言里有就算
+  expect(env.core.plugins.hasMessage('a', 'score.reward')).toBe(true)
+  expect(env.core.plugins.hasMessage('a', 'score')).toBe(false)
+  expect(env.core.plugins.hasMessage('a', 'missing')).toBe(false)
+  expect(env.core.plugins.hasMessage('gone', 'score.reward')).toBe(false)
+})
+
+test('user.registered 同一个事件重投两次只加一次积分', async () => {
+  const statuses: string[] = []
+  const plugin = official(
+    'a',
+    definePlugin({
+      capabilities: ['users.score'],
+      on: {
+        'user.registered': async ({ ctx, event }) => {
+          const result = await ctx.users.adjustScore(event.data.user.uid, 10, {
+            reason: 'reward',
+            key: `sharee:${event.data.user.uid}`,
+          })
+          statuses.push(result.status)
+        },
+      },
+    }),
+  )
+  plugin.messages = { en: { reward: 'Reward' } }
+  await env.boot([plugin])
+  await enable('a')
+  const { uid } = await env.core.users.register(env.input())
+  const job = await env.db
+    .selectFrom('jobs')
+    .selectAll()
+    .where('name', '=', 'plugin:a:on:user.registered')
+    .executeTakeFirstOrThrow()
+  const before = (await env.db.selectFrom('users').select('score').where('id', '=', uid).executeTakeFirstOrThrow())
+    .score
+  await env.core.jobs.drain()
+  // 模拟至少一次投递：任务完成后用同一信封重新入队。
+  await env.db
+    .insertInto('jobs')
+    .values({ name: job.name, payload: job.payload, run_at: job.run_at, created_at: job.created_at })
+    .execute()
+  await env.core.jobs.drain()
+  expect(statuses).toEqual(['applied', 'duplicate'])
+  expect((await env.db.selectFrom('users').select('score').where('id', '=', uid).executeTakeFirstOrThrow()).score).toBe(
+    before + 10,
+  )
+  expect(await env.db.selectFrom('score_transactions').selectAll().where('plugin_id', '=', 'a').execute()).toHaveLength(
+    1,
+  )
+})
+
+test('registerFields 把 fromQuery 交给网页，旧声明默认为 false', async () => {
+  await env.boot([
+    official(
+      'a',
+      definePlugin({
+        capabilities: [],
+        ui: {
+          formFields: [
+            { form: 'auth.register', field: { name: 'code', type: 'text', label: 'code' }, fromQuery: true },
+            { form: 'auth.register', field: { name: 'note', type: 'textarea', label: 'note' } },
+            { form: 'auth.register', field: { name: 'accept', type: 'boolean', label: 'accept' }, fromQuery: false },
+          ],
+        },
+      }),
+    ),
+  ])
+  await enable('a')
+  expect(env.core.plugins.registerFields()).toEqual([
+    { pluginId: 'a', field: { name: 'code', type: 'text', label: 'code' }, fromQuery: true },
+    { pluginId: 'a', field: { name: 'note', type: 'textarea', label: 'note' }, fromQuery: false },
+    { pluginId: 'a', field: { name: 'accept', type: 'boolean', label: 'accept' }, fromQuery: false },
+  ])
 })

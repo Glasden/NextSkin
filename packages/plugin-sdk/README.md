@@ -56,7 +56,7 @@ export default definePlugin({
 | 篇目 | 内容 |
 |---|---|
 | [入门](docs/getting-started.md) | 建项目、写定义、构建、在本地的站点上测试 |
-| [能力和上下文](docs/context.md) | `capabilities`、`ctx` 上的各项、出站请求、日志 |
+| [能力和上下文](docs/context.md) | `capabilities`、`ctx` 上的各项、改积分（`users.score`）、出站请求、日志 |
 | [事件](docs/events.md) | 17 个事件、至少一次投递、幂等 |
 | [拦截器](docs/interceptors.md) | `user.register`、事务内的上下文 |
 | [Provider](docs/providers.md) | `passwordHasher`、`login` |
