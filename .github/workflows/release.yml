@@ -70,6 +70,20 @@ jobs:
           node-version: 26
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # changeset publish 用 `git tag -m` 打附注标签，要有提交者身份；runner 上没有，失败了它也只说 Created git tags
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
       # 先跑打包冒烟测试，再 changeset publish：只发 npm 上还没有的版本，预发布模式下用 pre.json 里的 dist-tag
       - run: pnpm release
-      - run: git push origin --tags
+      # 当前版本的标签本地刚建好，或者远端已经有了（上一次只发成一个包时），否则就是没建出来
+      - run: |
+          for dir in packages/plugin-sdk packages/plugin-cli; do
+            tag=$(node -p "const p = require('./$dir/package.json'); p.name + '@' + p.version")
+            if ! git rev-parse -q --verify "refs/tags/$tag" > /dev/null &&
+              ! git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+              echo "::error::没有建出标签 $tag"
+              exit 1
+            fi
+          done
+          git push origin --tags
