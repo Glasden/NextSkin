@@ -90,6 +90,7 @@ location / {
 | `set-password <邮箱或 uid>`、`disable-2fa <邮箱或 uid>` | 找回超级管理员（后台改不了超级管理员）                                                     |
 | `disable-captcha`                                       | 验证码配错、自己也登不进去时关掉它                                                         |
 | `maintenance [on\|off]` | 查看或开关手动维护模式：除了管理员，别人只能看到维护页（ADR-0044）。备份、整理数据之前先挂上 |
+| `plugin list`、`plugin install <插件包> [--yes]`、`plugin enable\|disable <id>`、`plugin uninstall <id> [--yes]` | 不用后台管理插件（ADR-0049）：安装或升级先列出插件会做什么，第一次安装、升级多了能力和卸载要确认，脚本里加 `--yes`。启用、升级上传的插件时会临时拉起 plugin host 跑迁移。运行中的服务最多 5 秒后跟上 |
 | `migrate`                                               | 只执行迁移；平时 `start` 会自动执行                                                        |
 | `import blessing-skin …`                                | 从 BS v6 导入，服务要停着，见 MIGRATION.md                                                  |
 

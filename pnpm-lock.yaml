@@ -575,6 +575,9 @@ importers:
       '@nextskin/domain':
         specifier: workspace:*
         version: link:../domain
+      '@nextskin/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@nextskin/importer':
         specifier: workspace:*
         version: link:../importer

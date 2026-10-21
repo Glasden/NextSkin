@@ -322,8 +322,22 @@ export default definePlugin({ capabilities: [], providers: { login: [{ id: 'main
     .execute()
   expect(await env.core.plugins.admin.detail(admin, 'installed-login')).toMatchObject({
     logins: [{ providerId: 'main', bindings: 4 }],
+    uninstallBindings: 4,
     strandedOnUninstall: 1,
   })
+  // 新版本去掉了的 Provider 留下的绑定：不在 logins 里，卸载时照样删掉，确认里要算上
+  await env.db
+    .updateTable('accounts')
+    .set({ provider_id: 'plugin:installed-login:removed' })
+    .where('user_id', '=', users[0].uid)
+    .where('provider_id', '=', 'plugin:installed-login:main')
+    .execute()
+  expect(await env.core.plugins.admin.detail(admin, 'installed-login')).toMatchObject({
+    logins: [{ providerId: 'main', bindings: 3 }],
+    uninstallBindings: 4,
+    strandedOnUninstall: 1,
+  })
+  expect(await env.core.plugins.admin.uninstallImpactAsSystem('installed-login')).toEqual({ bindings: 4, stranded: 1 })
   await env.core.plugins.admin.disable(admin, 'other')
   expect((await env.core.plugins.admin.detail(admin, 'installed-login')).strandedOnUninstall).toBe(2)
   // 卸载时还没用完的 state 和暂存身份：之后装上来的同 id 插件可能对接另一个第三方，旧的 subject 不能落到它名下

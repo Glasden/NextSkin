@@ -1,14 +1,15 @@
 /** 只检查环境，不打开核心、不生成配置、不创建数据目录或执行迁移（ADR-0039）。 */
 import { constants } from 'node:fs'
 import { access, mkdtemp, rm, stat, statfs, writeFile } from 'node:fs/promises'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { coreMigrations, createDatabase, type DatabaseConfig } from '@nextskin/db'
-import { HostStartError, hostNetworkRestricted, pluginHostEntry, probePluginHost } from '@nextskin/domain'
+import { HostStartError, hostNetworkRestricted, probePluginHost } from '@nextskin/domain'
 import { coreConfigFromEnv, type CoreConfig } from '@nextskin/domain/config'
 import { ConfigError, currentUser, envFilePath, listenAddress, mergeEnv, readEnvFile } from '../config.ts'
 import type { LauncherContext } from '../context.ts'
 import { acquireDataLock } from '../lock.ts'
+import { launcherPluginHost } from '../plugin-host.ts'
 import { assertRelease } from '../release.ts'
 
 export interface CheckResult {
@@ -234,10 +235,7 @@ export async function checkPluginHost(
   probe: typeof probePluginHost = probePluginHost,
 ): Promise<CheckResult> {
   try {
-    const entry = pluginHostEntry({
-      root: context.source ? resolve(context.root, '../..') : join(context.root, 'server'),
-      bundled: !context.source,
-    })
+    const entry = launcherPluginHost(context)
     if (!context.source) {
       try {
         await access(entry.script)

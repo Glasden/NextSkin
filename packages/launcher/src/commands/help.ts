@@ -11,6 +11,7 @@ export function run(_argv: string[], context: LauncherContext): number {
   disable-2fa              关闭用户的两步验证
   disable-captcha          关闭站点验证码
   maintenance [on|off]     查看或开关手动维护模式
+  plugin <子命令>          管理插件：list、install、enable、disable、uninstall
   import blessing-skin     从 Blessing Skin v6 导入
   version                  显示版本
   help                     显示帮助`)

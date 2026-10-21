@@ -295,6 +295,11 @@ export function createPluginSystem(options: {
   load?: typeof loadPlugin
   /** plugin host 的入口；没有时安装插件不运行（命令行脚本只执行自己的用例） */
   host?: PluginHostEntry | null
+  /**
+   * `stage` 是命令行管理插件（ADR-0049）：不运行安装插件、不清理插件目录，host 只在启用、升级安装插件时
+   * 临时拉起只有这个插件的一代，加载、跑完迁移就杀掉；运行中的服务按插件表同步后自己换代。默认 `run`
+   */
+  hostMode?: 'run' | 'stage'
   /** 安装插件的包和解开后的目录；没有时只认官方插件 */
   packages?: PluginPackages | null
   /** host 崩溃后的重启策略；测试用来缩短等待 */
@@ -306,6 +311,8 @@ export function createPluginSystem(options: {
   fetch?: typeof fetch
 }) {
   const { db, handlers, events, schedules, gateway, now } = options
+  /** 本进程运行安装插件：有 host，而且不是只用它准备的命令行 */
+  const runsInstalled = !!options.host && options.hostMode !== 'stage'
   const log = options.log ?? ((line: string) => console.info(line))
   const kv = createPluginKv(db, now)
   const coreData = createPluginCoreData(db, options.storage)
@@ -535,7 +542,7 @@ export function createPluginSystem(options: {
       if (candidate) dispose(candidate, 'kill')
       return
     }
-    if (!desired.length || !options.host) {
+    if (!desired.length || !runsInstalled) {
       if (generation) dispose(generation, 'retire')
       generation = undefined
       return
@@ -1088,8 +1095,8 @@ export function createPluginSystem(options: {
     }
     await reconcile(rows, candidate)
     for (const state of active.values()) if (!state.known.official) setRunnable(state, runnable(state.known))
-    // 不运行 host 的进程（命令行脚本）不清理：服务进程可能正在用它们不认识的目录
-    if (options.packages && options.host) {
+    // 不运行安装插件的进程（命令行脚本）不清理：服务进程可能正在用它们不认识的目录
+    if (options.packages && runsInstalled) {
       // 当前这一代、正在退役的那一代还在读的目录也留着
       const keep = new Set<string>()
       for (const plugin of known.values()) if (plugin.local) keep.add(plugin.local.dir)
@@ -1303,7 +1310,8 @@ export function createPluginSystem(options: {
     sync: () => exclusive(() => syncLocked()),
     /**
      * 管理员启用、升级安装插件：在 exclusive 里先拉起包含新版本的一代（health check）、在它里面跑迁移，
-     * 确认没问题再改表，然后切换过去。fn 抛错时这一代被杀掉，当前这一代不受影响（ADR-0033）
+     * 确认没问题再改表，然后切换过去。fn 抛错时这一代被杀掉，当前这一代不受影响（ADR-0033）。
+     * 命令行（hostMode 为 stage）拉起的一代只有这个插件，fn 完成后也杀掉，由运行中的服务自己换代（ADR-0049）
      */
     stage<T>(
       local: LocalPluginPackage,
@@ -1311,11 +1319,13 @@ export function createPluginSystem(options: {
     ): Promise<T> {
       return exclusive(async () => {
         if (!options.host) throw new DomainError('plugin_unavailable')
-        const others = [...active.values()].flatMap((state) =>
-          !state.known.official && state.known.local && state.known.manifest.id !== local.id
-            ? [hosted(state.known.local)]
-            : [],
-        )
+        const others = !runsInstalled
+          ? []
+          : [...active.values()].flatMap((state) =>
+              !state.known.official && state.known.local && state.known.manifest.id !== local.id
+                ? [hosted(state.known.local)]
+                : [],
+            )
         let candidate: HostGeneration
         try {
           candidate = await startGeneration([...others, hosted(local)])
@@ -1330,7 +1340,11 @@ export function createPluginSystem(options: {
           dispose(candidate, 'kill')
           throw error
         }
-        await syncLocked(candidate)
+        if (runsInstalled) await syncLocked(candidate)
+        else {
+          dispose(candidate, 'kill')
+          await syncLocked()
+        }
         return result
       })
     },
@@ -1347,8 +1361,8 @@ export function createPluginSystem(options: {
     hostStatus(): PluginHostStatus {
       const current = generation?.alive ? generation : undefined
       return {
-        enabled: !!options.host,
-        state: !options.host
+        enabled: runsInstalled,
+        state: !runsInstalled
           ? 'disabled'
           : current
             ? 'running'
@@ -1543,7 +1557,8 @@ export function createPluginSystem(options: {
 
     /**
      * 登录页上的第三方登录按钮：插件启用了、能被调用（安装插件要 host 加载了这一代）、设置通过 manifest 里 JSON Schema 的校验。
-     * 缺了客户端 ID 的插件不显示按钮（ADR-0034）。按插件 id、声明顺序排列
+     * 缺了客户端 ID 的插件不显示按钮（ADR-0034）。按插件 id、声明顺序排列。
+     * 命令行（host 只用来准备）不运行安装插件，按服务运行时算：包在本实例上就当它能被调用，卸载确认里的用户数才不会多算
      */
     async loginProviders(): Promise<LoginProviderEntry[]> {
       const list = activeWith('providers', (providers) => providers.login.length > 0).sort((a, b) =>
@@ -1552,7 +1567,8 @@ export function createPluginSystem(options: {
       const entries: LoginProviderEntry[] = []
       for (const plugin of list) {
         const { manifest } = plugin.known
-        if (!runnable(plugin.known)) continue
+        if (options.hostMode === 'stage' ? !plugin.known.official && !plugin.known.local : !runnable(plugin.known))
+          continue
         if (!(await pluginSettings.complete(manifest.id, plugin.known.properties, requiredSettings(manifest)))) continue
         for (const provider of manifest.providers.login)
           entries.push({ pluginId: manifest.id, providerId: provider.id, label: provider.label, icon: provider.icon })

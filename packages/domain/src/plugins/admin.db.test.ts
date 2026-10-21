@@ -423,3 +423,23 @@ test('详情返回插件积分总量和最近 10 笔，无能力但有历史流�
   expect((await env.core.plugins.admin.detail(actor, 'a')).score).toEqual(expected)
   expect((await env.core.plugins.admin.detail(actor, 'b')).score).toMatchObject({ added: 1, deducted: 0 })
 })
+
+test('命令行以 system 启用、停用官方插件：不要用户，审计记成 system、没有 IP；照样子的 AdminActor 不算 system', async () => {
+  await env.boot([official('a', empty())])
+  const admin = env.core.plugins.admin
+  await expect(admin.enable({ uid: 0, ip: null }, 'a')).rejects.toMatchObject({ code: 'permission_denied' })
+  await expect(admin.list({ uid: 0, ip: null })).rejects.toMatchObject({ code: 'permission_denied' })
+  expect(await admin.enableAsSystem('a')).toEqual({ changed: true })
+  expect(await admin.enableAsSystem('a')).toEqual({ changed: false })
+  expect(env.core.plugins.isActive('a')).toBe(true)
+  expect(await admin.listAsSystem()).toEqual([expect.objectContaining({ id: 'a', official: true, enabled: true })])
+  expect(await admin.disableAsSystem('a')).toEqual({ changed: true })
+  expect(await admin.disableAsSystem('a')).toEqual({ changed: false })
+  await expect(admin.uninstallAsSystem('a')).rejects.toMatchObject({ code: 'plugin_official' })
+  expect(
+    await env.db.selectFrom('audit_logs').select(['action', 'actor_type', 'actor_user_id', 'ip']).execute(),
+  ).toEqual([
+    { action: 'plugin.enable', actor_type: 'system', actor_user_id: null, ip: null },
+    { action: 'plugin.disable', actor_type: 'system', actor_user_id: null, ip: null },
+  ])
+})

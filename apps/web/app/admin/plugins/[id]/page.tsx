@@ -294,7 +294,7 @@ export default async function AdminPluginPage({ params }: { params: Promise<{ id
             <PluginUninstall
               id={id}
               name={name}
-              bindings={detail.logins.reduce((sum, login) => sum + login.bindings, 0)}
+              bindings={detail.uninstallBindings}
               stranded={detail.strandedOnUninstall}
             />
           </div>

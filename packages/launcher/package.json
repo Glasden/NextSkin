@@ -11,8 +11,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@nextskin/domain": "workspace:*",
     "@nextskin/db": "workspace:*",
+    "@nextskin/domain": "workspace:*",
+    "@nextskin/i18n": "workspace:*",
     "@nextskin/importer": "workspace:*",
     "@nextskin/official-plugins": "workspace:*"
   },

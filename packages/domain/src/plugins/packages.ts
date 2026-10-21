@@ -5,10 +5,11 @@
  * - 每个实例自己把包解到 `data/plugins/{id}/{sha256}/`，换代之前把本地还没有的包取下来、校验后再解开。
  *   目录按包的 sha256 命名，不按版本号：两个版本号相同、内容不同的包（同时上传、卸载后重装）不会解到同一个目录，
  *   一个目录解开之后内容就不再变，正在运行它的 host 不会读到别的包的代码；
- * - 解开的目录里放一个记着 sha256 的标记文件，没有标记的目录不算解开了。
+ * - 解开的目录里放一个记着 sha256 的标记文件，没有标记的目录不算解开了。标记文件的修改时间记着它最近一次被
+ *   安装、升级用到：这之后一段时间里不清理它，解开它的可能是另一个进程（命令行，ADR-0049）。
  */
 import { randomUUID } from 'node:crypto'
-import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, rm, rmdir, stat, utimes, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { parsePluginManifest, sha256Hex, unpackPluginPackage, type PluginMessages } from '@nextskin/plugin-host'
 import type { PluginManifest } from '@nextskin/plugin-sdk'
@@ -31,8 +32,13 @@ export interface LocalPluginPackage {
 
 const MARKER = '.package-sha256'
 const HASH = /^[0-9a-f]{64}$/
-/** 刚解开的目录在这段时间里不清理：安装、升级时先解包，过一会儿才写插件表 */
+/**
+ * 刚解开的目录在这段时间里不清理：安装、升级时先解包，过一会儿才写插件表。按标记文件的修改时间算，
+ * 别的进程（服务、命令行）解开的也认
+ */
 const FRESH_MS = 10 * 60_000
+/** prune 挪开、正要删的目录的后缀 */
+const TRASH = '.trash'
 
 function assertHash(hash: string) {
   if (!HASH.test(hash)) throw new Error('插件包的 hash 必须是 64 位小写十六进制')
@@ -40,6 +46,30 @@ function assertHash(hash: string) {
 
 function isMissing(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT'
+}
+
+/** 做成了没有；不管失败的原因 */
+async function succeeded(operation: Promise<unknown>): Promise<boolean> {
+  try {
+    await operation
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** 标记文件在 FRESH_MS 之内改过：刚解开或者刚被用到。没有标记的不算；读不了的（权限、I/O）当它新鲜，不清理 */
+async function isFresh(dir: string): Promise<boolean> {
+  try {
+    return Date.now() - (await stat(join(dir, MARKER))).mtimeMs < FRESH_MS
+  } catch (error) {
+    return !isMissing(error)
+  }
+}
+
+/** 空了的插件目录删掉。不递归：别的进程可能正往里解包 */
+async function removeIfEmpty(dir: string): Promise<void> {
+  await rmdir(dir).catch(() => {})
 }
 
 /** 本地磁盘上的插件包：`<目录>/<sha256>.tgz` */
@@ -96,7 +126,6 @@ export function createPluginPackages(options: {
 }) {
   const { directory, store } = options
   const dirOf = (id: string, hash: string) => join(directory, id, hash)
-  const fresh = new Map<string, number>()
 
   async function readLocal(id: string, hash: string): Promise<LocalPluginPackage | null> {
     const dir = dirOf(id, hash)
@@ -115,14 +144,23 @@ export function createPluginPackages(options: {
 
   /**
    * 解到临时目录再改名：别的进程不会读到解了一半的目录。目标目录已经有了同一个包（另一个实例、另一次请求刚解开），
-   * 就用已有的，不删它：可能有 host 正在读
+   * 就用已有的，不删它：可能有 host 正在读。用已有的目录时更新标记文件的修改时间，接下来一段时间里谁都不清理它；
+   * 标记文件不在了是正好被清理挪开了（见 prune），重新解开一份
    */
   async function extract(hash: string, bytes: Uint8Array): Promise<LocalPluginPackage> {
     const unpacked = unpackPluginPackage(bytes)
     const { id, version } = unpacked.manifest
     const dir = dirOf(id, hash)
     const existing = await readLocal(id, hash).catch(() => null)
-    if (existing) return existing
+    if (existing) {
+      const now = new Date()
+      try {
+        await utimes(join(dir, MARKER), now, now)
+        return existing
+      } catch (error) {
+        if (!isMissing(error)) throw error
+      }
+    }
     const temp = join(directory, id, `.${hash}.${randomUUID()}.tmp`)
     try {
       for (const [path, content] of unpacked.files) {
@@ -142,10 +180,8 @@ export function createPluginPackages(options: {
         const raced = await readLocal(id, hash).catch(() => null)
         if (!raced) throw error
         await rm(temp, { recursive: true, force: true })
-        fresh.set(dir, Date.now())
         return raced
       }
-      fresh.set(dir, Date.now())
     } catch (error) {
       await rm(temp, { recursive: true, force: true })
       throw error
@@ -180,14 +216,15 @@ export function createPluginPackages(options: {
     async removeLocal(id: string, hash: string): Promise<void> {
       assertHash(hash)
       const dir = dirOf(id, hash)
-      fresh.delete(dir)
       await rm(dir, { recursive: true, force: true })
-      const parent = join(directory, id)
-      if (!(await readdir(parent).catch(() => [''])).length) await rm(parent, { recursive: true, force: true })
+      await removeIfEmpty(join(directory, id))
     },
     /**
      * 删掉不在 keep 里的包目录：卸载、升级之后旧的包留下的，每个实例清理自己的。
-     * 点开头的是正在解开的临时目录，不碰
+     * 点开头的是正在解开的临时目录，不碰；刚解开、刚被用到的（标记文件的修改时间在 FRESH_MS 之内）也不碰。
+     * 用到它的可能是另一个进程，拿不了插件的锁（安装拿着锁调 sync），所以先改名挪开、再查一遍：查过之后又被用上了
+     * 就挪回来；挪不回来时，那边已经重新解开了一份才删，不然留着。挪开到挪回之间只隔几次文件操作，那边正好在这时读它
+     * 会加载失败，重试就好
      */
     async prune(keep: ReadonlySet<string>): Promise<void> {
       let ids: string[]
@@ -197,17 +234,26 @@ export function createPluginPackages(options: {
         if (isMissing(error)) return
         throw error
       }
-      const now = Date.now()
-      for (const [dir, at] of fresh) if (now - at > FRESH_MS) fresh.delete(dir)
       for (const id of ids) {
         const parent = join(directory, id)
         const versions = await readdir(parent).catch(() => [] as string[])
         for (const version of versions) {
           const dir = join(parent, version)
-          if (!version.startsWith('.') && !keep.has(dir) && !fresh.has(dir))
-            await rm(dir, { recursive: true, force: true })
+          // 以前挪开了没删掉的（删到一半失败、进程中途退出）：过了新鲜期再删，没过的可能是刚被用上、没来得及挪回的。
+          // 只有服务清理，命令行不清理
+          if (version.endsWith(TRASH)) {
+            if (!(await isFresh(dir))) await rm(dir, { recursive: true, force: true })
+            continue
+          }
+          if (version.startsWith('.') || keep.has(dir) || (await isFresh(dir))) continue
+          const trash = join(parent, `.${version}.${randomUUID()}${TRASH}`)
+          // 挪不开（Windows 上有进程开着里面的文件）就留到下次
+          if (!(await succeeded(rename(dir, trash)))) continue
+          if (!(await isFresh(trash))) await rm(trash, { recursive: true, force: true })
+          else if (!(await succeeded(rename(trash, dir))) && (await succeeded(stat(join(dir, MARKER)))))
+            await rm(trash, { recursive: true, force: true })
         }
-        if (!(await readdir(parent).catch(() => [''])).length) await rm(parent, { recursive: true, force: true })
+        await removeIfEmpty(parent)
       }
     },
   }

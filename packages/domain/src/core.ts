@@ -91,6 +91,8 @@ export interface CoreOptions {
     load?: typeof loadPlugin
     /** plugin host 的入口；没有时安装插件不运行（命令行脚本） */
     host?: PluginHostEntry | null
+    /** `stage`：host 只用来准备启用、升级的插件，不运行安装插件（命令行管理插件，plugins/system.ts） */
+    hostMode?: 'run' | 'stage'
     /** 安装插件的包（存储接口）和本实例解开的目录 */
     packages?: PluginPackages | null
     /** host 崩溃后的重启策略；测试用来缩短等待 */
@@ -175,6 +177,7 @@ export function createCore(options: CoreOptions) {
     log: options.plugins?.log,
     load: options.plugins?.load,
     host: options.plugins?.host ?? null,
+    hostMode: options.plugins?.hostMode,
     packages: options.plugins?.packages ?? null,
     hostRestart: options.plugins?.hostRestart,
     fetch: options.plugins?.fetch,

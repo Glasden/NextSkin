@@ -1,7 +1,8 @@
+import { spawn } from 'node:child_process'
 import { sql } from 'kysely'
 import { afterAll, beforeAll, expect, test } from 'vitest'
 import { createDatabase } from './database.ts'
-import { ExclusiveLockBusyError, lockStatements, withExclusiveLock } from './exclusive-lock.ts'
+import { ExclusiveLockBusyError, lockStatements, sqliteLockFile, withExclusiveLock } from './exclusive-lock.ts'
 import { dialectOf } from './helpers.ts'
 import { createTestDatabase, testDialect, type TestDatabase } from './testing.ts'
 
@@ -28,7 +29,7 @@ test('拿着锁时同名的锁立即报忙，别的名字不受影响；fn 抛�
   expect(await withExclusiveLock(db, 'plugin:alpha', () => Promise.resolve(2))).toBe(2)
 })
 
-test.skipIf(!server)('另一个进程（另一个连接池）拿着锁时也报忙', async () => {
+test('另一个进程（另一个连接池）拿着锁时也报忙', async () => {
   const other = createDatabase<object>(database.config)
   try {
     await withExclusiveLock(database.db, 'plugin:gamma', async () => {
@@ -40,6 +41,44 @@ test.skipIf(!server)('另一个进程（另一个连接池）拿着锁时也报�
   } finally {
     await other.destroy()
   }
+})
+
+test.skipIf(server)('SQLite：别的进程拿着锁时报忙，那个进程被强制结束后锁就放开了（ADR-0049）', async () => {
+  if (database.config.dialect !== 'sqlite') return
+  // 另一个进程照 withFileLock 的办法拿着锁文件：命令行和服务就是这样的两个进程
+  const child = spawn(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `import { mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
+const file = process.argv[1]
+mkdirSync(dirname(file), { recursive: true })
+const lock = new DatabaseSync(file, { timeout: 0 })
+lock.exec('BEGIN EXCLUSIVE')
+process.stdout.write('locked')
+setInterval(() => lock, 1000)`,
+      sqliteLockFile(database.config.file, 'plugin:epsilon'),
+    ],
+    { stdio: ['ignore', 'pipe', 'inherit'] },
+  )
+  try {
+    await new Promise<void>((resolve, reject) => {
+      child.stdout.once('data', () => resolve())
+      child.once('exit', (code) => reject(new Error(`拿锁的进程退出了：${code}`)))
+    })
+    await expect(withExclusiveLock(database.db, 'plugin:epsilon', () => Promise.resolve(1))).rejects.toBeInstanceOf(
+      ExclusiveLockBusyError,
+    )
+    expect(await withExclusiveLock(database.db, 'plugin:zeta', () => Promise.resolve('other'))).toBe('other')
+  } finally {
+    const exited = new Promise((resolve) => child.once('exit', resolve))
+    child.kill('SIGKILL')
+    await exited
+  }
+  expect(await withExclusiveLock(database.db, 'plugin:epsilon', () => Promise.resolve('released'))).toBe('released')
 })
 
 test.skipIf(!server)('连接池只有两条连接时，几个名字不同的锁同时拿也不会把池占满、互相卡死', async () => {

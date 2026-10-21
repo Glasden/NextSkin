@@ -40,7 +40,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 | `pnpm test:pack` | 打包冒烟测试：在仓库外用 npm 安装 `pnpm pack` 出来的 SDK 和构建命令，类型检查、构建一个插件（要联网，不进 `pnpm check`，ADR-0035） |
 | `pnpm release` | 发布插件 SDK 和构建命令：先跑 `test:pack`，再 `changeset publish`。平时由 `.github/workflows/release.yml` 运行，版本号先在本地用 `pnpm changeset version` 改好（ADR-0035） |
 | `pnpm format` | Prettier 格式化 |
-| `pnpm nextskin <命令>` | 启动器的命令行（ADR-0039），发行目录里是 `node nextskin.mjs <命令>`，`help` 列出全部命令。源码里读 `apps/web/.env` 和环境变量，数据目录同 `pnpm dev`。`set-role <邮箱> <身份>` 另指定超级管理员（第一个在 `/setup` 创建，安装码在数据目录的 `setup-code`）；`set-password <邮箱或 uid>`、`disable-2fa <邮箱或 uid>` 找回超级管理员（后台动不了它，ADR-0036）；`disable-captcha` 关掉验证码（ADR-0038）；`maintenance [on\|off]` 查看或开关手动维护模式（ADR-0044）；`import blessing-skin` 从 BS v6 导入（ADR-0031，服务要停着，步骤见 `packages/importer/MIGRATION.md`）；`migrate` 只跑迁移；`doctor` 只读地检查运行环境（Node、密钥、数据目录、数据库和迁移状态、plugin host、服务在不在运行），有失败时退出码 1。`start` 只在发行目录里运行 |
+| `pnpm nextskin <命令>` | 启动器的命令行（ADR-0039），发行目录里是 `node nextskin.mjs <命令>`，`help` 列出全部命令。源码里读 `apps/web/.env` 和环境变量，数据目录同 `pnpm dev`。`set-role <邮箱> <身份>` 另指定超级管理员（第一个在 `/setup` 创建，安装码在数据目录的 `setup-code`）；`set-password <邮箱或 uid>`、`disable-2fa <邮箱或 uid>` 找回超级管理员（后台动不了它，ADR-0036）；`disable-captcha` 关掉验证码（ADR-0038）；`maintenance [on\|off]` 查看或开关手动维护模式（ADR-0044）；`plugin list\|install\|enable\|disable\|uninstall` 管理插件，服务运行时也能执行（ADR-0049）；`import blessing-skin` 从 BS v6 导入（ADR-0031，服务要停着，步骤见 `packages/importer/MIGRATION.md`）；`migrate` 只跑迁移；`doctor` 只读地检查运行环境（Node、密钥、数据目录、数据库和迁移状态、plugin host、服务在不在运行），有失败时退出码 1。`start` 只在发行目录里运行 |
 
 单元测试和 story 测试跑在 Chromium 里，第一次运行前要装浏览器：`pnpm --filter @nextskin/web exec playwright install chromium`。
 

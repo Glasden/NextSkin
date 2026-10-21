@@ -21,7 +21,7 @@ import {
   unpackPluginPackage,
   type PluginMessages,
 } from '@nextskin/plugin-host'
-import type { Capability } from '@nextskin/plugin-sdk'
+import type { Actor, Capability } from '@nextskin/plugin-sdk'
 import type { ExtractedPluginManifest as PluginManifest } from '@nextskin/plugin-host'
 import { highRiskCapabilities } from './capabilities.ts'
 import type { Kysely, Transaction } from 'kysely'
@@ -85,7 +85,12 @@ export interface PluginDetail extends PluginSummary {
   highRisk: readonly string[]
   /** 回调地址由页面按站点地址拼（externalCallbackPath） */
   logins: readonly PluginLoginBindings[]
-  /** 卸载之后没有任何登录方式的用户数，卸载确认里列出；官方插件不能卸载，总是 0 */
+  /**
+   * 卸载时一起删掉的第三方账号绑定数，卸载确认里列出。按插件 id 数，比 logins 的和多出新版本去掉了的 Provider
+   * 留下的绑定；官方插件不能卸载，总是 0
+   */
+  uninstallBindings: number
+  /** 卸载之后没有任何登录方式的用户数，卸载确认里列出；官方插件总是 0 */
   strandedOnUninstall: number
 }
 
@@ -109,6 +114,12 @@ export interface PluginPackagePreview {
     removedLogins: readonly PluginLoginBindings[]
   } | null
 }
+
+/**
+ * 命令行的操作者（ADR-0049）：操作者是 system，不查权限，审计的 IP 为空。按引用判断，不导出：
+ * 外面传进来的 AdminActor 再像它也是普通用户
+ */
+const SYSTEM: AdminActor = Object.freeze({ uid: 0, ip: null })
 
 const DEAD_LETTER_LIMIT = 50
 const MAX_ERROR_LENGTH = 500
@@ -135,11 +146,13 @@ export function createPluginAdmin(options: {
   const timestamp = (): IsoTimestamp => toIsoTimestamp(now())
 
   async function authorizeRead(actor: AdminActor) {
+    if (actor === SYSTEM) return
     const user = await db.selectFrom('users').select('role').where('id', '=', actor.uid).executeTakeFirst()
     if (!user || !can(user.role, 'plugins.manage')) throw new DomainError('permission_denied')
   }
 
-  async function authorize(tx: Transaction<CoreDatabase>, actor: AdminActor) {
+  async function authorize(tx: Transaction<CoreDatabase>, actor: AdminActor): Promise<Actor> {
+    if (actor === SYSTEM) return { kind: 'system' }
     const user = await lockUser(tx, actor.uid)
     if (!can(user.role, 'plugins.manage')) throw new DomainError('permission_denied')
     return { kind: 'user' as const, uid: actor.uid, role: user.role }
@@ -170,6 +183,15 @@ export function createPluginAdmin(options: {
         bindings: await countRows(db.selectFrom('accounts').where('provider_id', '=', `plugin:${id}:${provider.id}`)),
       })),
     )
+  }
+
+  /** 卸载会删掉的第三方账号绑定（和 uninstall 删的是同一批）和卸载之后没有登录方式的用户数 */
+  async function uninstallImpact(id: string): Promise<{ bindings: number; stranded: number }> {
+    const [bindings, stranded] = await Promise.all([
+      countRows(db.selectFrom('accounts').where('provider_id', 'like', `plugin:${id}:%`)),
+      options.externalLogin.strandedByUninstall(id),
+    ])
+    return { bindings, stranded }
   }
 
   async function scoreSummary(id: string, manifest: PluginManifest): Promise<PluginScoreSummary | null> {
@@ -330,7 +352,9 @@ export function createPluginAdmin(options: {
     }
     if (row?.is_enabled === 1) await checkDependencies(db, manifest)
     if (row) await checkDependents(db, manifest.id, manifest.version)
-    const old = plugins.get(manifest.id)?.manifest
+    // 比较的是本实例上的 manifest：取不到装着的这个包（多实例、刚被别人升级还没同步）时是上一个版本的，或者没有
+    const installed = plugins.get(manifest.id)
+    const old = installed?.manifest
     const removedLogins = old
       ? await loginBindings(
           manifest.id,
@@ -354,7 +378,7 @@ export function createPluginAdmin(options: {
           }
         : null,
     }
-    return { preview, row }
+    return { preview, row, comparedHash: installed?.local?.hash ?? null }
   }
 
   /** 表里这个插件的包还是 hash：不是就是别人刚改过，按冲突处理 */
@@ -363,7 +387,8 @@ export function createPluginAdmin(options: {
     if ((row?.package_hash ?? null) !== hash) throw new DomainError('plugin_busy')
   }
 
-  async function setEnabled(actor: AdminActor, id: string, enabled: boolean): Promise<void> {
+  /** 状态已经是目标值时什么也不做，changed 为 false */
+  async function setEnabled(actor: AdminActor, id: string, enabled: boolean): Promise<{ changed: boolean }> {
     // 先查权限再查插件：没有权限的人看不出插件存不存在
     await authorizeRead(actor)
     const known = plugins.get(id)
@@ -374,16 +399,16 @@ export function createPluginAdmin(options: {
       if (enabled) throw new DomainError('plugin_unavailable')
     }
     // 迁移回滚不了：同一个插件的启用、升级不能在两个实例上同时跑
-    await plugins.withLock(id, async () => {
+    return plugins.withLock(id, async () => {
       const current = await db.selectFrom('plugins').select('is_enabled').where('id', '=', id).executeTakeFirst()
-      if ((current?.is_enabled === 1) === enabled) return
+      if ((current?.is_enabled === 1) === enabled) return { changed: false }
 
       /**
-       * 改启用状态并写审计；状态已经是目标值时什么也不做。安装插件传 hash：准备好的那一代加载、迁移的是这个包，
-       * 这期间被别人升级或卸载了就不启用
+       * 改启用状态并写审计；状态已经是目标值时什么也不做，返回 false。安装插件传 hash：准备好的那一代加载、
+       * 迁移的是这个包，这期间被别人升级或卸载了就不启用
        */
       const commit = (hash?: string) =>
-        transactionWithRetry(db, async (tx) => {
+        transactionWithRetry(db, async (tx): Promise<boolean> => {
           const eventActor = await authorize(tx, actor)
           await lockPlugins(tx)
           const row = await tx
@@ -392,10 +417,10 @@ export function createPluginAdmin(options: {
             .where('id', '=', id)
             .executeTakeFirst()
           if (!row) {
-            if (!enabled) return
+            if (!enabled) return false
             throw new DomainError('plugin_not_found')
           }
-          if ((row.is_enabled === 1) === enabled) return
+          if ((row.is_enabled === 1) === enabled) return false
           if (hash !== undefined && row.package_hash !== hash) throw new DomainError('plugin_busy')
           if (!enabled) await checkDependents(tx, id, null)
           else if (known) await checkDependencies(tx, known.manifest)
@@ -421,6 +446,7 @@ export function createPluginAdmin(options: {
             ip: actor.ip,
             now: timestamp(),
           })
+          return true
         })
 
       const migrate = async (run: () => Promise<void>) => {
@@ -433,9 +459,9 @@ export function createPluginAdmin(options: {
       }
 
       if (!enabled) {
-        await commit()
+        const changed = await commit()
         await plugins.sync()
-        return
+        return { changed }
       }
       if (!known) throw new DomainError('plugin_unavailable')
       await checkDependencies(db, known.manifest)
@@ -461,19 +487,19 @@ export function createPluginAdmin(options: {
               .execute()
         })
         await migrate(() => plugins.migrate(id, timestamp))
-        await commit()
+        const changed = await commit()
         await plugins.sync()
-        return
+        return { changed }
       }
       // 安装插件：先拉起包含它的新一代、在里面跑迁移，加载不了就不启用，当前这一代照常运行（ADR-0033）
       const local = known.local
       if (!local) throw new DomainError('plugin_unavailable')
       try {
-        await plugins.stage(local, async (staged) => {
+        return await plugins.stage(local, async (staged) => {
           // 迁移改的是数据库：先确认表里还是这个包，别的实例上的管理员可能刚升级、卸载了它
           await assertPackage(id, local.hash)
           await migrate(() => staged.migrate(timestamp))
-          await commit(local.hash)
+          return { changed: await commit(local.hash) }
         })
       } catch (error) {
         if (error instanceof DomainError && error.code === 'plugin_load_failed')
@@ -483,7 +509,7 @@ export function createPluginAdmin(options: {
     })
   }
 
-  return {
+  const admin = {
     async list(actor: AdminActor): Promise<PluginSummary[]> {
       await authorizeRead(actor)
       return summaries()
@@ -492,9 +518,9 @@ export function createPluginAdmin(options: {
       await authorizeRead(actor)
       const known = plugin(id)
       const summary = (await summaries()).find((item) => item.id === id)!
-      const [logins, stranded, score] = await Promise.all([
+      const [logins, impact, score] = await Promise.all([
         loginBindings(id, known.manifest.providers.login),
-        known.official ? 0 : options.externalLogin.strandedByUninstall(id),
+        known.official ? { bindings: 0, stranded: 0 } : uninstallImpact(id),
         scoreSummary(id, known.manifest),
       ])
       return {
@@ -502,7 +528,8 @@ export function createPluginAdmin(options: {
         manifest: known.manifest,
         highRisk: highRisk(known.manifest),
         logins,
-        strandedOnUninstall: stranded,
+        uninstallBindings: impact.bindings,
+        strandedOnUninstall: impact.stranded,
         score,
       }
     },
@@ -543,10 +570,14 @@ export function createPluginAdmin(options: {
       actor: AdminActor,
       bytes: Uint8Array,
       packageHash: string,
+      /** 命令行：预览时装着的包（没装是 null）。现在不是它就按冲突处理，要不要确认是按预览决定的 */
+      installedPackageHash?: string | null,
     ): Promise<{ id: string; version: string; action: 'install' | 'upgrade' }> {
       await authorizeRead(actor)
       if (sha256Hex(bytes) !== packageHash) throw new DomainError('plugin_package_changed')
       const { preview, row } = await inspect(bytes)
+      if (installedPackageHash !== undefined && (row?.package_hash ?? null) !== installedPackageHash)
+        throw new DomainError('plugin_busy')
       const { manifest } = preview
       const id = manifest.id
       const packages = plugins.packages
@@ -779,6 +810,31 @@ export function createPluginAdmin(options: {
         })
       })
     },
+  }
+
+  return {
+    ...admin,
+    // 命令行（ADR-0049）：同一组用例，操作者是 system
+    listAsSystem: () => admin.list(SYSTEM),
+    detailAsSystem: (id: string) => admin.detail(SYSTEM, id),
+    /**
+     * 多带两项：预览时装着的包，确认之后原样交给 installAsSystem；升级时比较的是不是就是装着的这个包，
+     * 不是的话比出来的"新增"不可信，命令行要确认
+     */
+    async previewAsSystem(
+      bytes: Uint8Array,
+    ): Promise<PluginPackagePreview & { installedPackageHash: string | null; comparedWithInstalled: boolean }> {
+      const { preview, row, comparedHash } = await inspect(bytes)
+      const installedPackageHash = row?.package_hash ?? null
+      return { ...preview, installedPackageHash, comparedWithInstalled: !row || comparedHash === installedPackageHash }
+    },
+    installAsSystem: (bytes: Uint8Array, preview: { packageHash: string; installedPackageHash: string | null }) =>
+      admin.install(SYSTEM, bytes, preview.packageHash, preview.installedPackageHash),
+    enableAsSystem: (id: string) => admin.enable(SYSTEM, id),
+    disableAsSystem: (id: string) => admin.disable(SYSTEM, id),
+    /** 卸载确认里列出的影响：插件的包本实例取不到、看不了详情时也能算 */
+    uninstallImpactAsSystem: (id: string) => uninstallImpact(id),
+    uninstallAsSystem: (id: string) => admin.uninstall(SYSTEM, id),
   }
 }
 

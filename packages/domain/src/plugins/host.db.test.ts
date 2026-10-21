@@ -3,13 +3,14 @@
  * 读不到 .env、数据目录和 SQLite 文件；崩溃后重启；换代时在途的请求能完成；manifest 和实际定义对不上时停在旧的一代。
  */
 import { createServer } from 'node:http'
-import { readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises'
 import type { AddressInfo } from 'node:net'
 import { join } from 'node:path'
 import { packPluginPackage, unpackPluginPackage } from '@nextskin/plugin-host'
 import { definePlugin } from '@nextskin/plugin-sdk'
 import { toIsoTimestamp } from '@nextskin/db'
 import { expect, test, vi } from 'vitest'
+import { createCore } from '../core.ts'
 import { PLUGIN_CLEANUP_JOB, type PluginRouteRequest } from './system.ts'
 import { hostNetworkRestricted } from './host.ts'
 import { buildPackage, hostEntry, pluginPackages } from './host.test-helper.ts'
@@ -682,6 +683,192 @@ test('同一个版本号、内容不同的两个包解到不同的目录，先�
   expect(first.dir).not.toBe(second.dir)
   expect(await readFile(join(first.dir, 'server.mjs'), 'utf8')).toContain('slow 1')
   expect(await readFile(join(second.dir, 'server.mjs'), 'utf8')).toContain('slow X')
+})
+
+test('别的进程刚解开的包目录不清理：按标记文件的修改时间判断，安装又用到它时重新计时（ADR-0049）', async () => {
+  const { dir } = await pluginPackages()
+  const shared = {
+    directory: join(dir, 'plugins'),
+    store: createLocalPluginPackageStore(join(dir, 'plugin-packages')),
+  }
+  // 两个进程（命令行和服务）各自的实例，用同一个数据目录
+  const cli = createPluginPackages(shared)
+  const service = createPluginPackages(shared)
+  const bytes = await buildPackage({ id: 'probe', source: probe('1') })
+  const local = await cli.add(bytes)
+  const marker = join(local.dir, '.package-sha256')
+  const age = async (minutes: number) => {
+    const at = new Date(Date.now() - minutes * 60_000)
+    await utimes(marker, at, at)
+  }
+  await service.prune(new Set())
+  expect(await readdir(local.dir)).toContain('server.mjs')
+
+  await age(11)
+  await cli.add(bytes)
+  await service.prune(new Set())
+  expect(await readdir(local.dir)).toContain('server.mjs')
+
+  await age(11)
+  await service.prune(new Set())
+  await expect(readdir(local.dir)).rejects.toMatchObject({ code: 'ENOENT' })
+
+  // 清理先把目录挪开再删；挪开之后进程退出了，下次清理时删掉。刚被用上、没来得及挪回的过了新鲜期再删
+  const leftover = join(dir, 'plugins', 'probe', `.${local.hash}.leftover.trash`)
+  await mkdir(leftover, { recursive: true })
+  await writeFile(join(leftover, '.package-sha256'), local.hash)
+  await service.prune(new Set())
+  expect(await readdir(join(dir, 'plugins', 'probe'))).toEqual([`.${local.hash}.leftover.trash`])
+  const at = new Date(Date.now() - 11 * 60_000)
+  await utimes(join(leftover, '.package-sha256'), at, at)
+  await service.prune(new Set())
+  expect(await readdir(join(dir, 'plugins'))).toEqual([])
+})
+
+/** 一段带迁移的探针插件：路由报告版本，迁移建一张表、写一行 */
+const staged = (version: string) => `
+import { definePlugin, table } from '@nextskin/plugin-sdk'
+
+export default definePlugin({
+  capabilities: ['storage.tables'],
+  tables: { notes: table() },
+  migrations: {
+    '001': {
+      up: async (db) => {
+        await db.schema.createTable('notes').addColumn('value', 'varchar(64)').execute()
+      },
+    },
+    ${version === '1' ? '' : `'002': { up: async (db) => { await db.insertInto('notes').values({ value: '${version}' }).execute() } },`}
+  },
+  routes: {
+    'GET /version': { auth: 'public', handler: async () => new Response('${version}') },
+  },
+  providers: {
+    login: [{ id: 'main', label: 'login.main', icon: 'github',
+      authorizeUrl: () => Promise.resolve('https://identity.example.test/authorize'),
+      exchange: async () => ({ subject: 'subject', email: null, emailVerified: false, displayName: null }) }],
+  },
+})
+`
+
+test('命令行（host 只用来准备）安装、启用、升级、停用、卸载上传的插件：自己不运行插件，运行中的服务同步之后接上（ADR-0049）', async () => {
+  const storage = await boot()
+  const actor = await env.actor()
+  // 命令行是另一个进程：自己的核心，同一个库、同一个数据目录（插件目录和包存储），host 只用来准备
+  const cli = createCore({
+    db: env.db,
+    secretKey: env.secretKey,
+    production: false,
+    textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
+      lateDeleteWindowMs: 0,
+      write: async () => {},
+      delete: async () => {},
+      deleteTemp: async () => {},
+      read: () => Promise.resolve(null),
+    },
+    plugins: {
+      sqliteFile: env.databaseFile,
+      log: (line) => env.lines.push(line),
+      host: hostEntry,
+      hostMode: 'stage',
+      // 同步只在测试里手动触发
+      syncIntervalMs: 3_600_000,
+      packages: createPluginPackages({
+        directory: join(storage.dir, 'plugins'),
+        store: createLocalPluginPackageStore(join(storage.dir, 'plugin-packages')),
+      }),
+    },
+    jobs: { log: (line) => env.lines.push(line) },
+  })
+  await cli.plugins.start()
+  try {
+    const admin = cli.plugins.admin
+    const first = await buildPackage({ id: 'staged', source: staged('1') })
+    const second = await buildPackage({ id: 'staged', version: '1.1.0', source: staged('2') })
+    const preview = await admin.previewAsSystem(first)
+    expect(preview).toMatchObject({ action: 'install', previous: null, installedPackageHash: null })
+    const stale = await admin.previewAsSystem(second)
+    expect(await admin.installAsSystem(first, preview)).toEqual({
+      id: 'staged',
+      version: '1.0.0',
+      action: 'install',
+    })
+    // 预览之后插件被装上了：要不要确认是按预览决定的，不再作数
+    await expect(admin.installAsSystem(second, stale)).rejects.toMatchObject({ code: 'plugin_busy' })
+    await env.core.plugins.sync()
+    expect(await env.core.plugins.admin.list(actor)).toEqual([
+      expect.objectContaining({ id: 'staged', enabled: false, packageMissing: false }),
+    ])
+
+    // 启用：迁移在命令行临时拉起的一代里跑完，那一代随后就杀掉；命令行自己不运行它
+    expect(await admin.enableAsSystem('staged')).toEqual({ changed: true })
+    expect(await admin.enableAsSystem('staged')).toEqual({ changed: false })
+    expect(cli.plugins.hostStatus()).toMatchObject({ enabled: false, state: 'disabled', plugins: [] })
+    expect(cli.plugins.isRunning('staged')).toBe(false)
+    expect(
+      await env.db.selectFrom('plugin_migrations').select('name').where('plugin_id', '=', 'staged').execute(),
+    ).toEqual([{ name: '001' }])
+    expect(env.core.plugins.isRunning('staged')).toBe(false)
+    await env.core.plugins.sync()
+    expect(env.core.plugins.isRunning('staged')).toBe(true)
+    expect(text((await env.core.plugins.route(route('staged', '/version'))).body)).toBe('1')
+    // 命令行算卸载确认里的用户数时，按服务上的登录按钮算：插件在服务上运行，命令行里没有运行
+    expect(await cli.plugins.loginProviders()).toEqual(await env.core.plugins.loginProviders())
+    expect(await cli.plugins.loginProviders()).toEqual([expect.objectContaining({ pluginId: 'staged' })])
+
+    // 升级启用中的插件：新版本的迁移同样在命令行里跑；服务同步之前照旧是旧版本
+    const upgrade = await admin.previewAsSystem(second)
+    expect(upgrade).toMatchObject({
+      action: 'upgrade',
+      previous: { version: '1.0.0', enabled: true, addedCapabilities: [] },
+      comparedWithInstalled: true,
+    })
+    await admin.installAsSystem(second, upgrade)
+    const notes = env.db.withTables<{ p_staged__notes: { value: string } }>()
+    expect(await notes.selectFrom('p_staged__notes').select('value').execute()).toEqual([{ value: '2' }])
+    expect(text((await env.core.plugins.route(route('staged', '/version'))).body)).toBe('1')
+    await env.core.plugins.sync()
+    expect(text((await env.core.plugins.route(route('staged', '/version'))).body)).toBe('2')
+
+    // 别的进程刚升级、命令行还没同步：比较用的不是装着的包，比出来的"新增"不可信
+    const third = await buildPackage({ id: 'staged', version: '1.2.0', source: staged('2') })
+    const fourth = await buildPackage({ id: 'staged', version: '1.3.0', source: staged('2') })
+    await env.core.plugins.admin.install(actor, third, (await env.core.plugins.admin.preview(actor, third)).packageHash)
+    expect(await admin.previewAsSystem(fourth)).toMatchObject({
+      previous: { version: '1.2.0' },
+      comparedWithInstalled: false,
+    })
+    await cli.plugins.sync()
+    expect(await admin.previewAsSystem(fourth)).toMatchObject({ comparedWithInstalled: true })
+
+    expect(await admin.disableAsSystem('staged')).toEqual({ changed: true })
+    await env.core.plugins.sync()
+    expect(env.core.plugins.isRunning('staged')).toBe(false)
+
+    await admin.uninstallAsSystem('staged')
+    await env.core.plugins.sync()
+    expect(env.core.plugins.get('staged')).toBeUndefined()
+    expect(await env.db.selectFrom('jobs').select('name').execute()).toEqual([{ name: PLUGIN_CLEANUP_JOB }])
+    expect(
+      await env.db
+        .selectFrom('audit_logs')
+        .select(['action', 'actor_type', 'actor_user_id', 'ip'])
+        .where('actor_type', '!=', 'user')
+        .orderBy('id')
+        .execute(),
+    ).toEqual(
+      ['plugin.install', 'plugin.enable', 'plugin.upgrade', 'plugin.disable', 'plugin.uninstall'].map((action) => ({
+        action,
+        actor_type: 'system',
+        actor_user_id: null,
+        ip: null,
+      })),
+    )
+  } finally {
+    await cli.shutdown()
+  }
 })
 
 test('预览之后这个插件被别人改过：安装按冲突处理，不改表', async () => {

@@ -37,26 +37,26 @@ const packages = new Map<string, string>()
 /** 上传安装时插件的 id 前面加 `host-`：官方插件的 id 不能被上传的插件占用 */
 const pluginId = (id: string, host: boolean) => (host ? `host-${id}` : id)
 
+/** 和插件作者一样用 nextskin-plugin build 打包仓库里的插件；只换 package.json 里的 id，可以另给版本号 */
+function build(source: string, id: string, version?: string): string {
+  const dir = mkdtempSync(join(tmpdir(), `nextskin-e2e-${id}-`))
+  const from = join(repository, 'plugins', source)
+  cpSync(join(from, 'src'), join(dir, 'src'), { recursive: true })
+  cpSync(join(from, 'locales'), join(dir, 'locales'), { recursive: true })
+  // 构建命令按插件项目里装的 SDK 算 `api`
+  mkdirSync(join(dir, 'node_modules', '@nextskin'), { recursive: true })
+  symlinkSync(join(repository, 'packages/plugin-sdk'), join(dir, 'node_modules/@nextskin/plugin-sdk'), 'junction')
+  version ??= (JSON.parse(readFileSync(join(from, 'package.json'), 'utf8')) as { version: string }).version
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: `@e2e/${id}`, version, nextskin: { id } }))
+  const out = join(dir, 'plugin.tgz')
+  execFileSync(process.execPath, [join(repository, 'packages/plugin-cli/src/cli.ts'), 'build', dir, '--out', out])
+  return out
+}
+
 test.beforeAll(({ pluginHost }) => {
   if (!pluginHost) return
-  // 和插件作者一样用 nextskin-plugin build 打包；只换 package.json 里的 id
-  for (const id of ['invitation-codes', 'share-registration-link', 'cdn-refresh', 'authme-password']) {
-    const dir = mkdtempSync(join(tmpdir(), `nextskin-e2e-${id}-`))
-    const source = join(repository, 'plugins', id)
-    cpSync(join(source, 'src'), join(dir, 'src'), { recursive: true })
-    cpSync(join(source, 'locales'), join(dir, 'locales'), { recursive: true })
-    // 构建命令按插件项目里装的 SDK 算 `api`
-    mkdirSync(join(dir, 'node_modules', '@nextskin'), { recursive: true })
-    symlinkSync(join(repository, 'packages/plugin-sdk'), join(dir, 'node_modules/@nextskin/plugin-sdk'), 'junction')
-    const { version } = JSON.parse(readFileSync(join(source, 'package.json'), 'utf8')) as { version: string }
-    writeFileSync(
-      join(dir, 'package.json'),
-      JSON.stringify({ name: `@e2e/${id}`, version, nextskin: { id: pluginId(id, true) } }),
-    )
-    const out = join(dir, 'plugin.tgz')
-    execFileSync(process.execPath, [join(repository, 'packages/plugin-cli/src/cli.ts'), 'build', dir, '--out', out])
-    packages.set(id, out)
-  }
+  for (const id of ['invitation-codes', 'share-registration-link', 'cdn-refresh', 'authme-password'])
+    packages.set(id, build(id, pluginId(id, true)))
 })
 
 /** 插件自己的文案（不带参数的那些），和插件一起发布在 locales 目录里 */
@@ -508,4 +508,60 @@ test('AuthMe 密码：导入的 AuthMe 哈希在启用插件后能登录，登�
   })
   expect(authenticated.status()).toBe(200)
   expect(passwordHash(launcherEmail, pluginHost)).toMatch(/^[0-9a-f]{32}:[0-9a-f]{128}$/)
+})
+
+test('命令行：服务运行时安装、启用、升级、停用、卸载上传的插件，运行中的服务几秒后接上（ADR-0049）', async ({
+  page,
+  pluginHost,
+}) => {
+  test.skip(!pluginHost, '上传的插件只在 plugin host 的服务上测')
+  const directory = process.env.NEXTSKIN_E2E_PLUGINS_HOST_DATA_DIR
+  const name = pluginText('cdn-refresh')('plugin.name')
+  const id = 'cli-cdn-refresh'
+  const first = build('cdn-refresh', id, '1.0.0')
+  const second = build('cdn-refresh', id, '1.0.1')
+  setRole(await register(page, '203.0.113.180', `Cli${suffix}`), 'superadmin', true)
+
+  /** 服务每 5 秒和插件表同步一次：反复打开插件页，直到看到命令行改过的状态 */
+  const eventually = (check: () => Promise<void>) =>
+    expect(async () => {
+      await page.goto(`/admin/plugins/${id}`)
+      await check()
+    }).toPass({ timeout: 20_000 })
+  const status = (key: 'enabled' | 'disabled') =>
+    expect(page.getByText(t(`admin.plugins.status.${key}`), { exact: true })).toBeVisible({ timeout: 1000 })
+
+  // stdin 不是终端：第一次安装要确认，没有 --yes 就不装
+  expect(() => nextskin(directory, 'plugin', 'install', first)).toThrow()
+  expect(nextskin(directory, 'plugin', 'install', first, '--yes')).toContain(`已安装 ${name} 1.0.0`)
+  await eventually(() => status('disabled'))
+
+  // 启用：迁移在命令行里跑完；服务换代之后才算“已启用”，换代之前是“切换中”
+  expect(nextskin(directory, 'plugin', 'enable', id)).toContain(`已启用 ${id}`)
+  await eventually(() => status('enabled'))
+
+  // 升级启用中的插件，没有新增的能力：不用确认
+  expect(nextskin(directory, 'plugin', 'install', second)).toContain(`已把 ${name} 升级到 1.0.1`)
+  await eventually(async () => {
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('1.0.1', { timeout: 1000 })
+    await status('enabled')
+  })
+
+  expect(nextskin(directory, 'plugin', 'disable', id)).toContain(`已停用 ${id}`)
+  await eventually(() => status('disabled'))
+
+  expect(nextskin(directory, 'plugin', 'uninstall', id, '--yes')).toContain(`已卸载 ${id}`)
+  await expect(async () => {
+    const response = await page.goto(`/admin/plugins/${id}`)
+    expect(response?.status()).toBe(404)
+  }).toPass({ timeout: 20_000 })
+
+  // 五条审计，操作者都是系统；插件已经卸载，对象只写 id、不再链接
+  await page.goto('/admin/audit')
+  const rows = page
+    .getByRole('table', { name: t('admin.audit.tableLabel') })
+    .getByRole('row')
+    .filter({ hasText: t('admin.audit.subjects.plugin', { name: id }) })
+  await expect(rows).toHaveCount(5)
+  await expect(rows.filter({ hasText: t('admin.audit.actorSystem') })).toHaveCount(5)
 })

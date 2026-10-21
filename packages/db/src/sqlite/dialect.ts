@@ -322,6 +322,13 @@ function quoteIdentifier(name: string): string {
 }
 
 class MultiConnectionAdapter extends SqliteAdapter {
+  /** 数据库文件：跨进程的锁文件放在它旁边（exclusive-lock.ts） */
+  readonly file: string
+  constructor(file: string) {
+    super()
+    this.file = file
+  }
+
   // Migrator 必须在 BEGIN IMMEDIATE 内读迁移状态并执行 DDL，才能保证多连接互斥和迁移原子性。
   override get supportsTransactionalDdl(): boolean {
     return true
@@ -330,6 +337,12 @@ class MultiConnectionAdapter extends SqliteAdapter {
   override get supportsMultipleConnections(): boolean {
     return true
   }
+}
+
+/** createDatabase 建的 SQLite 实例的数据库文件；别的实例返回 null。和 dialectOf 一样依赖 Kysely 的内部 API */
+export function sqliteFileOf<DB>(db: Kysely<DB>): string | null {
+  const adapter = db.getExecutor().adapter
+  return adapter instanceof MultiConnectionAdapter ? adapter.file : null
 }
 
 export class SqliteWalDialect implements Dialect {
@@ -352,7 +365,7 @@ export class SqliteWalDialect implements Dialect {
     return new SqliteQueryCompiler()
   }
   createAdapter(): SqliteAdapter {
-    return new MultiConnectionAdapter()
+    return new MultiConnectionAdapter(this.options.file)
   }
   createIntrospector(db: Kysely<unknown>): SqliteIntrospector {
     return new SqliteIntrospector(db)

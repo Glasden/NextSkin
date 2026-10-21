@@ -65,7 +65,8 @@ export function migrateCore(db: Kysely<CoreDatabase>, config: CoreConfig): Promi
  * 连接数据库、执行核心迁移、启动任务执行器，返回领域层的入口。由核心进程在启动时调用。
  * 命令行脚本（例如 `nextskin set-role`）传 `startJobs: false`：只执行自己的用例，不去认领后台任务。
  * `pluginHost` 是 plugin host 的入口：由核心进程拉起 host（ADR-0039）；命令行脚本不传，
- * 安装插件在脚本里不运行，它们的拦截器按失败策略处理
+ * 安装插件在脚本里不运行，它们的拦截器按失败策略处理。管理插件的命令行传 host 和 `pluginHostMode: 'stage'`：
+ * host 只用来加载、迁移要启用或升级的插件，照样不运行安装插件（ADR-0049）
  */
 export async function openCore(
   config: CoreConfig,
@@ -73,6 +74,9 @@ export async function openCore(
     startJobs?: boolean
     officialPlugins?: readonly OfficialPlugin[]
     pluginHost?: PluginHostEntry | null
+    pluginHostMode?: 'run' | 'stage'
+    /** 插件系统的日志，默认写 stdout；管理插件的命令行有自己的输出，传空函数 */
+    pluginLog?: (line: string) => void
   } = {},
 ): Promise<{ core: Core; close(): Promise<void> }> {
   if (config.database.dialect === 'sqlite') await mkdir(dirname(config.database.file), { recursive: true })
@@ -93,6 +97,8 @@ export async function openCore(
         official: options.officialPlugins ?? [],
         sqliteFile: config.database.dialect === 'sqlite' ? config.database.file : undefined,
         host: options.pluginHost ?? null,
+        hostMode: options.pluginHostMode,
+        log: options.pluginLog,
         packages: createPluginPackages({
           directory: config.pluginDirectory,
           store: createLocalPluginPackageStore(config.pluginPackageDirectory),

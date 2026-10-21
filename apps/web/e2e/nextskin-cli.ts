@@ -5,12 +5,13 @@ import { fileURLToPath } from 'node:url'
 const entry = fileURLToPath(new URL('../../../dist/nextskin/nextskin.mjs', import.meta.url))
 
 /**
- * 对某个服务的数据目录执行命令行，例如设定第一个超级管理员（ADR-0027）。
- * 和运行中的服务共用一个 SQLite 文件，要用同一个密钥（playwright.config.ts）
+ * 对某个服务的数据目录执行命令行，例如设定第一个超级管理员（ADR-0027），返回它写到 stdout 的内容。
+ * 和运行中的服务共用一个 SQLite 文件，要用同一个密钥（playwright.config.ts）。stdin 不是终端
  */
-export function nextskin(dataDirectory: string | undefined, ...args: string[]): void {
+export function nextskin(dataDirectory: string | undefined, ...args: string[]): string {
   if (!dataDirectory) throw new Error('没有这个服务的数据目录')
-  execFileSync(process.execPath, [entry, ...args], {
+  return execFileSync(process.execPath, [entry, ...args], {
     env: { ...process.env, NEXTSKIN_DATA_DIR: dataDirectory, NEXTSKIN_SECRET: process.env.NEXTSKIN_E2E_SECRET },
+    encoding: 'utf8',
   })
 }
