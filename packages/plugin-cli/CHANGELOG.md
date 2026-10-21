@@ -1,5 +1,16 @@
 # @nextskin/plugin-cli
 
+## 1.0.0-rc.1
+
+### Minor Changes
+
+- 7cc757f: 新增事件 `player.transferred`（ADR-0036）：管理员在后台把角色转让给另一个用户后发出，带转让之后的 `player: Player`（`uid` 是新主人，pid、UUID、名字不变）和原主人的 `previousUid: Uid`；清掉新主人看不到的材质时先发 `player.texturesChanged`。`player.texturesChanged` 的说明补上转让和下架引起的清空；文档里 `user.roleChanged` 的“角色”改称“身份”，并说明 actor 是发起操作的人，后台操作和连带效果中 `data` 里的用户可能不是 actor，也可能波及管理员自己，只看信封分不出后台操作和连带效果。
+- d7ed769: 新增能力 `users.score` 和 `ctx.users.adjustScore`（ADR-0041）：插件以永久幂等键给任何用户加减积分，`ScoreAdjustResult` 返回业务状态和余额。注册表单字段新增 `fromQuery`，允许 text、textarea、number、select 从带插件 id 的查询参数预填。
+
+### Patch Changes
+
+- c22e0ba: KV 的键和任务的 `dedupeKey` 不再接受 NUL 和不成对的代理项，规则同 `adjustScore` 的 key：PostgreSQL 存不了 NUL；不成对的代理项写进数据库会变成 U+FFFD，两个不同的键会撞成一个。
+
 ## 1.0.0-rc.0
 
 ### Major Changes
