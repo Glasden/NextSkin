@@ -10,7 +10,7 @@ export interface NavProps {
   /** 读屏软件用的名称，例如“用户中心” */
   label: string
   /**
-   * sidebar：用户中心和后台的侧栏，宽屏竖排、窄屏横排；
+   * sidebar：用户中心和后台的侧栏，宽屏竖排并吸在页头下面、窄屏横排；
    * header：页头里的全站导航，始终横排
    */
   placement?: 'sidebar' | 'header'
@@ -19,17 +19,24 @@ export interface NavProps {
 }
 
 /**
- * 分区导航。侧栏在宽屏（lg 以上）是竖排列表，窄屏改成横排，放不下时横向滚动；页头里的始终横排。
+ * 分区导航。侧栏在宽屏（lg 以上）是竖排列表，长页面滚动时留在视野里；窄屏改成横排，放不下时横向滚动；页头里的始终横排。
  * 页面里的分组切换用 Tabs
  */
 export function Nav({ label, placement = 'sidebar', children }: NavProps) {
   return (
-    <nav aria-label={label} className="min-w-0">
+    <nav
+      aria-label={label}
+      // 宽屏侧栏吸在页头（64px 加 1px 底边）下面，和布局给侧栏留的 32px 上边距对齐，开始滚动时几乎不动。
+      // flow-root 挡住列表的负外边距，不让它穿出去缩小 nav 的外边距盒，否则 sticky 会把 nav 往下推
+      className={cx('min-w-0', placement === 'sidebar' && 'lg:sticky lg:top-24 lg:flow-root')}
+    >
       <ul
         data-placement={placement}
         className={cx(
           'group/nav flex gap-1',
-          placement === 'sidebar' && '-mx-4 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0',
+          // 宽屏比视口高时列表自己滚动，底下同样留 32px。滚动容器会裁掉焦点框，p-1 给它留出位置，-m-1 抵消这圈内边距
+          placement === 'sidebar' &&
+            '-mx-4 overflow-x-auto px-4 lg:-m-1 lg:max-h-[calc(100dvh-(--spacing(31)))] lg:flex-col lg:overflow-y-auto lg:p-1',
         )}
       >
         {children}
