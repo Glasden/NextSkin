@@ -11,7 +11,7 @@ export interface Rgba {
 export type TextureType = 'steve' | 'alex' | 'cape'
 
 /** 任何函数的输出像素变化时加 1；出图地址和缓存键包含它（ADR-0017）。 */
-export const RENDERER_VERSION = 2
+export const RENDERER_VERSION = 3
 
 /** 材质形状或渲染分辨率不合法。 */
 export class TextureShapeError extends Error {
@@ -229,17 +229,6 @@ export function renderFigure(image: Rgba, type: TextureType, k: number): Rgba {
   return out
 }
 
-/** 脸 (8,8,8,8) 叠帽子层 (40,8,8,8)，输出 8k×8k。 */
-export function renderHead(image: Rgba, type: 'steve' | 'alex', k: number): Rgba {
-  const s = imageScale(image, type)
-  checkResolution(k, s)
-  const skin = prepareSkin(image)
-  const out = blank(8 * k, 8 * k)
-  draw(out, skin, s, k, 8, 8, 8, 8, 0, 0, false)
-  draw(out, skin, s, k, 40, 8, 8, 8, 0, 0, true)
-  return out
-}
-
 export {
   PngError,
   parsePng,
@@ -250,6 +239,8 @@ export {
   type PngLimits,
   type ParsedPng,
 } from './png.ts'
+
+export { MAX_HEAD_DENSITY, headSize, renderHead } from './head.ts'
 
 export {
   RAISE_FRAMES,

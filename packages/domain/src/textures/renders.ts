@@ -62,7 +62,7 @@ export function createRenders({
       if (error instanceof TextureShapeError) return null
       throw error
     }
-    if ((key.kind === 'figure' || key.kind === 'head') && s % key.k !== 0) return null
+    if (key.kind === 'figure' && s % key.k !== 0) return null
     const existing = pending.get(id)
     if (existing) return existing
     const promise = generate(key).finally(() => pending.delete(id))
@@ -71,7 +71,8 @@ export function createRenders({
   }
   const figure = ({ hash, model, k }: { hash: string; model: TextureType; k: number }) =>
     render({ hash, model, k, kind: 'figure' })
-  const head = ({ hash, k }: { hash: string; k: number }) => render({ hash, model: 'steve', k, kind: 'head' })
+  // 头像和 3D 出图一样按显示密度 p 出图，不要求整除材质倍数（ADR-0056）
+  const head = ({ hash, p }: { hash: string; p: number }) => render({ hash, model: 'steve', k: p, kind: 'head' })
   const pose = ({ hash, kind, model, p }: { hash: string; kind: PoseKind; model: TextureType; p: number }) =>
     render({ hash, kind, model, k: p })
   return {
@@ -87,11 +88,12 @@ export function createRenders({
           heads = new Set<number>()
         for (const dpr of [1, 2]) {
           if (type === 'cape') for (const n of [3, 4, 5, 8]) figures.add(pickResolution(s, n, dpr))
-          if (type !== 'cape') for (const n of [2, 3, 4, 6]) heads.add(pickResolution(s, n, dpr))
+          // 头像显示成 16、24、32、48px，脸上一格是 2、3、4、6 个 CSS 像素
+          if (type !== 'cape') for (const n of [2, 3, 4, 6]) heads.add(n * dpr)
         }
         const results = await Promise.all([
           ...Array.from(figures, (k) => figure({ hash, model: type, k })),
-          ...Array.from(heads, (k) => head({ hash, k })),
+          ...Array.from(heads, (p) => head({ hash, p })),
           ...(type === 'cape'
             ? []
             : [

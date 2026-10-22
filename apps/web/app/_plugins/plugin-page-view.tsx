@@ -237,12 +237,7 @@ async function TableView({
         if (!found || id === null) return <span className="font-mono text-xs">#{display(value)}</span>
         const content = (
           <span className="inline-flex items-center gap-2">
-            <PlayerHead
-              src={found.avatar ? headSrc(found.avatar.hash) : undefined}
-              textureScale={found.avatar?.scale}
-              size={24}
-              alt=""
-            />
+            <PlayerHead src={found.avatar ? headSrc(found.avatar.hash) : undefined} size={24} alt="" />
             {found.nickname}
           </span>
         )

@@ -1,13 +1,13 @@
 import type { OAuthClaimExtensionInput, OAuthOptions, OAuthProviderExtension } from '@better-auth/oauth-provider'
 import { readAuthBoolean, type CoreDatabase } from '@nextskin/db'
-import { RENDERER_VERSION } from '@nextskin/skin'
+import { MAX_HEAD_DENSITY, RENDERER_VERSION } from '@nextskin/skin'
 import { APIError } from 'better-auth/api'
 import type { Kysely } from 'kysely'
 import { parsePlayerReference, READ_SCOPE, SELECT_SCOPE } from '../oauth/scopes.ts'
 import { textureScaleOrNull } from '../players/queries.ts'
 
 export function connectClaims(db: Kysely<CoreDatabase>, siteUrl: string) {
-  /** 头像按材质本身的分辨率出图（k = s）：出图只缩小不放大，k 必须整除 s（textures/renders.ts） */
+  /** 头像按最大的出图密度出 144×144（ADR-0056），客户端缩小显示；材质尺寸不合规则的不给 */
   async function picture(uid: number): Promise<string | undefined> {
     const row = await db
       .selectFrom('users')
@@ -16,8 +16,9 @@ export function connectClaims(db: Kysely<CoreDatabase>, siteUrl: string) {
       .select(['textures.hash', 'texture_files.width', 'texture_files.height'])
       .where('users.id', '=', uid)
       .executeTakeFirst()
-    const k = row ? textureScaleOrNull('steve', row.width, row.height) : null
-    return row && k !== null ? `${siteUrl}/render/v${RENDERER_VERSION}/head/${k}/${row.hash}.png` : undefined
+    return row && textureScaleOrNull('steve', row.width, row.height) !== null
+      ? `${siteUrl}/render/v${RENDERER_VERSION}/head/${MAX_HEAD_DENSITY}/${row.hash}.png`
+      : undefined
   }
 
   async function standardClaims({ user, scopes }: { user: { id: string }; scopes: string[] }) {

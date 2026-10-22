@@ -93,8 +93,8 @@ test('生成写缓存、同 key 并发合并，头像固定 steve；purge 后重
   expect(await cache.get(key)).toEqual(outputs[0])
   await service.figure(input)
   expect(render).toHaveBeenCalledTimes(1)
-  await service.head({ hash, k: 1 })
-  expect(render).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'head', type: 'steve', k: 1 }))
+  await service.head({ hash, p: 3 })
+  expect(render).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'head', type: 'steve', k: 3 }))
   await service.purge(hash)
   expect(await cache.get(key)).toBeNull()
   await service.figure(input)
@@ -199,7 +199,7 @@ test('warm 皮肤生成头像和常用 3D 出图，披风按显示倍数和 DPR 
   render.mockResolvedValue(Uint8Array.of(9))
   await database.db.updateTable('texture_files').set({ width: 512, height: 512 }).where('hash', '=', hash).execute()
   service.warm(hash, 'alex')
-  await vi.waitFor(() => expect(render).toHaveBeenCalledTimes(10))
+  await vi.waitFor(() => expect(render).toHaveBeenCalledTimes(12))
   const figures = render.mock.calls
     .filter(([i]) => i.kind === 'figure')
     .map(([i]) => i.k)
@@ -207,9 +207,10 @@ test('warm 皮肤生成头像和常用 3D 出图，披风按显示倍数和 DPR 
   const heads = render.mock.calls
     .filter(([i]) => i.kind === 'head')
     .map(([i]) => i.k)
-    .sort()
+    .sort((a, b) => a - b)
   expect(figures).toEqual([])
-  expect(heads).toEqual([1, 2, 4, 8])
+  // 头像按显示密度出图，和材质倍数无关
+  expect(heads).toEqual([2, 3, 4, 6, 8, 12])
   expect(
     render.mock.calls
       .filter(([i]) => i.kind === 'both')

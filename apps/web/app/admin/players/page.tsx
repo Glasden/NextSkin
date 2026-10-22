@@ -174,7 +174,6 @@ export default async function AdminPlayersPage({
                 <span className="flex min-w-40 items-center gap-2">
                   <PlayerHead
                     src={visibleSkin && visibleSkin.scale !== null ? headSrc(visibleSkin.hash) : undefined}
-                    textureScale={visibleSkin?.scale ?? undefined}
                     fallback="blank"
                     size={24}
                     alt=""

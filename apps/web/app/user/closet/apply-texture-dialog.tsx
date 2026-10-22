@@ -72,7 +72,6 @@ export function ApplyTextureDialog({ open, onOpenChange, texture, players, locke
               <li key={player.pid} className="flex items-center gap-3 px-3 py-2">
                 <PlayerHead
                   src={player.head ? headSrc(player.head.hash) : undefined}
-                  textureScale={player.head?.scale}
                   fallback="blank"
                   size={32}
                   alt=""

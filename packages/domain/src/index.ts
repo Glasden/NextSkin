@@ -51,7 +51,7 @@ export type { IsoTimestamp } from '@nextskin/db'
 export type { ChangeEmailResult } from './users/manage.ts'
 export type { PrivateUser } from '@nextskin/plugin-sdk'
 
-export { MAX_POSE_DENSITY, RENDERER_VERSION } from '@nextskin/skin'
+export { MAX_HEAD_DENSITY, MAX_POSE_DENSITY, RENDERER_VERSION } from '@nextskin/skin'
 export { createImagePool, type ImagePool } from './textures/image-pool.ts'
 export {
   createMemoryRenderCache,

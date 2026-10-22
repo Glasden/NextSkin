@@ -100,7 +100,6 @@ export function PlayerField({
               head: (
                 <PlayerHead
                   src={player.skin ? headSrc(player.skin.hash) : undefined}
-                  textureScale={player.skin?.scale}
                   fallback="blank"
                   size={32}
                   alt=""

@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { removeTestDirectory } from '@nextskin/db/testing'
-import { MAX_POSE_DENSITY, RENDERER_VERSION } from '@nextskin/skin'
+import { MAX_HEAD_DENSITY, MAX_POSE_DENSITY, RENDERER_VERSION } from '@nextskin/skin'
 import { afterAll, beforeAll, expect, test } from 'vitest'
 import {
   createLocalRenderCache,
@@ -52,6 +52,12 @@ test.each(POSE_KINDS)('%s 缓存键只允许皮肤模型和 1 到最大密度的
     expect(() => renderKey({ ...key, kind, k })).toThrow()
   expect(() => renderKey({ ...key, kind, model: 'cape' })).toThrow()
   expect(() => renderKey({ ...key, kind: 'unknown' as RenderKey['kind'] })).toThrow()
+})
+test('头像的缓存键是 1 到最大头像密度的整数', () => {
+  for (const k of [1, 3, MAX_HEAD_DENSITY])
+    expect(renderKey({ ...key, kind: 'head', model: 'steve', k })).toBe(`${key.hash}/head-steve-${k}.png`)
+  for (const k of [0, -1, 1.5, MAX_HEAD_DENSITY + 1, NaN, Infinity])
+    expect(() => renderKey({ ...key, kind: 'head', model: 'steve', k })).toThrow()
 })
 test('本地缓存：完整键、临时文件改名、按 hash 删除、保留其他 hash', async () => {
   await verify(createLocalRenderCache(directory))

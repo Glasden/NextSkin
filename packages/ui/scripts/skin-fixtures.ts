@@ -20,6 +20,7 @@ const fixtures = new URL('../../skin/test/fixtures/', import.meta.url)
 const assets = new URL('../../skin/assets/', import.meta.url)
 
 // 测试材质：经典、纤细、旧版 64×32、旧版高清各一张，加两张披风；再加随核心发布的默认皮肤（登录页插图）
+// 头像出 PlayerHead 四种尺寸的 1x 和 2x（p = 2、3、4、6、8、12）。
 // 3D 出图只出 story 用到的 1x（截图测试跑在 1x 屏上），fixtures.ts 里 2x 没有时退回 1x：
 // 每张皮肤都有材质卡片（正背面 ×4）、迷你卡片（正面 ×3）、领奖台（正面 ×5），连同悬浮时的抬手拼图；
 // 初音未来另有各个倍数（SkinFigure 的 Scales、名牌），默认皮肤另有插图（正面 ×8）
@@ -36,6 +37,8 @@ const EXTRA: Partial<Record<string, Pose[]>> = {
   ],
   'default-skin': withRaise('front', 8),
 }
+
+const HEAD_DENSITIES = [2, 3, 4, 6, 8, 12]
 
 const SOURCES = [
   { name: 'haka', kind: 'skin', dir: fixtures },
@@ -64,10 +67,8 @@ for (const { name, kind, dir } of SOURCES) {
   const image = { width: png.width, height: png.height, data: new Uint8Array(png.data) }
   const type = kind === 'cape' ? 'cape' : inferSkinModel(image)
   const s = textureScale(type, image.width, image.height)
-  for (const k of resolutions(s)) {
-    if (type === 'cape') write(`${name}-k${k}.png`, renderFigure(image, type, k))
-    else write(`${name}-head-k${k}.png`, renderHead(image, type, k))
-  }
+  if (type === 'cape') for (const k of resolutions(s)) write(`${name}-k${k}.png`, renderFigure(image, type, k))
+  else for (const p of HEAD_DENSITIES) write(`${name}-head-p${p}.png`, renderHead(image, p))
   if (type !== 'cape') {
     for (const { view, p, raise } of [...POSES, ...(EXTRA[name] ?? [])])
       write(`${name}-${view}${raise ? '-raise' : ''}-p${p}.png`, renderPose(image, type, view, p, raise))

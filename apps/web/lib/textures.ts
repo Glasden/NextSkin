@@ -8,9 +8,9 @@ export function figureSrc(hash: string, model: TextureType): (n: number, view: P
   return (p, view, raise) => `/render/v${RENDERER_VERSION}/${view}${raise ? '-raise' : ''}/${model}/${p}/${hash}.png`
 }
 
-/** PlayerHead 的 src：正脸加帽子层 */
-export function headSrc(hash: string): (k: number) => string {
-  return (k) => `/render/v${RENDERER_VERSION}/head/${k}/${hash}.png`
+/** PlayerHead 的 src：正脸和立体的帽子层，按出图密度 p 出图（ADR-0056） */
+export function headSrc(hash: string): (p: number) => string {
+  return (p) => `/render/v${RENDERER_VERSION}/head/${p}/${hash}.png`
 }
 
 /** 材质的原始 PNG，游戏客户端也用这个地址 */

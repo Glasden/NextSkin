@@ -45,7 +45,7 @@ describe('材质形状', () => {
       () => inferSkinModel(bad),
       () => prepareSkin(bad),
       () => renderFigure(bad, 'steve', 1),
-      () => renderHead(bad, 'alex', 1),
+      () => renderHead(bad, 1),
     ]) {
       expect(run).toThrow('RGBA 像素长度')
     }
@@ -202,17 +202,12 @@ describe('2D 正背面与头像', () => {
     expect(pixel(renderFigure(skin, 'steve', 1), 0, 10)[3]).toBe(255)
   })
 
-  it('半透明外层用 float32 over 合成；头像与正脸一致且输入不变', () => {
+  it('半透明外层用 float32 over 合成，输入不变', () => {
     const skin = blank()
     paint(skin, 8, 8, 8, 8, [100, 150, 200, 0])
     paint(skin, 40, 8, 8, 8, [200, 50, 100, 128])
     const before = skin.data.slice()
     expect(pixel(renderFigure(skin, 'steve', 1), 4, 0)).toEqual([150, 99, 149, 255])
-    for (const type of ['steve', 'alex'] as const) {
-      const head = renderHead(skin, type, 1)
-      expect([head.width, head.height]).toEqual([8, 8])
-      for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) expect(pixel(head, x, y)).toEqual([150, 99, 149, 255])
-    }
     expect(skin.data).toEqual(before)
   })
 
@@ -222,7 +217,7 @@ describe('2D 正背面与头像', () => {
     paint(skin, 80, 16, 16, 16, [200, 220, 240, 255])
     // 缩小不会选中的一个透明像素，仍应阻止整块帽子清 alpha。
     paint(skin, 64, 0, 1, 1, [0, 0, 0, 127])
-    expect(pixel(renderHead(skin, 'steve', 1), 0, 0)).toEqual([200, 220, 240, 255])
+    expect(pixel(renderHead(skin, 1), 0, 0)).toEqual([200, 220, 240, 255])
   })
 
   it.each([3, 4])('s=%i 的所有 k 按 f×f 方块中心取样', (s) => {
@@ -230,10 +225,8 @@ describe('2D 正背面与头像', () => {
       const skin = patterned(64 * s, height)
       for (const type of ['steve', 'alex'] as const) {
         const full = renderFigure(skin, type, s)
-        const head = renderHead(skin, type, s)
         for (const k of resolutions(s)) {
           expect(samePixels(renderFigure(skin, type, k), centerResize(full, s / k))).toBe(true)
-          expect(samePixels(renderHead(skin, type, k), centerResize(head, s / k))).toBe(true)
         }
       }
     }
@@ -270,7 +263,6 @@ describe('2D 正背面与头像', () => {
   it.each([0, -1, 1.5, NaN, Infinity, 3, 8])('s=4 拒绝 k=%s', (k) => {
     expect(() => renderFigure(blank(256), 'steve', k)).toThrow(TextureShapeError)
     expect(() => renderFigure(blank(256, 128), 'cape', k)).toThrow(TextureShapeError)
-    expect(() => renderHead(blank(256), 'alex', k)).toThrow(TextureShapeError)
   })
 
   it('拼图尺寸与 k 校验', () => {

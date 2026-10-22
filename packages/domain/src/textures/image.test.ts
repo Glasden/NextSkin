@@ -176,21 +176,17 @@ test('坏 PNG/解压炸弹映射为 texture_file_invalid', () => {
   }
 })
 
-test('出图结果等于纯 RGBA 渲染器；头像使用 steve', async () => {
+test('出图结果等于纯 RGBA 渲染器；头像不看模型', async () => {
   const bytes = await fixture(),
     image = decodeTexturePng(bytes)
   expect(decodeTexturePng(renderTexture({ kind: 'figure', bytes, type: 'alex', k: 1 }))).toEqual(
     renderFigure(image, 'alex', 1),
   )
-  expect(decodeTexturePng(renderTexture({ kind: 'head', bytes, type: 'alex', k: 1 }))).toEqual(
-    renderHead(image, 'steve', 1),
-  )
+  expect(decodeTexturePng(renderTexture({ kind: 'head', bytes, type: 'alex', k: 3 }))).toEqual(renderHead(image, 3))
   expect(renderTexture({ kind: 'figure', bytes, type: 'alex', k: 1 })).toEqual(
     encodeRenderPng(renderFigure(image, 'alex', 1)),
   )
-  expect(renderTexture({ kind: 'head', bytes, type: 'alex', k: 1 })).toEqual(
-    encodeRenderPng(renderHead(image, 'steve', 1)),
-  )
+  expect(renderTexture({ kind: 'head', bytes, type: 'alex', k: 3 })).toEqual(encodeRenderPng(renderHead(image, 3)))
 })
 
 test.each(POSE_KINDS)('%s 按请求模型和密度渲染，用出图编码器保留全部像素', async (kind) => {

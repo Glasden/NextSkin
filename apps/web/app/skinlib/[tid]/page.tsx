@@ -169,7 +169,6 @@ export default async function TexturePage({ params }: { params: Promise<{ tid: s
               <>
                 <PlayerHead
                   src={texture.uploader.avatar ? headSrc(texture.uploader.avatar.hash) : undefined}
-                  textureScale={texture.uploader.avatar?.scale}
                   size={32}
                   alt=""
                 />

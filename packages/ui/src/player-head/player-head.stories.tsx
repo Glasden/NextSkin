@@ -15,7 +15,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** 四种尺寸：脸是 8×8 个标准像素，分别放大 2、3、4、6 倍 */
+/** 四种尺寸：脸是 8×8 个标准像素，分别放大 2、3、4、6 倍；帽子层比脸大一圈，伸到方框外面 */
 export const Sizes: Story = {
   render: () => (
     <div className="flex items-end gap-4">
@@ -25,11 +25,15 @@ export const Sizes: Story = {
     </div>
   ),
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('img', { name: 'Miku 的头像，48px' })).toHaveAttribute('width', '48')
+    // 按 48px 的脸排版，出图是 9×9 格的 54px，四周各伸出 3px
+    const head = canvas.getByRole('img', { name: 'Miku 的头像，48px' })
+    await expect(head).toHaveAttribute('width', '54')
+    await expect(head).toHaveStyle({ left: '-3px', top: '-3px' })
+    await expect(head.parentElement).toHaveStyle({ width: '48px', height: '48px' })
   },
 }
 
-/** 高清皮肤（s = 8）：32px 显示 k = 4，2x 屏 k = 8；普通皮肤只有 k = 1，不给 srcset */
+/** 出图密度和皮肤的分辨率无关：32px 的头像 1x 屏 p = 4，2x 屏 p = 8，高清皮肤（s = 8）也一样 */
 export const Skins: Story = {
   render: () => (
     <div className="flex items-center gap-4">
@@ -44,7 +48,11 @@ export const Skins: Story = {
     const hd = canvas.getByRole('img', { name: '红金装甲的头像（高清）' })
     await expect(hd).toHaveAttribute('src', ironman.src(4))
     await expect(hd).toHaveAttribute('srcset', `${ironman.src(4)} 1x, ${ironman.src(8)} 2x`)
-    await expect(canvas.getByRole('img', { name: 'Haka 的头像' })).not.toHaveAttribute('srcset')
+    const haka = headFixture('haka')
+    await expect(canvas.getByRole('img', { name: 'Haka 的头像' })).toHaveAttribute(
+      'srcset',
+      `${haka.src(6)} 1x, ${haka.src(12)} 2x`,
+    )
   },
 }
 

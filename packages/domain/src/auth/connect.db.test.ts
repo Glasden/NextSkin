@@ -13,7 +13,7 @@ import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import type { OAuthExtensionGrantHandler, oauthProvider } from '@better-auth/oauth-provider'
 import type { BetterAuthPlugin } from 'better-auth'
 import { dispatchAuthEndpoint, type DispatchContext } from 'better-auth/api'
-import { RENDERER_VERSION } from '@nextskin/skin'
+import { MAX_HEAD_DENSITY, RENDERER_VERSION } from '@nextskin/skin'
 import { createLocalJWKSet, decodeJwt, decodeProtectedHeader, importJWK, jwtVerify, type JSONWebKeySet } from 'jose'
 import { afterAll, beforeAll, beforeEach, expect, test, vi, type MockInstance } from 'vitest'
 import { createCore, encodeSettingValue, type Core, type CoreSettingKey, type CoreSettingValue } from '../index.ts'
@@ -625,8 +625,8 @@ test('头像声明用渲染地址，忽略 users.image', async () => {
     .execute()
   try {
     const tokens = await issue(`${SCOPE} profile`)
-    // 64×64 的皮肤 s = 1，按原分辨率出图
-    const picture = `${ROOT}/render/v${RENDERER_VERSION}/head/1/${hash}.png`
+    // 头像按最大的出图密度出 144×144，和材质倍数无关
+    const picture = `${ROOT}/render/v${RENDERER_VERSION}/head/${MAX_HEAD_DENSITY}/${hash}.png`
     expect(decodeJwt(tokens.id_token)).toHaveProperty('picture', picture)
     expect(await json(await info(tokens))).toHaveProperty('picture', picture)
     const withoutProfile = await issue()

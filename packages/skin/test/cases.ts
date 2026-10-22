@@ -46,7 +46,9 @@ export function goldenCases(): GoldenCase[] {
     for (const k of selected)
       cases.push({ name: `${name}-figure-k${k}.png`, render: () => renderFigure(image, type, k) })
     if (type === 'cape') return
-    cases.push({ name: `${name}-head-k1.png`, render: () => renderHead(image, type, 1) })
+    // 头像：奇数和偶数密度各一张（奇数时右下多一个像素），高清皮肤再存一张 p 等于 s 的
+    for (const p of new Set([3, 4, ...(s > 1 ? [s] : [])]))
+      cases.push({ name: `${name}-head-p${p}.png`, render: () => renderHead(image, p) })
     // 3D 出图：抬手拼图的第 0 帧就是静止图，所以只存拼图；高清皮肤再存一张 p 等于 s 的。
     // 合成的花纹材质几乎压不动，3D 出图只用真实材质
     if (name.startsWith('synthetic')) return

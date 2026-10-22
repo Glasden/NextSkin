@@ -94,12 +94,7 @@ export default async function AdminUsersPage({
               uid: <span className="font-mono">{user.uid}</span>,
               user: (
                 <span className="flex min-w-40 items-center gap-2">
-                  <PlayerHead
-                    src={user.avatar ? headSrc(user.avatar.hash) : undefined}
-                    textureScale={user.avatar?.scale}
-                    size={24}
-                    alt=""
-                  />
+                  <PlayerHead src={user.avatar ? headSrc(user.avatar.hash) : undefined} size={24} alt="" />
                   <span className="min-w-0 truncate">
                     <Link render={<NextLink href={`/admin/users/${user.uid}`} />}>{user.nickname}</Link>
                   </span>

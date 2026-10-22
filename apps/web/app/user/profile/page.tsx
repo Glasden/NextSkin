@@ -50,12 +50,7 @@ export default async function ProfilePage() {
         </h2>
         <div className="flex flex-col gap-6 rounded-md border border-border bg-surface p-6">
           <div className="flex min-w-0 items-center gap-4">
-            <PlayerHead
-              src={avatar ? headSrc(avatar.hash) : undefined}
-              textureScale={avatar?.scale}
-              size={48}
-              alt={t('summary.avatarAlt')}
-            />
+            <PlayerHead src={avatar ? headSrc(avatar.hash) : undefined} size={48} alt={t('summary.avatarAlt')} />
             <div className="flex min-w-0 items-center gap-3">
               <p className="truncate text-xl font-medium text-text">{profile.nickname}</p>
               {admin && <Badge>{t(`summary.roles.${profile.role === 'superadmin' ? 'superadmin' : 'admin'}`)}</Badge>}

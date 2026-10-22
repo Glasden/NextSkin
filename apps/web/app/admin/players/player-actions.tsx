@@ -272,12 +272,7 @@ function RecipientCard({ user }: { user: AdminUserLookup }) {
   const role: UserRole = user.role
   return (
     <div className="flex items-center gap-3 rounded-md border border-border bg-surface-sunken p-3">
-      <PlayerHead
-        src={user.avatar ? headSrc(user.avatar.hash) : undefined}
-        textureScale={user.avatar?.scale}
-        size={48}
-        alt=""
-      />
+      <PlayerHead src={user.avatar ? headSrc(user.avatar.hash) : undefined} size={48} alt="" />
       <span className="flex min-w-0 flex-col gap-1">
         <span className="flex flex-wrap items-center gap-2">
           <span className="min-w-0 font-medium break-all text-text">{user.nickname}</span>

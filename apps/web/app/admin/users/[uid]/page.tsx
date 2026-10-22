@@ -96,12 +96,7 @@ export default async function AdminUserPage({
         </span>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-center gap-4">
-            <PlayerHead
-              src={user.avatar ? headSrc(user.avatar.hash) : undefined}
-              textureScale={user.avatar?.scale}
-              size={48}
-              alt=""
-            />
+            <PlayerHead src={user.avatar ? headSrc(user.avatar.hash) : undefined} size={48} alt="" />
             <div className="flex min-w-0 flex-col gap-2">
               <h1 className="font-pixel text-pixel-2 break-all text-text">{user.nickname}</h1>
               <div className="flex flex-wrap items-center gap-2">

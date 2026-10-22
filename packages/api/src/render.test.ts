@@ -1,4 +1,11 @@
-import { DomainError, MAX_POSE_DENSITY, POSE_KINDS, RENDERER_VERSION, type Core } from '@nextskin/domain'
+import {
+  DomainError,
+  MAX_HEAD_DENSITY,
+  MAX_POSE_DENSITY,
+  POSE_KINDS,
+  RENDERER_VERSION,
+  type Core,
+} from '@nextskin/domain'
 import { expect, test, vi } from 'vitest'
 import { createApp } from './app.ts'
 
@@ -31,7 +38,7 @@ test.each(['figure/steve', 'figure/alex', 'figure/cape', 'head'])(
       expect(new Uint8Array(await response.arrayBuffer())).toEqual(method === 'HEAD' ? new Uint8Array() : bytes)
     }
     if (kind === 'head') {
-      expect(head).toHaveBeenCalledWith({ hash, k: 1 })
+      expect(head).toHaveBeenCalledWith({ hash, p: 1 })
       expect(figure).not.toHaveBeenCalled()
     } else expect(figure).toHaveBeenCalledWith({ hash, model: kind.slice(7), k: 1 })
   },
@@ -67,6 +74,8 @@ test.each([
   path(`head/-1/${hash}.png`),
   path(`head/1.0/${hash}.png`),
   path(`head/10000/${hash}.png`),
+  path(`head/${MAX_HEAD_DENSITY + 1}/${hash}.png`),
+  path(`head/0/${hash}.png`),
   path(`head/1/${hash.toUpperCase()}.png`),
   path(`head/1/${hash}.jpg`),
   path('head/1/abc.png'),
@@ -96,10 +105,12 @@ test.each([
   expect(pose).not.toHaveBeenCalled()
 })
 
-test('合法 k 范围包含 9999，其他 HTTP 方法返回 405 / Allow', async () => {
-  const { app, figure } = setup()
+test('合法 k 范围包含 9999，头像密度到上限为止，其他 HTTP 方法返回 405 / Allow', async () => {
+  const { app, figure, head } = setup()
   expect((await app.request(path(`figure/steve/9999/${hash}.png`))).status).toBe(200)
   expect(figure).toHaveBeenCalledWith({ hash, model: 'steve', k: 9999 })
+  expect((await app.request(path(`head/${MAX_HEAD_DENSITY}/${hash}.png`))).status).toBe(200)
+  expect(head).toHaveBeenCalledWith({ hash, p: MAX_HEAD_DENSITY })
   figure.mockClear()
   for (const method of ['POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']) {
     const response = await app.request(path(), { method })

@@ -28,14 +28,12 @@ export function fixture(name: FixtureName) {
   }
 }
 
-/** 返回 PlayerHead 需要的 src 和 textureScale；披风没有头像 */
+/** 返回 PlayerHead 需要的 src；披风没有头像 */
 export function headFixture(name: Exclude<FixtureName, 'mojang_cape' | 'legacy_cape'>) {
-  const { textureScale } = manifest.figures[name]
   return {
-    textureScale,
-    src: (k: number) => {
-      const url = urls[`./fixtures/${name}-head-k${k}.png`]
-      if (!url) throw new Error(`没有 ${name} 在 k = ${k} 的头像，运行 pnpm --filter @nextskin/ui skin:fixtures`)
+    src: (p: number) => {
+      const url = urls[`./fixtures/${name}-head-p${p}.png`]
+      if (!url) throw new Error(`没有 ${name} 在 p = ${p} 的头像，运行 pnpm --filter @nextskin/ui skin:fixtures`)
       return url
     },
   }

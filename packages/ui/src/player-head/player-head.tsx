@@ -1,21 +1,19 @@
-import { pickResolution } from '@nextskin/skin'
 import { cx } from '../cx.ts'
 import { LogoMark } from '../logo/logo-mark.tsx'
 
 export interface PlayerHeadProps {
   /**
-   * 头像的出图地址：服务端渲染的正脸加帽子层（ADR-0025），按分辨率 k 返回。
+   * 头像的出图地址：服务端渲染的正脸和立体的帽子层（ADR-0056），按出图密度 p 返回。
+   * p 是脸上一格占多少个输出像素，等于显示倍数乘设备像素比，浏览器不缩放。
    * 还没有头像时不传，按 fallback 显示同样大小的占位
    */
-  src?: (k: number) => string
+  src?: (p: number) => string
   /**
    * 不传 src 时的占位。`logo`（默认）是标志的像素图形，给还没设头像的用户；
    * `blank` 是和 FigurePlaceholder 同样画法的空白脸，给还没有皮肤的角色和已经注销的用户，表示这里没有东西
    */
   fallback?: 'logo' | 'blank'
-  /** 皮肤的倍数 s：宽度 ÷ 64。不传 src 时忽略 */
-  textureScale?: number
-  /** 显示成 16、24、32、48px：脸是 8×8 个标准像素，只做整数倍放大（DESIGN.md §5） */
+  /** 脸显示成 16、24、32、48px，即 8×8 个标准像素的 2、3、4、6 倍（DESIGN.md §5）。帽子层比脸大一圈，四周各伸出 size / 16 */
   size: 16 | 24 | 32 | 48
   /** 替代文字，例如“Miku 的头像”。头像旁边已经写了名字时传空字符串，读屏软件不再重复 */
   alt: string
@@ -23,9 +21,10 @@ export interface PlayerHeadProps {
 
 /**
  * 用户和角色的头像。一律是方形：圆形裁切会切掉边缘的像素（DESIGN.md §5）。
+ * 组件按脸排版，帽子层像 BS 的头像那样伸到方框外面，父元素不要裁掉四周。
  * 没有头像时显示标志的图形，或者一块和 FigurePlaceholder 同样画法的空白脸
  */
-export function PlayerHead({ src, textureScale = 1, size, alt, fallback = 'logo' }: PlayerHeadProps) {
+export function PlayerHead({ src, size, alt, fallback = 'logo' }: PlayerHeadProps) {
   const frame = 'block shrink-0 rounded-none'
   if (!src) {
     return (
@@ -46,21 +45,24 @@ export function PlayerHead({ src, textureScale = 1, size, alt, fallback = 'logo'
       </span>
     )
   }
-  const scale = size / 8
-  const k1 = pickResolution(textureScale, scale, 1)
-  const k2 = pickResolution(textureScale, scale, 2)
+  // 出图是 9p×9p，帽子四周各多出半格。p 是奇数时脸左上的边距是 (p - 1) / 2，所以往下取整
+  const scale = size / 8,
+    outer = 9 * scale,
+    inset = Math.floor(scale / 2)
   return (
-    <img
-      src={src(k1)}
-      srcSet={k2 === k1 ? undefined : `${src(k1)} 1x, ${src(k2)} 2x`}
-      width={size}
-      height={size}
-      alt={alt}
-      loading="lazy"
-      decoding="async"
-      draggable={false}
-      className={cx(frame, '[image-rendering:pixelated]')}
-      style={{ width: size, height: size }}
-    />
+    <span className={cx(frame, 'relative')} style={{ width: size, height: size }}>
+      <img
+        src={src(scale)}
+        srcSet={`${src(scale)} 1x, ${src(scale * 2)} 2x`}
+        width={outer}
+        height={outer}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        draggable={false}
+        className="absolute max-w-none [image-rendering:pixelated]"
+        style={{ width: outer, height: outer, left: -inset, top: -inset }}
+      />
+    </span>
   )
 }

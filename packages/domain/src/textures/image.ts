@@ -242,7 +242,7 @@ export function renderTexture({ kind, bytes, type, k }: RenderInput): Uint8Array
   // 不能用上传的上限：导入的旧文件可以更大
   const image = decodeTexturePng(bytes, STORED_TEXTURE_LIMITS)
   if (kind === 'figure') return encodeRenderPng(renderFigure(image, type, k))
-  if (kind === 'head') return encodeRenderPng(renderHead(image, 'steve', k))
+  if (kind === 'head') return encodeRenderPng(renderHead(image, k))
   if (type === 'cape') throw new TextureShapeError('披风没有 3D 出图')
   const view = kind === 'both' || kind === 'both-raise' ? 'both' : 'front',
     raise = kind === 'both-raise' || kind === 'front-raise'

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { MAX_POSE_DENSITY, RENDERER_VERSION, type TextureType } from '@nextskin/skin'
+import { MAX_HEAD_DENSITY, MAX_POSE_DENSITY, RENDERER_VERSION, type TextureType } from '@nextskin/skin'
 import { assertTextureHash } from './storage.ts'
 
 export const POSE_KINDS = ['both', 'both-raise', 'front', 'front-raise'] as const
@@ -29,7 +29,7 @@ export function renderKey(key: RenderKey): string {
     (pose && key.model === 'cape') ||
     !Number.isSafeInteger(key.k) ||
     key.k < 1 ||
-    key.k > (pose ? MAX_POSE_DENSITY : 9999)
+    key.k > (pose ? MAX_POSE_DENSITY : key.kind === 'head' ? MAX_HEAD_DENSITY : 9999)
   ) {
     throw new Error('出图缓存键不合法')
   }

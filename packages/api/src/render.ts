@@ -1,4 +1,11 @@
-import { DomainError, MAX_POSE_DENSITY, POSE_KINDS, RENDERER_VERSION, type Core } from '@nextskin/domain'
+import {
+  DomainError,
+  MAX_HEAD_DENSITY,
+  MAX_POSE_DENSITY,
+  POSE_KINDS,
+  RENDERER_VERSION,
+  type Core,
+} from '@nextskin/domain'
 import type { Hono } from 'hono'
 import type { AppEnv } from './env.ts'
 import { errorPage, protocolMethodResponse } from './protocol/http.ts'
@@ -13,7 +20,8 @@ export function registerRender(app: Hono<AppEnv>, core: Core): void {
       !/^[0-9a-f]{64}\.png$/.test(file) ||
       (model !== undefined && model !== 'steve' && model !== 'alex' && model !== 'cape') ||
       (model !== undefined && kind !== 'figure' && !poseKind) ||
-      (poseKind !== undefined && (model === 'cape' || Number(k) > MAX_POSE_DENSITY))
+      (poseKind !== undefined && (model === 'cape' || Number(k) > MAX_POSE_DENSITY)) ||
+      (model === undefined && Number(k) > MAX_HEAD_DENSITY)
     )
       return errorPage(404)
     // 新端点的 OPTIONS 也返回 405，不沿用 BS 协议端点的 OPTIONS 200 特例。
@@ -23,7 +31,7 @@ export function registerRender(app: Hono<AppEnv>, core: Core): void {
       const hash = file.slice(0, -4)
       const bytes =
         model === undefined
-          ? await core.renders.head({ hash, k: Number(k) })
+          ? await core.renders.head({ hash, p: Number(k) })
           : poseKind
             ? await core.renders.pose({ hash, kind: poseKind, model, p: Number(k) })
             : await core.renders.figure({ hash, model, k: Number(k) })
