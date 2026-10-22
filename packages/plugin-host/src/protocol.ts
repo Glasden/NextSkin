@@ -9,6 +9,7 @@ import type {
   HttpMethod,
   InterceptorName,
   Json,
+  PluginNotification,
   RequestScope,
 } from '@nextskin/plugin-sdk'
 import type { PluginContributions } from './manifest.ts'
@@ -98,6 +99,10 @@ export interface CoreRequests {
   'users.adjustScore': {
     args: { uid: number; delta: number; reason: string; key: string }
     result: { status: string; balance: number | null }
+  }
+  'notifications.send': {
+    args: { uid: number; notification: PluginNotification; key: string }
+    result: { status: string }
   }
   'users.get': { args: { uid: number }; result: Json | null }
   'users.getMany': { args: { uids: readonly number[] }; result: Json[] }

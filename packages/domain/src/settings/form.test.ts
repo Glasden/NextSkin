@@ -82,6 +82,7 @@ const expected = {
   'network.trustedProxies': lines,
   'cache.publicMaxAge': integer(0),
   'audit.retentionDays': integer(0, 3650),
+  'notifications.retentionDays': integer(0, 3650),
 } satisfies Partial<Record<CoreSettingKey, SettingControl>>
 
 test('每个可见设置都有预期控件，注册表按分区和页面顺序排列', () => {

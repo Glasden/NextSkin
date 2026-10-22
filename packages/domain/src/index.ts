@@ -143,3 +143,6 @@ export { OAUTH_SCOPES, SELECT_SCOPE, READ_SCOPE, JOIN_SCOPE, SHARED_OAUTH_CLIENT
 export type { OAuthClientType, OAuthClientView } from './oauth/clients.ts'
 
 export { CAPTCHA_HEADER, type CaptchaPublicConfig, type CaptchaInput, type CaptchaResult } from './captcha/service.ts'
+
+export type { NotificationView } from './notifications/render.ts'
+export type { SendNotificationInput } from './notifications/admin.ts'

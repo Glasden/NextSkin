@@ -16,7 +16,7 @@ export function Tooltip({ content, children }: TooltipProps) {
     <BaseTooltip.Root>
       <BaseTooltip.Trigger render={children} />
       <BaseTooltip.Portal>
-        <BaseTooltip.Positioner className="z-10" sideOffset={8} collisionPadding={8}>
+        <BaseTooltip.Positioner className="z-30" sideOffset={8} collisionPadding={8}>
           <BaseTooltip.Popup
             className={
               // 渲染在 body 下，字体自己设。出现和消失是四格阶跃的淡入淡出

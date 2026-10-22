@@ -191,7 +191,14 @@
     "oauth_redirect_uri_too_long": "Each redirect URI must be at most {max} characters.",
     "oauth_client_public": "Native applications do not have a client secret.",
     "oauth_client_shared": "The shared application cannot be deleted.",
-    "oauth_client_not_manageable": "Only a super administrator can manage applications without an owner."
+    "oauth_client_not_manageable": "Only a super administrator can manage applications without an owner.",
+    "notification_not_found": "Notification not found.",
+    "notification_broadcast_not_found": "Notification broadcast not found.",
+    "notification_broadcast_recalled": "This broadcast has already been recalled.",
+    "notification_title_length": "The title must contain {min}–{max} characters.",
+    "notification_body_length": "The body cannot exceed {max} characters.",
+    "notification_recipients_length": "Specify {min}–{max} recipients.",
+    "notification_recipient_unknown": "Recipient “{value}” was not found."
   },
   "score": {
     "reasons": {
@@ -338,6 +345,7 @@
     "nav": {
       "label": "User center",
       "dashboard": "Dashboard",
+      "notifications": "Notifications",
       "players": "Players",
       "profile": "Profile",
       "security": "Sign-in & security",
@@ -781,6 +789,31 @@
       "next": "Next",
       "page": "Page {page}"
     },
+    "notifications": {
+      "title": "Notifications",
+      "description": "Results of your reports, changes administrators made to your textures and account, and messages from the site.",
+      "tabsLabel": "Notification filter",
+      "tabs": {
+        "all": "All",
+        "unread": "Unread"
+      },
+      "listLabel": "Notifications",
+      "readAll": "Mark all as read",
+      "readAllDone": "{count, plural, =0 {Nothing to mark} one {Marked # notification as read} other {Marked # notifications as read}}",
+      "markRead": "Mark as read",
+      "delete": "Delete",
+      "deleted": "Notification deleted",
+      "open": "View",
+      "failed": "That didn’t work. Try again in a moment.",
+      "emptyTitle": "No notifications yet",
+      "emptyUnreadTitle": "No unread notifications",
+      "emptyDescription": "You’ll be told here when a report gets a result, or an administrator acts on your textures or account.",
+      "emptyUnreadAction": "View all notifications",
+      "pagination": "Notification pages",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page}"
+    },
     "oauthClients": {
       "title": "OAuth apps",
       "count": "{count, number}",
@@ -890,6 +923,15 @@
       },
       "copyright": "© {year} {name}",
       "poweredBy": "Powered by NextSkin"
+    },
+    "notifications": {
+      "label": "Notifications",
+      "labelUnread": "{count, plural, =100 {Notifications, more than 99 unread} other {Notifications, # unread}}",
+      "title": "Notifications",
+      "readAll": "Mark all as read",
+      "viewAll": "View all",
+      "empty": "No new notifications",
+      "unread": "Unread"
     }
   },
   "home": {
@@ -1150,7 +1192,8 @@
       "migration": "Migration",
       "plugins": "Plugins",
       "failedJobs": "Failed jobs",
-      "oauthClients": "OAuth apps"
+      "oauthClients": "OAuth apps",
+      "notifications": "Notifications"
     },
     "roles": {
       "banned": "Banned",
@@ -1417,7 +1460,9 @@
         "textureUnpublish": "Unpublish texture",
         "oauthClientDisable": "Disable OAuth app",
         "oauthClientEnable": "Enable OAuth app",
-        "oauthClientDelete": "Delete OAuth app"
+        "oauthClientDelete": "Delete OAuth app",
+        "notificationSend": "Send notification",
+        "notificationRecall": "Recall notification"
       },
       "subjects": {
         "user": "User #{id}",
@@ -1429,7 +1474,8 @@
         "pluginHost": "Plugin host",
         "oauthClient": "OAuth app #{id}",
         "job": "Failed job #{id}",
-        "allJobs": "All failed jobs"
+        "allJobs": "All failed jobs",
+        "notificationBroadcast": "Notification broadcast #{id}"
       },
       "actorSystem": "System",
       "actorPlugin": "Plugin {id}",
@@ -1476,7 +1522,9 @@
         "textureDescription": "description {from} → {to} characters",
         "textureUnpublish": "{name}{closets, plural, =0 {} one {, removed from # closet} other {, removed from # closets}}{refunded, plural, =0 {} one {, # point refunded} other {, # points refunded}}",
         "oauthClient": "client_id {clientId}{owner, select, none {, no owner} other {, owner #{owner}}}",
-        "oauthClientDelete": "{summary}; {users, plural, one {# user’s authorization} other {# users’ authorizations}}, {accessTokens, plural, one {# access token} other {# access tokens}}, {refreshTokens, plural, one {# refresh token} other {# refresh tokens}}"
+        "oauthClientDelete": "{summary}; {users, plural, one {# user’s authorization} other {# users’ authorizations}}, {accessTokens, plural, one {# access token} other {# access tokens}}, {refreshTokens, plural, one {# refresh token} other {# refresh tokens}}",
+        "notificationSend": "Recipients: {audience, select, all {all users} users {regular users} admins {administrators} other {{count, plural, one {# chosen user} other {# chosen users}}}}",
+        "notificationRecall": "Delivered to {recipientCount, number} recipients before recall"
       },
       "filterActor": "Only actor #{uid}",
       "filterSubject": "Only {subject}",
@@ -1902,6 +1950,12 @@
             "label": "Cache lifetime of public resources",
             "help": "How long browsers cache texture files and CSL responses, in seconds."
           }
+        },
+        "notifications": {
+          "retentionDays": {
+            "label": "Notification retention days",
+            "help": "Notifications are deleted this many days after they were sent, read or not. Set to 0 to keep them forever."
+          }
         }
       }
     },
@@ -2033,6 +2087,9 @@
           "readPrivate": "Read users' email addresses, score and language",
           "score": "Add to or deduct from any user’s score, and see balances"
         },
+        "notifications": {
+          "send": "Send any user an in-site notification using the plugin’s own messages"
+        },
         "players": {
           "read": "Read players"
         },
@@ -2150,7 +2207,10 @@
         "authCleanup": "Clean up expired sign-in data",
         "auditLogCleanup": "Clean up old audit log entries",
         "pluginKvCleanup": "Clean up expired plugin data",
-        "pluginCleanup": "Clean up an uninstalled plugin"
+        "pluginCleanup": "Clean up an uninstalled plugin",
+        "notificationFanout": "Deliver broadcast notifications",
+        "notificationRecall": "Remove recalled notifications",
+        "notificationSweep": "Remove expired notifications"
       },
       "templates": {
         "verifyEmail": "Verify email",
@@ -2215,7 +2275,13 @@
       "email_taken": "This email is already used by another account.",
       "texture_not_found": "Texture not found, or it is a private texture the owner can't see.",
       "closet_item_exists": "This texture is already in the user's closet.",
-      "closet_item_not_found": "This texture is not in the user's closet."
+      "closet_item_not_found": "This texture is not in the user's closet.",
+      "notification_broadcast_not_found": "Notification broadcast not found.",
+      "notification_broadcast_recalled": "This broadcast has already been recalled.",
+      "notification_title_length": "The title must contain {min}–{max} characters.",
+      "notification_body_length": "The body cannot exceed {max} characters.",
+      "notification_recipients_length": "Specify {min}–{max} recipients.",
+      "notification_recipient_unknown": "Recipient “{value}” was not found."
     },
     "userDetail": {
       "metaTitle": "User #{uid}",
@@ -2432,7 +2498,8 @@
         "title": "OAuth apps",
         "owned": "Owned apps",
         "manage": "Manage on the OAuth apps page"
-      }
+      },
+      "sendNotification": "Send notification"
     },
     "oauthClients": {
       "title": "OAuth apps",
@@ -2485,6 +2552,61 @@
       "deleteHint": "{count, plural, =0 {Nobody has authorized this app yet.} one {The authorization of # user will stop working.} other {The authorizations of # users will stop working.}} Services using this app need to be set up again. This can’t be undone.{notify, select, yes { The owner gets an email.} other {}}",
       "deleteConfirm": "Delete app",
       "deleted": "{name} deleted"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "Send in-site notifications to users. They only appear on the site and are not emailed. A broadcast goes to the users who exist when it is sent; people who sign up later won’t get it.",
+      "compose": "Send a notification",
+      "audience": "Recipients",
+      "audiences": {
+        "all": "All users",
+        "users": "Regular users",
+        "admins": "Administrators",
+        "specific": "Chosen users"
+      },
+      "audienceHints": {
+        "all": "Everyone except banned users.",
+        "users": "Users with the “User” role, excluding administrators and banned users.",
+        "admins": "Administrators and super administrators.",
+        "specific": "Only the users listed below. Banned users receive it too."
+      },
+      "recipients": "Users",
+      "recipientsHint": "One uid or email per line, up to 50.",
+      "titleLabel": "Title",
+      "titleHint": "Up to 60 characters. Shown in the notification list in the header.",
+      "body": "Body",
+      "bodyHint": "Markdown is supported; HTML is not rendered. Optional.",
+      "preview": "What recipients see",
+      "previewUntitled": "The title appears here",
+      "previewTime": "Just now",
+      "recipientsTooMany": "You can send to at most 50 users at once; {count} are listed. Split them into several sends.",
+      "send": "Send",
+      "confirmTitle": "{audience, select, all {Send to all users?} users {Send to all regular users?} other {Send to all administrators?}}",
+      "confirmHint": "Every recipient gets this notification. With many users it takes a while to finish; if it was a mistake, recall it from the history.",
+      "sent": "{audience, select, specific {Sent} other {Sending started. Track progress in the history.}}",
+      "failed": "The notification wasn’t sent. Try again in a moment.",
+      "history": "History",
+      "historyCount": "{count}",
+      "tableLabel": "Notification history",
+      "columns": {
+        "title": "Title",
+        "audience": "Recipients",
+        "sender": "Sender",
+        "status": "Status",
+        "time": "Time",
+        "actions": "Actions"
+      },
+      "status": {
+        "sending": "Sending",
+        "sent": "Sent",
+        "recalled": "Recalled"
+      },
+      "delivered": "Delivered to {count, number}",
+      "empty": "No notifications sent yet",
+      "recall": "Recall",
+      "recallTitle": "Recall “{title}”?",
+      "recallHint": "It will be removed from every recipient’s notifications, including people who already read it. The history entry stays.",
+      "recalled": "Recalled “{title}”"
     }
   },
   "yggdrasil": {
@@ -3071,5 +3193,47 @@
     "approved": "Go back to your launcher; it will finish signing in. You can close this page.",
     "deniedTitle": "Denied",
     "denied": "{name} didn’t get any access. You can close this page."
+  },
+  "notifications": {
+    "plugin": {
+      "fallbackTitle": "Notification from plugin {id}"
+    },
+    "types": {
+      "report": {
+        "resolved": {
+          "title": "{outcome, select, resolved {Report accepted} other {Report rejected}}",
+          "body": "Your report about the texture “{textureName}” was {outcome, select, resolved {accepted} other {rejected}}.{refunded, plural, =0 {} other { # points were refunded.}}{rewarded, plural, =0 {} other { You were awarded # points.}}"
+        },
+        "pending": {
+          "title": "New reports need review",
+          "body": "Someone reported a texture. Review it in the admin panel."
+        }
+      },
+      "texture": {
+        "removed": {
+          "title": "{action, select, unpublished {Your texture was unpublished} other {Your texture was deleted}}",
+          "body": "An administrator {action, select, unpublished {unpublished} other {deleted}} your texture “{name}”."
+        }
+      },
+      "account": {
+        "changed": {
+          "title": "An administrator changed your account",
+          "body": "{changes}",
+          "changes": {
+            "email": "{pending, select, true {Changed your email (effective after confirmation)} other {Changed your email}}",
+            "password": "Set a new password",
+            "twoFactor": "Turned off two-factor authentication",
+            "passkeys": "Deleted {count, plural, one {# passkey} other {# passkeys}}",
+            "binding": "Unlinked your {provider} account",
+            "playerRenamed": "Renamed your player {from} to {to}",
+            "playerDeleted": "Deleted your player {name}",
+            "oauthClientDisabled": "Disabled your OAuth application {name}",
+            "oauthClientDeleted": "Deleted your OAuth application {name}",
+            "playerTransferredOut": "Transferred your player {name} to another user",
+            "playerTransferredIn": "Transferred the player {name} to you"
+          }
+        }
+      }
+    }
   }
 }

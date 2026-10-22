@@ -8,6 +8,9 @@ export const IMPORT_SCORE_REASON = 'score.reasons.import'
 
 /** 导入清空的业务表，按删除的先后排好（外键）。texture_files 不在其中，见 clearBusinessData */
 const BUSINESS_TABLES = [
+  'notifications',
+  'notification_broadcasts',
+  'plugin_notification_keys',
   'device_code_selections',
   'yggdrasil_tokens',
   'closet_items',
@@ -199,6 +202,9 @@ export async function inspectTarget(db: Kysely<CoreDatabase>): Promise<TargetSta
     ),
     auditLogs: await countRows(db.selectFrom('audit_logs')),
     other:
+      (await countRows(db.selectFrom('notifications'))) +
+      (await countRows(db.selectFrom('notification_broadcasts'))) +
+      (await countRows(db.selectFrom('plugin_notification_keys'))) +
       (await countRows(db.selectFrom('verifications'))) +
       (await countRows(db.selectFrom('two_factors'))) +
       (await countRows(db.selectFrom('passkeys'))) +

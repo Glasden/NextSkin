@@ -57,8 +57,9 @@ import { JobDeferredError, type JobHandler, type JobRunner } from '../jobs/runne
 import type { createScheduler } from '../jobs/schedules.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import type { TextureStorage } from '../textures/storage.ts'
+import { sendPluginNotification } from '../notifications/plugin.ts'
 import { adjustPluginScore } from '../score/plugin.ts'
-import { scoreAdjustInput } from './core-writes.ts'
+import { notificationSendInput, scoreAdjustInput } from './core-writes.ts'
 import { createPluginCoreData } from './core-data.ts'
 import { PluginCallRejected, PluginInvocationError } from './errors.ts'
 import { pluginFetch } from './fetch.ts'
@@ -660,6 +661,14 @@ export function createPluginSystem(options: {
             pluginId: id,
             now: toIsoTimestamp(now()),
           })
+        case 'notifications.send':
+          require(invocation, 'notifications.send')
+          remaining(invocation)
+          return sendPluginNotification(db, {
+            ...notificationSendInput(a, invocation.known.messages),
+            pluginId: id,
+            now: now(),
+          })
         case 'users.get':
           require(invocation, 'users.read', 'users.readPrivate')
           return coreData.user(a.uid, invocation.granted.has('users.readPrivate'))
@@ -869,6 +878,25 @@ export function createPluginSystem(options: {
     await db.deleteFrom('jobs').where('name', 'like', prefix).execute()
     await db.deleteFrom('job_schedules').where('name', 'like', prefix).execute()
     await db.deleteFrom('failed_jobs').where('name', 'like', prefix).execute()
+    // 用 (plugin_id, id) 索引分批清理，避免长事务；永久幂等键保留给重装后的插件。
+    for (;;) {
+      const batch = await db
+        .selectFrom('notifications')
+        .select('id')
+        .where('plugin_id', '=', id)
+        .orderBy('id')
+        .limit(1000)
+        .execute()
+      if (!batch.length) break
+      await db
+        .deleteFrom('notifications')
+        .where(
+          'id',
+          'in',
+          batch.map((row) => row.id),
+        )
+        .execute()
+    }
     await pluginSettings.clear(db, id)
   }
 

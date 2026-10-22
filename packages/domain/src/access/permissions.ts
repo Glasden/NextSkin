@@ -1,6 +1,7 @@
 import type { UserRole } from '@nextskin/db'
 
 export type CorePermission =
+  | 'notifications.send'
   | 'reports.review'
   | 'textures.manage'
   | 'users.ban'
@@ -17,6 +18,7 @@ const permissions: Record<UserRole, readonly CorePermission[]> = {
   banned: [],
   user: [],
   admin: [
+    'notifications.send',
     'reports.review',
     'textures.manage',
     'users.ban',
@@ -26,6 +28,7 @@ const permissions: Record<UserRole, readonly CorePermission[]> = {
     'audit.read',
   ],
   superadmin: [
+    'notifications.send',
     'reports.review',
     'textures.manage',
     'users.ban',
@@ -55,4 +58,9 @@ export function hasAdminAccess(role: UserRole): boolean {
 export function outranks(actor: UserRole, target: UserRole): boolean {
   const ranks: Record<UserRole, number> = { banned: 0, user: 1, admin: 2, superadmin: 3 }
   return ranks[actor] > ranks[target]
+}
+
+/** 系统通知的收件身份从同一张权限表推导，权限调整后不会漏发。 */
+export function rolesWithPermission(permission: CorePermission): UserRole[] {
+  return (Object.keys(permissions) as UserRole[]).filter((role) => can(role, permission))
 }

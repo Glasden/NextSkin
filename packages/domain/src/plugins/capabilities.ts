@@ -8,5 +8,6 @@ import type { Capability } from '@nextskin/plugin-sdk'
 export const highRiskCapabilities = [
   'users.readPrivate',
   'users.score',
+  'notifications.send',
   'textures.readFile',
 ] as const satisfies readonly Capability[]

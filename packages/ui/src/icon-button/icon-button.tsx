@@ -16,6 +16,11 @@ export interface IconButtonProps extends Omit<
   children: ReactNode
   /** 32 / 40px，和同一行的 Button 取相同的尺寸 */
   size?: 'sm' | 'md'
+  /**
+   * 右上角的计数，例如页头铃铛上的未读通知数：0 不显示，超过 99 写 99+。
+   * 角标对读屏隐藏，label 里要写出数量，例如“通知，3 条未读”
+   */
+  count?: number
 }
 
 const sizes = {
@@ -27,7 +32,7 @@ const sizes = {
  * 只有图标的按钮，用在空间紧凑处的常见操作，例如复制。没有边框和阴影，悬停时底色混入 12% 的 text。
  * 含义不明显的操作改用带文字的 Button（DESIGN.md §6）
  */
-export function IconButton({ label, children, size = 'md', ...props }: IconButtonProps) {
+export function IconButton({ label, children, size = 'md', count = 0, ...props }: IconButtonProps) {
   return (
     <Tooltip content={label}>
       <BaseButton
@@ -46,6 +51,15 @@ export function IconButton({ label, children, size = 'md', ...props }: IconButto
         <span aria-hidden className="contents">
           {children}
         </span>
+        {count > 0 && (
+          // 强调色的方块压在图标右上角，外面一圈 2px 的 surface 把它和图标的笔画隔开
+          <span
+            aria-hidden
+            className="absolute top-0.5 right-0.5 grid h-4 min-w-4 place-items-center rounded-sm bg-accent px-0.5 font-pixel text-pixel-1 text-accent-fg tabular-nums shadow-[0_0_0_2px_var(--color-surface)]"
+          >
+            {count > 99 ? '99+' : count}
+          </span>
+        )}
       </BaseButton>
     </Tooltip>
   )

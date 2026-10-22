@@ -1055,3 +1055,56 @@ test('表里换成了本实例取不到的新版本：插件不可用，但在�
   outgoing.resolve(new Response('old call completed'))
   expect(text((await pending).body)).toBe('old call completed')
 })
+
+test('notifications.send 在 plugin host 里发送、重放和卸载后保留永久键', async () => {
+  await boot()
+  const actor = await env.actor()
+  const bytes = await buildPackage({
+    id: 'notice',
+    locales: { en: { notice: { title: 'Hello {name}', body: 'Welcome' } } },
+    source: `
+      import { definePlugin } from '@nextskin/plugin-sdk'
+      export default definePlugin({
+        capabilities: ['notifications.send'],
+        routes: { 'GET /send': { auth: 'public', async handler({ ctx, request }) {
+          const uid = Number(new URL(request.url).searchParams.get('uid'))
+          return Response.json(await ctx.notifications.send(uid, {
+            title: 'notice.title', body: 'notice.body', params: { name: 'Alex' }, link: '/user',
+          }, { key: 'once' }))
+        } } },
+      })
+    `,
+  })
+  const preview = await install(bytes, actor)
+  expect(preview.highRisk).toContain('notifications.send')
+  await env.core.plugins.admin.enable(actor, 'notice')
+  const send = () => env.core.plugins.route(route('notice', `/send?uid=${actor.uid}`))
+  expect(text((await send()).body)).toBe('{"status":"sent"}')
+  expect(text((await send()).body)).toBe('{"status":"duplicate"}')
+  expect(
+    await env.db.selectFrom('notifications').selectAll().where('plugin_id', '=', 'notice').execute(),
+  ).toMatchObject([
+    {
+      user_id: actor.uid,
+      type: 'plugin',
+      title_key: 'notice.title',
+      body_key: 'notice.body',
+      params: '{"name":"Alex"}',
+      link: '/user',
+    },
+  ])
+  await env.core.plugins.admin.uninstall(actor, 'notice')
+  await runCleanup()
+  expect(await env.db.selectFrom('notifications').select('id').where('plugin_id', '=', 'notice').execute()).toEqual([])
+  expect(
+    await env.db
+      .selectFrom('plugin_notification_keys')
+      .select('plugin_key')
+      .where('plugin_id', '=', 'notice')
+      .execute(),
+  ).toEqual([{ plugin_key: 'once' }])
+  await install(bytes, actor)
+  await env.core.plugins.admin.enable(actor, 'notice')
+  expect(text((await send()).body)).toBe('{"status":"duplicate"}')
+  expect(await env.db.selectFrom('notifications').select('id').where('plugin_id', '=', 'notice').execute()).toEqual([])
+})

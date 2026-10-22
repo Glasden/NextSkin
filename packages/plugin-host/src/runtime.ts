@@ -10,6 +10,7 @@ import {
   type Json,
   type Logger,
   type PluginFetchInit,
+  type PluginNotification,
   type RequestScope,
 } from '@nextskin/plugin-sdk'
 import { Kysely } from 'kysely'
@@ -139,6 +140,12 @@ export function loadPlugin(options: {
         ...(granted.has('users.readPrivate')
           ? { findByEmail: (email: string) => rpc(call, 'users.findByEmail', { email }) }
           : {}),
+      })
+    }
+    if (granted.has('notifications.send')) {
+      ctx.notifications = Object.freeze({
+        send: (uid: number, notification: PluginNotification, options: { key: string }) =>
+          rpc(call, 'notifications.send', { uid, notification, key: options?.key }),
       })
     }
     if (granted.has('players.read')) {

@@ -47,7 +47,9 @@ export const capabilities: readonly [
 /** 额外可见：邮箱、积分、语言 */
 'users.readPrivate',
 /** 给任何用户加减积分（`ctx.users.adjustScore`），返回值里带余额；写核心数据，安装时按高风险展示（ADR-0041） */
-'users.score', 'players.read',
+'users.score',
+/** 给任何用户发站内通知，内容是插件自己的文案；写核心数据，安装时按高风险展示（ADR-0052） */
+'notifications.send', 'players.read',
 /** 材质元数据 */
 'textures.read',
 /** 材质 PNG 原始字节 */
@@ -403,6 +405,18 @@ export interface LoginProvider<Ctx> {
 export type MessageKey = string;
 
 // @public
+export interface NotificationsApi {
+    send(uid: Uid, notification: PluginNotification, options: {
+        readonly key: string;
+    }): Promise<NotificationSendResult>;
+}
+
+// @public
+export interface NotificationSendResult {
+    readonly status: 'sent' | 'duplicate' | 'userNotFound' | (string & {});
+}
+
+// @public
 export interface PasswordHasherProvider<Ctx> {
     readonly detect: ({
         readonly prefix: readonly string[];
@@ -469,6 +483,8 @@ export type PluginContext<C extends readonly Capability[], S, T extends TableMap
     readonly users: UsersApiFor<C>;
 }> & Gate<Has<C, 'users.score'>, {
     readonly users: UsersScoreApi;
+}> & Gate<Has<C, 'notifications.send'>, {
+    readonly notifications: NotificationsApi;
 }> & Gate<Has<C, 'players.read'>, {
     readonly players: PlayersApi;
 }> & Gate<Or<Has<C, 'textures.read'>, Has<C, 'textures.readFile'>>, {
@@ -645,6 +661,14 @@ export interface PluginMigration {
 
 // @public
 export type PluginMigrationDb = Omit<Kysely<any>, Exclude<DbOmitted, 'schema'>>;
+
+// @public
+export interface PluginNotification {
+    readonly body?: MessageKey;
+    readonly link?: string;
+    readonly params?: Readonly<Record<string, string | number>>;
+    readonly title: MessageKey;
+}
 
 // @public
 export interface PluginPackageField {
@@ -946,8 +970,8 @@ export { z }
 
 // Warnings were encountered during analysis:
 //
-// dist/context.d.ts:186:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
-// dist/context.d.ts:192:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
+// dist/context.d.ts:209:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
+// dist/context.d.ts:217:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
 // dist/routes.d.ts:35:5 - (ae-forgotten-export) The symbol "RouteArgs" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)

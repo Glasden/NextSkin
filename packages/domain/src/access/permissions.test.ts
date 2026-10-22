@@ -3,6 +3,7 @@ import { can, hasAdminAccess, outranks, type CorePermission } from './permission
 
 const roles = ['banned', 'user', 'admin', 'superadmin'] as const
 const permissions: CorePermission[] = [
+  'notifications.send',
   'reports.review',
   'textures.manage',
   'users.ban',

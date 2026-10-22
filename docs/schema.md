@@ -347,6 +347,70 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 
 进服记录（serverId 对应哪个角色和客户端 IP）只保留 120 秒，放在缓存接口里，默认是进程内存，不建表。签名私钥存在 `settings` 的机密项里。
 
+## 通知
+
+站内通知（ADR-0052）：系统通知、管理员发的、插件发的都存在 `notifications`，一个收件人一行。系统通知和插件通知存类型（或文案键）和参数，读的时候按收件人的语言渲染；管理员写的原文存在 `notification_broadcasts`，每个收件人的那一行只引用它。
+
+### notifications
+
+| 列 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | 自增 | 主键 | |
+| user_id | 整数 | 非空，外键 → users，cascade | 收件人 |
+| type | varchar(32) | 非空 | 系统通知的类型（`report.resolved`、`report.pending`、`texture.removed`、`account.changed`），或 `message`（管理员发的）、`plugin` |
+| params | 长文本 | 可空 | JSON：系统通知和插件通知的参数 |
+| broadcast_id | 整数 | 可空，外键 → notification_broadcasts，cascade | 只有 `message` 有 |
+| plugin_id | varchar(64) | 可空 | 只有 `plugin` 有。不建外键，同 `score_transactions.plugin_id` |
+| title_key、body_key | varchar(128) | 可空 | 插件的文案键，只有 `plugin` 有，`body_key` 可以为空 |
+| link | varchar(500) | 可空 | 插件给的站内路径。系统通知的链接按类型和参数算出来，不存 |
+| read_at | 时间 | 可空 | 未读为空 |
+| created_at | 时间 | 非空 | 群发写出的行记发送的时刻，不记展开到这一行的时刻 |
+
+- 索引：`(user_id, read_at)` 数未读，`(user_id, id)` 翻页，`(broadcast_id, user_id)` 唯一（展开重跑不会写重），`(plugin_id, id)` 给卸载插件时的清理用。
+- 未读数只数到 100（子查询带 `limit`）。
+- 列表、摘要和未读数连上 `notification_broadcasts`，不看已经撤回的发送：撤回当场生效，行由任务稍后分批删掉。
+- 系统通知和触发它的业务写入在同一个事务里写。`report.pending` 用一条 `INSERT … SELECT` 写给还没有未读 `report.pending` 的审核人。
+- `core:notification-sweep` 每天按 id 从小往大删掉早于保留期（设置 `notifications.retentionDays`，默认 365，0 不清理）的通知，已读、未读都删，遇到没过期的就停，同审计日志。
+- 卸载插件时 `core:plugin-cleanup` 按 `(plugin_id, id)` 分批删掉它发的通知。
+
+### notification_broadcasts
+
+管理员的每一次发送。
+
+| 列 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | 自增 | 主键 | |
+| sender_id | 整数 | 可空，外键 → users，set null | 发送人，注销后为空 |
+| audience | varchar(16) | 非空，CHECK | `all`（不含被封禁的）、`users`、`admins`、`specific` |
+| title | varchar(255) | 非空 | 去掉首尾空白后 1～60 个码位，由领域层校验 |
+| body | 长文本 | 非空 | Markdown，0～5000 个码位 |
+| through_uid | 整数 | 非空 | 发送那一刻最大的 uid，展开到它为止；指定用户时是收件人里最大的 uid |
+| cursor_uid | 整数 | 非空，默认 0 | 已经展开到的 uid |
+| recipient_count | 整数 | 非空，默认 0 | 已经写进去的行数，撤回后不减 |
+| status | varchar(16) | 非空，CHECK | `sending`、`sent`、`recalled` |
+| created_at | 时间 | 非空 | |
+| finished_at | 时间 | 可空 | 展开完的时刻 |
+
+- 另建 `sender_id` 索引（删除用户时置空）。
+- 指定用户在发送的事务里直接写完，状态 `sent`。其余三种只写这一行、入队 `core:notification-fanout`：按 uid 升序每批 500 人，一批一个事务，先用条件 UPDATE 锁住这一行（状态不是 `sending` 就停），再写这一批、推进 `cursor_uid` 和 `recipient_count`。
+- 撤回把状态改成 `recalled`（和展开争同一行的锁，展开在下一批停下），入队 `core:notification-recall` 分批删掉写出的行。
+- 保留期的清理同时删掉早于保留期、已经展开完或者撤回了的发送记录，展开中的不删。
+
+### plugin_notification_keys
+
+插件通知的幂等键（ADR-0052）。不和通知记在同一行：通知会被用户删除、过保留期被清理，键要永久保留。
+
+| 列 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| plugin_id | varchar(64) | 主键之一 | |
+| plugin_key | varchar(255) | 主键之一 | 插件给的 key，1～255 个码位。列名同 `score_transactions.plugin_key`（`key` 是 MySQL 的保留字） |
+| user_id | 整数 | 非空 | 不建外键：用户注销后键仍然保留 |
+| fingerprint | char(64) | 非空 | uid、文案键、参数（按键排序）、链接组成的 JSON 的 sha256。同一个 key 再发，一样返回 `duplicate`，不一样拒绝 |
+| created_at | 时间 | 非空 | |
+
+- 键和通知在同一个事务里写入，并发的同一个键由主键兜住。
+- 不清理：卸载插件不删，重装同一个 id 的插件，发过的不会再发。
+
 ## 导入
 
 ### import_runs
@@ -371,10 +435,6 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 - "上一次导入"指最近一行 `succeeded` 且不是试跑的记录。导入提交前在报告里记下写进去的范围（`watermark`：各表最大的 id、角色和材质最晚的 `updated_at`），之后按它和 `finished_at` 判断新站有没有产生数据，不按导入的行自带的时间：旧站的时间可能在未来。
 
 ## 以下各表只定了要点，随对应切片细化
-
-### 通知
-
-- **notifications**：SDK 的 `notifications.send`。标题和正文存 i18n 键加参数，按收件人的语言渲染。列：`user_id`（cascade）、`title_key`、`body_key`、`params`（JSON）、`read_at`、`created_at`。
 
 ### 插件
 
@@ -582,7 +642,7 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 |---|---|
 | jobs、migrations | 运行时数据 |
 | language_lines | 后台改过的界面翻译。新界面的文案重新写过，键名对不上 |
-| notifications | 站内信。ADR-0006 没有要求保留，需要时再补 |
+| notifications | 站内信。ADR-0006 没有要求保留；读过的在 BS 里本来也看不到（ADR-0052） |
 | oauth_access_tokens、oauth_auth_codes、oauth_refresh_tokens、oauth_personal_access_clients | 旧令牌全部作废（ADR-0001） |
 | scopes | OAuth scope 由核心定义 |
 | ygg_log | Yggdrasil 的操作日志 |
@@ -607,6 +667,6 @@ authserver（启动器用邮箱或角色名加密码换来的）令牌，与 OAu
 | 首页 | closet_items 的 created_at 索引 |
 | 插件 | plugins、plugin_kv、plugin_migrations |
 | Yggdrasil Connect 设备码流程 | oauth_clients 的公用应用（插入数据）、reference_id 的索引、users.oauth_version（加列） |
-| 通知 | notifications |
+| 通知 | notifications、notification_broadcasts、plugin_notification_keys |
 
 在第一个切片之前，`packages/db` 先补上 ADR-0015"后果"一节列出的辅助函数。

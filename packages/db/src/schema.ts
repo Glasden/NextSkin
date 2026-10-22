@@ -417,7 +417,46 @@ export interface PluginMigrationsTable {
   executed_at: IsoTimestamp
 }
 
+export type NotificationAudience = 'all' | 'users' | 'admins' | 'specific'
+export type NotificationBroadcastStatus = 'sending' | 'sent' | 'recalled'
+export interface NotificationBroadcastsTable {
+  id: Generated<number>
+  sender_id: number | null
+  audience: NotificationAudience
+  title: string
+  body: string
+  through_uid: number
+  cursor_uid: Generated<number>
+  recipient_count: Generated<number>
+  status: NotificationBroadcastStatus
+  created_at: IsoTimestamp
+  finished_at: IsoTimestamp | null
+}
+export interface NotificationsTable {
+  id: Generated<number>
+  user_id: number
+  type: string
+  params: string | null
+  broadcast_id: number | null
+  plugin_id: string | null
+  title_key: string | null
+  body_key: string | null
+  link: string | null
+  read_at: IsoTimestamp | null
+  created_at: IsoTimestamp
+}
+export interface PluginNotificationKeysTable {
+  plugin_id: string
+  plugin_key: string
+  user_id: number
+  fingerprint: string
+  created_at: IsoTimestamp
+}
+
 export interface CoreDatabase {
+  notifications: NotificationsTable
+  notification_broadcasts: NotificationBroadcastsTable
+  plugin_notification_keys: PluginNotificationKeysTable
   plugins: PluginsTable
   plugin_kv: PluginKvTable
   plugin_migrations: PluginMigrationsTable

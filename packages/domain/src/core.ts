@@ -16,6 +16,8 @@ import { createMemorySiteImageStorage, isSiteImageFile, type SiteImageStorage } 
 import { createAdmin } from './admin/service.ts'
 import { createCloset } from './closet/service.ts'
 import { createReports } from './reports/service.ts'
+import { createNotificationJobs, NOTIFICATION_SWEEP_JOB } from './notifications/jobs.ts'
+import { createNotifications } from './notifications/service.ts'
 import { dialectOf, toIsoTimestamp, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
 import { createPluginDbGateway } from './plugins/db/gateway.ts'
 import { createPluginSystem, PLUGIN_CLEANUP_JOB, type OfficialPlugin } from './plugins/system.ts'
@@ -134,6 +136,8 @@ export function createCore(options: CoreOptions) {
   })
   for (const [name, handler] of Object.entries(files.handlers)) handlers.set(name, handler)
   handlers.set(AUTH_CLEANUP_JOB, createAuthCleanup({ db: options.db, now }))
+  for (const [name, handler] of Object.entries(createNotificationJobs({ db: options.db, jobs, settings, now })))
+    handlers.set(name, handler)
   handlers.set(AUDIT_CLEANUP_JOB, createAuditCleanup({ db: options.db, settings, now }))
   handlers.set(
     TEXTURE_SWEEP_JOB,
@@ -186,6 +190,7 @@ export function createCore(options: CoreOptions) {
   handlers.set(PLUGIN_CLEANUP_JOB, { run: ({ payload }) => plugins.cleanupUninstalled(payload) })
   schedules.add({ name: PLUGIN_KV_CLEANUP_JOB, job: PLUGIN_KV_CLEANUP_JOB, cron: '37 4 * * *' })
   schedules.add({ name: AUTH_CLEANUP_JOB, job: AUTH_CLEANUP_JOB, cron: '17 4 * * *' })
+  schedules.add({ name: NOTIFICATION_SWEEP_JOB, job: NOTIFICATION_SWEEP_JOB, cron: '32 4 * * *' })
   schedules.add({ name: AUDIT_CLEANUP_JOB, job: AUDIT_CLEANUP_JOB, cron: '27 4 * * *' })
   schedules.add({ name: TEXTURE_SWEEP_JOB, job: TEXTURE_SWEEP_JOB, cron: '47 4 * * 0' })
   schedules.add({ name: SITE_IMAGE_SWEEP_JOB, job: SITE_IMAGE_SWEEP_JOB, cron: '57 4 * * 0' })
@@ -293,6 +298,7 @@ export function createCore(options: CoreOptions) {
     }),
     closet,
     reports: createReports(textureOptions),
+    notifications: createNotifications({ db: options.db, plugins, now }),
     renders,
     plugins: Object.assign(plugins, {
       admin: createPluginAdmin({ db: options.db, plugins, externalLogin, now }),

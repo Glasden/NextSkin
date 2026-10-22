@@ -54,6 +54,8 @@ import * as addUsersOauthVersion from './0044_add_users_oauth_version.ts'
 
 import * as addScoreTransactionsPluginColumns from './0045_add_score_transactions_plugin_columns.ts'
 
+import * as createNotifications from './0046_create_notifications.ts'
+
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
   '0002_create_texture_files': createTextureFiles,
@@ -100,4 +102,5 @@ export const coreMigrations: Record<string, Migration> = {
   '0043_create_oauth_reference_id_indexes': createOauthReferenceIdIndexes,
   '0044_add_users_oauth_version': addUsersOauthVersion,
   '0045_add_score_transactions_plugin_columns': addScoreTransactionsPluginColumns,
+  '0046_create_notifications': createNotifications,
 }

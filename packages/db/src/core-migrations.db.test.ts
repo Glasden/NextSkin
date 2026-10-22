@@ -96,6 +96,9 @@ beforeAll(async () => {
 })
 afterAll(async () => database?.cleanup())
 beforeEach(async () => {
+  await db.deleteFrom('notifications').execute()
+  await db.deleteFrom('notification_broadcasts').execute()
+  await db.deleteFrom('plugin_notification_keys').execute()
   await db.deleteFrom('audit_logs').execute()
   await db.deleteFrom('reports').execute()
   await db.deleteFrom('jobs').execute()
@@ -161,6 +164,7 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0043_create_oauth_reference_id_indexes',
     '0044_add_users_oauth_version',
     '0045_add_score_transactions_plugin_columns',
+    '0046_create_notifications',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -980,7 +984,9 @@ test('积分插件列迁移保留旧流水，CHECK 要求两列成对，唯一�
       created_at: timestamp,
     }
     const id = await insertReturningId(upgrade.db, 'score_transactions', row)
-    expect(await migrateToLatest(upgrade.db, coreMigrations)).toEqual([migration])
+    expect(await migrateToLatest(upgrade.db, coreMigrations)).toEqual(
+      Object.keys(coreMigrations).filter((name) => name >= migration),
+    )
     expect(await upgrade.db.selectFrom('score_transactions').selectAll().execute()).toEqual([
       { ...row, id, plugin_id: null, plugin_key: null },
     ])
@@ -1009,4 +1015,111 @@ test('积分插件列迁移保留旧流水，CHECK 要求两列成对，唯一�
   } finally {
     await upgrade.cleanup()
   }
+})
+
+test('通知三张表的列、外键行为和永久插件幂等键', async () => {
+  const tables = await db.introspection.getTables()
+  const columns = {
+    notifications: [
+      'id',
+      'user_id',
+      'type',
+      'params',
+      'broadcast_id',
+      'plugin_id',
+      'title_key',
+      'body_key',
+      'link',
+      'read_at',
+      'created_at',
+    ],
+    notification_broadcasts: [
+      'id',
+      'sender_id',
+      'audience',
+      'title',
+      'body',
+      'through_uid',
+      'cursor_uid',
+      'recipient_count',
+      'status',
+      'created_at',
+      'finished_at',
+    ],
+    plugin_notification_keys: ['plugin_id', 'plugin_key', 'user_id', 'fingerprint', 'created_at'],
+  }
+  for (const [name, expected] of Object.entries(columns))
+    expect(
+      tables
+        .find((table) => table.name === name)!
+        .columns.map((column) => column.name)
+        .sort(),
+    ).toEqual([...expected].sort())
+  const broadcastId = await insertReturningId(db, 'notification_broadcasts', {
+    sender_id: userId,
+    audience: 'specific',
+    title: '通知',
+    body: '正文',
+    through_uid: userId,
+    status: 'sent',
+    created_at: timestamp,
+    finished_at: timestamp,
+  })
+  const notification = { user_id: userId, type: 'message', broadcast_id: broadcastId, created_at: timestamp }
+  await db
+    .insertInto('notifications')
+    .columns(['user_id', 'type', 'broadcast_id', 'created_at'])
+    .values(notification)
+    .execute()
+  await expect(db.insertInto('notifications').values(notification).execute()).rejects.toThrow()
+  // NULL broadcast_id 不互斥，系统通知可以有多行。
+  await db
+    .insertInto('notifications')
+    .values([
+      { ...notification, broadcast_id: null },
+      { ...notification, broadcast_id: null },
+    ])
+    .execute()
+  const key = {
+    plugin_id: 'example',
+    plugin_key: 'key',
+    user_id: userId,
+    fingerprint: 'a'.repeat(64),
+    created_at: timestamp,
+  }
+  await db.insertInto('plugin_notification_keys').values(key).execute()
+  await expect(db.insertInto('plugin_notification_keys').values(key).execute()).rejects.toThrow()
+  await db
+    .insertInto('plugin_notification_keys')
+    .values({ ...key, plugin_id: 'other' })
+    .execute()
+  await db.deleteFrom('notification_broadcasts').where('id', '=', broadcastId).execute()
+  expect(await db.selectFrom('notifications').select('id').where('broadcast_id', '=', broadcastId).execute()).toEqual(
+    [],
+  )
+  const another = await insertReturningId(db, 'notification_broadcasts', {
+    sender_id: userId,
+    audience: 'all',
+    title: 'x',
+    body: '',
+    through_uid: userId,
+    status: 'sending',
+    created_at: timestamp,
+    finished_at: null,
+  })
+  await db.deleteFrom('users').where('id', '=', userId).execute()
+  expect(await db.selectFrom('notifications').select('id').execute()).toEqual([])
+  expect(
+    (
+      await db
+        .selectFrom('notification_broadcasts')
+        .select('sender_id')
+        .where('id', '=', another)
+        .executeTakeFirstOrThrow()
+    ).sender_id,
+  ).toBe(null)
+  expect(await db.selectFrom('plugin_notification_keys').select('user_id').execute()).toEqual([
+    { user_id: userId },
+    { user_id: userId },
+  ])
 })

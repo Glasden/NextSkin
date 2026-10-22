@@ -9,6 +9,7 @@ const capabilities = [
   'users.read',
   'users.readPrivate',
   'users.score',
+  'notifications.send',
   'players.read',
   'textures.read',
   'textures.readFile',

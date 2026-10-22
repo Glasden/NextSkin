@@ -1,27 +1,31 @@
 import { can, hasAdminAccess } from '@nextskin/domain'
 import { cx, Link, Logo, Notice } from '@nextskin/ui'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { ToolCase } from 'pixelarticons/react/ToolCase.js'
 import { getServer } from '../lib/server'
 import { getSessionUser } from '../lib/session'
 import { siteImageUrl } from '../lib/site-images'
 import { ColorModeMenu } from './color-mode-menu'
+import { NotificationBell } from './notification-bell'
 import { SiteNav } from './site-nav'
 import { UserMenu } from './user/user-menu'
 
 /**
- * 全站的页头：标志、全站导航，右边是亮暗模式和用户菜单；没有登录时是登录、注册的链接。
+ * 全站的页头：标志、全站导航，右边是亮暗模式、通知铃铛（ADR-0052，被封禁的用户没有）和用户菜单；没有登录时是登录、注册的链接。
  * wide：后台的正文比前台宽（ADR-0027），页头跟着放宽，标志和侧栏才对得齐。
  * 手动维护期间（ADR-0044）只有管理员走得到这里，页头下方提醒他们维护还开着；超级管理员多一个去维护设置的链接
  */
 export async function SiteHeader({ wide = false }: { wide?: boolean } = {}) {
-  const [{ core }, user, t] = await Promise.all([getServer(), getSessionUser(), getTranslations('site')])
-  const settings = await core.settings.read([
-    'site.name',
-    'site.logo',
-    'maintenance.enabled',
-    'maintenance.blockProtocols',
+  const [{ core }, user, t, locale] = await Promise.all([
+    getServer(),
+    getSessionUser(),
+    getTranslations('site'),
+    getLocale(),
+  ])
+  const [settings, notifications] = await Promise.all([
+    core.settings.read(['site.name', 'site.logo', 'maintenance.enabled', 'maintenance.blockProtocols']),
+    user && user.role !== 'banned' ? core.notifications.summary(user.uid, locale) : null,
   ])
   const { 'site.name': siteName, 'site.logo': logo } = settings
   const admin = user !== null && hasAdminAccess(user.role)
@@ -43,6 +47,7 @@ export async function SiteHeader({ wide = false }: { wide?: boolean } = {}) {
           </div>
           <div className="ml-auto flex h-16 min-w-0 shrink-0 items-center gap-4 text-sm">
             <ColorModeMenu />
+            {notifications && <NotificationBell initial={notifications} />}
             {user ? (
               <UserMenu nickname={user.nickname} admin={admin} />
             ) : (

@@ -12,7 +12,6 @@ import {
   type CoreDatabase,
   type IsoTimestamp,
 } from '@nextskin/db'
-import type { AdminAccountChange } from '@nextskin/email'
 import type { Actor } from '@nextskin/plugin-sdk'
 import { hashPassword } from 'better-auth/crypto'
 import type { Transaction } from 'kysely'
@@ -33,7 +32,13 @@ import { rejectNul } from '../text.ts'
 import { createEmailChangeTokens, EMAIL_CHANGE_TTL_SECONDS } from '../users/email-change-token.ts'
 import { validateEmail, validateNickname } from '../users/validation.ts'
 import { authorize, changeRole, lockTarget, manageableTarget, precheck, type TargetUser } from './context.ts'
-import { bindingName, notifyAccountChanged, readNoticeContext, recipientLocale } from './notify.ts'
+import {
+  bindingName,
+  notifyAccountChanged,
+  readNoticeContext,
+  recipientLocale,
+  type AccountNoticeChange,
+} from './notify.ts'
 import { userView } from './queries.ts'
 import type { AdminOptions } from './service.ts'
 import type {
@@ -172,7 +177,7 @@ export function createAdminUsers(options: AdminOptions) {
               updated_at: writeAuthDate(tx, at),
             })
             .execute()
-        const changes: AdminAccountChange[] = [{ kind: 'password' }]
+        const changes: AccountNoticeChange[] = [{ kind: 'password' }]
         if (input.removeOtherMethods) {
           const passkeys = await tx.deleteFrom('passkeys').where('user_id', '=', uid).executeTakeFirst()
           const count = Number(passkeys.numDeletedRows)
@@ -202,7 +207,12 @@ export function createAdminUsers(options: AdminOptions) {
               { nickname: target.nickname, plugin: pluginId, provider: providerId },
               at,
             )
-            changes.push({ kind: 'binding', provider: bindingName(plugins, pluginId, providerId, locale) })
+            changes.push({
+              kind: 'binding',
+              pluginId,
+              providerId,
+              provider: bindingName(plugins, pluginId, providerId, locale),
+            })
           }
         }
         if (newEmail !== undefined) {
@@ -420,6 +430,13 @@ export function createAdminUsers(options: AdminOptions) {
             .execute()
           // 还没用的找回密码链接发到了旧地址
           await deletePasswordResetLinks(tx, uid)
+          // 没有配置邮件才会走到这里：只写站内通知（ADR-0052）
+          await notifyAccountChanged(tx, jobs, notice, {
+            uid,
+            to: target.email,
+            changes: [{ kind: 'email', pending: false }],
+            at,
+          })
           await events.emit(tx, 'user.profileUpdated', subject.actor, { uid, fields: ['email'] }, at)
           await record(
             tx,
@@ -519,7 +536,12 @@ export function createAdminUsers(options: AdminOptions) {
           uid,
           to: target.email,
           changes: [
-            { kind: 'binding', provider: bindingName(plugins, pluginId, providerId, recipientLocale(target, notice)) },
+            {
+              kind: 'binding',
+              pluginId,
+              providerId,
+              provider: bindingName(plugins, pluginId, providerId, recipientLocale(target, notice)),
+            },
           ],
           at,
         })

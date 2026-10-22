@@ -45,7 +45,7 @@ export function Menu({ label, trigger, children, align = 'start' }: MenuProps) {
         </BaseMenu.Trigger>
       )}
       <BaseMenu.Portal>
-        <BaseMenu.Positioner className="z-10 outline-none" sideOffset={8} align={align} collisionPadding={16}>
+        <BaseMenu.Positioner className="z-30 outline-none" sideOffset={8} align={align} collisionPadding={16}>
           <BaseMenu.Popup
             className={cx(
               // 渲染在 body 下，字体自己设。弹出是四格阶跃的淡入

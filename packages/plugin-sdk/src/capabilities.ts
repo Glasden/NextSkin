@@ -1,5 +1,5 @@
 /**
- * 插件可以申请的数据访问能力。除 `users.score` 外只读核心数据或读写插件自己的数据。
+ * 插件可以申请的数据访问能力。除 `users.score` 和 `notifications.send` 外只读核心数据或读写插件自己的数据。
  * 写核心数据的能力一项对应一个领域用例（ADR-0041）。
  *
  * 这里只列"从贡献清单看不出来"的权限。注册了哪些路由、事件、拦截器、Provider、UI，
@@ -15,6 +15,8 @@ export const capabilities = [
   'users.readPrivate',
   /** 给任何用户加减积分（`ctx.users.adjustScore`），返回值里带余额；写核心数据，安装时按高风险展示（ADR-0041） */
   'users.score',
+  /** 给任何用户发站内通知，内容是插件自己的文案；写核心数据，安装时按高风险展示（ADR-0052） */
+  'notifications.send',
   'players.read',
   /** 材质元数据 */
   'textures.read',

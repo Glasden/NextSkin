@@ -7,6 +7,7 @@
 | BS 写法或扩展点 | NextSkin 第一版 |
 |---|---|
 | bootstrap.php 里注册回调 | `src/index.ts` 默认导出 definePlugin；没有 setup 或动态 ctx.on |
+| Hook::sendNotification | `ctx.notifications.send`，申请 `notifications.send`，插件文案、纯文本正文、站内链接和永久幂等键 |
 | Hook::addRoute、ConfigureRoutes | routes，固定挂在 `/plugins/{id}`；登录、权限、限流和请求体上限由网关处理 |
 | Hook::addMenuItem、ConfigureUserMenu、ConfigureAdminMenu | ui.nav 和 ui.pages |
 | Hook::addScriptFileToPage、addStyleFileToPage、RenderingHeader/Footer 的 addContent | 无脚本、样式或 HTML 注入；改成声明式页面、注册字段，做不到的部分要删去或等待新扩展点 |
@@ -36,7 +37,7 @@
 | Filter::add 或注入的$filter->add | 注册和外置登录限制用 intercept；密码识别用 Provider；没有可任意改数据的通用 filter |
 | Laravel 队列、定时命令 | jobs、ctx.jobs.enqueue、cron，载荷可 JSON 序列化，处理函数幂等 |
 | Eloquent、DB::table | 只读核心数据用 ctx.users/players/textures；自有表用 table、migrations、ctx.db |
-| 写核心数据 | 改积分已经可以（`users.score`、`ctx.users.adjustScore`），其余写核心数据的能力还没有 |
+| 写核心数据 | 改积分（`users.score`、`ctx.users.adjustScore`）和发通知（`notifications.send`、`ctx.notifications.send`）已经可以，其余写核心数据的能力还没有 |
 | session 存临时业务状态 | 优先显式参数或本插件 KV；插件拿不到站点会话存储，不能写 Cookie |
 | Guzzle | ctx.fetch，先在 network 声明 HTTPS origin |
 | abort/json/Response | 路由返回 Web Response；业务错误自己校验，拦截拒绝用 deny |
@@ -64,7 +65,7 @@
 
 | 类别 | 原因 | 可行替代 |
 |---|---|---|
-| 其余写核心数据（通知、指定 UUID 建角色等） | 改积分已经可以（`users.score`），其余写核心数据的能力还没有；每项写能力对应专门的领域用例 | 积分用 `ctx.users.adjustScore` 和永久幂等键；其余使用核心已有管理流程或提扩展点需求，不能用插件表或核心 HTTP 接口冒充用例权限 |
+| 其余写核心数据（指定 UUID 建角色等） | 改积分（`users.score`）和发通知（`notifications.send`）已经可以，其余写核心数据的能力还没有；每项写能力对应专门的领域用例 | 积分用 `ctx.users.adjustScore`，通知用 `ctx.notifications.send`，都带永久幂等键；其余使用核心已有管理流程或提扩展点需求，不能用插件表或核心 HTTP 接口冒充用例权限 |
 | 浏览器执行代码、自定义组件和插槽 | 第一版只有声明式 UI，不提供 ui.script，也不允许 HTML 注入 | 表格、表单、统计、Markdown、注册字段；超出范围等后续 API |
 | 外部数据库 | host 没有外部数据库凭据或任意连接能力，ctx.db 只能访问插件自有表 | 先离线迁入自有表，或由独立服务提供受鉴权 HTTPS API；后者只能在允许网络的调用点使用 |
 | 常驻连接（机器人、WebSocket 客户端等） | 没有 setup 生命周期，host 会整代切换，ctx 仅在单次调用有效 | 独立服务，或有期限的 jobs/cron 轮询；不要在顶层偷偷创建常驻连接 |

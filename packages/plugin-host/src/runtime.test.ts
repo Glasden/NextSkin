@@ -39,6 +39,7 @@ test('事务内拦截器只有本地上下文和 db，即使申请了其他能�
         'users.read',
         'users.readPrivate',
         'users.score',
+        'notifications.send',
         'players.read',
         'textures.read',
         'textures.readFile',
@@ -251,3 +252,44 @@ test.each(['yggdrasil.issueToken', 'user.action'] as const)(
     plugin.unload()
   },
 )
+
+test('notifications.send 按能力提供冻结对象并原样转发参数', async () => {
+  const rpc = vi.fn<CoreRpc>().mockResolvedValue({ status: 'sent' })
+  const notification = { title: 'notice.title', body: 'notice.body', params: { name: 'Alex', count: 1 }, link: '/user' }
+  const plugin = load(
+    definePlugin({
+      capabilities: ['notifications.send'],
+      jobs: {
+        send: {
+          async handler({ ctx }) {
+            expect(Object.isFrozen(ctx.notifications)).toBe(true)
+            expect(Object.keys(ctx.notifications)).toEqual(['send'])
+            expect(await ctx.notifications.send(1, notification, { key: 'once' })).toEqual({ status: 'sent' })
+          },
+        },
+      },
+    }),
+    rpc,
+  )
+  await plugin.invoke({ kind: 'job', name: 'send', payload: {}, attempt: 1 }, context)
+  expect(rpc).toHaveBeenCalledWith('invocation', 'notifications.send', { uid: 1, notification, key: 'once' })
+  plugin.unload()
+})
+
+test('没有通知能力时没有 ctx.notifications', async () => {
+  const plugin = load(
+    definePlugin({
+      capabilities: [],
+      jobs: {
+        check: {
+          handler({ ctx }) {
+            expect('notifications' in ctx).toBe(false)
+            return Promise.resolve()
+          },
+        },
+      },
+    }),
+  )
+  await plugin.invoke({ kind: 'job', name: 'check', payload: {}, attempt: 1 }, context)
+  plugin.unload()
+})
