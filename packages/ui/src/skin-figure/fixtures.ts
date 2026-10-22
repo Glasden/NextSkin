@@ -43,7 +43,15 @@ export function headFixture(name: Exclude<FixtureName, 'mojang_cape' | 'legacy_c
 
 export const fixtureRendererVersion = manifest.rendererVersion
 
-/** 等抬手拼图下载完：play 里悬浮或聚焦过人物以后调用，截图才稳定 */
+/**
+ * 等图片下载、解码的 waitFor 用的上限。默认的 1 秒在 CI 上不够：check 并行跑整套测试时，
+ * 抬手拼图下载完再 decode() 偶尔要一秒多，story 就超时失败
+ */
+export const IMAGE_TIMEOUT = 5000
+
+/** 等抬手拼图下载、解码完：play 里悬浮或聚焦过人物以后调用，截图才稳定 */
 export async function raiseSettled(root: HTMLElement) {
-  await waitFor(() => expect(root.querySelectorAll('img[data-raise]:not([data-ready])')).toHaveLength(0))
+  await waitFor(() => expect(root.querySelectorAll('img[data-raise]:not([data-ready])')).toHaveLength(0), {
+    timeout: IMAGE_TIMEOUT,
+  })
 }

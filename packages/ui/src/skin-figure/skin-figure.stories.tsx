@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, spyOn, userEvent, waitFor } from 'storybook/test'
 import { Stage } from '../stage/stage.tsx'
 import { focusRing } from '../styles.ts'
-import { fixture } from './fixtures.ts'
+import { fixture, IMAGE_TIMEOUT } from './fixtures.ts'
 import { SkinFigure } from './skin-figure.tsx'
 
 const miku = fixture('hatsune_miku')
@@ -33,7 +33,9 @@ export const Scales: Story = {
     await expect(canvas.getAllByRole('img')).toHaveLength(4)
     const large = canvas.getByRole<HTMLImageElement>('img', { name: '初音未来的皮肤，×8' })
     await expect(large.getAttribute('src')).toMatch(/hatsune_miku-both-p8[.-]/)
-    await waitFor(() => expect(large.naturalWidth).toBe(Number(large.getAttribute('width'))))
+    await waitFor(() => expect(large.naturalWidth).toBe(Number(large.getAttribute('width'))), {
+      timeout: IMAGE_TIMEOUT,
+    })
   },
 }
 
@@ -100,7 +102,9 @@ export const Raise: Story = {
     try {
       await userEvent.tab()
       await expect(canvas.getByRole('link')).toHaveFocus()
-      await waitFor(() => expect(requested).toContain(canvasElement.querySelector('img[data-raise]')))
+      await waitFor(() => expect(requested).toContain(canvasElement.querySelector('img[data-raise]')), {
+        timeout: IMAGE_TIMEOUT,
+      })
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
       await expect(canvasElement.querySelector('img[data-ready]')).toBeNull()
       await expect(canvas.getByRole('img', { name: '初音未来的皮肤' })).not.toHaveClass('opacity-0')
@@ -108,7 +112,9 @@ export const Raise: Story = {
       decode.mockRestore()
       release()
     }
-    await waitFor(() => expect(canvasElement.querySelector('img[data-ready]')).not.toBeNull())
+    await waitFor(() => expect(canvasElement.querySelector('img[data-ready]')).not.toBeNull(), {
+      timeout: IMAGE_TIMEOUT,
+    })
     const sprite = canvasElement.querySelector('img[data-ready]')!
     await expect(sprite.getAttribute('src')).toMatch(/hatsune_miku-both-raise-p4[.-]/)
     // 拼图向左挪四帧，停在最后一帧；静止图留着替代文字，只是透明
