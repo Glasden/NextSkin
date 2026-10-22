@@ -9,7 +9,7 @@ pnpm --filter @nextskin/docs dev      # http://localhost:4321
 pnpm --filter @nextskin/docs build    # 输出到 apps/docs/dist
 ```
 
-`dev`、`build`、`typecheck` 都先跑 `scripts/sync.ts`：从本仓库的 `packages/plugin-sdk/docs` 生成插件 API 参考，记下页脚要显示的 NextSkin 版本、SDK 版本和提交号。不联网。
+`dev`、`build` 和 turbo 的 `typegen` 任务（`lint`、`typecheck` 依赖它）都先跑 `scripts/sync.ts`：从本仓库的 `packages/plugin-sdk/docs` 生成插件 API 参考，记下页脚要显示的 NextSkin 版本、SDK 版本和提交号。不联网。直接 `pnpm --filter @nextskin/docs lint` 之前先跑一次 `typegen`。
 
 ## 内容从哪来
 

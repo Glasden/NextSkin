@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import starlight from '@astrojs/starlight'
 import { defineConfig, passthroughImageService } from 'astro/config'
 
-// scripts/sync.ts 写下的版本信息；dev、build、typecheck 都先跑它
+// scripts/sync.ts 写下的版本信息；dev、build 和 typegen 都先跑它
 const { sdk } = JSON.parse(readFileSync(new URL('./src/data/versions.json', import.meta.url), 'utf8'))
 
 export default defineConfig({
