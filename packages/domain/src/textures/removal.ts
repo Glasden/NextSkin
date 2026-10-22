@@ -3,6 +3,7 @@ import type { Actor } from '@nextskin/plugin-sdk'
 import type { Selectable, Transaction } from 'kysely'
 import { claimReport, settleReport } from '../admin/report-resolution.ts'
 import type { Events } from '../events/emit.ts'
+import { notify } from '../notifications/write.ts'
 import { adjustScore } from '../score/adjust.ts'
 import type { TextureRow } from './dto.ts'
 import type { TextureFiles } from './files.ts'
@@ -200,9 +201,17 @@ export function createTextureRemoval(events: Events, files: TextureFiles) {
         ip: options.review?.ip ?? null,
         management: options.review !== undefined,
         deletedAccountUid: options.deletedAccountUid,
+        textureName: row.name,
         now,
       })
     }
+    if (
+      options.review &&
+      options.deletedAccountUid === undefined &&
+      row.uploader_id !== null &&
+      !(actor.kind === 'user' && actor.uid === row.uploader_id)
+    )
+      await notify(tx, row.uploader_id, 'texture.removed', { tid: row.id, name: row.name, action: 'deleted' }, now)
     await tx.deleteFrom('textures').where('id', '=', row.id).execute()
     const lastReference = await files.release(tx, row.hash, now)
     await events.emit(tx, 'texture.deleted', actor, { tid: row.id, hash: row.hash, type: row.type, lastReference }, now)

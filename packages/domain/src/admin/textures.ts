@@ -3,6 +3,7 @@ import type { Transaction } from 'kysely'
 import { audit } from '../audit/write.ts'
 import type { Texture } from '../dto.ts'
 import { DomainError } from '../errors.ts'
+import { notify } from '../notifications/write.ts'
 import { changeTexture, lockTexture, type UpdateTextureInput } from '../textures/manage.ts'
 import { toTexture } from '../textures/dto.ts'
 import { authorize, lockTarget } from './context.ts'
@@ -97,6 +98,7 @@ export function createAdminTextures(options: AdminOptions) {
             now: timestamp,
           },
         )
+        await notify(tx, row.uploader_id, 'texture.removed', { tid, name: row.name, action: 'unpublished' }, timestamp)
         await audit(tx, {
           actor: eventActor,
           action: 'texture.unpublish',

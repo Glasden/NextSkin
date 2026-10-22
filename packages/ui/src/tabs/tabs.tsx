@@ -8,8 +8,8 @@ import { focusRing } from '../styles.ts'
 export interface TabsItem<Value extends string> {
   value: Value
   label: string
-  /** 跟在标签后面的数量，例如衣柜里有几件皮肤 */
-  count?: number
+  /** 跟在标签后面的数量，例如衣柜里有几件皮肤。数到上限就不再往下数时传写好的文字，例如“99+” */
+  count?: number | string
   disabled?: boolean
 }
 

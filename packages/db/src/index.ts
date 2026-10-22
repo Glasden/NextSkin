@@ -5,6 +5,7 @@ export { ExclusiveLockBusyError, withExclusiveLock } from './exclusive-lock.ts'
 export {
   containsInsensitive,
   isUniqueViolation,
+  lockForReference,
   isIsoTimestamp,
   toIsoTimestamp,
   isoTimestampColumn,
@@ -41,6 +42,11 @@ export { SqliteWriteLockTimeoutError } from './sqlite/dialect.ts'
 export { coreMigrations } from './migrations/index.ts'
 export type {
   CoreDatabase,
+  NotificationsTable,
+  NotificationBroadcastsTable,
+  PluginNotificationKeysTable,
+  NotificationAudience,
+  NotificationBroadcastStatus,
   JobsTable,
   FailedJobsTable,
   ScoreTransactionsTable,

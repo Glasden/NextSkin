@@ -55,6 +55,8 @@ const actionKeys = {
   'oauthClient.disable': 'oauthClientDisable',
   'oauthClient.enable': 'oauthClientEnable',
   'oauthClient.delete': 'oauthClientDelete',
+  'notification.send': 'notificationSend',
+  'notification.recall': 'notificationRecall',
 } as const satisfies Record<AuditAction, string>
 
 function isAuditAction(action: string): action is AuditAction {
@@ -163,6 +165,11 @@ export async function AuditTable({
     }
     // 核心任务的死信重试、删除之后就不在表里了，不链接；全部重试、全部删除记 0（ADR-0051）
     if (type === 'job') return id === 0 ? t('subjects.allJobs') : t('subjects.job', { id })
+    // 通知的发送记录没有详情页，链接到发送记录的列表（ADR-0052）
+    if (type === 'notificationBroadcast')
+      return (
+        <Link render={<NextLink href="/admin/notifications" />}>{t('subjects.notificationBroadcast', { id })}</Link>
+      )
     const label =
       type === 'user' || type === 'texture' || type === 'report' || type === 'oauthClient'
         ? t(`subjects.${type}`, { id })
@@ -423,6 +430,13 @@ export async function AuditTable({
         accessTokens: count(details.accessTokens),
         refreshTokens: count(details.refreshTokens),
       }),
+    'notification.send': (details) =>
+      t('details.notificationSend', {
+        audience: oneOf(['all', 'users', 'admins', 'specific'] as const, details.audience) ?? 'specific',
+        count: Array.isArray(details.uids) ? details.uids.length : 0,
+      }),
+    'notification.recall': (details) =>
+      t('details.notificationRecall', { recipientCount: count(details.recipientCount) }),
   }
 
   function details(entry: AuditEntry) {

@@ -10,6 +10,7 @@ import {
 import type { Kysely } from 'kysely'
 import { DomainError } from '../errors.ts'
 import type { Events } from '../events/emit.ts'
+import { notifyPendingReport } from '../notifications/write.ts'
 import { textureScaleOrNull } from '../players/queries.ts'
 import { adjustScore } from '../score/adjust.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
@@ -91,6 +92,7 @@ export function createReports(options: {
             subject: { type: 'report', id },
             now: timestamp,
           })
+        await notifyPendingReport(tx, actor.uid, timestamp)
         await events.emit(
           tx,
           'report.created',

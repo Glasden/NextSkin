@@ -1,21 +1,22 @@
 # 能力和上下文
 
-处理函数通过 `ctx` 使用站点服务。需要读用户、角色、材质、改积分或保存插件数据时，先在 `capabilities` 申请对应能力。
+处理函数通过 `ctx` 使用站点服务。需要读用户、角色、材质、改积分、发通知或保存插件数据时，先在 `capabilities` 申请对应能力。
 
-## 八项能力
+## 九项能力
 
 | 能力 | 提供什么 |
 |---|---|
 | `users.read` | `ctx.users.get/getMany/searchByNickname`，返回 `PublicUser`：uid、昵称、身份、头像材质编号、注册时间 |
 | `users.readPrivate` | 上述方法返回 `PrivateUser`，再加邮箱、邮箱验证状态、积分、语言；增加 `findByEmail`，不必同时申请 `users.read` |
 | `users.score` | `ctx.users.adjustScore`，给任何用户加减积分，结果里带余额 |
+| `notifications.send` | `ctx.notifications.send`，给任何用户发站内通知，使用插件自己的文案 |
 | `players.read` | `ctx.players`，读 Minecraft 角色 |
 | `textures.read` | `ctx.textures.get/findByHash`，读材质元数据 |
 | `textures.readFile` | `ctx.textures.files.read`，读 PNG 原始字节；不会自动获得元数据方法 |
 | `storage.kv` | `ctx.kv`，读写本插件的 KV |
 | `storage.tables` | `ctx.db`，查询本插件声明的表，允许声明迁移 |
 
-`users.readPrivate`、`users.score` 和 `textures.readFile` 是高风险能力。passwordHasher、login 虽然不是能力名，也因接触密码或第三方身份而按高风险展示。除 `users.score` 外，其余能力只读核心数据或读写本插件数据；写核心数据的能力一项对应一个领域用例（ADR-0041）。
+`users.readPrivate`、`users.score`、`notifications.send` 和 `textures.readFile` 是高风险能力。passwordHasher、login 虽然不是能力名，也因接触密码或第三方身份而按高风险展示。除 `users.score` 和 `notifications.send` 外，其余能力只读核心数据或读写本插件数据；写核心数据的能力一项对应一个领域用例（ADR-0041）。
 
 事件、路由、Provider、任务、UI 本身已经列在 manifest，不需要额外能力。缺失能力时方法在类型上不存在，运行时 RPC 也会被拒绝。
 
@@ -138,6 +139,35 @@ export default definePlugin({
 ```
 
 与插件表配对写入的步骤见[插件表](./tables.md)。
+
+## ctx.notifications
+
+申请 `notifications.send` 后，用 `ctx.notifications.send(uid, notification, { key })` 一次给一个用户发站内通知。内容使用插件自己的文案，读取时按收件人的语言渲染；用户改语言后，旧通知也跟着变。要发给很多人，插件自己分批读取收件人并发送。
+
+```ts
+await ctx.notifications.send(uid, {
+  title: 'notice.title',
+  body: 'notice.body',
+  params: { name: 'Alex', count: 1 },
+  link: '/user',
+}, { key: `welcome:${uid}` })
+```
+
+uid 必须是正安全整数。title 必填、body 可选，均为本插件任一语言文案里存在的键，1–128 个码位，不能含 NUL 或不成对的代理项。params 可选，须为最多 20 项的普通对象：键 1–64 个码位，值为不超过 200 个码位的字符串或有限数字；键和字符串值不能含 NUL 或不成对的代理项。正文是纯文本，不渲染 Markdown。
+
+link 可选，只能是站内路径：以一个 `/` 开头，不能以 `//` 开头，不能含反斜杠、U+0000–U+001F、U+007F 或不成对的代理项，最多 500 个 UTF-16 代码单元。
+
+key 在本插件内唯一，1–255 个码位，无首尾空白、NUL 或不成对的代理项，永久保存。同 key 的 uid、title、body、params、link 相同返回 duplicate（params 的键顺序不影响判断），参数不同则抛错；省略的字段按 null 比较。超时不表示没有提交，应用同 key 重试。
+
+返回 `NotificationSendResult`，status 是开放字符串联合，还须处理未知值：
+
+| status | 含义 |
+|---|---|
+| sent | 通知与永久键已在同一事务里写入 |
+| duplicate | 同 key 已发过，本次未写；通知即使已被删除或过期清理也不会再发 |
+| userNotFound | 用户不存在，不占用 key，可以重试 |
+
+不检查收件人是否封禁，不写审计、不发事件。事务内的拦截器、迁移、设置校验里不能调用。安装时作为高风险能力展示：能给任何用户发通知。卸载后清理任务会分批删除这个插件发的通知，永久幂等键保留，重装同一个插件 id 仍然有效。
 
 ## KV 和入队
 

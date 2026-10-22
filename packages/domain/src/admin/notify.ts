@@ -1,13 +1,13 @@
 /**
  * 后台改了账号之后给用户发"管理员修改了你的账号"（ADR-0036"通知邮件"）。邮件任务和修改在同一个事务里入队：
- * 修改回滚，信也不会发；没有配置邮件就不入队。理由同 ADR-0023 改邮箱时通知旧地址：管理员账号被人滥用时，原主人至少能知道
+ * 修改回滚，通知和信也不会发；没有配置邮件仍写站内通知。理由同 ADR-0023 改邮箱时通知旧地址：管理员账号被人滥用时，原主人至少能知道
  */
 import type { CoreDatabase, IsoTimestamp } from '@nextskin/db'
-import type { AdminAccountChange } from '@nextskin/email'
 import { matchLocale, type Locale } from '@nextskin/i18n'
 import type { Transaction } from 'kysely'
 import type { JobRunner } from '../jobs/runner.ts'
 import { MAIL_JOB, type MailJobPayload, type MailService } from '../mail/service.ts'
+import { notify, type AccountChange } from '../notifications/write.ts'
 import type { PluginSystem } from '../plugins/system.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 
@@ -44,19 +44,38 @@ export function bindingName(
   return label === undefined ? providerId : plugins.translate(pluginId, label, locale)
 }
 
-/** 在调用方的事务里入队一封通知。to 是收件地址：收回账号改了邮箱时是旧地址 */
+export type AccountNoticeChange =
+  | Exclude<AccountChange, { kind: 'binding' }>
+  | { kind: 'binding'; pluginId: string; providerId: string; provider: string }
+
+/** 在调用方的事务里写站内通知并入队邮件。to 是收件地址：收回账号改了邮箱时是旧地址 */
 export async function notifyAccountChanged(
   tx: Transaction<CoreDatabase>,
   jobs: Pick<JobRunner, 'enqueue'>,
   context: NoticeContext,
-  input: { uid: number; to: string; changes: readonly AdminAccountChange[]; at: IsoTimestamp },
+  input: { uid: number; to: string; changes: readonly AccountNoticeChange[]; at: IsoTimestamp },
 ): Promise<void> {
-  if (!context.configured || input.changes.length === 0) return
+  if (input.changes.length === 0) return
+  await notify(
+    tx,
+    input.uid,
+    'account.changed',
+    {
+      changes: input.changes.map((change) => {
+        if (change.kind !== 'binding') return change
+        return { kind: 'binding', pluginId: change.pluginId, providerId: change.providerId }
+      }),
+    },
+    input.at,
+  )
+  if (!context.configured) return
   await jobs.enqueue(tx, MAIL_JOB, {
     template: 'adminAccountChanged',
     uid: input.uid,
     to: input.to,
-    changes: [...input.changes],
+    changes: input.changes.map((change) =>
+      change.kind === 'binding' ? { kind: 'binding', provider: change.provider } : change,
+    ),
     at: input.at,
   } satisfies MailJobPayload)
 }

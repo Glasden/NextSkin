@@ -357,6 +357,28 @@ export function isUniqueViolation<DB>(db: Kysely<DB>, error: unknown): boolean {
   }
 }
 
+/**
+ * `INSERT … SELECT` 从被引用的表里取外键的值时（例如给一批用户写通知），给源查询加上外键检查本来就要加的那种锁。
+ * 两种服务器库的连接都是读已提交：不加锁的读看得到别的事务删掉、还没提交的行，外键检查等对方提交后报错（PostgreSQL
+ * 23503、MySQL 1452），这种错误不会重试。加锁的读先等删除提交，再按最新的版本判断，删掉的行不选。PostgreSQL 用
+ * FOR KEY SHARE，不挡不改主键的更新；MySQL、MariaDB 的外键检查加的就是共享锁。SQLite 的写锁是全局的，原样返回
+ */
+export function lockForReference<DB, TB extends keyof DB, O>(
+  db: Kysely<DB>,
+  query: SelectQueryBuilder<DB, TB, O>,
+  table: TB & string,
+): SelectQueryBuilder<DB, TB, O> {
+  switch (dialectOf(db)) {
+    case 'postgres':
+      return query.forKeyShare(table)
+    case 'mysql':
+      // MariaDB 不认 FOR SHARE
+      return query.modifyEnd(sql`lock in share mode`)
+    case 'sqlite':
+      return query
+  }
+}
+
 // 品牌只存在于类型层；普通字符串必须先通过日期转换或格式校验。
 declare const isoTimestampBrand: unique symbol
 export type IsoTimestamp = string & { readonly [isoTimestampBrand]: true }

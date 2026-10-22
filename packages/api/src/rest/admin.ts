@@ -1,3 +1,4 @@
+import { registerAdminNotifications } from './notifications.ts'
 import { createRoute, z, type OpenAPIHono } from '@hono/zod-openapi'
 import { CAPTCHA_HEADER, DomainError, SITE_IMAGE_MAX_BYTES, type Core } from '@nextskin/domain'
 import { clientIp } from '../client-ip.ts'
@@ -219,4 +220,5 @@ export function registerAdmin(app: OpenAPIHono<AppEnv>, core: Core) {
   registerAdminCloset(app, core)
   // 核心任务的死信（ADR-0051）
   registerAdminFailedJobs(app, core)
+  registerAdminNotifications(app, core)
 }

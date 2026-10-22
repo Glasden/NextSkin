@@ -1,3 +1,4 @@
+import { Bell } from 'pixelarticons/react/Bell.js'
 import { Chart } from 'pixelarticons/react/Chart.js'
 import { Code } from 'pixelarticons/react/Code.js'
 import { Database } from 'pixelarticons/react/Database.js'
@@ -21,6 +22,7 @@ export const adminNavItems = [
   { href: '/admin/users', icon: Users, label: 'users', permission: 'users.ban' },
   { href: '/admin/players', icon: Gamepad, label: 'players', permission: 'players.manage' },
   { href: '/admin/oauth-clients', icon: Code, label: 'oauthClients', permission: 'oauthClients.manage' },
+  { href: '/admin/notifications', icon: Bell, label: 'notifications', permission: 'notifications.send' },
   { href: '/admin/audit', icon: Notebook, label: 'audit', permission: 'audit.read' },
   { href: '/admin/settings', icon: Sliders, label: 'settings', permission: 'settings.manage' },
   { href: '/admin/plugins', icon: Plug, label: 'plugins', permission: 'plugins.manage' },

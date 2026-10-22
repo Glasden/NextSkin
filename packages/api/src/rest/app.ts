@@ -1,3 +1,4 @@
+import { registerNotifications } from './notifications.ts'
 import { registerOAuthClients } from './oauth-clients.ts'
 import { registerDevices } from './devices.ts'
 import { registerUserAuthorizations } from './user-authorizations.ts'
@@ -97,7 +98,9 @@ export function createRestApp(
             ? 1024 * 1024
             : c.req.method === 'PATCH' && /\/admin\/settings\/?$/.test(c.req.path)
               ? 192 * 1024
-              : 16 * 1024
+              : c.req.method === 'POST' && /\/admin\/notifications\/?$/.test(c.req.path)
+                ? 32 * 1024
+                : 16 * 1024
         if (maxSize === 1024 * 1024) {
           if (Number(c.req.header('content-length')) > maxSize) throw new DomainError('request_too_large')
           const headers = new Headers(c.req.raw.headers)
@@ -164,6 +167,7 @@ export function createRestApp(
   registerExternalLogin(app, core)
   registerCloset(app, core)
   registerReports(app, core)
+  registerNotifications(app, core)
   registerAdmin(app, core)
   registerPluginAdmin(app, core)
   registerSetup(app, core, options.importer)

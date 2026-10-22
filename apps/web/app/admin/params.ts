@@ -177,3 +177,18 @@ export function parseFailedJobsPage(search: SearchParams): number {
 export function failedJobsHref(page: number): string {
   return page > 1 ? `/admin/failed-jobs?page=${page}` : '/admin/failed-jobs'
 }
+
+export interface NotificationParams {
+  page: number
+  /** 发给某个用户：`?to=5`，用户详情页链接到这里，收件人预先填好 */
+  to: number | null
+}
+
+export function parseNotificationParams(search: SearchParams): NotificationParams {
+  return { page: parsePage(first(search.page)), to: parseId(first(search.to)) }
+}
+
+/** 翻的是发送记录，不带 to：预填只在从用户详情页进来时有用 */
+export function notificationsHref(page: number): string {
+  return page > 1 ? `/admin/notifications?page=${page}` : '/admin/notifications'
+}

@@ -120,6 +120,30 @@ export interface ScoreAdjustResult {
   readonly balance: number | null
 }
 
+/** `notifications.send`：用插件自己的文案给任何用户发站内通知（ADR-0052）。 */
+export interface NotificationsApi {
+  /** 永久 key 在本插件内唯一；同 key 同参数返回 duplicate，参数不同则拒绝。事务内不可调用。 */
+  send(uid: Uid, notification: PluginNotification, options: { readonly key: string }): Promise<NotificationSendResult>
+}
+
+/** 通知在读取时按收件人的语言渲染；正文是纯文本。 */
+export interface PluginNotification {
+  /** 本插件的文案键，任何一种语言里存在即可。 */
+  readonly title: MessageKey
+  /** 可选的正文文案键，规则同 title；按纯文本显示。 */
+  readonly body?: MessageKey
+  /** 渲染标题和正文用的参数。 */
+  readonly params?: Readonly<Record<string, string | number>>
+  /** 站内路径，以一个 / 开头。 */
+  readonly link?: string
+}
+
+/** 发送通知的业务结果；参数错误仍抛错。 */
+export interface NotificationSendResult {
+  /** sent：已写入；duplicate：同一 key 已发过，本次未写；userNotFound：用户不存在。开放联合。 */
+  readonly status: 'sent' | 'duplicate' | 'userNotFound' | (string & {})
+}
+
 /** id 须为正安全整数，查询字符串最多 255 字符。 */
 export interface PlayersApi {
   get(pid: Pid): Promise<Player | null>
@@ -210,6 +234,7 @@ type TexturesApiFor<C extends readonly Capability[]> = Gate<Has<C, 'textures.rea
 export type PluginContext<C extends readonly Capability[], S, T extends TableMap> = PluginContextBase<S> &
   Gate<Or<Has<C, 'users.read'>, Has<C, 'users.readPrivate'>>, { readonly users: UsersApiFor<C> }> &
   Gate<Has<C, 'users.score'>, { readonly users: UsersScoreApi }> &
+  Gate<Has<C, 'notifications.send'>, { readonly notifications: NotificationsApi }> &
   Gate<Has<C, 'players.read'>, { readonly players: PlayersApi }> &
   Gate<Or<Has<C, 'textures.read'>, Has<C, 'textures.readFile'>>, { readonly textures: TexturesApiFor<C> }> &
   Gate<Has<C, 'storage.kv'>, { readonly kv: KvApi }> &

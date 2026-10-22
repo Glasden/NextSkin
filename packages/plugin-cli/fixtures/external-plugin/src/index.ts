@@ -13,7 +13,7 @@ type NoteRow = {
 }
 
 export default definePlugin({
-  capabilities: ['users.read', 'storage.kv', 'storage.tables'],
+  capabilities: ['users.read', 'storage.kv', 'storage.tables', 'notifications.send'],
   network: ['https://api.example.com'],
   settings: z.object({
     token: secret(),
@@ -37,6 +37,11 @@ export default definePlugin({
   on: {
     'user.registered': async ({ event, ctx }) => {
       await ctx.kv.set(`welcome:${event.data.user.uid}`, event.data.user.nickname, { ttlSec: 3600 })
+      await ctx.notifications.send(
+        event.data.user.uid,
+        { title: 'nav.notes', params: { name: event.data.user.nickname }, link: '/user' },
+        { key: `welcome:${event.data.user.uid}` },
+      )
     },
   },
   intercept: {

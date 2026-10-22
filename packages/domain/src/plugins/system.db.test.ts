@@ -1,7 +1,9 @@
 import { countRows, dialectOf, toIsoTimestamp, writeAuthDate } from '@nextskin/db'
 import { loadPlugin, remoteDialect, type CoreRpc, type InvocationContext, type PluginCall } from '@nextskin/plugin-host'
 import { definePlugin, deny, table } from '@nextskin/plugin-sdk'
-import { Kysely } from 'kysely'
+import { Kysely, type KyselyPlugin, type QueryId } from 'kysely'
+import { sendPluginNotification } from '../notifications/plugin.ts'
+import { PLUGIN_CLEANUP_JOB } from './system.ts'
 import { afterEach, expect, test, vi } from 'vitest'
 import { DomainError } from '../errors.ts'
 import { unavailableError } from './host.ts'
@@ -256,7 +258,12 @@ test('完全受控插件的非法拦截返回值也按失败处理', async () =>
 test('完全受控插件：事务内拒绝 kv/fetch/jobs/users RPC，允许 db.query', async () => {
   const denied: string[] = []
   await env.boot(
-    [official('a', { ...recorder(), capabilities: ['storage.tables', 'storage.kv', 'users.read', 'users.score'] })],
+    [
+      official('a', {
+        ...recorder(),
+        capabilities: ['storage.tables', 'storage.kv', 'users.read', 'users.score', 'notifications.send'],
+      }),
+    ],
     {
       plugins: {
         load: injected(async (_, context, rpc) => {
@@ -266,6 +273,7 @@ test('完全受控插件：事务内拒绝 kv/fetch/jobs/users RPC，允许 db.q
             ['jobs.enqueue', { name: 'missing', payload: {} }],
             ['users.get', { uid: 1 }],
             ['users.adjustScore', { uid: 1, delta: 1, reason: 'reward', key: 'once' }],
+            ['notifications.send', { uid: 1, notification: { title: 'notice' }, key: 'once' }],
           ] as const) {
             await expect(rpc(context.invocationId, method, args)).rejects.toMatchObject({ name: 'PluginCallRejected' })
             denied.push(method)
@@ -281,7 +289,7 @@ test('完全受控插件：事务内拒绝 kv/fetch/jobs/users RPC，允许 db.q
   )
   await enable('a')
   await env.core.users.register(env.input())
-  expect(denied).toEqual(['kv.get', 'fetch', 'jobs.enqueue', 'users.get', 'users.adjustScore'])
+  expect(denied).toEqual(['kv.get', 'fetch', 'jobs.enqueue', 'users.get', 'users.adjustScore', 'notifications.send'])
   expect(await records()).toEqual([{ value: 'allowed' }])
 })
 
@@ -305,6 +313,9 @@ test('完全受控插件：未授予能力、过期和伪造 invocationId 都拒
         })
         await expect(
           send(oldId, 'users.adjustScore', { uid: 1, delta: 1, reason: 'reward', key: 'once' }),
+        ).rejects.toMatchObject({ name: 'PluginCallRejected' })
+        await expect(
+          send(oldId, 'notifications.send', { uid: 1, notification: { title: 'notice' }, key: 'once' }),
         ).rejects.toMatchObject({ name: 'PluginCallRejected' })
         expect(await send(oldId, 'users.get', { uid: 2147483647 })).toBeNull()
         return { status: 200, statusText: 'OK', headers: [], body: null }
@@ -1346,4 +1357,211 @@ test('衣柜、设备码确认、注册顺带建角色和后台代操作不调�
   const player = await env.db.selectFrom('players').select('id').where('user_id', '=', uid).executeTakeFirstOrThrow()
   await env.core.admin.updatePlayer(actor, player.id, { name: 'Renamed' })
   expect(handler).not.toHaveBeenCalled()
+})
+
+test('notifications.send 的 RPC 校验参数、永久 key，并接受任一语言的文案', async () => {
+  const plugin = official(
+    'a',
+    definePlugin({
+      capabilities: ['notifications.send'],
+      routes: { 'GET /': { auth: 'public', handler: () => Promise.resolve(new Response()) } },
+    }),
+  )
+  // 文案里真有这些键也要拒绝：键原样存进 varchar 列，PostgreSQL 存不了 NUL，不成对的代理项会被换成 U+FFFD
+  plugin.messages = {
+    fr: {
+      x: '最短',
+      notice: { title: 'Bonjour', body: 'Corps' },
+      ['🪙'.repeat(128)]: '上限',
+      ['a\0b']: 'NUL',
+      ['\ud800']: '代理项',
+      ['a\udc00']: '代理项',
+    },
+  }
+  const actor = await env.actor()
+  let accepted = false
+  await env.boot([plugin], {
+    plugins: {
+      load: injected(async (_, context, rpc) => {
+        const notification = { title: 'notice.title', body: 'notice.body' }
+        const args = { uid: actor.uid, notification, key: 'once' }
+        const call = (patch: Record<string, unknown>) =>
+          rpc(context.invocationId, 'notifications.send', { ...args, ...patch })
+        for (const uid of [0, -1, 1.1, '1', null, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])
+          await expect(call({ uid })).rejects.toMatchObject({
+            name: 'PluginCallRejected',
+            message: expect.stringContaining('uid') as unknown,
+          })
+        for (const value of [null, [], 'notice', 1])
+          await expect(call({ notification: value })).rejects.toMatchObject({ name: 'PluginCallRejected' })
+        for (const field of ['title', 'body']) {
+          for (const value of [
+            '',
+            'missing',
+            'notice',
+            1,
+            null,
+            '🪙'.repeat(129),
+            'a\0b',
+            '\ud800',
+            'a\udc00',
+            ...(field === 'title' ? [undefined] : []),
+          ])
+            await expect(call({ notification: { ...notification, [field]: value } })).rejects.toMatchObject({
+              name: 'PluginCallRejected',
+              message: expect.stringContaining(field) as unknown,
+            })
+        }
+        for (const params of [
+          null,
+          [],
+          'x',
+          1,
+          new Date(),
+          Object.fromEntries(Array.from({ length: 21 }, (_, n) => [`p${n}`, 1])),
+          { '': 1 },
+          { ['🪙'.repeat(65)]: 1 },
+          { ['a\0b']: 1 },
+          { ['\ud800']: 1 },
+          { ['a\udc00']: 1 },
+          { a: '🪙'.repeat(201) },
+          { a: 'a\0b' },
+          { a: '\ud800' },
+          { a: 'a\udc00' },
+          { a: NaN },
+          { a: Infinity },
+          { a: -Infinity },
+          { a: true },
+          { a: null },
+          { a: {} },
+          { a: [] },
+        ])
+          await expect(call({ notification: { ...notification, params } })).rejects.toMatchObject({
+            name: 'PluginCallRejected',
+            message: expect.stringContaining('params') as unknown,
+          })
+        for (const link of [
+          '',
+          'https://evil.example',
+          '//evil.example',
+          '/\\evil.example',
+          '/a\\b',
+          '/a\0b',
+          '/a\nb',
+          '/a\x1fb',
+          '/a\x7fb',
+          '/a\ud800',
+          '/'.repeat(501),
+          1,
+          null,
+        ])
+          await expect(call({ notification: { ...notification, link } })).rejects.toMatchObject({
+            name: 'PluginCallRejected',
+            message: expect.stringContaining('link') as unknown,
+          })
+        for (const key of [
+          '',
+          ' leading',
+          'trailing ',
+          '\tkey',
+          'a\0b',
+          '\ud800',
+          'a\udc00',
+          '🪙'.repeat(256),
+          1,
+          null,
+        ])
+          await expect(call({ key })).rejects.toMatchObject({
+            name: 'PluginCallRejected',
+            message: expect.stringContaining('key') as unknown,
+          })
+        expect(
+          await call({
+            notification: {
+              title: '🪙'.repeat(128),
+              body: '🪙'.repeat(128),
+              params: {
+                ['🪙'.repeat(64)]: '🪙'.repeat(200),
+                ...Object.fromEntries(Array.from({ length: 19 }, (_, n) => [`p${n}`, n])),
+              },
+              link: '/' + 'a'.repeat(499),
+            },
+            key: '🪙'.repeat(255),
+          }),
+        ).toEqual({ status: 'sent' })
+        expect(await call({})).toEqual({ status: 'sent' })
+        expect(await call({})).toEqual({ status: 'duplicate' })
+        expect(await call({ key: 'minimal', notification: { title: 'notice.title', params: {}, link: '/' } })).toEqual({
+          status: 'sent',
+        })
+        expect(
+          await call({
+            key: 'x',
+            notification: {
+              title: 'x',
+              body: 'x',
+              params: { ' ': '', a: Number.MAX_VALUE, b: -Number.MAX_VALUE, c: 0 },
+            },
+          }),
+        ).toEqual({ status: 'sent' })
+        expect(await call({ uid: Number.MAX_SAFE_INTEGER, key: 'missing' })).toEqual({ status: 'userNotFound' })
+        accepted = true
+        return { status: 200, statusText: 'OK', headers: [], body: null }
+      }),
+    },
+  })
+  await env.core.plugins.admin.enable(actor, 'a')
+  await env.core.plugins.route(routeInput('/'))
+  expect(accepted).toBe(true)
+  expect(await env.db.selectFrom('notifications').select('plugin_id').execute()).toEqual([
+    { plugin_id: 'a' },
+    { plugin_id: 'a' },
+    { plugin_id: 'a' },
+    { plugin_id: 'a' },
+  ])
+  expect(env.core.plugins.hasMessage('a', 'notice.title')).toBe(true)
+})
+
+test('卸载后的清理任务按 1000 个通知分批删除，永久键和其他插件的通知保留', async () => {
+  const deleted: bigint[] = []
+  const queries = new Set<QueryId>()
+  const observer: KyselyPlugin = {
+    transformQuery({ node, queryId }) {
+      if (node.kind === 'DeleteQueryNode' && JSON.stringify(node).includes('"notifications"')) queries.add(queryId)
+      return node
+    },
+    transformResult({ result, queryId }) {
+      if (queries.has(queryId)) deleted.push(result.numAffectedRows!)
+      return Promise.resolve(result)
+    },
+  }
+  await env.boot([], { db: env.db.withPlugin(observer) })
+  const actor = await env.actor()
+  const now = new Date()
+  await sendPluginNotification(env.db, { pluginId: 'gone', uid: actor.uid, title: 'notice', key: 'once', now })
+  const row = await env.db.selectFrom('notifications').selectAll().executeTakeFirstOrThrow()
+  const { id: _id, ...copy } = row
+  void _id
+  for (let n = 0; n < 8; n++)
+    await env.db
+      .insertInto('notifications')
+      .values(Array.from({ length: 250 }, () => copy))
+      .execute()
+  await env.db
+    .insertInto('notifications')
+    .values({ ...copy, plugin_id: 'other' })
+    .execute()
+  // 模拟卸载事务已删除插件记录、登记清理任务后的状态。
+  await env.core.plugins.scheduleCleanup(env.db, { id: 'gone', hash: 'old-package' })
+  await env.db
+    .updateTable('jobs')
+    .set({ run_at: toIsoTimestamp(new Date(0)) })
+    .where('name', '=', PLUGIN_CLEANUP_JOB)
+    .execute()
+  await env.core.jobs.drain()
+  expect(deleted).toEqual([1000n, 1000n, 1n])
+  expect(await env.db.selectFrom('notifications').select('plugin_id').execute()).toEqual([{ plugin_id: 'other' }])
+  expect(await env.db.selectFrom('plugin_notification_keys').select('plugin_key').execute()).toEqual([
+    { plugin_key: 'once' },
+  ])
 })

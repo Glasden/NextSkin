@@ -89,7 +89,7 @@ export function Select<Value extends string>({
       <BaseSelect.Portal>
         {/* 弹出层放在触发器下方，不像系统下拉框那样盖住触发器：与 Menu 的位置一致 */}
         <BaseSelect.Positioner
-          className="z-10 outline-none"
+          className="z-30 outline-none"
           alignItemWithTrigger={false}
           sideOffset={4}
           collisionPadding={16}

@@ -3,6 +3,7 @@ import type { Actor } from '@nextskin/plugin-sdk'
 import type { Selectable, Transaction } from 'kysely'
 import { audit } from '../audit/write.ts'
 import type { Events } from '../events/emit.ts'
+import { notify } from '../notifications/write.ts'
 import { adjustScore } from '../score/adjust.ts'
 import type { ReportAction } from './types.ts'
 
@@ -40,6 +41,7 @@ export async function settleReport(
     reward: number
     ip: string | null
     management: boolean
+    textureName: string
     deletedAccountUid?: number
     now: IsoTimestamp
   },
@@ -78,6 +80,22 @@ export async function settleReport(
     }
   }
   if (row.texture_id === null) throw new TypeError('待处理举报必须指向存在的材质')
+  // 告诉举报人处理结果（ADR-0052）：只说采纳还是驳回，不说是删了材质还是封禁了上传者，同"我的举报"页
+  if (row.reporter_id !== null && row.reporter_id !== input.deletedAccountUid)
+    await notify(
+      tx,
+      row.reporter_id,
+      'report.resolved',
+      {
+        reportId: row.id,
+        tid: row.texture_id,
+        textureName: input.textureName,
+        outcome: row.status === 'rejected' ? 'rejected' : 'resolved',
+        refunded,
+        rewarded,
+      },
+      now,
+    )
   await events.emit(
     tx,
     'report.resolved',

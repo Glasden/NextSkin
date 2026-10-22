@@ -24,6 +24,7 @@ Kysely 实例、SQLite 方言、迁移运行器，以及隔离四种数据库差
 - `insertOrIgnore` 在 MySQL 上会把任何唯一键冲突都当成"已存在"，不只是传入的冲突列。冲突列以外还有唯一约束的表，要注意这一点。
 - `upsert` 在 MySQL 上是逐行"先 update、再 insert"，不用 `on duplicate key update`：后者遇到冲突列以外的唯一键冲突时，会改掉另一行。为了四种数据库结果一致，`upsert` 有几条限制：`update` 不能改冲突列；多行时 `update` 只能是列名数组；列名数组里的列，每一行都必须给值。违反时执行前就会报错。另外，`values` 必须是一条能单独插入的合法行：MySQL 命中已有行时直接 update，不会像 PG、SQLite 那样先检查这一行的 CHECK 等约束。
 - MySQL 的会话隔离级别统一设为 READ COMMITTED，与 PG 的默认值一致；SQLite 是串行化。业务代码不能依赖 REPEATABLE READ 的快照语义。
+- 读已提交下，`INSERT … SELECT` 从被引用的表里取外键的值（例如从 `users` 给一批用户写行），源查询要包一层 `lockForReference`：不加锁的读会选中别的事务删掉、还没提交的行，对方提交后外键检查报错，这种错误不重试。
 - 死锁（MySQL 1213、PG 40P01）和串行化失败（PG 40001）会让整个事务作废，只能由开启事务的一方重试整个事务。本包的辅助函数只在自己开的事务里重试。
 - MySQL 的服务器错误大多只保留 errno、错误码和 SQLSTATE，原始消息被省略：消息里的值，甚至列名，都可能来自查询参数（不变量 11）。排查时在测试库上复现。往白名单里加 errno 之前，要在 MySQL 和 MariaDB 上实测（见 `connection-errors.mysql.db.test.ts`）。
 - `dialectOf` 依赖 Kysely 标为 `@internal` 的 `getExecutor()`。升级 Kysely 后必须跑 `pnpm test:db`。

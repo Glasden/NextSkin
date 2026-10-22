@@ -6,6 +6,7 @@ import { DomainError } from '../errors.ts'
 import type { CaptchaService } from '../captcha/service.ts'
 import type { Events } from '../events/emit.ts'
 import type { JobHandler, JobRunner } from '../jobs/runner.ts'
+import { createAdminNotifications } from '../notifications/admin.ts'
 import type { PluginSystem } from '../plugins/system.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { lockTexture } from '../textures/manage.ts'
@@ -93,6 +94,7 @@ export function createAdmin(options: AdminOptions) {
     ...createAdminTextures(options),
     ...createAdminCloset(options),
     ...createAdminFailedJobs(options),
+    ...createAdminNotifications(options),
     /** 只改身份：PATCH 只带 role 时的说法，规则见 updateUser */
     setRole(actor: AdminActor, uid: number, role: AssignableRole): Promise<AdminUser> {
       return users.updateUser(actor, uid, { role })
@@ -157,6 +159,7 @@ export function createAdmin(options: AdminOptions) {
           reward: values['report.reward'],
           ip: actor.ip,
           management: true,
+          textureName: texture?.name ?? '',
           now: timestamp,
         })
         return reportView(tx, id)

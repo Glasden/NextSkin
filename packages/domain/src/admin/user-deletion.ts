@@ -51,6 +51,7 @@ export function createAdminUserDeletion(options: AdminOptions) {
               actor: eventActor,
               refund,
               refundUploader: false,
+              deletedAccountUid: uid,
               now: timestamp,
               review: { resolverId: actor.uid, ip: actor.ip, reward: 0 },
             })

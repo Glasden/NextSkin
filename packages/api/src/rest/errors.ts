@@ -15,6 +15,13 @@ import type { AppEnv } from '../env.ts'
 
 type ErrorCode = keyof Messages['errors']
 const statuses = {
+  notification_not_found: 404,
+  notification_broadcast_not_found: 404,
+  notification_broadcast_recalled: 409,
+  notification_title_length: 400,
+  notification_body_length: 400,
+  notification_recipients_length: 400,
+  notification_recipient_unknown: 400,
   import_jobs_busy: 409,
   setup_required: 403,
   setup_completed: 404,

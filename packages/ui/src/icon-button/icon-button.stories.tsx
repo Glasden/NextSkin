@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { Bell } from 'pixelarticons/react/Bell.js'
 import { Copy } from 'pixelarticons/react/Copy.js'
 import { Pencil } from 'pixelarticons/react/Pencil.js'
 import { Trash } from 'pixelarticons/react/Trash.js'
@@ -58,4 +59,30 @@ export const Sizes: Story = {
       </IconButton>
     </div>
   ),
+}
+
+/** 右上角的计数：页头铃铛上的未读通知数。0 不显示，超过 99 写 99+；数量写在按钮的名称里，角标对读屏隐藏 */
+export const WithCount: Story = {
+  name: 'With count',
+  render: () => (
+    <div className="flex items-center gap-2 bg-surface p-2">
+      <IconButton label="通知">
+        <Bell />
+      </IconButton>
+      <IconButton label="通知，3 条未读" count={3}>
+        <Bell />
+      </IconButton>
+      <IconButton label="通知，42 条未读" count={42}>
+        <Bell />
+      </IconButton>
+      <IconButton label="通知，超过 99 条未读" count={100}>
+        <Bell />
+      </IconButton>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('button', { name: '通知' })).toHaveTextContent('')
+    await expect(canvas.getByRole('button', { name: '通知，3 条未读' })).toHaveTextContent('3')
+    await expect(canvas.getByRole('button', { name: '通知，超过 99 条未读' })).toHaveTextContent('99+')
+  },
 }

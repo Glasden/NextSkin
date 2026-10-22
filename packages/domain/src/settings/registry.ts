@@ -234,6 +234,8 @@ export const coreSettingsRegistry = {
   },
   // 0 表示永久保留审计日志（ADR-0029）。
   'audit.retentionDays': { schema: z.int().min(0).max(3650), default: 0, section: 'advanced', secret: false },
+  // 通知的保留天数，已读、未读都清理；0 表示不清理（ADR-0052）。
+  'notifications.retentionDays': { schema: z.int().min(0).max(3650), default: 365, section: 'advanced', secret: false },
   // 旧站 .env 的 SALT：BS 的带盐摘要算法用它当全站 pepper，导入时写入（auth/legacy-passwords.ts）
   'auth.legacyPasswordSalt': { schema: z.string(), default: '', section: null, secret: true },
 } as const satisfies Record<string, SettingDefinition>

@@ -12,6 +12,9 @@ const jobKeys = {
   'core:audit-log-cleanup': 'auditLogCleanup',
   'core:plugin-kv-cleanup': 'pluginKvCleanup',
   'core:plugin-cleanup': 'pluginCleanup',
+  'core:notification-fanout': 'notificationFanout',
+  'core:notification-recall': 'notificationRecall',
+  'core:notification-sweep': 'notificationSweep',
 } as const
 export type JobKey = (typeof jobKeys)[keyof typeof jobKeys]
 

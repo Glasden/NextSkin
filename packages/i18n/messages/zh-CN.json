@@ -191,7 +191,14 @@
     "oauth_redirect_uri_too_long": "每条回调地址最多 {max} 个字符。",
     "oauth_client_public": "启动器类型的应用没有密钥。",
     "oauth_client_shared": "公用应用不能删除。",
-    "oauth_client_not_manageable": "只有超级管理员能处理没有主人的应用。"
+    "oauth_client_not_manageable": "只有超级管理员能处理没有主人的应用。",
+    "notification_not_found": "找不到这条通知。",
+    "notification_broadcast_not_found": "找不到这次发送记录。",
+    "notification_broadcast_recalled": "这次发送已经撤回了。",
+    "notification_title_length": "标题需要 {min}–{max} 个字。",
+    "notification_body_length": "正文不能超过 {max} 个字。",
+    "notification_recipients_length": "请填写 {min}–{max} 个收件人。",
+    "notification_recipient_unknown": "找不到收件人「{value}」。"
   },
   "score": {
     "reasons": {
@@ -338,6 +345,7 @@
     "nav": {
       "label": "用户中心",
       "dashboard": "仪表盘",
+      "notifications": "通知",
       "players": "角色",
       "profile": "个人资料",
       "security": "登录与安全",
@@ -781,6 +789,31 @@
       "next": "下一页",
       "page": "第 {page} 页"
     },
+    "notifications": {
+      "title": "通知",
+      "description": "举报的处理结果、管理员对你的材质和账号做的修改，以及站点发给你的消息。",
+      "tabsLabel": "通知分类",
+      "tabs": {
+        "all": "全部",
+        "unread": "未读"
+      },
+      "listLabel": "通知列表",
+      "readAll": "全部标为已读",
+      "readAllDone": "{count, plural, =0 {没有要标的通知} other {已把 # 条标为已读}}",
+      "markRead": "标为已读",
+      "delete": "删除",
+      "deleted": "已删除这条通知",
+      "open": "查看",
+      "failed": "没有成功，稍后再试一次",
+      "emptyTitle": "还没有通知",
+      "emptyUnreadTitle": "没有未读的通知",
+      "emptyDescription": "举报有了结果、管理员处理了你的材质或账号时，会在这里告诉你。",
+      "emptyUnreadAction": "查看全部通知",
+      "pagination": "通知分页",
+      "previous": "上一页",
+      "next": "下一页",
+      "page": "第 {page} 页"
+    },
     "oauthClients": {
       "title": "OAuth 应用",
       "count": "{count, number} 个",
@@ -890,6 +923,15 @@
       },
       "copyright": "© {year} {name}",
       "poweredBy": "由 NextSkin 驱动"
+    },
+    "notifications": {
+      "label": "通知",
+      "labelUnread": "{count, plural, =100 {通知，超过 99 条未读} other {通知，# 条未读}}",
+      "title": "通知",
+      "readAll": "全部标为已读",
+      "viewAll": "查看全部",
+      "empty": "没有新通知",
+      "unread": "未读"
     }
   },
   "home": {
@@ -1150,7 +1192,8 @@
       "migration": "数据迁移",
       "plugins": "插件",
       "failedJobs": "失败任务",
-      "oauthClients": "OAuth 应用"
+      "oauthClients": "OAuth 应用",
+      "notifications": "通知"
     },
     "roles": {
       "banned": "已封禁",
@@ -1417,7 +1460,9 @@
         "textureUnpublish": "下架材质",
         "oauthClientDisable": "停用 OAuth 应用",
         "oauthClientEnable": "启用 OAuth 应用",
-        "oauthClientDelete": "删除 OAuth 应用"
+        "oauthClientDelete": "删除 OAuth 应用",
+        "notificationSend": "发送通知",
+        "notificationRecall": "撤回通知"
       },
       "subjects": {
         "user": "用户 #{id}",
@@ -1429,7 +1474,8 @@
         "pluginHost": "plugin host",
         "oauthClient": "OAuth 应用 #{id}",
         "job": "失败任务 #{id}",
-        "allJobs": "全部失败任务"
+        "allJobs": "全部失败任务",
+        "notificationBroadcast": "通知发送 #{id}"
       },
       "actorSystem": "系统",
       "actorPlugin": "插件 {id}",
@@ -1476,7 +1522,9 @@
         "textureDescription": "描述 {from} 字 → {to} 字",
         "textureUnpublish": "{name}{closets, plural, =0 {} other {，从 # 个衣柜里移除}}{refunded, plural, =0 {} other {，退还 # 积分}}",
         "oauthClient": "client_id {clientId}{owner, select, none {，没有主人} other {，主人 #{owner}}}",
-        "oauthClientDelete": "{summary}；{users, plural, other {# 位用户的授权}}，{accessTokens, plural, other {# 个访问令牌}}、{refreshTokens, plural, other {# 个刷新令牌}}"
+        "oauthClientDelete": "{summary}；{users, plural, other {# 位用户的授权}}，{accessTokens, plural, other {# 个访问令牌}}、{refreshTokens, plural, other {# 个刷新令牌}}",
+        "notificationSend": "收件人：{audience, select, all {全部用户} users {普通用户} admins {管理员} other {指定的 {count, plural, other {# 个用户}}}}",
+        "notificationRecall": "撤回前已送达 {recipientCount, number} 人"
       },
       "filterActor": "只看操作者 #{uid}",
       "filterSubject": "只看 {subject}",
@@ -1902,6 +1950,12 @@
             "label": "公开资源的缓存时间",
             "help": "材质文件和 CSL 接口的浏览器缓存时间，单位是秒。"
           }
+        },
+        "notifications": {
+          "retentionDays": {
+            "label": "通知保留天数",
+            "help": "通知发出超过这么多天就删掉，已读、未读都删。填 0 表示一直保留。"
+          }
         }
       }
     },
@@ -2033,6 +2087,9 @@
           "readPrivate": "读用户的邮箱、积分和语言",
           "score": "给任何用户加减积分，能看到余额"
         },
+        "notifications": {
+          "send": "给任何用户发站内通知，内容是插件自己的文案"
+        },
         "players": {
           "read": "读角色"
         },
@@ -2150,7 +2207,10 @@
         "authCleanup": "清理过期的登录数据",
         "auditLogCleanup": "清理过期的审计日志",
         "pluginKvCleanup": "清理插件的过期数据",
-        "pluginCleanup": "清理卸载了的插件"
+        "pluginCleanup": "清理卸载了的插件",
+        "notificationFanout": "展开群发通知",
+        "notificationRecall": "清理撤回的通知",
+        "notificationSweep": "清理过期的通知"
       },
       "templates": {
         "verifyEmail": "验证邮箱",
@@ -2215,7 +2275,13 @@
       "email_taken": "这个邮箱已经被另一个账号用了。",
       "texture_not_found": "找不到这个材质，或者它是主人看不到的私有材质。",
       "closet_item_exists": "这个材质已经在这个用户的衣柜里了。",
-      "closet_item_not_found": "这个用户的衣柜里没有这个材质。"
+      "closet_item_not_found": "这个用户的衣柜里没有这个材质。",
+      "notification_broadcast_not_found": "找不到这次发送记录。",
+      "notification_broadcast_recalled": "这次发送已经撤回了。",
+      "notification_title_length": "标题需要 {min}–{max} 个字。",
+      "notification_body_length": "正文不能超过 {max} 个字。",
+      "notification_recipients_length": "请填写 {min}–{max} 个收件人。",
+      "notification_recipient_unknown": "找不到收件人「{value}」。"
     },
     "userDetail": {
       "metaTitle": "用户 #{uid}",
@@ -2432,7 +2498,8 @@
         "title": "OAuth 应用",
         "owned": "名下的应用",
         "manage": "在 OAuth 应用页管理"
-      }
+      },
+      "sendNotification": "发通知"
     },
     "oauthClients": {
       "title": "OAuth 应用",
@@ -2485,6 +2552,61 @@
       "deleteHint": "{count, plural, =0 {还没有用户授权过这个应用。} other {已经授权的 # 位用户全部失效。}}接入这个应用的服务要重新配置，无法恢复。{notify, select, yes {会给主人发邮件通知。} other {}}",
       "deleteConfirm": "删除应用",
       "deleted": "已删除 {name}"
+    },
+    "notifications": {
+      "title": "通知",
+      "description": "给用户发站内通知。通知只出现在站内，不发邮件；群发的对象以发送那一刻为准，之后注册的用户收不到。",
+      "compose": "发送通知",
+      "audience": "收件人",
+      "audiences": {
+        "all": "全部用户",
+        "users": "普通用户",
+        "admins": "管理员",
+        "specific": "指定用户"
+      },
+      "audienceHints": {
+        "all": "除了被封禁的用户，人人都会收到。",
+        "users": "身份是“用户”的人，不含管理员和被封禁的用户。",
+        "admins": "管理员和超级管理员。",
+        "specific": "只发给下面填的用户，被封禁的用户也能收到。"
+      },
+      "recipients": "用户",
+      "recipientsHint": "一行一个 uid 或邮箱，最多 50 个。",
+      "titleLabel": "标题",
+      "titleHint": "最多 60 个字，显示在页头的通知列表里。",
+      "body": "正文",
+      "bodyHint": "可以用 Markdown，不渲染 HTML。可以不写。",
+      "preview": "收件人看到的样子",
+      "previewUntitled": "标题会显示在这里",
+      "previewTime": "刚刚",
+      "recipientsTooMany": "一次最多发给 50 个用户，现在填了 {count} 个。分几次发。",
+      "send": "发送",
+      "confirmTitle": "{audience, select, all {发给全部用户？} users {发给全部普通用户？} other {发给全部管理员？}}",
+      "confirmHint": "每个收件人的通知里都会多出这一条。人多的时候要一会儿才能发完；发错了可以在发送记录里撤回。",
+      "sent": "{audience, select, specific {已发送} other {开始发送了，可以在发送记录里看进度}}",
+      "failed": "没有发出去，稍后再试一次",
+      "history": "发送记录",
+      "historyCount": "{count} 次",
+      "tableLabel": "通知的发送记录",
+      "columns": {
+        "title": "标题",
+        "audience": "收件人",
+        "sender": "发送人",
+        "status": "状态",
+        "time": "时间",
+        "actions": "操作"
+      },
+      "status": {
+        "sending": "发送中",
+        "sent": "已发送",
+        "recalled": "已撤回"
+      },
+      "delivered": "送达 {count, number} 人",
+      "empty": "还没有发过通知",
+      "recall": "撤回",
+      "recallTitle": "撤回“{title}”？",
+      "recallHint": "收件人的通知里会删掉这一条，读过的人也看不到了。发送记录会留着。",
+      "recalled": "已撤回“{title}”"
     }
   },
   "yggdrasil": {
@@ -3071,5 +3193,47 @@
     "approved": "回到启动器，登录会自动完成。可以关掉这个页面了。",
     "deniedTitle": "已拒绝",
     "denied": "{name} 没有拿到任何权限。可以关掉这个页面了。"
+  },
+  "notifications": {
+    "plugin": {
+      "fallbackTitle": "来自插件 {id} 的通知"
+    },
+    "types": {
+      "report": {
+        "resolved": {
+          "title": "{outcome, select, resolved {举报已采纳} other {举报已驳回}}",
+          "body": "你对材质「{textureName}」的举报已{outcome, select, resolved {采纳} other {驳回}}{refunded, plural, =0 {} other {，退还 # 积分}}{rewarded, plural, =0 {} other {，奖励 # 积分}}。"
+        },
+        "pending": {
+          "title": "有新的举报待处理",
+          "body": "有用户举报了材质，等你在后台处理。"
+        }
+      },
+      "texture": {
+        "removed": {
+          "title": "{action, select, unpublished {你的材质被下架了} other {你的材质被删除了}}",
+          "body": "管理员{action, select, unpublished {下架} other {删除}}了你的材质「{name}」。"
+        }
+      },
+      "account": {
+        "changed": {
+          "title": "管理员修改了你的账号",
+          "body": "{changes}",
+          "changes": {
+            "email": "{pending, select, true {修改了你的邮箱（新地址确认之后才生效）} other {修改了你的邮箱}}",
+            "password": "设置了新密码",
+            "twoFactor": "关闭了两步验证",
+            "passkeys": "删除了 {count, plural, other {# 个通行密钥}}",
+            "binding": "解除了 {provider} 账号的绑定",
+            "playerRenamed": "把角色 {from} 改名为 {to}",
+            "playerDeleted": "删除了角色 {name}",
+            "oauthClientDisabled": "停用了你的 OAuth 应用 {name}",
+            "oauthClientDeleted": "删除了你的 OAuth 应用 {name}",
+            "playerTransferredOut": "把角色 {name} 转给了其他用户",
+            "playerTransferredIn": "把角色 {name} 转给了你"
+          }
+        }
+      }
+    }
   }
 }

@@ -62,7 +62,7 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(43)
+  expect(routes).toHaveLength(46)
   for (const route of routes) {
     const path = route.path
       .slice('/api'.length)
@@ -87,33 +87,36 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
     // 请求体要能通过 zod 和用例在查权限之前做的格式检查，才会走到权限检查
     const image = new FormData()
     image.set('file', new Blob([new Uint8Array([1])]), 'logo.png')
-    const body = route.path.startsWith('/api/admin/plugin-packages')
-      ? upload
-      : route.path === '/api/admin/site-images'
-        ? image
-        : route.path === '/api/admin/failed-jobs/retry'
-          ? { through: 7 }
-          : route.path.endsWith('/settings')
-            ? { values: {} }
-            : route.path.endsWith('/email')
-              ? { email: 'new@example.test' }
-              : route.path.endsWith('/password')
-                ? { password: 'new-password-123' }
-                : route.path.endsWith('/score')
-                  ? { delta: 1 }
-                  : route.path.endsWith('/transfer')
-                    ? { uid: 8 }
-                    : route.path.endsWith('/closet') && route.method === 'POST'
-                      ? { tid: 7 }
-                      : route.path.startsWith('/api/admin/textures/') && route.method === 'PATCH'
-                        ? { name: 'Skin' }
-                        : route.path.startsWith('/api/admin/players/') && route.method === 'PATCH'
-                          ? { name: 'Steve' }
-                          : route.method === 'POST'
-                            ? { action: 'dismiss' }
-                            : route.method === 'PATCH'
-                              ? { role: 'banned' }
-                              : undefined
+    const body =
+      route.path === '/api/admin/notifications' && route.method === 'POST'
+        ? { audience: 'all', title: '通知', body: '' }
+        : route.path.startsWith('/api/admin/plugin-packages')
+          ? upload
+          : route.path === '/api/admin/site-images'
+            ? image
+            : route.path === '/api/admin/failed-jobs/retry'
+              ? { through: 7 }
+              : route.path.endsWith('/settings')
+                ? { values: {} }
+                : route.path.endsWith('/email')
+                  ? { email: 'new@example.test' }
+                  : route.path.endsWith('/password')
+                    ? { password: 'new-password-123' }
+                    : route.path.endsWith('/score')
+                      ? { delta: 1 }
+                      : route.path.endsWith('/transfer')
+                        ? { uid: 8 }
+                        : route.path.endsWith('/closet') && route.method === 'POST'
+                          ? { tid: 7 }
+                          : route.path.startsWith('/api/admin/textures/') && route.method === 'PATCH'
+                            ? { name: 'Skin' }
+                            : route.path.startsWith('/api/admin/players/') && route.method === 'PATCH'
+                              ? { name: 'Steve' }
+                              : route.method === 'POST'
+                                ? { action: 'dismiss' }
+                                : route.method === 'PATCH'
+                                  ? { role: 'banned' }
+                                  : undefined
     for (const loggedIn of [true, false]) {
       authenticated = loggedIn
       const response = await request(route.method, path + query, body)

@@ -617,3 +617,43 @@ definePlugin({
     'user.action': async () => ({ action: 'patch', patch: {} }),
   },
 })
+
+// 通知能力只在申请后出现，事务内仍不可用（ADR-0052）。
+definePlugin({
+  capabilities: [],
+  on: {
+    'user.registered': async ({ ctx }) => {
+      // @ts-expect-error notifications 需要 notifications.send
+      ctx.notifications
+    },
+  },
+})
+definePlugin({
+  capabilities: ['notifications.send'],
+  intercept: {
+    'user.register': async ({ ctx }) => {
+      // @ts-expect-error 事务内没有 notifications
+      ctx.notifications
+    },
+  },
+})
+definePlugin({
+  capabilities: ['notifications.send'],
+  on: {
+    'user.registered': async ({ ctx, event }) => {
+      const result = await ctx.notifications.send(
+        event.data.user.uid,
+        {
+          title: 'notice.title',
+          body: 'notice.body',
+          params: { name: 'Alex', count: 1 },
+          link: '/user',
+        },
+        { key: 'once' },
+      )
+      const status: string = result.status
+      void status
+      await ctx.notifications.send(event.data.user.uid, { title: 'notice.title' }, { key: 'minimal' })
+    },
+  },
+})

@@ -111,7 +111,12 @@ export default async function AdminUserPage({
               </div>
             </div>
           </div>
-          <UserActions user={{ uid, nickname: user.nickname, role: user.role }} changes={changes} />
+          <div className="flex shrink-0 items-center gap-4 text-sm">
+            {can(viewer.role, 'notifications.send') && (
+              <Link render={<NextLink href={`/admin/notifications?to=${uid}`} />}>{t('sendNotification')}</Link>
+            )}
+            <UserActions user={{ uid, nickname: user.nickname, role: user.role }} changes={changes} />
+          </div>
         </div>
       </header>
 

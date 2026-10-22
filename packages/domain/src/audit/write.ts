@@ -44,6 +44,8 @@ export const AUDIT_ACTIONS = {
   'plugin.uninstall': 'plugin',
   'plugin.restartHost': 'plugin',
   'job.deadLetter': 'job',
+  'notification.send': 'notificationBroadcast',
+  'notification.recall': 'notificationBroadcast',
 } as const satisfies Record<string, string>
 export type AuditAction = keyof typeof AUDIT_ACTIONS
 
