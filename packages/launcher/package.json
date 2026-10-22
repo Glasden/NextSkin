@@ -1,6 +1,6 @@
 {
   "name": "@nextskin/launcher",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "private": true,
   "description": "启动器、管理命令与发行目录（ADR-0039）",
   "type": "module",
