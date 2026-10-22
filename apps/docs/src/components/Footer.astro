@@ -1,57 +1,24 @@
 ---
 import Default from '@astrojs/starlight/components/Footer.astro'
-import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import versions from '../data/versions.json'
 
-const repo = 'https://github.com/NayaCcR/NextSkin-Docs'
-
-let sdkVersion
-try {
-  sdkVersion = JSON.parse(
-    readFileSync(join(process.cwd(), 'src/data/sdk-meta.json'), 'utf8'),
-  ).version
-} catch {
-  sdkVersion = undefined
-}
-
-// Cloudflare Pages 构建时注入提交号；本地取 git，取不到就只显示日期。
-const sha =
-  (process.env.CF_PAGES_COMMIT_SHA ?? process.env.GITHUB_SHA)?.slice(0, 7) ||
-  (() => {
-    try {
-      return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      }).trim()
-    } catch {
-      return undefined
-    }
-  })()
-
-const builtOn = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai' }).format(new Date())
+const repo = 'https://github.com/Glasden/NextSkin'
 ---
 
 <Default />
 
 <div class="docs-meta sl-flex">
-	<span>文档版本 {builtOn}</span>
+	<a href={`${repo}/releases/tag/v${versions.nextskin}`}>NextSkin v{versions.nextskin}</a>
+	<span aria-hidden="true">·</span>
+	<span>插件 SDK v{versions.sdk}</span>
 	{
-		sha && (
+		versions.commit && (
 			<>
 				<span aria-hidden="true">·</span>
-				<a href={`${repo}/commit/${sha}`}>提交 {sha}</a>
-			</>
-		)
-	}
-	{
-		sdkVersion && (
-			<>
-				<span aria-hidden="true">·</span>
-				<span>插件 SDK v{sdkVersion}</span>
+				<a href={`${repo}/commit/${versions.commit}`}>提交 {versions.commit.slice(0, 7)}</a>
 			</>
 		)
 	}
 	<span aria-hidden="true">·</span>
-	<a href={repo}>文档仓库</a>
+	<a href={`${repo}/tree/main/apps/docs`}>本站源码</a>
 </div>

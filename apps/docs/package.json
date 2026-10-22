@@ -1,20 +1,25 @@
 {
-  "name": "nextskin-docs",
+  "name": "@nextskin/docs",
   "version": "0.0.0",
   "private": true,
+  "description": "文档站：Astro + Starlight 的静态站点，正式版发布后部署到 Cloudflare Workers（ADR-0054）",
   "type": "module",
-  "packageManager": "pnpm@12.8.1",
-  "engines": {
-    "node": ">=24"
-  },
   "scripts": {
-    "sync": "node scripts/fetch-sdk-docs.mjs",
-    "dev": "pnpm sync && astro dev",
-    "build": "pnpm sync && astro build",
-    "preview": "astro preview"
+    "sync": "node scripts/sync.ts",
+    "dev": "node scripts/sync.ts && astro dev",
+    "build": "node scripts/sync.ts && astro build",
+    "preview": "astro preview",
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node scripts/sync.ts && astro sync && node ../../node_modules/typescript-native/bin/tsc -p .",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@astrojs/starlight": "0.42.6",
-    "astro": "7.3.8"
+    "@nextskin/ui": "workspace:*",
+    "astro": "7.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "wrangler": "4.151.3"
   }
 }
