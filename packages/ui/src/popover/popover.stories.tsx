@@ -99,6 +99,8 @@ export const Notification: Story = {
     await waitFor(() => expect(screen.queryByRole('dialog', { hidden: true })).toBeNull())
     await userEvent.click(trigger)
     await screen.findByRole('dialog', { name: '通知' })
+    // 初始焦点下一帧才落到第一个可聚焦的元素上：等它落下再移开，否则移开的可能是铃铛，截图里留着焦点框和提示
+    await waitFor(() => expect(screen.getByRole('button', { name: '全部标为已读' })).toHaveFocus())
     ;(document.activeElement as HTMLElement | null)?.blur()
   },
 }
@@ -110,6 +112,7 @@ export const Empty: Story = {
     await userEvent.click(canvas.getByRole('button', { name: '通知' }))
     await screen.findByText('没有新通知')
     await expect(screen.queryByRole('button', { name: '全部标为已读' })).toBeNull()
+    await waitFor(() => expect(screen.getByRole('link', { name: '查看全部' })).toHaveFocus())
     ;(document.activeElement as HTMLElement | null)?.blur()
   },
 }
