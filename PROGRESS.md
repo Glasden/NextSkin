@@ -55,4 +55,4 @@
 - **第三方登录的字段核对**：四家的 subject、`emailVerified` 还要用真实账号核对一遍（ADR-0034"首批插件"）。
 - **插件 API 推迟的部分**：其余写核心数据的能力（以指定 UUID 建角色等，见 ADR-0041 的"以后的写能力"）、草案里的其余五个拦截点、运行时组件和插槽等，见 ADR-0033 的"推迟"表。
 - **发布的后续**（ADR-0040）：ZIP 和镜像的构建来源证明（`actions/attest-build-provenance`）可以加了（仓库已公开）；推到 GHCR 的镜像还没在真实环境里运行过（发布工作流的镜像冒烟跑的是 runner 上本地构建的 amd64 镜像）；部署文档里标了"未实测"的条目（宝塔和 1Panel 的反向代理、Windows 的 Ctrl+C 和 NSSM、Docker 里导入）等真实环境核对；国内的下载渠道看 0.1.0 发出后的反馈再定。
-- 站点的 CSP（根布局里亮暗模式的内联脚本要带 nonce 或 hash）、后台覆盖翻译、种子数据。
+- 站点的 CSP（ADR-0053 提议：nonce 加 `'strict-dynamic'` 的严格策略，全站 `frame-ancestors 'none'`）、后台覆盖翻译、种子数据。
