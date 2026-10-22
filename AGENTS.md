@@ -67,6 +67,14 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 10. **UI 中不写原始色值和任意值类。** 需要组件时先在 `packages/ui` 里找；没有就先补组件和 story，再写页面。见 DESIGN.md。守护：lint、`theme.css` 清空了 Tailwind 的默认调色板。
 11. **日志里不得出现密码、令牌、Cookie、OAuth secret、数据库连接串。**
 
+### 服务器专属 Yggdrasil 准入
+
+- 预期接入方式是：玩家启动器继续使用公共 `/api/yggdrasil`，Minecraft 服务器使用 `/api/yggdrasil/server/<serverKey>`。公共 `join` 产生的认证证明必须能被专属路径的 `hasJoined` 安全消费；不能简单把 `serverKey` 拼进缓存键，导致公共 join 和专属 hasJoined 永远互相读不到。
+- 专属路径只允许失败关闭：未知或非法 key、设置读取失败、维护短路、插件缺失/停用、插件异常、超时、熔断和准入拒绝都不得返回公共 API 的 `X-Authlib-Injector-API-Location`，也不得让客户端回退到 `/api/yggdrasil`。
+- 准入授权必须是明确许可。插件“不处理”某个 key 不能等价于 allow；多插件时需要明确的权威认领/许可语义，不能用“所有插件都返回 void”放行未知服务器。
+- metadata、join、hasJoined 的拦截调用次数和路径匹配必须有测试；不要注册会让同一请求命中两次的重叠 middleware。hasJoined 的准入失败要和普通会话未命中区分，失败响应不能误带 ALI。
+- 服务器专属路径的测试必须覆盖公共 join → 专属 hasJoined、专属 metadata 异常、ALI 回退、插件拒绝/不可用/超时、末尾斜杠和多服务器 session 隔离；只 mock `hasJoined` 成功不足以证明真实链路可用。
+
 ## 目录（落地后的约定）
 
 | 路径 | 内容 |
