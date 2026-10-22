@@ -25,8 +25,50 @@ env:
   NEXT_TELEMETRY_DISABLED: 1
 
 jobs:
+  # 合并 PR 在 main 上生成新的提交，推送时又要把 PR 上测过的内容整个再跑一遍。
+  # 推送的提交来自一个已合并的 PR、树和 PR 最后的 head 完全相同、那次 CI 也通过了，就跳过下面的任务。
+  # 还要求推送前的分支是 head 的祖先：PR 上测的是 head 和当时目标分支的合并结果，分支只会往前走（规则集禁止强推），
+  # 当时的目标分支也就是 head 的祖先，测的正是 head 本身。
+  # 合并前目标分支动过、直接推送（找不到 PR）、查询出错，都照常全跑
+  gate:
+    name: 合并的内容是否已在 PR 上测过
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+    outputs:
+      skip: ${{ steps.tested.outputs.skip }}
+    steps:
+      - id: tested
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          skip=false
+          tree=$(gh api "repos/$REPO/git/commits/$SHA" --jq .tree.sha || true)
+          heads=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '.[] | select(.merged_at != null) | .head.sha' || true)
+          for head in $heads; do
+            [ -n "$tree" ] && [ "$(gh api "repos/$REPO/git/commits/$head" --jq .tree.sha || true)" = "$tree" ] || continue
+            case "$(gh api "repos/$REPO/compare/$BEFORE...$head" --jq .status || true)" in ahead | identical) ;; *) continue ;; esac
+            passed=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$head&event=pull_request&status=success" --jq .total_count || true)
+            if [ "${passed:-0}" -gt 0 ]; then
+              echo "::notice::内容和 PR 的 head ${head:0:7} 完全相同，那次 CI 已经通过，这次不再重跑"
+              skip=true
+              break
+            fi
+          done
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
   check:
     name: ${{ matrix.name }}
+    needs: gate
+    # gate 只在推送时运行；没运行或出错时 skip 为空，照常跑
+    if: ${{ !cancelled() && needs.gate.outputs.skip != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
@@ -52,6 +94,8 @@ jobs:
       - run: ${{ matrix.command }}
 
   test-db:
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.skip != 'true' }}
     name: test:db（SQLite / MySQL / MariaDB / PostgreSQL）
     runs-on: ubuntu-24.04
     # 平时 11–14 分钟；慢的 runner 上光测试就跑了 19 分钟，20 分钟的上限被撞上过
@@ -70,6 +114,8 @@ jobs:
       - run: pnpm test:db
 
   e2e:
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.skip != 'true' }}
     name: build + e2e
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -93,6 +139,8 @@ jobs:
     # 组件截图回归：浏览器跑在与 @playwright/test 同版本的官方镜像里（packages/ui/playwright.config.ts），
     # 基线和本地 `pnpm test:visual` 拍出来的是同一套
     name: test:visual
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.skip != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -115,6 +163,8 @@ jobs:
           retention-days: 7
 
   pack:
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.skip != 'true' }}
     # 打包冒烟测试（ADR-0035）：在仓库外用 npm 安装 pnpm pack 出来的 SDK 和构建命令，类型检查、构建一个插件
     name: test:pack
     runs-on: ubuntu-24.04
@@ -134,9 +184,10 @@ jobs:
   changeset:
     # 不变量 9：插件 SDK 的 src 有改动就必须附 changeset（.changeset/config.json 的 changedFilePatterns）
     name: changeset
+    needs: gate
+    if: ${{ !cancelled() && github.event_name != 'workflow_dispatch' && needs.gate.outputs.skip != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    if: github.event_name != 'workflow_dispatch'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
