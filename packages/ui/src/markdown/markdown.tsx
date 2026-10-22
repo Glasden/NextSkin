@@ -3,6 +3,7 @@ import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cx } from '../cx.ts'
 import { focusRing } from '../styles.ts'
+import { CopyableCodeBlock, type MarkdownCopyLabels } from './code-block.tsx'
 
 export interface MarkdownProps {
   /** GitHub 风格的 Markdown。原始 HTML 直接去掉，不渲染（ADR-0028） */
@@ -14,6 +15,11 @@ export interface MarkdownProps {
    * 例如备案号前面的公安备案图标（ADR-0042）
    */
   inlineImages?: boolean
+  /**
+   * 给了就在每个代码块右上角放复制按钮，复制整块的文字，例如插件页上要用户发给机器人的一条命令。
+   * 结果用 Toast 告诉用户，要放在 ToastProvider 里面
+   */
+  copy?: MarkdownCopyLabels
 }
 
 const linkProtocols = /^(?:https?|mailto)$/i
@@ -40,6 +46,7 @@ export function markdownUrl(url: string, key: string): string {
 
 const headingClass = ['text-lg font-semibold', 'text-base font-semibold', 'text-base font-medium']
 const cellClass = 'border-b border-border px-3 py-2 text-left align-top'
+const codeBlockClass = 'font-mono text-sm [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-sm'
 
 /** react-markdown 会把 hast 节点作为 node 传给组件，不能落到 DOM 上 */
 function omitNode<P extends { node?: unknown }>(props: P): Omit<P, 'node'> {
@@ -55,7 +62,7 @@ function heading(depth: number, level: number) {
   }
 }
 
-function components(level: number, inlineImages: boolean): Components {
+function components(level: number, inlineImages: boolean, copy: MarkdownCopyLabels | undefined): Components {
   return {
     h1: heading(1, level),
     h2: heading(2, level),
@@ -97,12 +104,14 @@ function components(level: number, inlineImages: boolean): Components {
       <code {...omitNode(props)} className="rounded-sm bg-surface-sunken px-1 py-0.5 font-mono text-[0.875em]" />
     ),
     // 代码块和表格在自己的容器里横向滚动，页面本身不横向滚动
-    pre: (props) => (
-      <pre
-        {...omitNode(props)}
-        className="overflow-x-auto rounded-sm bg-surface-sunken p-3 font-mono text-sm [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-sm"
-      />
-    ),
+    pre: copy
+      ? (props) => <CopyableCodeBlock {...omitNode(props)} copy={copy} className={codeBlockClass} />
+      : (props) => (
+          <pre
+            {...omitNode(props)}
+            className={cx('overflow-x-auto rounded-sm bg-surface-sunken p-3', codeBlockClass)}
+          />
+        ),
     table: (props) => (
       <div className="overflow-x-auto">
         <table {...omitNode(props)} className="min-w-full border-collapse text-sm tabular-nums" />
@@ -133,10 +142,10 @@ const cache = new Map<string, Components>()
  * 管理员写的长文，例如公告和内容政策。块之间间距 16px，字号随所在的容器；
  * 链接、图片按 markdownUrl 过滤，原始 HTML 去掉。用户产生的内容（材质描述）不用它，按纯文本显示（ADR-0025）
  */
-export function Markdown({ children, headingLevel = 2, inlineImages = false }: MarkdownProps) {
-  const key = `${headingLevel}:${inlineImages}`
+export function Markdown({ children, headingLevel = 2, inlineImages = false, copy }: MarkdownProps) {
+  const key = JSON.stringify([headingLevel, inlineImages, copy && [copy.label, copy.done, copy.failed]])
   let mapped = cache.get(key)
-  if (!mapped) cache.set(key, (mapped = components(headingLevel, inlineImages)))
+  if (!mapped) cache.set(key, (mapped = components(headingLevel, inlineImages, copy)))
   return (
     <div className="flex min-w-0 flex-col gap-4 break-words text-text">
       <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml urlTransform={markdownUrl} components={mapped}>

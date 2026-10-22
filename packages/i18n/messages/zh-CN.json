@@ -2907,7 +2907,10 @@
     "failed": "没能完成：{message}",
     "failedPlain": "没能完成，插件没有说明原因。",
     "invalid": "有几项填写得不对，改好再提交。",
-    "count": "共 {count, number} 条"
+    "count": "共 {count, number} 条",
+    "copyCode": "复制",
+    "codeCopied": "已复制",
+    "copyCodeFailed": "没能复制，请手动选中后复制。"
   },
   "oauth": {
     "sharedClient": "{site} 公用应用",

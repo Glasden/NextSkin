@@ -126,7 +126,13 @@ export async function PluginPageView({
       body =
         response && response.status === 200 ? (
           <div className="max-w-3xl rounded-md border border-border bg-surface p-4 sm:p-6">
-            <Markdown headingLevel={1}>{response.text}</Markdown>
+            {/* 插件页上的代码块多半是要用户复制走的东西，例如发给机器人的一条命令 */}
+            <Markdown
+              headingLevel={1}
+              copy={{ label: t('copyCode'), done: t('codeCopied'), failed: t('copyCodeFailed') }}
+            >
+              {response.text}
+            </Markdown>
           </div>
         ) : null
       break

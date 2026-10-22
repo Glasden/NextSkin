@@ -2907,7 +2907,10 @@
     "failed": "Couldn't complete this: {message}",
     "failedPlain": "Couldn't complete this, and the plugin didn't say why.",
     "invalid": "Some fields aren't filled in correctly. Fix them and submit again.",
-    "count": "{count, number} in total"
+    "count": "{count, number} in total",
+    "copyCode": "Copy",
+    "codeCopied": "Copied",
+    "copyCodeFailed": "Couldn't copy. Select the text and copy it yourself."
   },
   "oauth": {
     "sharedClient": "{site} shared app",

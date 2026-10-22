@@ -52,7 +52,7 @@ page.items、field.code、field.used 需写进 locales。后台名字和简介�
 | table | source 路由返回 HTTP 200、JSON `{ rows: Record<string, Json>[], total: number }`；columns 按 key 读取每行的直接属性，不解析点路径 |
 | form | fields 声明输入；可选 load 用 GET 返回 HTTP 200 的 JSON 对象作为初始值；不写 load 则为空对象。submit 指定 route、POST/PUT/PATCH 和按钮 label |
 | stats | source 返回 HTTP 200、JSON `{ items: [{ label: MessageKey, value: number \| string }] }`；label 再翻译，数字按当前语言格式化 |
-| markdown | source 返回 HTTP 200、text/markdown 正文；核心不渲染原始 HTML |
+| markdown | source 返回 HTTP 200、text/markdown 正文；核心不渲染原始 HTML。代码块（三个反引号围起来的）右上角带复制按钮，复制整块的文字、不带末尾的换行，适合放要用户复制走的命令或地址 |
 
 数据源由页面在服务端调用插件 GET 路由，仍检查身份、权限、限流、期限。加载失败或形状不合格显示“没能加载”。public 数据源即使在登录页面中调用也匿名。
 

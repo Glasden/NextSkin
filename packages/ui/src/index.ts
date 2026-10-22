@@ -17,6 +17,7 @@ export { Input, type InputProps } from './input/input.tsx'
 export { Link, type LinkProps } from './link/link.tsx'
 export { Logo, type LogoProps } from './logo/logo.tsx'
 export { LogoMark } from './logo/logo-mark.tsx'
+export { type MarkdownCopyLabels } from './markdown/code-block.tsx'
 export { Markdown, type MarkdownProps } from './markdown/markdown.tsx'
 export {
   Menu,

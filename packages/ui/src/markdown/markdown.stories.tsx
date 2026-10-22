@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect } from 'storybook/test'
+import { expect, screen, spyOn, userEvent, waitFor } from 'storybook/test'
+import { ToastProvider } from '../toast/toast.tsx'
 // 不内联：小图在构建时会变成 data: 地址，Markdown 不放行
 import badge from './fixtures/badge.png?url&no-inline'
 import { Markdown } from './markdown.tsx'
@@ -108,5 +109,47 @@ export const InlineImages: Story = {
     const image = canvasElement.querySelector('img')!
     await expect(image.getBoundingClientRect().height).toBe(20)
     await expect(image.closest('p')!.getBoundingClientRect().height).toBe(20)
+  },
+}
+
+/** 插件页：代码块右上角带复制按钮，复制整块的文字，结果用 Toast 告诉用户 */
+export const CopyableCode: Story = {
+  args: {
+    copy: { label: '复制', done: '已复制', failed: '没能复制，请手动选中后复制。' },
+    children: `在游戏里输入下面的命令，领取新手礼包：
+
+\`\`\`
+/kit starter
+\`\`\`
+
+服务端的 \`server.properties\` 改成这样：
+
+\`\`\`properties
+online-mode=true
+enforce-secure-profile=false
+# 很长的一行在代码块自己的容器里横向滚动，复制按钮留在原处：-javaagent:authlib-injector.jar=https://example.test/api/yggdrasil
+\`\`\``,
+  },
+  decorators: [
+    (Story) => (
+      <ToastProvider label="通知" closeLabel="关闭">
+        <Story />
+      </ToastProvider>
+    ),
+  ],
+  play: async ({ canvas }) => {
+    const writeText = spyOn(navigator.clipboard, 'writeText').mockResolvedValue()
+    try {
+      const [first] = canvas.getAllByRole('button', { name: '复制' })
+      await userEvent.click(first!)
+      // 代码块末尾的换行不复制
+      await expect(writeText).toHaveBeenCalledWith('/kit starter')
+      const toast = await screen.findByRole('dialog', { name: '已复制' })
+      await waitFor(() => expect(toast).toBeVisible())
+      await userEvent.unhover(first!)
+      first!.blur()
+    } finally {
+      writeText.mockRestore()
+    }
   },
 }
