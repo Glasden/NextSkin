@@ -1,5 +1,5 @@
 import { channel } from 'node:diagnostics_channel'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { peerAddress, subscribePeerAddress } from '../lib/peer-address'
 
 test('订阅前和签名不匹配的内部头不可信；同步订阅覆盖伪造头且可重复调用', () => {

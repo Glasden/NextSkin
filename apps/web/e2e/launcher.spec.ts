@@ -1,5 +1,5 @@
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 test.use({ locale: 'zh-CN', extraHTTPHeaders: { 'x-forwarded-for': '203.0.113.70' } })
 

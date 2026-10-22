@@ -2,7 +2,8 @@ import { createHmac } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { nextskin } from './nextskin-cli'
 
 // 后台的主流程（ADR-0027）：举报 → 管理员删除材质 → 举报人看到已采纳 → 审计日志；封禁上传者 → 他只看到封禁说明，

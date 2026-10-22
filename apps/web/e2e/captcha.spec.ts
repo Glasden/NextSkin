@@ -1,5 +1,6 @@
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { nextskin } from './nextskin-cli'
 
 // 验证码（ADR-0038）。启用之后登录、注册都要过验证码，和别的用例共用一个站点会让它们失败，

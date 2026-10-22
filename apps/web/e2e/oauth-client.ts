@@ -3,7 +3,8 @@ import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { expect, type Locator, type Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
+import { expect } from './fixtures'
 
 // 授权码流程（ADR-0037 切片二）的 e2e 共用：登记应用、拼授权地址、接回调。connect.spec.ts 测流程本身，
 // account.spec.ts 测两步验证、通行密钥登录以后回到授权流程

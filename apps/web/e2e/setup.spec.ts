@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { OLD_SITE, OLD_SITE_PASSWORD } from '../../../packages/importer/src/testing/old-site.ts'
 
 // 安装向导的两条路（ADR-0031）：新站，和从 BS 导入。两个服务都是未初始化的站点（playwright.config.ts），

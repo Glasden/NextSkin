@@ -1,5 +1,5 @@
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { nextskin } from './nextskin-cli'
 
 // 手动维护模式（ADR-0044）。开着时除了管理员谁都用不了站点，和别的用例共用一个站点会让它们失败，
@@ -46,7 +46,9 @@ test('开启维护后，别人看到维护页、只能登录，管理员照常�
   expect(enabled.status()).toBe(200)
   try {
     // 没登录的访客：地址不变，换成维护页，显示站长的说明；管理员登录的链接带着原来的地址
-    await visitor.goto('/skinlib')
+    const maintenance = await visitor.goto('/skinlib')
+    expect(maintenance?.headers()['content-security-policy']).toContain("'strict-dynamic'")
+    expect(maintenance?.headers()['content-security-policy']).toContain("frame-ancestors 'none'")
     await expect(visitor.getByRole('heading', { name: t('maintenance.title'), level: 1 })).toBeVisible()
     await expect(visitor).toHaveURL(/\/skinlib$/)
     await expect(visitor.getByRole('heading', { name: '迁移服务器' })).toBeVisible()

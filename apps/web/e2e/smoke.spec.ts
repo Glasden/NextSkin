@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 test('首页能打开', async ({ page }) => {
   await page.goto('/')

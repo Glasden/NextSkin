@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto'
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { authorization, clickHydrated, createLauncherClient, listenCallback, waitForCallback } from './oauth-client'
 
 // 个人资料、两步验证、通行密钥和删除账号经过 standalone 产物的主流程（ADR-0023）。跑在 account 项目上：

@@ -1,5 +1,6 @@
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 // 亮暗模式（DESIGN.md §10）经过 standalone 产物：<head> 里的内联脚本是序列化的函数，生产构建压缩之后也要能跑
 const t = createTranslator('zh-CN')

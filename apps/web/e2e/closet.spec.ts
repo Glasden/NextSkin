@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
+import type { APIRequestContext, Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 // 衣柜、换材质、头像和举报的主流程（ADR-0026）。跑在 account 项目上：上传是 multipart 表单，
 // 接口按站点地址检查 Origin（playwright.config.ts）。两个用户各用自己的 TEST-NET 地址注册，不占别的用例的名额

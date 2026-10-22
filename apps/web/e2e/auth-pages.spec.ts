@@ -1,5 +1,5 @@
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 // 认证页经过 standalone 产物能用。播种数据的站点地址是录制 BS 时的地址（auth.spec.ts），和浏览器的 Origin 不同，
 // Better Auth 会拒绝页面发起的登录，所以这里只走注册（/api/register 是 JSON 接口，不按 Origin 拦）。

@@ -113,4 +113,22 @@ export default defineConfig(
       '@next/next/no-img-element': 'off',
     },
   },
+  {
+    files: ['apps/web/e2e/**'],
+    ignores: ['apps/web/e2e/fixtures.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@playwright/test',
+              importNames: ['test', 'expect'],
+              message: '从 ./fixtures 导入：它在页面出现 CSP 违规时让用例失败（ADR-0053）',
+            },
+          ],
+        },
+      ],
+    },
+  },
 )
