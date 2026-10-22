@@ -9,8 +9,9 @@
     "dev": "node scripts/sync.ts && astro dev",
     "build": "node scripts/sync.ts && astro build",
     "preview": "astro preview",
+    "typegen": "node scripts/sync.ts && astro sync",
     "lint": "eslint --max-warnings 0 .",
-    "typecheck": "node scripts/sync.ts && astro sync && node ../../node_modules/typescript-native/bin/tsc -p .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
     "deploy": "wrangler deploy"
   },
   "dependencies": {

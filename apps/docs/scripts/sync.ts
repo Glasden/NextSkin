@@ -1,4 +1,4 @@
-// 构建前运行：从同一次检出的 packages/plugin-sdk/docs 生成插件 API 参考，记下页脚要显示的版本和提交（ADR-0054）。
+// 构建前运行（dev、build 和 turbo 的 typegen 任务）：从同一次检出的 packages/plugin-sdk/docs 生成插件 API 参考，记下页脚要显示的版本和提交（ADR-0054）。
 // 生成的文件都在 .gitignore 里，不要手改。
 import { execFileSync } from 'node:child_process'
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
