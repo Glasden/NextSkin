@@ -50,6 +50,8 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 - Windows 若设置了 `core.autocrlf=true`，工作区 CRLF 可能让全仓 `prettier --check .` 报大量行尾差异。不要用 `prettier --write .` 扫全仓；先对本次修改文件运行 `pnpm exec prettier --check <files>`，并查看 `git diff`，避免把无关文件或整仓行尾转换带进 PR。最终以 Linux CI 的检查结果为准。
 - 插件 SDK 公开 API 改动除更新 `packages/plugin-sdk/etc/plugin-sdk.api.md` 和 changeset 外，还要验证 `pnpm --filter @nextskin/plugin-sdk test` 与 `pnpm test:pack`。新增 SDK 作者文档放在 `packages/plugin-sdk/docs/`，不要放进临时目录（例如 `docs/pre/`），否则会被 npm pack 收录。
 - CI 失败时先查看对应 job 的失败步骤和 annotations；视觉测试要看 expected/actual/diff，区分交互时序 flaky 与有意的视觉变化，不要未审阅就更新截图基线。
+- 失败检查可能是串联结果：先修最早的 `format:check` 或单测失败，再重跑；Turbo 并行任务被首个失败中断时，后续日志里的 `SIGINT` 通常是连带结果，不要把它当成第二个独立根因。
+- E2E 的设置保存测试要同时核对保存计数文案和实际响应；如果保存提示未出现，先检查设置 schema/错误映射和服务端响应，再调整等待时间。视觉测试出现大量快照差异时先检查字体、主题、Storybook 构建和基线版本，不能只更新截图。
 
 ## 不变量
 
