@@ -1,12 +1,13 @@
 /*
- * 对齐主站视觉（DESIGN.md）：钻石青强调色、冷灰中性色、2/4px 圆角、硬边位移阴影。
- * 色值取自 packages/ui/src/theme.css；主站换 token 时这里跟着改。
+ * 对齐主站视觉（DESIGN.md）：钻石青强调色、冷灰中性色、2/4px 圆角、硬边位移阴影、像素字体的标题。
+ * 色值取自 packages/ui/src/theme.css；主站换 token 时这里跟着改。字体文件来自 @nextskin/ui/fonts.css。
  */
 
 html:root {
-  --sl-font:
-    -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  --sl-font: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
   --sl-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* 只配 12、24、36、48px：像素字体按设计字号的整数倍才清楚（DESIGN.md §4） */
+  --docs-font-pixel: 'Fusion Pixel 12', 'Fusion Pixel 12 Ext', var(--sl-font);
 
   --sl-color-bg: #f2f3f5;
   --sl-color-bg-nav: #ffffff;
@@ -78,10 +79,6 @@ body {
   font-family: var(--sl-font);
 }
 
-.site-title {
-  font-weight: 700;
-}
-
 .site-title img {
   image-rendering: pixelated;
 }
@@ -97,10 +94,6 @@ body {
   background: var(--sl-color-accent-low);
   color: var(--sl-color-accent-high);
   border-radius: 2px;
-}
-
-.group-label .large {
-  font-weight: 700;
 }
 
 /* 按钮：小圆角 + 硬边位移阴影 */
@@ -150,6 +143,12 @@ body {
   border-radius: 2px;
 }
 
+/* Starlight 的 note 徽标默认是蓝色，主站色板里没有，换成强调色 */
+.sl-badge.note {
+  --sl-color-bg-badge: var(--sl-color-accent-low);
+  --sl-color-border-badge: var(--sl-color-accent);
+  --sl-color-text-badge: var(--sl-color-accent-high);
+}
 
 /* 主站页头是文字色，不是强调色 */
 a.site-title {
@@ -180,4 +179,64 @@ html:root .header > .header > .sl-flex:has(site-search) {
 
 .docs-meta a:hover {
   color: var(--sl-color-white);
+}
+
+/*
+ * 像素字体：站名、页面和区块标题、侧栏分组名、表头、徽标（DESIGN.md §4）。
+ * 只有常规字重，不加粗：浏览器合成的粗体会把像素笔画抹糊。
+ */
+.site-title,
+.hero h1,
+h1#_top,
+.sl-markdown-content h2,
+.sidebar-content .group-label .large,
+starlight-toc h2,
+.sl-markdown-content th,
+.sl-badge {
+  font-family: var(--docs-font-pixel);
+  font-weight: 400;
+  font-synthesis: none;
+  letter-spacing: 0;
+}
+
+.site-title {
+  font-size: 24px;
+  line-height: 32px;
+}
+
+h1#_top {
+  font-size: 36px;
+  line-height: 48px;
+}
+
+.sl-markdown-content h2 {
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.sidebar-content .group-label .large,
+starlight-toc h2,
+.sl-markdown-content th {
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* 分组名和表头用次要文字色，和主站的表头一样 */
+.sidebar-content .group-label .large,
+.sl-markdown-content th {
+  color: var(--sl-color-gray-2);
+}
+
+.sl-badge {
+  font-size: 12px;
+  line-height: 16px;
+  padding: 2px 6px;
+}
+
+/* 首页的大标题也是 h1#_top，要带上 id 才压得过上面那条 */
+@media (min-width: 50rem) {
+  .hero h1#_top {
+    font-size: 48px;
+    line-height: 64px;
+  }
 }
