@@ -4,6 +4,7 @@ import { clientIp } from '../client-ip.ts'
 import type { AppEnv } from '../env.ts'
 import { registerAdminTextures } from './admin-textures.ts'
 import { registerAdminCloset } from './admin-closet.ts'
+import { registerAdminFailedJobs } from './admin-failed-jobs.ts'
 import { registerAdminOAuthClients } from './admin-oauth-clients.ts'
 import { registerAdminPlayers } from './admin-players.ts'
 import { registerAdminUsers } from './admin-users.ts'
@@ -216,4 +217,6 @@ export function registerAdmin(app: OpenAPIHono<AppEnv>, core: Core) {
   registerAdminOAuthClients(app, core)
   registerAdminTextures(app, core)
   registerAdminCloset(app, core)
+  // 核心任务的死信（ADR-0051）
+  registerAdminFailedJobs(app, core)
 }

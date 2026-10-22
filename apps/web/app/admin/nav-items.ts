@@ -7,6 +7,7 @@ import { Notebook } from 'pixelarticons/react/Notebook.js'
 import { Plug } from 'pixelarticons/react/Plug.js'
 import { Sliders } from 'pixelarticons/react/Sliders.js'
 import { Users } from 'pixelarticons/react/Users.js'
+import { WarningDiamond } from 'pixelarticons/react/WarningDiamond.js'
 
 // 布局（服务端，按权限过滤）和导航（客户端，渲染图标）共用，不能放在 'use client' 的文件里
 
@@ -23,6 +24,7 @@ export const adminNavItems = [
   { href: '/admin/audit', icon: Notebook, label: 'audit', permission: 'audit.read' },
   { href: '/admin/settings', icon: Sliders, label: 'settings', permission: 'settings.manage' },
   { href: '/admin/plugins', icon: Plug, label: 'plugins', permission: 'plugins.manage' },
+  { href: '/admin/failed-jobs', icon: WarningDiamond, label: 'failedJobs', permission: 'jobs.manage' },
   { href: '/admin/migration', icon: Database, label: 'migration', permission: 'import.manage' },
 ] as const
 

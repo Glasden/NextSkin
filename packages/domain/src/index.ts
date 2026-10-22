@@ -90,6 +90,7 @@ export type {
   AdminUserLookup,
   AdminTextureForOwner,
   AdminClosetItem,
+  AdminFailedJob,
 } from './admin/types.ts'
 export { AUDIT_ACTIONS, type AuditAction } from './audit/write.ts'
 

@@ -5,6 +5,7 @@ import type { Transaction } from 'kysely'
 /**
  * 审计动作和它的对象类型（docs/schema.md 的 audit_logs.action 指向这里）。插件和设置项一样没有整数 id，
  * subject_id 记 0，插件 id 放在 details 里（ADR-0028 的做法）。角色的操作以主人为对象（ADR-0036）。
+ * 核心任务的死信以死信的编号为对象，全部重试、全部删除记 0（ADR-0051）。
  * 后台的审计表对每个动作都要有文案和详情摘要：apps/web 的 audit-table.tsx 按 AuditAction 穷举，类型检查守着
  */
 export const AUDIT_ACTIONS = {
@@ -42,6 +43,7 @@ export const AUDIT_ACTIONS = {
   'plugin.upgrade': 'plugin',
   'plugin.uninstall': 'plugin',
   'plugin.restartHost': 'plugin',
+  'job.deadLetter': 'job',
 } as const satisfies Record<string, string>
 export type AuditAction = keyof typeof AUDIT_ACTIONS
 

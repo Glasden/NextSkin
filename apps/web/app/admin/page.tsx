@@ -17,7 +17,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * 后台的概览：站点的几个数字、待处理的举报、最近 10 条管理操作（ADR-0027）。超级管理员还会看到没完成的配置（ADR-0028）。
+ * 后台的概览：站点的几个数字、待处理的举报、最近 10 条管理操作（ADR-0027）。超级管理员还会看到没完成的配置（ADR-0028）
+ * 和失败的核心任务（ADR-0051）。
  * 插件的 admin.dashboard 插槽以后放在这里
  */
 export default async function AdminOverviewPage() {
@@ -63,6 +64,15 @@ export default async function AdminOverviewPage() {
           <span className="flex flex-wrap items-baseline gap-x-3">
             {t('pendingAlert', { count: overview.pendingReports })}
             <Link render={<NextLink href="/admin/reports" />}>{t('pendingAction')}</Link>
+          </span>
+        </Alert>
+      )}
+
+      {overview.failedJobs !== null && overview.failedJobs > 0 && (
+        <Alert tone="warning">
+          <span className="flex flex-wrap items-baseline gap-x-3">
+            {t('failedJobsAlert', { count: overview.failedJobs })}
+            <Link render={<NextLink href="/admin/failed-jobs" />}>{t('failedJobsAction')}</Link>
           </span>
         </Alert>
       )}

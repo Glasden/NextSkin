@@ -285,6 +285,7 @@ export function createCore(options: CoreOptions) {
       production: options.production,
       mail,
       jobs,
+      handlers,
       plugins,
       getSigningKey,
       captcha,

@@ -5,7 +5,7 @@ import { can, outranks, type CorePermission } from '../access/permissions.ts'
 import { DomainError } from '../errors.ts'
 import type { CaptchaService } from '../captcha/service.ts'
 import type { Events } from '../events/emit.ts'
-import type { JobRunner } from '../jobs/runner.ts'
+import type { JobHandler, JobRunner } from '../jobs/runner.ts'
 import type { PluginSystem } from '../plugins/system.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import { lockTexture } from '../textures/manage.ts'
@@ -17,6 +17,7 @@ import type { SigningKey } from '../yggdrasil/signing-key.ts'
 import { authorize, changeRole, lockTarget } from './context.ts'
 import { createAdminTextures } from './textures.ts'
 import { createAdminCloset } from './closet.ts'
+import { createAdminFailedJobs } from './failed-jobs.ts'
 import { createAdminOAuthClients } from './oauth-clients.ts'
 import { createAdminPlayers } from './players.ts'
 import { createAdminQueries, reportView, userView } from './queries.ts'
@@ -39,6 +40,8 @@ export interface AdminOptions {
   mail: MailService
   captcha: CaptchaService
   jobs: Pick<JobRunner, 'enqueue'>
+  /** 执行器登记的处理函数：判断失败的核心任务能不能重试（ADR-0051） */
+  handlers: ReadonlyMap<string, JobHandler>
   /** 第三方登录的 Provider：解绑时判断能不能用、通知邮件里按收件人的语言翻译名称（ADR-0034） */
   plugins: Pick<PluginSystem, 'loginProviders' | 'translate' | 'get'>
   getSigningKey: () => Promise<SigningKey | null>
@@ -89,6 +92,7 @@ export function createAdmin(options: AdminOptions) {
     ...createAdminOAuthClients(options),
     ...createAdminTextures(options),
     ...createAdminCloset(options),
+    ...createAdminFailedJobs(options),
     /** 只改身份：PATCH 只带 role 时的说法，规则见 updateUser */
     setRole(actor: AdminActor, uid: number, role: AssignableRole): Promise<AdminUser> {
       return users.updateUser(actor, uid, { role })

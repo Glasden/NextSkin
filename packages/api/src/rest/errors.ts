@@ -115,6 +115,7 @@ const statuses = {
   plugin_required_by: 409,
   plugin_official: 400,
   dead_letter_not_found: 404,
+  dead_letter_not_retryable: 409,
   external_login_not_found: 404,
   external_login_unavailable: 503,
   external_login_failed: 502,

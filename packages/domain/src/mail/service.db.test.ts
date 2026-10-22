@@ -223,3 +223,88 @@ test('确认新邮箱链接过期时丢弃，通知无期限；两种死信都�
     ]),
   )
 })
+
+test('SMTP 的错误记类别码和应答码，不记消息；认不出类别码的仍记 error', async () => {
+  const smtp = (code: unknown, responseCode?: unknown) =>
+    Object.assign(new Error(`535 5.7.8 rejected steve@example.test ${url}`), { code, responseCode })
+  const cases = [
+    [smtp('EAUTH', 535), 'smtp:EAUTH:535'],
+    [smtp('ECONNECTION'), 'smtp:ECONNECTION'],
+    [smtp('EENVELOPE', 99), 'smtp:EENVELOPE'],
+    [smtp('eauth', 535), 'error'],
+    [smtp('ESECRETTOKEN', 535), 'error'],
+    [smtp('EAUTH steve@example.test'), 'error'],
+    [new Error('plain'), 'error'],
+  ] as const
+  for (const [error, expected] of cases) {
+    await database.db.deleteFrom('jobs').execute()
+    send = () => Promise.reject(error)
+    await core.jobs.enqueue(database.db, MAIL_JOB, { template: 'emailChanged', uid, to: 'old@example.test' })
+    await core.jobs.drain()
+    const [job] = await database.db.selectFrom('jobs').select('last_error').execute()
+    expect(job?.last_error).toBe(expected)
+  }
+  expect(JSON.stringify(lines)).not.toMatch(/SECRET_TOKEN_CANARY|steve@example|5\.7\.8/)
+})
+
+test('进死信时通知邮件保留渲染要用的内容，能放回队列重发；去掉了链接的不能', async () => {
+  send = () => Promise.reject(new Error('transport_failed'))
+  let clock = new Date()
+  core = createCore({
+    db: database.db,
+    secretKey,
+    production: false,
+    textureStorage: {
+      list: () => Promise.resolve([]),
+      listTemp: () => Promise.resolve([]),
+      lateDeleteWindowMs: 0,
+      write: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+      deleteTemp: () => Promise.resolve(),
+      read: () => Promise.resolve(null),
+    },
+    mailTransport: { send: (message) => send(message) },
+    jobs: { now: () => clock, log: (line) => lines.push(line) },
+  })
+  const at = toIsoTimestamp(new Date())
+  const notices = [
+    { template: 'adminAccountChanged', uid, to: 'steve@example.test', changes: [{ kind: 'password' }], at },
+    { template: 'externalAccountLinked', uid, to: 'steve@example.test', provider: 'GitHub' },
+    { template: 'emailChanged', uid, to: 'old@example.test' },
+  ]
+  for (const payload of notices) await core.jobs.enqueue(database.db, MAIL_JOB, payload)
+  await core.mail.send('verifyEmail', user(), url)
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await core.jobs.drain()
+    clock = new Date(clock.getTime() + 3_600_000)
+  }
+  const dead = await database.db.selectFrom('failed_jobs').select(['id', 'payload']).execute()
+  expect(dead.map((row) => JSON.parse(row.payload) as unknown)).toEqual(
+    expect.arrayContaining([...notices, { template: 'verifyEmail', to: 'steve@example.test', uid }]),
+  )
+  const superadmin = await database.db
+    .updateTable('users')
+    .set({ role: 'superadmin' })
+    .where('id', '=', uid)
+    .executeTakeFirstOrThrow()
+  expect(superadmin.numUpdatedRows).toBe(1n)
+  const { items } = await core.admin.listFailedJobs(uid, { page: 1 })
+  expect(items.filter((item) => item.retryable).map((item) => item.payload)).toEqual(expect.arrayContaining(notices))
+  expect(items.filter((item) => !item.retryable).map((item) => item.payload)).toEqual([
+    { template: 'verifyEmail', to: 'steve@example.test', uid },
+  ])
+  send = (message) => {
+    messages.push(message)
+    return Promise.resolve({ messageId: null })
+  }
+  expect(await core.admin.retryAllFailedJobs({ uid, ip: null }, Math.max(...dead.map((row) => row.id)))).toEqual({
+    retried: 3,
+    skipped: 1,
+  })
+  await core.jobs.drain()
+  expect(messages.map((message) => message.to).sort()).toEqual([
+    'old@example.test',
+    'steve@example.test',
+    'steve@example.test',
+  ])
+})

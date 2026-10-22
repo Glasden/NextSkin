@@ -24,6 +24,8 @@ export interface JobHandler {
   concurrency?: number
   /** 进死信时替换载荷，去掉链接里的令牌这类敏感内容 */
   deadLetterPayload?(payload: unknown): unknown
+  /** 后台能不能把这条死信放回队列：去掉了内容的载荷放回去只会再失败（ADR-0051）。默认能 */
+  retryable?(payload: unknown): boolean
   /**
    * 记进 last_error 的文字；默认只记固定的错误码。插件任务记插件抛出的消息（ADR-0021），
    * 返回 null 时退回错误码

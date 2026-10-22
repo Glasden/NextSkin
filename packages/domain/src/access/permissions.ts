@@ -12,6 +12,7 @@ export type CorePermission =
   | 'settings.manage'
   | 'import.manage'
   | 'plugins.manage'
+  | 'jobs.manage'
 const permissions: Record<UserRole, readonly CorePermission[]> = {
   banned: [],
   user: [],
@@ -36,6 +37,7 @@ const permissions: Record<UserRole, readonly CorePermission[]> = {
     'settings.manage',
     'import.manage',
     'plugins.manage',
+    'jobs.manage',
   ],
 }
 export function can(role: UserRole, permission: CorePermission): boolean {

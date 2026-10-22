@@ -22,6 +22,33 @@ import type { MailTransport } from './types.ts'
 
 export const MAIL_JOB = 'core:mail'
 
+/** Nodemailer 的 SMTP 错误类别码（ADR-0051），后台的失败任务页按它们写说明 */
+const SMTP_ERROR_CODES = new Set([
+  'EAUTH',
+  'ENOAUTH',
+  'ECONNECTION',
+  'ETIMEDOUT',
+  'EDNS',
+  'ETLS',
+  'ESOCKET',
+  'EPROTOCOL',
+  'EENVELOPE',
+  'EMESSAGE',
+  'EREQUIRETLS',
+  'ESTREAM',
+  'ECONFIG',
+  'EPROXY',
+  'EMAXLIMIT',
+])
+
+/** 发信这一步出的错，原始错误在 cause 里。errorText 只认它：读库时的网络错误码不是 SMTP 的 */
+class MailSendError extends Error {
+  override name = 'MailSendError'
+  constructor(cause: unknown) {
+    super('发送邮件失败', { cause })
+  }
+}
+
 const templates = {
   verifyEmail: { render: renderVerifyEmail, ttl: EMAIL_VERIFICATION_TTL_SECONDS },
   resetPassword: { render: renderResetPassword, ttl: RESET_PASSWORD_TTL_SECONDS },
@@ -163,15 +190,45 @@ export function createMailService(
                     url: mail.url,
                     expiresInHours: templates[mail.template].ttl / 3600,
                   })
-        await transport.send({ to: mail.to, from: values['mail.from'], ...rendered })
+        try {
+          await transport.send({ to: mail.to, from: values['mail.from'], ...rendered })
+        } catch (error) {
+          throw new MailSendError(error)
+        }
       },
       deadLetterPayload(payload) {
         const parsed = mailPayload.safeParse(payload)
         if (!parsed.success) return null
         const { template, to, uid } = parsed.data
-        // 改了哪些项留着供排查，里面没有链接和令牌
-        if (parsed.data.template === 'adminAccountChanged') return { template, to, uid, changes: parsed.data.changes }
+        // 改了哪些项、什么时候改的留着，可以重试（ADR-0051），里面没有链接和令牌
+        if (parsed.data.template === 'adminAccountChanged')
+          return { template, to, uid, changes: parsed.data.changes, at: parsed.data.at }
+        if (parsed.data.template === 'externalAccountLinked')
+          return { template, to, uid, provider: parsed.data.provider }
         return { template, to, uid }
+      },
+      /** 带链接的三种进死信时去掉了链接，放回去只会再失败；其余的载荷完整，能重发（ADR-0051） */
+      retryable: (payload) => mailPayload.safeParse(payload).success,
+      /**
+       * 发信时 SMTP 库报的错误类别码和服务器的三位应答码，例如 `smtp:EAUTH`、`smtp:EENVELOPE:550`（ADR-0051）。
+       * 类别码只认白名单里的，不记错误消息：服务器的应答里可能回显收件地址和密码（不变量 11）。
+       * 读库等别处的错误不是 SMTP 的，交给执行器记错误码
+       */
+      errorText(error) {
+        if (!(error instanceof MailSendError)) return null
+        const cause = error.cause
+        if (cause instanceof DomainError) return cause.code
+        if (typeof cause !== 'object' || cause === null) return null
+        const { code, responseCode } = cause as { code?: unknown; responseCode?: unknown }
+        if (typeof code !== 'string' || !SMTP_ERROR_CODES.has(code)) return null
+        const status =
+          typeof responseCode === 'number' &&
+          Number.isInteger(responseCode) &&
+          responseCode >= 200 &&
+          responseCode < 600
+            ? `:${responseCode}`
+            : ''
+        return `smtp:${code}${status}`
       },
     } satisfies JobHandler,
   }

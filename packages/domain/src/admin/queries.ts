@@ -10,6 +10,7 @@ import {
 } from '@nextskin/db'
 import type { Kysely, SelectQueryBuilder } from 'kysely'
 import { can, hasAdminAccess, outranks, type CorePermission } from '../access/permissions.ts'
+import { CORE_JOB_PREFIX, countDeadLetters } from '../jobs/store.ts'
 import { countAuthorizedApps } from '../oauth/clients.ts'
 import { DomainError } from '../errors.ts'
 import { textureScaleOrNull, toNameKey } from '../players/queries.ts'
@@ -337,7 +338,7 @@ export function createAdminQueries(
   }
   return {
     async overview(viewer: number): Promise<AdminOverview> {
-      await authorize(viewer)
+      const role = await authorize(viewer)
       const values = await settings.read(['site.timeZone'])
       const start = todayStart(now(), values['site.timeZone'])
       const recent = await db.selectFrom('audit_logs').select('id').orderBy('id', 'desc').limit(10).execute()
@@ -346,6 +347,7 @@ export function createAdminQueries(
         users: await countRows(db.selectFrom('users')),
         textures: await countRows(db.selectFrom('textures')),
         registeredToday: await countRows(db.selectFrom('users').where('created_at', '>=', writeAuthDate(db, start))),
+        failedJobs: can(role, 'jobs.manage') ? await countDeadLetters(db, CORE_JOB_PREFIX) : null,
         recentAudit: await auditViews(
           db,
           recent.map((r) => r.id),

@@ -168,3 +168,12 @@ export function parseClosetPage(search: SearchParams): number {
 export function closetHref(uid: number, page: number): string {
   return page > 1 ? `/admin/users/${uid}?closet=${page}#closet` : `/admin/users/${uid}#closet`
 }
+
+/** 失败任务页只有页码（ADR-0051） */
+export function parseFailedJobsPage(search: SearchParams): number {
+  return parsePage(first(search.page))
+}
+
+export function failedJobsHref(page: number): string {
+  return page > 1 ? `/admin/failed-jobs?page=${page}` : '/admin/failed-jobs'
+}

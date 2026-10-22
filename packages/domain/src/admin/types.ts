@@ -60,6 +60,8 @@ export interface AdminOverview {
   users: number
   textures: number
   registeredToday: number
+  /** 核心任务的死信数；没有 jobs.manage 时为 null（ADR-0051） */
+  failedJobs: number | null
   recentAudit: AuditEntry[]
 }
 
@@ -184,4 +186,21 @@ export interface AdminClosetItem {
 export interface AdminOAuthClient extends OAuthClientView {
   shared: boolean
   owner: { uid: number; nickname: string; role: UserRole } | null
+}
+
+/** 后台失败任务页的一行：核心任务的死信（ADR-0051） */
+export interface AdminFailedJob {
+  id: number
+  name: string
+  /** 进死信时存下的载荷，邮件的去掉了链接；存的不是合法的 JSON 时为 null */
+  payload: unknown
+  attempts: number
+  lastError: string | null
+  /** 原任务的入队时间 */
+  createdAt: IsoTimestamp
+  failedAt: IsoTimestamp
+  /** 能不能放回队列：运行中的核心登记了它的处理函数，处理函数也认这份载荷 */
+  retryable: boolean
+  /** 载荷里的 uid（邮件的收件人）对应的用户，已经删除时为 null */
+  user: { uid: number; nickname: string } | null
 }

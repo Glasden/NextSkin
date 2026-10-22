@@ -20,11 +20,12 @@ const errors = {
   504: errorContent,
 }
 const pluginId = z.string().regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/)
+// failed_jobs.id 是 integer，在 MySQL 和 PostgreSQL 上是 32 位：更大的数传进查询会报错
 const jobId = z
   .string()
   .regex(/^[1-9]\d*$/)
   .transform(Number)
-  .pipe(z.number().int().positive().max(Number.MAX_SAFE_INTEGER))
+  .pipe(z.number().int().positive().max(2147483647))
 const ok = {
   200: { description: '完成', content: { 'application/json': { schema: z.object({ ok: z.literal(true) }) } } },
 }

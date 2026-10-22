@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import {
+  countRows,
   insertOrIgnore,
   insertReturningId,
   toIsoTimestamp,
@@ -7,10 +8,12 @@ import {
   type CoreDatabase,
   type IsoTimestamp,
 } from '@nextskin/db'
-import type { Kysely } from 'kysely'
+import type { ExpressionBuilder, Kysely } from 'kysely'
 import { isStorageKey } from '../text.ts'
 
 export const FAILED_JOB_RETENTION_DAYS = 30
+/** 核心自己的任务名都以它开头，插件的以 `plugin:<id>:` 开头 */
+export const CORE_JOB_PREFIX = 'core:'
 
 export interface NewJob {
   name: string
@@ -185,7 +188,16 @@ export interface DeadLetter {
   failedAt: IsoTimestamp
 }
 
-/** 某一组任务的死信，最新的在前。`prefix` 是任务名前缀，例如 `plugin:<id>:`，不能含 `%` 和 `_` */
+/**
+ * 任务名以 prefix 开头。不用 LIKE：SQLite 的 LIKE 不分大小写，筛出的行在分页、计数之后再筛就对不上了。
+ * 等号在四种数据库上都区分大小写（MySQL 的表是 utf8mb4_bin）
+ */
+export function nameStartsWith(prefix: string) {
+  return (eb: ExpressionBuilder<CoreDatabase, 'failed_jobs'>) =>
+    eb(eb.fn<string>('substr', [eb.ref('name'), eb.lit(1), eb.lit([...prefix].length)]), '=', prefix)
+}
+
+/** 某一组任务的死信，最新的在前。`prefix` 是任务名前缀，例如 `plugin:<id>:` */
 export async function listDeadLetters(
   db: Kysely<CoreDatabase>,
   options: { prefix: string; limit: number },
@@ -193,22 +205,24 @@ export async function listDeadLetters(
   const rows = await db
     .selectFrom('failed_jobs')
     .select(['id', 'name', 'attempts', 'last_error', 'created_at', 'failed_at'])
-    // 前缀里只有小写字母、数字、连字符和冒号，没有 LIKE 的通配符；SQLite 的 LIKE 不分大小写，读出后再按前缀筛一遍
-    .where('name', 'like', `${options.prefix}%`)
+    .where(nameStartsWith(options.prefix))
     .orderBy('failed_at', 'desc')
     .orderBy('id', 'desc')
     .limit(options.limit)
     .execute()
-  return rows
-    .filter((row) => row.name.startsWith(options.prefix))
-    .map((row) => ({
-      id: row.id,
-      name: row.name,
-      attempts: row.attempts,
-      lastError: row.last_error,
-      createdAt: row.created_at,
-      failedAt: row.failed_at,
-    }))
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    attempts: row.attempts,
+    lastError: row.last_error,
+    createdAt: row.created_at,
+    failedAt: row.failed_at,
+  }))
+}
+
+/** 某一组任务的死信数 */
+export async function countDeadLetters(db: Kysely<CoreDatabase>, prefix: string): Promise<number> {
+  return countRows(db.selectFrom('failed_jobs').where(nameStartsWith(prefix)))
 }
 
 /**
@@ -222,6 +236,9 @@ export async function retryDeadLetter(
   const retry = async (tx: Kysely<CoreDatabase>): Promise<boolean> => {
     const row = await tx.selectFrom('failed_jobs').selectAll().where('id', '=', options.id).executeTakeFirst()
     if (!row || !row.name.startsWith(options.prefix)) return false
+    // 先删、按删掉的行数判断：两个管理员同时重试同一条时，后到的删不到行（等前一个提交），不会入队两次
+    const deleted = await tx.deleteFrom('failed_jobs').where('id', '=', row.id).executeTakeFirstOrThrow()
+    if (deleted.numDeletedRows === 0n) return false
     await insertOrIgnore(
       tx,
       'jobs',
@@ -234,7 +251,6 @@ export async function retryDeadLetter(
       },
       ['name', 'dedupe_key'],
     )
-    await tx.deleteFrom('failed_jobs').where('id', '=', row.id).execute()
     return true
   }
   return db.isTransaction ? retry(db) : transactionWithRetry(db, retry)

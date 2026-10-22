@@ -11,6 +11,7 @@ import { getFormatter, getLocale, getMessages, getTranslations } from 'next-intl
 import NextLink from 'next/link'
 import { pluginName } from '../../lib/plugins'
 import { getServer } from '../../lib/server'
+import { jobKey } from './failed-jobs/job-text'
 import { auditHref } from './params'
 import { formatSettingValue, settingsHref, settingText } from './settings/setting-text'
 
@@ -50,6 +51,7 @@ const actionKeys = {
   'plugin.upgrade': 'pluginUpgrade',
   'plugin.uninstall': 'pluginUninstall',
   'plugin.restartHost': 'pluginRestartHost',
+  'job.deadLetter': 'jobDeadLetter',
   'oauthClient.disable': 'oauthClientDisable',
   'oauthClient.enable': 'oauthClientEnable',
   'oauthClient.delete': 'oauthClientDelete',
@@ -101,12 +103,13 @@ export async function AuditTable({
   label: string
   empty: string
 }) {
-  const [t, admin, reports, types, settings, messages, format, { core }, locale] = await Promise.all([
+  const [t, admin, reports, types, settings, failedJobs, messages, format, { core }, locale] = await Promise.all([
     getTranslations('admin.audit'),
     getTranslations('admin'),
     getTranslations('admin.reports'),
     getTranslations('skinlib.types'),
     getTranslations('admin.settings'),
+    getTranslations('admin.failedJobs'),
     getMessages(),
     getFormatter(),
     getServer(),
@@ -158,6 +161,8 @@ export async function AuditTable({
       const name = key ? settingText(settingFields, key).label : (text(entry.details.key) ?? t('subjects.setting'))
       return section ? <Link render={<NextLink href={settingsHref(section)} />}>{name}</Link> : name
     }
+    // 核心任务的死信重试、删除之后就不在表里了，不链接；全部重试、全部删除记 0（ADR-0051）
+    if (type === 'job') return id === 0 ? t('subjects.allJobs') : t('subjects.job', { id })
     const label =
       type === 'user' || type === 'texture' || type === 'report' || type === 'oauthClient'
         ? t(`subjects.${type}`, { id })
@@ -395,6 +400,20 @@ export async function AuditTable({
         job: count(details.job),
       }),
     'plugin.restartHost': () => null,
+    'job.deadLetter': (details) => {
+      if (details.action === 'retryAll' || details.action === 'deleteAll')
+        return t('details.jobDeadLetterAll', {
+          action: details.action,
+          count: count(details.count),
+          skipped: count(details.skipped),
+        })
+      const name = text(details.name) ?? ''
+      const key = jobKey(name)
+      return t('details.jobDeadLetter', {
+        action: details.action === 'retry' ? 'retry' : 'delete',
+        name: key ? failedJobs(`names.${key}`) : name,
+      })
+    },
     'oauthClient.disable': oauthClientSummary,
     'oauthClient.enable': oauthClientSummary,
     'oauthClient.delete': (details) =>
