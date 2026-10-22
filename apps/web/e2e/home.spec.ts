@@ -1,5 +1,5 @@
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 // 首页经过 standalone 产物（ADR-0032）。领奖台的内容由领域层的测试守着：它在进程里缓存 60 秒，
 // 这里只看它在不在，不看站了谁

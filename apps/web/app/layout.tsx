@@ -1,9 +1,11 @@
+import { CspProvider } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import type { ReactNode } from 'react'
 import { COLOR_MODE_COOKIE, colorModeScript, parseColorMode } from '../lib/color-mode'
+import { NONCE_HEADER } from '../lib/csp'
 import { getServer } from '../lib/server'
 import { iconsMetadata, siteIconHash } from '../lib/site-icons'
 import { ColorModeProvider } from './color-mode-menu'
@@ -37,20 +39,24 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // data-theme 由 <head> 里的内联脚本在第一次绘制之前设上（lib/color-mode.ts）。服务端渲染的 <html> 上没有这个属性，
-// 水合时和页面对不上，所以 <html> 不报水合不一致
+// 水合时和页面对不上，所以 <html> 不报水合不一致。
+// 内联脚本要带 proxy.ts 生成的 nonce 才会执行（ADR-0053），Base UI 插的脚本和样式经 CspProvider 拿到它
 export default async function RootLayout({ children }: { readonly children: ReactNode }) {
-  const [locale, cookieStore] = await Promise.all([getLocale(), cookies()])
+  const [locale, cookieStore, headerList] = await Promise.all([getLocale(), cookies(), headers()])
+  const nonce = headerList.get(NONCE_HEADER) ?? undefined
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: colorModeScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: colorModeScript }} />
       </head>
       <body className="min-h-dvh bg-bg font-sans text-text">
-        <NextIntlClientProvider>
-          <ColorModeProvider value={parseColorMode(cookieStore.get(COLOR_MODE_COOKIE)?.value)}>
-            {children}
-          </ColorModeProvider>
-        </NextIntlClientProvider>
+        <CspProvider nonce={nonce}>
+          <NextIntlClientProvider>
+            <ColorModeProvider value={parseColorMode(cookieStore.get(COLOR_MODE_COOKIE)?.value)}>
+              {children}
+            </ColorModeProvider>
+          </NextIntlClientProvider>
+        </CspProvider>
       </body>
     </html>
   )

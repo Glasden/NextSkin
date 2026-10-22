@@ -44,6 +44,6 @@ function applyColorMode(cookie: string, event: string) {
 
 /**
  * 根布局写进 <head> 的内联脚本：在第一次绘制之前设好 data-theme，不会先闪一下亮色；跟随系统时，系统切换亮暗也跟着变。
- * 以后上 CSP 时要给它 nonce 或者 hash（PROGRESS.md 的“站点的 CSP”）
+ * 页面的 CSP 只执行带 nonce 的脚本，根布局给它带上（ADR-0053）
  */
 export const colorModeScript = `(${applyColorMode.toString()})(${JSON.stringify(COLOR_MODE_COOKIE)},${JSON.stringify(COLOR_MODE_CHANGE)})`

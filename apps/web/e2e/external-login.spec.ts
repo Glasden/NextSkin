@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test as base } from '@playwright/test'
+import { expect, test as base } from './fixtures'
 import { nextskin } from './nextskin-cli'
 
 const test = base.extend<object, { pluginHost: boolean }>({

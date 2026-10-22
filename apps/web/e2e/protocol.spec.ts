@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 // 协议响应本身由 e2e/contract.spec.ts 回放契约用例守护；这里只测 Next 这一层的行为。
 

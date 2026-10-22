@@ -71,6 +71,14 @@ location / {
 
 确认方法：经反向代理登录后台，看"审计日志"里自己这次登录的 IP。是你的公网 IP 就对了；是 `172.x`、`10.x` 这类地址，就把这个地址加进受信任的反向代理，退出再登录一次核对。
 
+### CDN 和内容安全策略
+
+页面带 `Content-Security-Policy` 响应头：只执行带本次请求 nonce 的脚本（ADR-0053）。反向代理和 CDN 不要去掉或改写这个头，也不要另加一条 CSP。往页面里插脚本、改写页面里的脚本的 CDN 功能会被它拦下，以 Cloudflare 为例：
+
+- **Rocket Loader**、**邮箱地址混淆**（Scrape Shield 里的 Email Address Obfuscation）：关掉。它们改写页面里的脚本，不带 nonce，浏览器不执行；改写过的 HTML 还可能和页面的脚本对不上，按钮、表单失灵。
+- **Bot Fight Mode**（JavaScript Detections）：可以开。Cloudflare 会读响应头里的 CSP，给它插的脚本带上同一个 nonce。
+- **Web Analytics** 的自动注入：未实测。
+
 ## 进程管理
 
 - `start` 是启动器：拉起核心，核心崩溃时自己重启（退避），不需要 pm2。

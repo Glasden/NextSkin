@@ -8,6 +8,7 @@ import noRawColor from './rules/no-raw-color.ts'
 import noArbitraryValue from './rules/no-arbitrary-value.ts'
 import noUseServer from './rules/no-use-server.ts'
 import noModulepreload from './rules/no-modulepreload.ts'
+import noScriptWithoutNonce from './rules/no-script-without-nonce.ts'
 
 const plugin = {
   meta: { name: '@nextskin/eslint-plugin' },
@@ -21,6 +22,7 @@ const plugin = {
     'no-arbitrary-value': noArbitraryValue,
     'no-use-server': noUseServer,
     'no-modulepreload': noModulepreload,
+    'no-script-without-nonce': noScriptWithoutNonce,
   },
   configs: {} as { recommended: Linter.Config },
 } satisfies ESLint.Plugin

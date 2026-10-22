@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 // 上传、皮肤库、详情页和上传者的管理操作经过 standalone 产物的主流程（ADR-0025）。跑在 account 项目上：
 // 上传是 multipart 表单，接口按站点地址检查 Origin，这个服务的站点地址就是浏览器的 Origin（playwright.config.ts）。

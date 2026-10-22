@@ -36,6 +36,7 @@
 - **亮暗模式**（DESIGN.md §10）：页头、认证页和安装向导右上角的菜单（跟随系统、亮色、暗色），偏好按设备记在 Cookie 里；根布局的内联脚本在第一次绘制之前设好 `data-theme`，跟随系统时随系统切换；组件 `MenuRadioGroup`。
 - **首页**（ADR-0032）：领奖台（最近 7 天新加进衣柜最多的三个皮肤）、站点统计、最新上传、外置登录三步；全站页脚；站点描述、关键词和页脚文字三个设置项；标志"折起来的头"，站点图标由 `pnpm design:sync` 从 token 生成。
 - **站点外观**（ADR-0042）：站点标志 `site.logo` 和站点图标 `site.favicon`（图标没传时用标志）；设置表单的图片控件（组件 ImageInput，按实际尺寸预览）和上传接口 `POST /api/admin/site-images`（PNG、正方形、边长 16～512，小图按最近邻放大，重新编码，另存白底的一份）；单独的存储 `<数据目录>/site-images` 和 `/site-images/<hash>.png`；每周清理没引用的图（`core:site-image-sweep`）；根布局自己写图标的 `<link>`，默认图标挪到 `apps/web/public/`，`/favicon.ico` 有自定义图标时重定向；页头、页脚、登录注册页和全屏页的标志显示上传的图；页脚 Markdown 里的图片缩到一行字高；导入报告提示重新上传图标。
+- **站点的 CSP**（ADR-0053）：页面带 `script-src 'nonce-…' 'strict-dynamic'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`，nonce 由 `proxy.ts` 按请求生成、经请求头交给 Next 和根布局（`lib/csp.ts`），开发模式多 `'unsafe-eval'`；样式、图片、请求、iframe 不约束，不维护来源白名单。亮暗模式的内联脚本带 nonce，Base UI 经 `packages/ui` 的 `CspProvider` 拿到它；全站发 `X-Frame-Options: DENY`；进 Hono 的路径不加。lint `nextskin/no-script-without-nonce`；e2e 的共用 fixture（`e2e/fixtures.ts`）在任何页面出现 CSP 违规时判失败。部署文档写了 CDN（Cloudflare）哪些功能要关。
 - **插件系统第一版**（ADR-0033），按 ADR 的三步落地：
   1. 插件在核心进程内运行（`packages/domain/src/plugins/`、`packages/plugin-host`）：能力检查、事件、任务和定时任务、KV、设置；插件自有表经网关查询（重建 SQL，SQLite 用专用的只读连接）；`/plugins/{id}/*` 路由网关；声明式的页面、导航和注册表单字段；`user.register` 拦截器；后台的"插件"页（启用、停用、设置、死信）；官方插件"邀请码"和"CDN 刷新"。
   2. 上传的插件在 plugin host 进程里运行：核心进程拉起；stdin/stdout 上带长度前缀的帧；`--permission`，环境变量为空，Node 26 起不能直接连网；整代切换，新一代报告的定义要和 manifest 一致；崩溃后退避重启，连续崩溃就停下、等管理员在后台重启。`nextskin-plugin build` 打插件包（`packages/plugin-cli`）；后台上传安装、升级（列出新增的能力）、卸载，都写审计；多实例按 `plugins.package_hash` 从存储接口取包。
@@ -55,4 +56,5 @@
 - **第三方登录的字段核对**：四家的 subject、`emailVerified` 还要用真实账号核对一遍（ADR-0034"首批插件"）。
 - **插件 API 推迟的部分**：其余写核心数据的能力（以指定 UUID 建角色等，见 ADR-0041 的"以后的写能力"）、草案里的其余五个拦截点、运行时组件和插槽等，见 ADR-0033 的"推迟"表。
 - **发布的后续**（ADR-0040）：ZIP 和镜像的构建来源证明（`actions/attest-build-provenance`）可以加了（仓库已公开）；推到 GHCR 的镜像还没在真实环境里运行过（发布工作流的镜像冒烟跑的是 runner 上本地构建的 amd64 镜像）；部署文档里标了"未实测"的条目（宝塔和 1Panel 的反向代理、Windows 的 Ctrl+C 和 NSSM、Docker 里导入）等真实环境核对；国内的下载渠道看 0.1.0 发出后的反馈再定。
-- 站点的 CSP（ADR-0053：nonce 加 `'strict-dynamic'` 的严格策略，全站 `frame-ancestors 'none'`）、后台覆盖翻译、种子数据。
+- **CSP 的实测**（ADR-0053）：三家验证码各用官方的测试密钥在真实网络上走一遍（hCaptcha 的文档没提 `'strict-dynamic'`）；放在 Cloudflare 后面、开着 Bot Fight Mode 的部署上看控制台有没有 CSP 报错；Cloudflare Web Analytics 的自动注入会不会被拦。
+- 后台覆盖翻译、种子数据。

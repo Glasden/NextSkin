@@ -1,5 +1,5 @@
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 // Better Auth 经 Next 的 catch-all 路由和 standalone 产物（Turbopack 打包）能正常工作。
 // 认证行为本身由 packages/domain 的 auth.db.test.ts 守护。

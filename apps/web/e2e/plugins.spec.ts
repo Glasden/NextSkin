@@ -6,7 +6,8 @@ import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test as base, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test as base } from './fixtures'
 import { nextskin } from './nextskin-cli'
 
 // 参考插件跑通（ADR-0033"验收：参考插件"）：后台启用、插件的设置、插件加的页面和导航、注册表单上的字段和

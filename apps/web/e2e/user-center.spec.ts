@@ -1,5 +1,5 @@
 import { createTranslator } from '@nextskin/i18n'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 // 用户中心经过 standalone 产物的主流程（ADR-0022）。播种数据的站点地址和浏览器的 Origin 不同（auth-pages.spec.ts），
 // 所以账号用 /api/register 注册；页面的写请求都带 JSON 的 Content-Type，不按 Origin 拦。
