@@ -40,7 +40,7 @@ NextSkin 只需要 Node 和一个可写的数据目录：默认用 SQLite，不�
    cat data/setup-code
    ```
 
-   建好站后这个文件被删除，`/setup` 返回 404。“站点地址”填玩家实际访问的地址，例如 `https://nextskin.org`。
+   建好站后这个文件被删除，`/setup` 返回 404。“站点地址”填玩家实际访问的地址，例如 `https://skin.example.com`。
 
 4. 生产环境放在反向代理后面，见下一节。
 
