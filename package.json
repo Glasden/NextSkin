@@ -7,7 +7,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "turbo run dev --filter=!@nextskin/docs",
+    "dev": "turbo run dev --filter=!@nextskin/docs --filter=!@nextskin/site",
     "build": "turbo run build",
     "check": "turbo run lint typecheck test format:check",
     "lint": "turbo run lint",

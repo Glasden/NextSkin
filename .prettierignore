@@ -4,5 +4,8 @@ spikes/
 packages/plugin-sdk/etc/
 # 录制脚本生成
 tests/contract/recordings/
-# Astro 生成的类型和数据（文档站，ADR-0054）
+# Astro 生成的类型和数据（文档站 ADR-0054、宣传站 ADR-0055）
 apps/docs/.astro/
+apps/site/.astro/
+# 宣传站的生成脚本输出（ADR-0055）
+apps/site/src/gen/

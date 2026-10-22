@@ -17,10 +17,10 @@
   "dependencies": {
     "@astrojs/starlight": "0.42.6",
     "@nextskin/ui": "workspace:*",
-    "astro": "7.4.2"
+    "astro": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "wrangler": "4.151.3"
+    "wrangler": "catalog:"
   }
 }

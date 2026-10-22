@@ -1,0 +1,154 @@
+---
+// 宣传站唯一的页面（ADR-0055）：桌面上是翻页的播放器，其余设备是静帧加文字。两种版式都在构建时渲染，
+// 由 site.css 按 PLAYER_MEDIA 的条件二选一显示；播放器只在满足条件时水合
+import { LogoMark } from '@nextskin/ui'
+import '../styles/site.css'
+import { PLAYER_MEDIA } from '../player/mode.ts'
+import { Player } from '../player/player.tsx'
+import { Entries } from '../scenes/entries.tsx'
+import { pages } from '../scenes/pages.ts'
+import { Frame } from '../stage/frame.tsx'
+import { Px } from '../stage/ui.tsx'
+import { PageBody } from '../text.tsx'
+import repoData from '../gen/repo-data.json'
+
+const title = 'NextSkin · Minecraft 皮肤站与外置登录'
+const description =
+  'NextSkin 是 Blessing Skin Server 的 TypeScript 全栈重写：和 BS 同一套协议，一条命令启动，零原生依赖，SQLite、MySQL、MariaDB、PostgreSQL 都能用。'
+const stats = [
+  [String(repoData.adrs), '份架构决策'],
+  [String(repoData.contractTitles.length), '条契约回放'],
+  ['4', '种数据库'],
+  ['0', '个原生依赖'],
+] as const
+const stack = ['TypeScript', 'Next.js', 'Hono', 'Kysely']
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href="https://nextskin.org/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://nextskin.org/" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <!-- 亮暗跟随系统（DESIGN.md §10）：theme.css 认 <html> 上的 data-theme，要在首次绘制前设好 -->
+    <script is:inline>
+      {
+        const query = matchMedia('(prefers-color-scheme: dark)')
+        const apply = () => (document.documentElement.dataset.theme = query.matches ? 'dark' : 'light')
+        apply()
+        query.addEventListener('change', apply)
+      }
+    </script>
+    <noscript>
+      <style>
+        html,
+        body {
+          height: auto !important;
+          overflow: visible !important;
+        }
+        .player {
+          display: none !important;
+        }
+        .stills {
+          display: block !important;
+        }
+      </style>
+    </noscript>
+  </head>
+  <body class="m-0">
+    <div class="player">
+      <Player client:media={PLAYER_MEDIA} />
+    </div>
+
+    <main class="stills mx-auto max-w-240 px-4 pb-16">
+      <header id={pages[0]!.id} class="flex flex-col items-center pt-16 pb-12 text-center">
+        <div class="flex items-center gap-4">
+          <LogoMark cell={6} />
+          <Px size={48}>NextSkin</Px>
+        </div>
+        <Px as="h1" size={24} wrap className="mt-6">Minecraft 皮肤站与外置登录</Px>
+        <Px size={12} tone="muted" wrap className="mt-2">Skin hosting &amp; Yggdrasil auth for Minecraft</Px>
+        <p class="mt-6 max-w-160 text-text-muted">
+          Blessing Skin Server 的 TypeScript 全栈重写：{stack.join(' · ')}。和 BS 同一套协议，玩家的模组和启动器不用升级，旧站可以一键迁过来。
+        </p>
+        <Entries style={{ marginTop: 32, flexWrap: 'wrap', justifyContent: 'center' }} />
+      </header>
+
+      {
+        pages.slice(1, -1).map((page) =>
+          page.chapter ? (
+            <section id={page.id} class="border-t border-border py-10">
+              <Px size={12} tone="muted" wrap>
+                <span class="text-accent">{page.chapter.no}</span>
+                {` ${page.chapter.zh} ${page.chapter.en}`}
+              </Px>
+              <div class="still mt-4 rounded-md border border-border" inert aria-hidden="true">
+                <div class="still-frame">
+                  <Frame page={page} t={page.duration} density={1} live={false} />
+                </div>
+              </div>
+              <Px as="h2" size={24} wrap className="mt-6">
+                {page.text.title}
+              </Px>
+              <Px size={12} tone="muted" wrap className="mt-1">
+                <span lang="en">{page.text.en}</span>
+              </Px>
+              <div class="still-text mt-4 flex flex-col gap-3 leading-relaxed">
+                <PageBody page={page} />
+              </div>
+            </section>
+          ) : (
+            <section id={page.id} class="border-t border-border py-12 text-center">
+              <Px as="h2" size={24} tone="accent" wrap>
+                {page.text.title}
+              </Px>
+              <p class="mx-auto mt-4 max-w-160 text-text-muted">{page.text.body.join('')}</p>
+            </section>
+          ),
+        )
+      }
+
+      <footer id={pages.at(-1)!.id} class="flex flex-col items-center border-t border-border pt-12 text-center">
+        <Px as="h2" size={24} wrap>Minecraft 皮肤站，重新出发</Px>
+        <Px size={12} tone="muted" wrap className="mt-1">Blessing Skin, rebuilt from the ground up</Px>
+        <dl class="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-4">
+          {
+            stats.map(([n, label]) => (
+              <div class="flex flex-col-reverse">
+                <dt>
+                  <Px size={12}>{label}</Px>
+                </dt>
+                <dd>
+                  <Px size={36} tone="accent">
+                    {n}
+                  </Px>
+                </dd>
+              </div>
+            ))
+          }
+        </dl>
+        <Entries style={{ marginTop: 32, flexWrap: 'wrap', justifyContent: 'center' }} />
+        <Px size={12} tone="muted" className="mt-10">展示皮肤 · cxchency</Px>
+      </footer>
+    </main>
+
+    <!-- 静帧按容器宽度缩放：CSS 做不了长度相除，用脚本写进 --still-scale；不跑脚本时按 site.css 的默认值 -->
+    <script is:inline>
+      {
+        const stills = document.querySelector('.stills')
+        const update = () => {
+          const still = document.querySelector('.still')
+          if (still && still.clientWidth) document.documentElement.style.setProperty('--still-scale', String(still.clientWidth / 1280))
+        }
+        new ResizeObserver(update).observe(stills)
+      }
+    </script>
+  </body>
+</html>
