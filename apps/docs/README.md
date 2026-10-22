@@ -1,110 +1,64 @@
 # NextSkin 文档站
 
-NextSkin 的公开文档。Astro + Starlight，构建成纯静态站点，部署在 Cloudflare Pages。
+面向服主、玩家和插件作者的文档，部署在 <https://docs.nextskin.org>。Astro + Starlight 构建的纯静态站点，正式版发布后部署到 Cloudflare Workers（ADR-0054）。最初由 NayaCcR 建成，原仓库是 [NayaCcR/NextSkin-Docs](https://github.com/NayaCcR/NextSkin-Docs)。
 
 ## 本地开发
 
 ```bash
-corepack enable
-pnpm install
-pnpm dev
+pnpm --filter @nextskin/docs dev      # http://localhost:4321
+pnpm --filter @nextskin/docs build    # 输出到 apps/docs/dist
 ```
 
-`pnpm dev` 先从主仓拉取 `packages/plugin-sdk/docs` 生成 API 参考，再启动 Astro。只改指南时这条命令一样适用；参考页是生成物，不要手改。
+`dev`、`build`、`typecheck` 都先跑 `scripts/sync.ts`：从本仓库的 `packages/plugin-sdk/docs` 生成插件 API 参考，记下页脚要显示的 NextSkin 版本、SDK 版本和提交号。不联网。
 
 ## 内容从哪来
 
 | 内容 | 位置 | 维护方式 |
 | --- | --- | --- |
-| 服主指南、玩家指南、本地开发 | `src/content/docs/guide`、`players`、`development.md` | 在本仓库改 |
-| 插件总览 | `src/content/docs/plugins/index.md` | 在本仓库改 |
-| 插件 API 参考 | `src/content/docs/plugins/reference` | 构建时生成，已 gitignore |
-| SDK 版本 | `src/data/sdk-meta.json` | 构建时生成，已 gitignore，分组徽章读它 |
+| 服主指南、玩家指南、本地开发、插件总览 | `src/content/docs/` | 在这里改 |
+| 插件 API 参考 | `src/content/docs/plugins/reference/` | 由 `packages/plugin-sdk/docs` 生成，不进仓库，改源文件 |
+| 版本和提交号 | `src/data/versions.json` | 生成，不进仓库 |
 
-`scripts/fetch-sdk-docs.mjs` 做的事：
+插件 API 参考的侧栏顺序、单篇的版本徽章写在 `scripts/sync.ts` 的 `order`、`changedIn` 里。
 
-- 下载 `NEXTSKIN_REPO`（默认 `Glasden/NextSkin`）在 `NEXTSKIN_REF`（默认 `main`）上的源码包；
-- 读 `packages/plugin-sdk/docs/*.md`，生成 frontmatter：标题、侧栏顺序、版本徽章、`editUrl` 指回主仓源文件；
-- 把 `./x.md` 和 `./x.md#锚点` 改写成 `/plugins/reference/x/`；
-- 生成目录写进 `.gitignore`；拉不到文档时构建直接失败，不会生成空侧栏。
+网站上的文档对应最新的正式版：main 上改了的内容，要等下一次发版才上线。
 
-想用自己 fork 的文档本地预览：
+## 外观
 
-```bash
-# bash
-NEXTSKIN_REPO=NayaCcR/NextSkinG NEXTSKIN_REF=main pnpm build
+- 配色、圆角、硬边阴影对齐主站（DESIGN.md），色值从 `packages/ui/src/theme.css` 转录到 `src/styles/theme.css`。主站改 token 时手工同步。
+- 像素字体来自 `@nextskin/ui/fonts.css`，分片随站点发布。和主站一样只用 12、24、36、48px，不加粗：站名、页面和区块标题、侧栏分组名、表头、徽标用它，正文用系统字体。
+- 页面不从别的域名加载任何资源：国内访问只加速了 nextskin.org 自己的主机名（ADR-0054）。搜索是 Starlight 自带的 Pagefind，构建时生成索引。
 
-# PowerShell
-$env:NEXTSKIN_REPO='NayaCcR/NextSkinG'; $env:NEXTSKIN_REF='main'; pnpm build
-```
+## 部署
 
-## 版本徽章
+`.github/workflows/docs.yml`：
 
-版本号只挂在侧栏“插件 API 参考”这个分组上，单篇默认不标。某篇内容在某版有变化时，在 `scripts/fetch-sdk-docs.mjs` 的 `changedIn` 里加一条（例如 `'context': 'v1.1.0'`），只有那一篇会在标题旁出现徽章。
+- PR 和推送上，改了文档站相关的文件时只构建。
+- 维护者发布正式版的 Release 以后，在那个标签上构建，部署到 Worker `nextskin-docs`。给旧的次版本发修订版时只构建、不部署。
+- 部署失败后，从 Actions 页面手动运行 Docs 工作流，选那个 `v*` 标签。
 
-## 视觉
+部署凭据在 GitHub 的 `docs` environment（只允许 `v*` 标签）：
 
-页头标志、favicon、配色和圆角对齐主站：`src/assets/logo.svg`、`src/assets/logo-dark.svg` 与 `public/favicon.svg` 转录自 `apps/web/public/icon.svg`，`src/styles/theme.css` 的色值取自 `packages/ui/src/theme.css`。主站改 token 时手工同步，没有构建期依赖。像素字体分片目前没有随主仓提交，所以文档站沿用系统字体；字体进仓后把 `fonts.css` 和分片复制过来即可。
+- secret `CLOUDFLARE_API_TOKEN`：账户的"Workers 脚本：编辑"和 nextskin.org 的"Workers 路由：编辑"，不给 DNS 权限；
+- variable `CLOUDFLARE_ACCOUNT_ID`。
 
-## 发布与部署
+Worker 只有静态资源，配置在 `wrangler.jsonc`：绑路由 `docs.nextskin.org/*`，关掉 `workers.dev` 和预览地址。
 
-### 第一次
+## 国内访问（优选）
 
-1. 推送仓库（remote 已经是 `https://github.com/NayaCcR/NextSkin-Docs.git`）：
+DNS 记录都不开代理（ADR-0054）：
 
-   ```bash
-   git add -A
-   git commit -m "docs: 初始化文档站"
-   git push -u origin main
-   ```
+| 记录 | 内容 |
+| --- | --- |
+| `edge.nextskin.org` A | 几个 Cloudflare 官方段里国内访问快的 IP |
+| `docs.nextskin.org` CNAME | `edge.nextskin.org` |
 
-2. Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git，选 `NayaCcR/NextSkin-Docs`，分支 `main`。
-3. 构建配置：
-
-   | 设置 | 值 |
-   | --- | --- |
-   | Root directory | `/` |
-   | Build command | `pnpm install --frozen-lockfile && pnpm build` |
-   | Build output | `dist` |
-   | 环境变量 | `NODE_VERSION=24`；生产环境按需加 `NEXTSKIN_REF=v1.0.0` |
-
-4. 保存并部署。之后每次 push `main` 自动构建，PR 会生成预览部署。
-5. 自定义域：Pages 项目 → Custom domains → 添加 `docs.nextskin.org`，按提示在 DNS 加 CNAME。`astro.config.mjs` 的默认 `site` 已经是这个地址；换域名时改默认值或注入 `SITE_URL`。
-6. Deploy hook：Pages 项目 → Settings → Builds & deployments → Deploy hooks → Add（分支 `main`），复制 URL 到主仓 GitHub → Settings → Secrets and variables → Actions，新建 `PAGES_DEPLOY_HOOK`。
-
-预览部署跟随分支。生产环境可以固定 `NEXTSKIN_REF=v1.0.0` 这类 tag，避免未发布的接口混进正式文档；不设置时跟随 `main`。Cloudflare 会按 `package.json` 的 `packageManager` 自动装对应版本的 pnpm（日志里会打印 `pnpm@12.8.1`），构建命令里不要再 `npm i -g pnpm`，否则会和已装好的同版本冲突（`EEXIST`）。
-
-### 日常
-
-- 只改本仓库的文档：push `main`，Pages 自己构建。
-- 主仓 `packages/plugin-sdk/docs/**` 变化：主仓 `.github/workflows/docs-rebuild.yml` 调 Deploy Hook 触发重建。
-- 回退：Pages → Deployments → 选上一个正常部署 → Rollback；或 revert 对应提交。
-
-### Workers（静态资源）
-
-如果项目建成了 Worker 而不是 Pages，构建命令不变，部署命令用 
-px wrangler@4 deploy，配置在 wrangler.jsonc：ssets.directory 指 ./dist，
-ot_found_handling 用 404-page。有这份配置时 wrangler 不会再去跑 stro add cloudflare，也就不会因为 pnpm 12 拒绝执行 esbuild/workerd 的构建脚本而报 ERR_PNPM_IGNORED_BUILDS。
-
-## 页脚与文档版本
-
-页脚在 `src/components/Footer.astro`，显示：文档版本（构建日期，`Asia/Shanghai`）· 提交 sha（链到 commit）· 同步的插件 SDK 版本 · 文档仓库链接。
-
-全部在构建期生成，不需要手写：
-
-- 日期取构建时间；
-- 提交号取 `CF_PAGES_COMMIT_SHA`，本地构建时取 `git rev-parse --short HEAD`；
-- SDK 版本来自 `src/data/sdk-meta.json`，由 `pnpm sync` 从主仓 `packages/plugin-sdk/package.json` 读取。
-
-要换成语义版本号（`v0.1.0` 这种）时，给仓库打 tag，把日期那段换成 `git describe --tags --always` 即可；发版时打 tag，文件不用改。
-
-## 搜索
-
-Starlight 自带 Pagefind，构建时生成静态索引，不需要外部服务。上线后拿 `set-role`、`提权`、`Yggdrasil`、`拦截点` 实测召回；效果不够再考虑 Algolia DocSearch。
+- IP 只从 <https://www.cloudflare.com/ips/> 列出的官方段里选，不 CNAME 第三方的优选域名，不用 BYOIP 段。
+- 变慢了就换 `edge` 的 A 记录：在国内网络上测延迟，或参考公共优选域名当前的解析结果，去掉不在官方段里的。换之前用 `curl --resolve docs.nextskin.org:443:<IP> https://docs.nextskin.org/` 确认能打开。
+- 回退：把 `docs` 换成一条开代理的 `AAAA 100::`，走 Cloudflare 默认分配的 IP。
 
 ## 待办
 
 - [ ] 把 `docs/deploy` 里的面板、systemd、Windows 步骤迁入本站，主仓只留一份
 - [ ] 玩家指南补截图和完整步骤
-- [ ] 配置自定义域，替换 `SITE_URL` 默认值
 - [ ] SDK 1.0 正式发布后加快照（`plugins/v1/`）和版本切换
