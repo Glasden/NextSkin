@@ -48,8 +48,19 @@ export default definePlugin({
     'GET /notes': {
       auth: 'user',
       permission: 'manage',
-      async handler({ ctx }) {
-        const rows = await ctx.db.selectFrom('notes').selectAll().orderBy('created_at', 'desc').limit(20).execute()
+      async handler({ request, ctx }) {
+        const q = new URL(request.url).searchParams.get('q')?.trim()
+        let query = ctx.db.selectFrom('notes').selectAll()
+        if (q) {
+          const authors = await ctx.users.searchByNickname(q, { limit: 100 })
+          if (!authors.length) return Response.json({ rows: [], total: 0 } satisfies TableSourceResponse)
+          query = query.where(
+            'uid',
+            'in',
+            authors.map((author) => author.uid),
+          )
+        }
+        const rows = await query.orderBy('created_at', 'desc').limit(20).execute()
         const users = await ctx.users.getMany(rows.map((row) => row.uid))
         ctx.log.info('notes listed', { count: rows.length, users: users.length })
         const body: TableSourceResponse = { rows, total: rows.length }

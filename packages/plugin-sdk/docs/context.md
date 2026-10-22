@@ -6,7 +6,7 @@
 
 | 能力 | 提供什么 |
 |---|---|
-| `users.read` | `ctx.users.get/getMany`，返回 `PublicUser`：uid、昵称、身份、头像材质编号、注册时间 |
+| `users.read` | `ctx.users.get/getMany/searchByNickname`，返回 `PublicUser`：uid、昵称、身份、头像材质编号、注册时间 |
 | `users.readPrivate` | 上述方法返回 `PrivateUser`，再加邮箱、邮箱验证状态、积分、语言；增加 `findByEmail`，不必同时申请 `users.read` |
 | `users.score` | `ctx.users.adjustScore`，给任何用户加减积分，结果里带余额 |
 | `players.read` | `ctx.players`，读 Minecraft 角色 |
@@ -61,6 +61,7 @@ export default definePlugin({ capabilities, settings, tables /* , on, routes …
 |---|---|
 | `users.get(uid)` | 按 uid 读公开或私有 DTO，由能力决定 |
 | `users.getMany(uids)` | 原始数组最多 100 项，之后才去重；按 uid 升序，省略不存在的用户，空数组返回 `[]` |
+| `users.searchByNickname(query, { after?, limit? })` | 昵称包含 query 的用户，按 uid 升序。query 是 1–255 个 UTF-16 代码单元，按字面匹配（`%`、`_` 不是通配符），不 trim，含 NUL 时返回 `[]`；ASCII 字母不分大小写，其他字符看数据库（SQLite 只折叠 ASCII）。limit 是 1–100 的整数，默认 100；翻下一页时把 after 设成这一页最后一个 uid，返回不足 limit 个就是最后一页。不返回总数 |
 | `users.findByEmail(email)` | 只在 `users.readPrivate` 下存在；原始字符串最多 255 个 UTF-16 代码单元，trim 并转小写后查询 |
 | `players.get(pid)` | 按 pid 读 `Player` |
 | `players.findByName(name)` | 字符串最多 255 个 UTF-16 代码单元，转小写后按角色名查询，不自动 trim |
@@ -69,6 +70,20 @@ export default definePlugin({ capabilities, settings, tables /* , on, routes …
 | `textures.get(tid)` | 按 tid 读 `Texture` |
 | `textures.findByHash(hash)` | 字符串最多 64 个 UTF-16 代码单元；同 hash 多个条目时先公开、再 tid 升序取第一条 |
 | `textures.files.read(hash)` | 字符串最多 64 个 UTF-16 代码单元；必须匹配 `^[0-9a-f]{64}$`，且文件处于 active 状态，否则 `null`；成功返回 `Uint8Array` |
+
+插件的表只存 uid、后台表格要按昵称搜时，一页一页取出命中的用户，拿 uid 到自己的表里对；总数和排序以自己的表为准：
+
+```ts
+const matched: { uid: number; created_at: string }[] = []
+let after: number | undefined
+for (;;) {
+  const users = await ctx.users.searchByNickname(q, { after })
+  if (users.length)
+    matched.push(...(await ctx.db.selectFrom('records').selectAll().where('uid', 'in', users.map((user) => user.uid)).execute()))
+  if (users.length < 100) break
+  after = users.at(-1)!.uid
+}
+```
 
 DTO 字段见类型声明里 `PublicUser`、`PrivateUser`、`Player`、`Texture` 的注释；日期是 ISO 字符串。用户的 `role`、材质的 `type` 是开放字符串联合，要处理未知值，见[版本和兼容](./versioning.md)。
 

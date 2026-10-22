@@ -666,6 +666,9 @@ export function createPluginSystem(options: {
         case 'users.getMany':
           require(invocation, 'users.read', 'users.readPrivate')
           return coreData.users(a.uids, invocation.granted.has('users.readPrivate'))
+        case 'users.searchByNickname':
+          require(invocation, 'users.read', 'users.readPrivate')
+          return coreData.usersByNickname(a.query, a.after, a.limit, invocation.granted.has('users.readPrivate'))
         case 'users.findByEmail':
           require(invocation, 'users.readPrivate')
           return coreData.userByEmail(a.email)

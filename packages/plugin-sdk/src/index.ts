@@ -9,6 +9,7 @@ export {
   type Logger,
   type UsersPublicApi,
   type UsersPrivateApi,
+  type UserSearchOptions,
   type UsersScoreApi,
   type ScoreAdjustOptions,
   type ScoreAdjustResult,
