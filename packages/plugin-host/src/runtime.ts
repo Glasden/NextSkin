@@ -122,6 +122,12 @@ export function loadPlugin(options: {
           ? {
               get: (uid: number) => rpc(call, 'users.get', { uid }),
               getMany: (uids: readonly number[]) => rpc(call, 'users.getMany', { uids: [...uids] }),
+              searchByNickname: (query: string, opts?: { after?: number; limit?: number }) =>
+                rpc(call, 'users.searchByNickname', {
+                  query,
+                  ...(opts?.after !== undefined ? { after: opts.after } : {}),
+                  ...(opts?.limit !== undefined ? { limit: opts.limit } : {}),
+                }),
             }
           : {}),
         ...(granted.has('users.score')

@@ -62,6 +62,11 @@ export interface UsersPublicApi {
   get(uid: Uid): Promise<PublicUser | null>
   /** 最多 100 项；按 id 排序、去重，省略不存在的用户。 */
   getMany(uids: readonly Uid[]): Promise<PublicUser[]>
+  /**
+   * 昵称包含 query 的用户（ADR-0050），按 id 升序。query 是 1–255 字符，按字面匹配、不 trim，含 NUL 时返回空数组；
+   * ASCII 字母不分大小写，其他字符看数据库。返回不足 limit 个就是最后一页。
+   */
+  searchByNickname(query: string, options?: UserSearchOptions): Promise<PublicUser[]>
 }
 
 /** id 须为正安全整数，邮箱最多 255 字符。 */
@@ -69,7 +74,17 @@ export interface UsersPrivateApi {
   get(uid: Uid): Promise<PrivateUser | null>
   /** 最多 100 项；按 id 排序、去重，省略不存在的用户。 */
   getMany(uids: readonly Uid[]): Promise<PrivateUser[]>
+  /** 同 `UsersPublicApi.searchByNickname`，返回私有 DTO。 */
+  searchByNickname(query: string, options?: UserSearchOptions): Promise<PrivateUser[]>
   findByEmail(email: string): Promise<PrivateUser | null>
+}
+
+/** 按昵称搜索的翻页：下一页把 after 设成这一页最后一个 uid。 */
+export interface UserSearchOptions {
+  /** 只返回 uid 比它大的用户；正安全整数，省略时从头开始。 */
+  readonly after?: Uid
+  /** 1–100 的整数，默认 100。 */
+  readonly limit?: number
 }
 
 /** `users.score`：以插件的身份改积分（ADR-0041）。 */

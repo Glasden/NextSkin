@@ -317,6 +317,43 @@ test('完全受控插件：未授予能力、过期和伪造 invocationId 都拒
   await expect(rpc('forged', 'users.get', { uid: 2147483647 })).rejects.toMatchObject({ name: 'PluginCallRejected' })
 })
 
+test.each([
+  [['users.read'], 'public'],
+  [['users.readPrivate'], 'private'],
+  [['users.score'], 'rejected'],
+] as const)('users.searchByNickname：%j 下返回 %s', async (capabilities, expected) => {
+  let result: unknown
+  await env.boot(
+    [
+      official(
+        'a',
+        definePlugin({
+          capabilities,
+          routes: { 'GET /': { auth: 'public', handler: () => Promise.resolve(new Response()) } },
+        }),
+      ),
+    ],
+    {
+      plugins: {
+        load: injected(async (_, context, send) => {
+          result = await send(context.invocationId, 'users.searchByNickname', { query: 'superADMIN' }).catch(
+            (error: unknown) => error,
+          )
+          return { status: 200, statusText: 'OK', headers: [], body: null }
+        }),
+      },
+    },
+  )
+  const { uid } = await enable('a')
+  await env.core.plugins.route(routeInput('/'))
+  if (expected === 'rejected') expect(result).toMatchObject({ name: 'PluginCallRejected' })
+  else {
+    expect(result).toEqual([expect.objectContaining({ uid, nickname: 'superadmin' })])
+    if (expected === 'private') expect((result as object[])[0]).toHaveProperty('email', expect.any(String))
+    else expect((result as object[])[0]).not.toHaveProperty('email')
+  }
+})
+
 test('非迁移调用禁止 DDL，迁移允许建表', async () => {
   let rejection: unknown
   await env.boot([official('a', recorder())], {

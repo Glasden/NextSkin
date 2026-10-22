@@ -158,7 +158,9 @@ test.each([false, true])('users.score 和读取能力合并为一个冻结对象
         reward: {
           async handler({ ctx }) {
             expect(Object.isFrozen(ctx.users)).toBe(true)
-            expect(Object.keys(ctx.users).sort()).toEqual(read ? ['adjustScore', 'get', 'getMany'] : ['adjustScore'])
+            expect(Object.keys(ctx.users).sort()).toEqual(
+              read ? ['adjustScore', 'get', 'getMany', 'searchByNickname'] : ['adjustScore'],
+            )
             expect(await ctx.users.adjustScore(1, 5, { reason: 'reward', key: 'once' })).toEqual({
               status: 'applied',
               balance: 5,
@@ -179,21 +181,28 @@ test.each([false, true])('users.score 和读取能力合并为一个冻结对象
   plugin.unload()
 })
 
-test('只申请读取能力时没有 adjustScore', async () => {
+test('只申请读取能力时没有 adjustScore；按昵称搜索不转发省略的选项', async () => {
+  const rpc = vi.fn<CoreRpc>().mockResolvedValue([])
   const plugin = load(
     definePlugin({
       capabilities: ['users.read'],
       jobs: {
         read: {
-          handler({ ctx }) {
-            expect(Object.keys(ctx.users).sort()).toEqual(['get', 'getMany'])
-            return Promise.resolve()
+          async handler({ ctx }) {
+            expect(Object.keys(ctx.users).sort()).toEqual(['get', 'getMany', 'searchByNickname'])
+            await ctx.users.searchByNickname('steve')
+            await ctx.users.searchByNickname('steve', { after: 7, limit: 20 })
           },
         },
       },
     }),
+    rpc,
   )
   await plugin.invoke({ kind: 'job', name: 'read', payload: {}, attempt: 1 }, context)
+  expect(rpc.mock.calls.map((call) => call.slice(1))).toEqual([
+    ['users.searchByNickname', { query: 'steve' }],
+    ['users.searchByNickname', { query: 'steve', after: 7, limit: 20 }],
+  ])
   plugin.unload()
 })
 

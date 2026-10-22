@@ -101,6 +101,7 @@ export interface CoreRequests {
   }
   'users.get': { args: { uid: number }; result: Json | null }
   'users.getMany': { args: { uids: readonly number[] }; result: Json[] }
+  'users.searchByNickname': { args: { query: string; after?: number; limit?: number }; result: Json[] }
   'users.findByEmail': { args: { email: string }; result: Json | null }
   'players.get': { args: { pid: number }; result: Json | null }
   'players.findByName': { args: { name: string }; result: Json | null }

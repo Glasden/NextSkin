@@ -889,12 +889,19 @@ export type UserActor = Extract<Actor, {
 export type UserRole = 'banned' | 'user' | 'admin' | 'superadmin' | (string & {});
 
 // @public
+export interface UserSearchOptions {
+    readonly after?: Uid;
+    readonly limit?: number;
+}
+
+// @public
 export interface UsersPrivateApi {
     // (undocumented)
     findByEmail(email: string): Promise<PrivateUser | null>;
     // (undocumented)
     get(uid: Uid): Promise<PrivateUser | null>;
     getMany(uids: readonly Uid[]): Promise<PrivateUser[]>;
+    searchByNickname(query: string, options?: UserSearchOptions): Promise<PrivateUser[]>;
 }
 
 // @public
@@ -902,6 +909,7 @@ export interface UsersPublicApi {
     // (undocumented)
     get(uid: Uid): Promise<PublicUser | null>;
     getMany(uids: readonly Uid[]): Promise<PublicUser[]>;
+    searchByNickname(query: string, options?: UserSearchOptions): Promise<PublicUser[]>;
 }
 
 // @public
@@ -938,8 +946,8 @@ export { z }
 
 // Warnings were encountered during analysis:
 //
-// dist/context.d.ts:172:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
-// dist/context.d.ts:178:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
+// dist/context.d.ts:186:5 - (ae-forgotten-export) The symbol "UsersApiFor" needs to be exported by the entry point index.d.ts
+// dist/context.d.ts:192:5 - (ae-forgotten-export) The symbol "TexturesApiFor" needs to be exported by the entry point index.d.ts
 // dist/routes.d.ts:35:5 - (ae-forgotten-export) The symbol "RouteArgs" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)

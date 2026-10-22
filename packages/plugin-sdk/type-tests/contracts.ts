@@ -31,6 +31,21 @@ definePlugin({
       user?.email
       // @ts-expect-error adjustScore 需要 users.score（ADR-0041）
       ctx.users.adjustScore
+      const [found] = await ctx.users.searchByNickname('steve', { after: 1, limit: 100 })
+      // @ts-expect-error 按昵称搜到的也是公开 DTO（ADR-0050）
+      found?.email
+    },
+  },
+})
+
+// users.readPrivate 下按昵称搜到的是私有 DTO（ADR-0050）。
+definePlugin({
+  capabilities: ['users.readPrivate'],
+  on: {
+    'user.registered': async ({ ctx }) => {
+      const [found] = await ctx.users.searchByNickname('steve')
+      const email: string | undefined = found?.email
+      void email
     },
   },
 })
@@ -43,6 +58,8 @@ definePlugin({
       await ctx.users.adjustScore(event.data.user.uid, 1, { reason: 'reward', key: 'once' })
       // @ts-expect-error 只申请 users.score 就没有 get
       ctx.users.get
+      // @ts-expect-error 也没有 searchByNickname
+      ctx.users.searchByNickname
     },
   },
 })

@@ -1,8 +1,8 @@
 /**
  * 插件读核心数据（`users.read`、`players.read`、`textures.read`、`textures.readFile`）。
- * 只返回 SDK 的 DTO；按 id 读，成本很低（ADR-0033）。
+ * 只返回 SDK 的 DTO；按 id 读，成本很低（ADR-0033）。按昵称搜索的用户每次最多 100 个（ADR-0050）。
  */
-import { readAuthBoolean, readAuthDate, type CoreDatabase, type UsersTable } from '@nextskin/db'
+import { containsInsensitive, readAuthBoolean, readAuthDate, type CoreDatabase, type UsersTable } from '@nextskin/db'
 import type { Player, PrivateUser, PublicUser, Texture } from '@nextskin/plugin-sdk'
 import type { Kysely, Selectable } from 'kysely'
 import { toPlayer } from '../players/manage.ts'
@@ -45,6 +45,13 @@ function text(value: unknown, what: string, max = 255): string {
   return value
 }
 
+function batchLimit(value: unknown): number {
+  if (value === undefined) return MAX_BATCH
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > MAX_BATCH)
+    throw new PluginCallRejected(`limit 必须是 1 到 ${MAX_BATCH} 的整数`)
+  return value
+}
+
 export function createPluginCoreData(db: Kysely<CoreDatabase>, storage: TextureStorage) {
   return {
     async user(uid: unknown, privateFields: boolean): Promise<PublicUser | PrivateUser | null> {
@@ -57,6 +64,28 @@ export function createPluginCoreData(db: Kysely<CoreDatabase>, storage: TextureS
       const ids = [...new Set(uids.map((uid) => id(uid, 'uid')))]
       if (!ids.length) return []
       const rows = await db.selectFrom('users').selectAll().where('id', 'in', ids).orderBy('id').execute()
+      return rows.map(privateFields ? toPrivateUser : toPublicUser)
+    },
+    async usersByNickname(
+      query: unknown,
+      after: unknown,
+      limit: unknown,
+      privateFields: boolean,
+    ): Promise<(PublicUser | PrivateUser)[]> {
+      const q = text(query, 'query')
+      if (!q) throw new PluginCallRejected('query 不能是空串')
+      const from = after === undefined ? 0 : id(after, 'after')
+      const take = batchLimit(limit)
+      // 昵称里不会有 NUL（users/validation.ts），PostgreSQL 收到 NUL 还会报错
+      if (q.includes('\0')) return []
+      const rows = await db
+        .selectFrom('users')
+        .selectAll()
+        .where(containsInsensitive('nickname', q))
+        .where('id', '>', from)
+        .orderBy('id')
+        .limit(take)
+        .execute()
       return rows.map(privateFields ? toPrivateUser : toPublicUser)
     },
     async userByEmail(email: unknown): Promise<PrivateUser | null> {
