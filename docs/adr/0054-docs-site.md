@@ -43,7 +43,7 @@ Cloudflare 现在推荐新项目用 Workers 静态资源，Pages 继续可用，
   请求到了这些 IP，Cloudflare 边缘按主机名匹配 nextskin.org 的 Worker 路由，证书用区域的 Universal SSL。
 - IP 只从官方段里选。官方段是 anycast，海外访客照样连到就近的节点；某个 IP 的线路变差，最坏是变慢，不会打不开，也不会被导到别处。挑法：在国内网络上测延迟（CloudflareST 之类），或者参考公共优选域名当前的解析结果，去掉不在官方段里的。IP 不写进仓库，变慢了就在 DNS 里换 `edge` 的记录。
 - 回退：把 `docs` 换成一条开代理的 `AAAA 100::`（只给 Worker 路由用、没有源站的写法），走 Cloudflare 默认分配的 IP。Cloudflare 的文档要求 Worker 路由配一条开代理的记录；不开代理、指向优选 IP 也能用，靠的是边缘按主机名匹配路由，不是官方承诺的行为，哪天失效就这样回退。
-- 以后的宣传站放在 `nextskin.org`，照同样的形态部署，届时补充本篇或另写一篇。
+- 宣传站放在 `nextskin.org`，照同样的形态部署，见 ADR-0055。
 
 ### 资源同源
 
