@@ -1,0 +1,38 @@
+{
+  "name": "@nextskin/site",
+  "version": "0.0.0",
+  "private": true,
+  "description": "宣传站：Astro 静态站，一页放一个介绍视频里的场景，正式版发布后部署到 Cloudflare Workers（ADR-0055）",
+  "type": "module",
+  "scripts": {
+    "generate": "node scripts/generate.ts",
+    "dev": "node scripts/generate.ts && astro dev",
+    "build": "node scripts/generate.ts && astro build",
+    "preview": "astro preview",
+    "typegen": "node scripts/generate.ts && astro sync",
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@astrojs/react": "7.1.1",
+    "@nextskin/ui": "workspace:*",
+    "@tailwindcss/vite": "catalog:",
+    "astro": "catalog:",
+    "pixelarticons": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "skinview3d": "catalog:",
+    "tailwindcss": "catalog:"
+  },
+  "devDependencies": {
+    "@nextskin/contract-tests": "workspace:*",
+    "@nextskin/domain": "workspace:*",
+    "@nextskin/skin": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "kysely": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

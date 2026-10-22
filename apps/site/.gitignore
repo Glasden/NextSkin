@@ -1,0 +1,5 @@
+.astro/
+
+# scripts/generate.ts 生成，不提交
+src/gen/
+public/gen/

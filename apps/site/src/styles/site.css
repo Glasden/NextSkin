@@ -1,0 +1,184 @@
+@import 'tailwindcss';
+@import '@nextskin/ui/theme.css';
+@import '@nextskin/ui/fonts.css';
+@source '../../../../packages/ui/src';
+
+/* 材质和出图保持像素锐利（DESIGN.md §5） */
+@utility pixelated {
+  image-rendering: pixelated;
+}
+
+/* 首屏铺底的 20px 网格：网格线由 text 按 6% 混入 bg，不单独设 token（同 packages/ui 的 stageGrid） */
+@utility grid-lines {
+  --grid-line: color-mix(in srgb, var(--color-text) 6%, var(--color-bg));
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/*
+ * 首屏引导往下翻的箭头：停一会儿，再按图标的像素一格一格（48px 的图标一格 4px）往下跳两格、跳回来。
+ * steps(1, end) 让每个关键帧之间停在原处，不补间（DESIGN.md 的阶跃动效）
+ */
+@utility animate-nudge {
+  animation: nudge 1600ms steps(1, end) infinite;
+}
+@keyframes nudge {
+  0% {
+    transform: translateY(0);
+  }
+  55% {
+    transform: translateY(4px);
+  }
+  65% {
+    transform: translateY(8px);
+  }
+  80% {
+    transform: translateY(4px);
+  }
+  90% {
+    transform: translateY(0);
+  }
+}
+
+/* 解压炸弹想解出来、但被预算截住的部分 */
+@utility hatch-danger {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--color-danger) 35%, var(--color-surface)) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+/*
+ * 第 7 页依次换上的三套备选主题，取值见 DESIGN.md 附录（钴蓝、洋红只换强调色，focus 等于 accent）。
+ * 只在这个页面上演示，主站还没有主题切换（DESIGN.md §2.3），所以不进 theme.css
+ */
+[data-palette='cobalt'] {
+  --color-accent: #2a52e5;
+  --color-accent-fg: #ffffff;
+  --color-accent-subtle: #e5eafc;
+  --color-focus: #2a52e5;
+}
+[data-theme='dark'] [data-palette='cobalt'] {
+  --color-accent: #86a2ff;
+  --color-accent-fg: #0e1013;
+  --color-accent-subtle: #282f41;
+  --color-focus: #86a2ff;
+}
+[data-palette='magenta'] {
+  --color-accent: #c2186b;
+  --color-accent-fg: #ffffff;
+  --color-accent-subtle: #f8e3ed;
+  --color-focus: #c2186b;
+}
+[data-theme='dark'] [data-palette='magenta'] {
+  --color-accent: #ff7ab8;
+  --color-accent-fg: #0e1013;
+  --color-accent-subtle: #3b2936;
+  --color-focus: #ff7ab8;
+}
+/* 高对比还改了结构：直角（圆角变量清零）；边框和阴影由组件按主题名加粗 */
+[data-palette='contrast'] {
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #f0f0f0;
+  --color-stage: #ececec;
+  --color-border: #bdbdbd;
+  --color-border-strong: #000000;
+  --color-text: #000000;
+  --color-text-muted: #4a4a4a;
+  --color-text-inverse: #ffffff;
+  --color-accent: #d4ff1e;
+  --color-accent-fg: #000000;
+  --color-accent-subtle: #f0ffb0;
+  --color-success: #00813a;
+  --color-success-fg: #ffffff;
+  --color-warning: #a85600;
+  --color-warning-fg: #ffffff;
+  --color-danger: #d0021b;
+  --color-danger-fg: #ffffff;
+  --color-focus: #0040ff;
+  --color-shadow: #000000;
+  --color-checker-a: #ffffff;
+  --color-checker-b: #e6e6e6;
+  --radius-sm: 0;
+  --radius-md: 0;
+}
+[data-theme='dark'] [data-palette='contrast'] {
+  --color-bg: #000000;
+  --color-surface: #0b0b0b;
+  --color-surface-raised: #161616;
+  --color-surface-sunken: #050505;
+  --color-stage: #222222;
+  --color-border: #3d3d3d;
+  --color-border-strong: #ffffff;
+  --color-text: #ffffff;
+  --color-text-muted: #b5b5b5;
+  --color-text-inverse: #000000;
+  --color-accent: #d4ff1e;
+  --color-accent-fg: #000000;
+  --color-accent-subtle: #37410f;
+  --color-success: #3ddc84;
+  --color-success-fg: #000000;
+  --color-warning: #ffb020;
+  --color-warning-fg: #000000;
+  --color-danger: #ff4d5e;
+  --color-danger-fg: #000000;
+  --color-focus: #d4ff1e;
+  --color-shadow: #e6e6e6;
+  --color-checker-a: #222222;
+  --color-checker-b: #0b0b0b;
+}
+
+@layer base {
+  html {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+  }
+}
+
+/*
+ * 两种版式（ADR-0055）：桌面上是翻页的播放器，其余（窄屏、触屏、减少动态效果、不跑脚本）是静帧加文字。
+ * 条件和 src/player/mode.ts 的 PLAYER_MEDIA 一致，播放器只在满足时水合
+ */
+.player {
+  display: none;
+}
+@media (min-width: 960px) and (min-height: 540px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+  .player {
+    display: block;
+  }
+  .stills {
+    display: none;
+  }
+}
+
+/* 静帧：1280×720 的画面按容器宽度缩放。--still-scale 由 index.astro 的脚本按实际宽度写入，没有脚本时按手机的宽度估 */
+.still {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+.still-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: scale(var(--still-scale, 0.27));
+  transform-origin: 0 0;
+}
+.still-text code {
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  padding: 0 0.25em;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}

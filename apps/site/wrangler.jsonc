@@ -1,0 +1,15 @@
+// 只有静态资源、没有脚本的 Worker（ADR-0055，同文档站的 ADR-0054）。部署由 .github/workflows/site.yml 在正式版发布后执行。
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nextskin-site",
+  "compatibility_date": "2026-10-21",
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+  },
+  // 用路由而不是自定义域：自定义域由 Cloudflare 建一条开代理的 DNS 记录，没法指向优选 IP
+  "routes": [{ "pattern": "nextskin.org/*", "zone_name": "nextskin.org" }],
+  "workers_dev": false,
+  "preview_urls": false,
+}
