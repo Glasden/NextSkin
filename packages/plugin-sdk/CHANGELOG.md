@@ -1,5 +1,11 @@
 # @nextskin/plugin-sdk
 
+## 1.0.0-rc.3
+
+### Minor Changes
+
+- fa4af7c: `users.read`、`users.readPrivate` 新增 `ctx.users.searchByNickname(query, { after?, limit? })`：昵称包含 query 的用户，ASCII 字母不分大小写，按 uid 升序往后翻页，每次最多 100 个；新类型 `UserSearchOptions`（ADR-0050）。
+
 ## 1.0.0-rc.2
 
 ### Minor Changes
