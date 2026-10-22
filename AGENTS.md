@@ -26,8 +26,9 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 
 | 命令 | 用途 |
 |---|---|
-| `pnpm dev` | 启动开发环境，不依赖任何外部服务（默认 SQLite，数据在 `apps/web/data`；环境变量见 `packages/domain/src/config.ts`。种子数据还没有：空库先在 `/setup` 建站，安装码在数据目录的 `setup-code`，安装之前不能注册）。不含文档站 |
+| `pnpm dev` | 启动开发环境，不依赖任何外部服务（默认 SQLite，数据在 `apps/web/data`；环境变量见 `packages/domain/src/config.ts`。种子数据还没有：空库先在 `/setup` 建站，安装码在数据目录的 `setup-code`，安装之前不能注册）。不含文档站和宣传站 |
 | `pnpm --filter @nextskin/docs dev` | 文档站（ADR-0054）。插件 API 参考由 `packages/plugin-sdk/docs` 生成；正式版发布后由 `.github/workflows/docs.yml` 部署到 docs.nextskin.org |
+| `pnpm --filter @nextskin/site dev` | 宣传站（ADR-0055）。画面上的数据由仓库代码在构建前生成；正式版发布后由 `.github/workflows/site.yml` 部署到 nextskin.org |
 | `pnpm check` | lint + 类型检查 + 单元测试 + 格式检查；提交前必须通过。CI 还会跑 `test:db` 和 `e2e`，改了数据库代码或 Next 配置时先在本地跑 |
 | `pnpm build` | 构建 Next standalone 产物、插件 SDK 的声明文件和 plugin host 的单文件包（`packages/plugin-host/dist/host.mjs`，standalone 里运行它），再组装发行目录 `dist/nextskin/`（启动器和命令行的单文件包加上 standalone，ADR-0039）。Next 关了构建期类型检查，所以会先对构建涉及的每个包跑 `typecheck` |
 | `pnpm test <path>` | 只跑指定文件或目录的测试 |
@@ -67,6 +68,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 |---|---|
 | `apps/web` | Next.js 页面，只做 UI |
 | `apps/docs` | 文档站：Astro + Starlight 的静态页（ADR-0054）。安装、命令行的内容和 `docs/deploy`、启动器的帮助有重复，改了那边要一起改 |
+| `apps/site` | 宣传站：Astro 静态页，场景是从介绍视频分叉的 React 组件（ADR-0055）。画面和文案里的说法要和代码对得上，约定见该目录 README |
 | `packages/api` | Hono 应用：协议端点、REST API、插件路由网关 |
 | `packages/domain` | 领域用例与查询服务，按业务领域分目录（users、players、textures、closet……） |
 | `packages/db` | Kysely 实例、迁移、方言辅助函数 |
