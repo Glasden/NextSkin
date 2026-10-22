@@ -46,6 +46,24 @@ test('注册失败时错误显示在对应的输入框下方', async ({ page }) 
   await expect(input).toHaveAccessibleDescription(t('errors.email_taken'))
 })
 
+test('页面水合之前提交登录表单：按 POST 提交，密码不进地址', async ({ page }) => {
+  // 挡掉页面的脚本，页面一直停在服务端渲染的样子
+  await page.route('**/_next/static/**/*.js', (route) => route.abort())
+  await page.goto('/sign-in')
+  await page.getByLabel(t('auth.email')).fill('prehydration@example.test')
+  await page.getByLabel(t('auth.password')).fill('prehydration secret')
+  const submitted = page.waitForRequest(
+    (request) => request.isNavigationRequest() && request.frame() === page.mainFrame(),
+  )
+  await page.getByRole('button', { name: t('auth.signIn.submit') }).click()
+  const request = await submitted
+  expect(request.method()).toBe('POST')
+  expect(new URL(request.url()).pathname).toBe('/sign-in')
+  expect(request.url()).not.toContain('prehydration')
+  await page.waitForLoadState()
+  expect(page.url()).not.toContain('prehydration')
+})
+
 test('BS 的认证页地址跳到新地址', async ({ request }) => {
   for (const [from, to] of [
     ['/auth/login', '/sign-in'],
