@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import designDoc from '../../../DESIGN.md?raw'
+import designDoc from '../../../docs/DESIGN.md?raw'
 import themeCss from './theme.css?raw'
 import {
   contrastRatio,

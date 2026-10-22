@@ -40,14 +40,14 @@ pnpm dev
 | `pnpm e2e` | 从 `dist/nextskin` 经启动器启动服务，跑 Playwright 端到端测试 |
 | `pnpm test:pack` | 在仓库外安装 `pnpm pack` 出来的 SDK，类型检查并构建一个插件（要联网） |
 | `pnpm format` | Prettier 格式化 |
-| `pnpm design:sync` | 改了设计 token 或标志的图形后重新生成 DESIGN.md 的 token 表 |
+| `pnpm design:sync` | 改了设计 token 或标志的图形后重新生成 `docs/DESIGN.md` 的 token 表 |
 | `pnpm nextskin <命令>` | 在源码里用启动器的命令行，读写 `apps/web` 的数据目录 |
 
 ## 改代码的固定顺序
 
 - **新功能**：领域用例（含事务、拦截器、事件）→ Hono 路由与 zod schema → UI。文案先写进 `packages/i18n` 的 `zh-CN.json`，同时写 `en.json`。
 - **新数据表**：迁移 → 类型 → 仓储，然后跑 `pnpm test:db`。
-- **新组件**：写进 `packages/ui`，按 `src/button/` 的样子配 story 和截图基线，并在 DESIGN.md 的组件清单里补一行。
+- **新组件**：写进 `packages/ui`，按 `src/button/` 的样子配 story 和截图基线，并在 `docs/DESIGN.md` 的组件清单里补一行。
 - **新的或改动的协议行为**：先在 `tests/contract/src/cases.ts` 加用例、从 BS v6 录制，再实现。
 - **新设置项**：在设置注册表里声明类型、默认值和分区，后台表单会自动生成，不要手写表单。
 
@@ -75,10 +75,10 @@ nextskin 启动器（进程监管 + 命令行）
 | `packages/importer` | 从 BS v6 只读导入 |
 | `plugins/*` | 官方插件 |
 | `tests/contract` | 协议契约用例 |
-| `docs/` | ADR、表设计、部署文档 |
+| `docs/` | ADR、表设计、设计规范、进度、CI 说明、部署文档 |
 
 ## 提交、分支和发布
 
 - 文档和单提交的修复直接进 `main`；加迁移、改协议端点或 SDK 公开 API、要分几个提交的功能，开 `feat/` 或 `fix/` 分支提 PR，CI 通过后由维护者合并（[ADR-0047](https://github.com/Glasden/NextSkin/blob/main/docs/adr/0047-branching.md)）。
-- CI 跑 `pnpm check`、`test:db`、`e2e`；改了数据库代码或 Next 配置时先在本地跑。
+- CI 跑 `pnpm check`、`test:db`、`e2e`、截图回归、打包冒烟和 changeset 检查。提 PR 之前按改动该跑哪些、检查挂了怎么看，见 [`docs/ci.md`](https://github.com/Glasden/NextSkin/blob/main/docs/ci.md)。
 - 插件 SDK 的公开 API 一旦变化必须附 changeset，并通过 `packages/plugin-sdk/type-tests`。

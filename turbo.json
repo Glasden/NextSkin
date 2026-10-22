@@ -36,7 +36,7 @@
     },
     "@nextskin/ui#test": {
       "dependsOn": ["transit"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/DESIGN.md"]
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/docs/DESIGN.md"]
     },
     "test:db": {
       "dependsOn": ["transit"],

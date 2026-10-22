@@ -4,12 +4,12 @@
 
 ## 当前阶段
 
-各领域已经落地和还没做的部分逐项列在 `PROGRESS.md`；判断某个功能有没有、做到哪一步，先看它。
+各领域已经落地和还没做的部分逐项列在 `docs/PROGRESS.md`；判断某个功能有没有、做到哪一步，先看它。
 
 - 已做的决定都在 `docs/adr/`，从 `docs/adr/README.md` 的索引和 spike 列表看起。
 - 早期的两份研究报告已经删除。它们推荐过、但已被 ADR 否决的方案不要再引入：同进程 `import()` 热重载插件、Drizzle 多套 schema、PHP sidecar、把 Redis 设为必需。否决理由见对应 ADR。
 - 核心表的设计在 `docs/schema.md`，跨表约定（时间、布尔、JSON、外键、UUID）见 ADR-0015。写迁移前先读。
-- 视觉与界面规范在 `DESIGN.md`。
+- 视觉与界面规范在 `docs/DESIGN.md`。
 - 插件 API 在 `packages/plugin-sdk/`（和构建命令一起发布到 npm，ADR-0035），该目录有自己的 AGENTS.md。
 - `spikes/` 是技术验证代码，结论写在各自的 README 和对应 ADR 里。这些代码不按产品标准维护，移植进正式代码时要重新审视。
 
@@ -35,7 +35,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 | `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑 `*.db.test.ts`（需要 Docker，测试库容器跑完后保留；`pnpm test` 只用 SQLite 跑） |
 | `pnpm test:contract` | 协议契约测试：回放从真实 BS v6 录制的用例，不需要 Docker，`pnpm check` 也会跑。录制见 `tests/contract/README.md` |
 | `pnpm storybook` | 组件工作台 |
-| `pnpm design:sync` | 改了 `packages/ui/src/theme.css` 或标志的图形之后，重新生成 DESIGN.md §3 的 token 表和 `apps/web/public` 里的默认站点图标（不同步时 ui 的测试会失败） |
+| `pnpm design:sync` | 改了 `packages/ui/src/theme.css` 或标志的图形之后，重新生成 `docs/DESIGN.md` §3 的 token 表和 `apps/web/public` 里的默认站点图标（不同步时 ui 的测试会失败） |
 | `pnpm font:sync` | 重新生成像素字体的分片（DESIGN.md §4），需要联网；只在换字体版本或改切片规则时运行 |
 | `pnpm e2e` | Playwright 端到端测试：从 `dist/nextskin` 经启动器启动服务、用打包后的命令行设定身份；也经过 Next standalone 回放全部契约用例 |
 | `pnpm test:visual` | 组件截图回归：给每个 story 拍亮暗两张截图，和基线比较（需要 Docker，浏览器跑在容器里）。外观改动是有意的，就加 `-- --update-snapshots` 更新基线，并检查新截图 |
@@ -45,6 +45,8 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 | `pnpm nextskin <命令>` | 启动器的命令行（ADR-0039），发行目录里是 `node nextskin.mjs <命令>`，`help` 列出全部命令。源码里读 `apps/web/.env` 和环境变量，数据目录同 `pnpm dev`。`set-role <邮箱> <身份>` 另指定超级管理员（第一个在 `/setup` 创建，安装码在数据目录的 `setup-code`）；`set-password <邮箱或 uid>`、`disable-2fa <邮箱或 uid>` 找回超级管理员（后台动不了它，ADR-0036）；`disable-captcha` 关掉验证码（ADR-0038）；`maintenance [on\|off]` 查看或开关手动维护模式（ADR-0044）；`plugin list\|install\|enable\|disable\|uninstall` 管理插件，服务运行时也能执行（ADR-0049）；`import blessing-skin` 从 BS v6 导入（ADR-0031，服务要停着，步骤见 `packages/importer/MIGRATION.md`）；`migrate` 只跑迁移；`doctor` 只读地检查运行环境（Node、密钥、数据目录、数据库和迁移状态、plugin host、服务在不在运行），有失败时退出码 1。`start` 只在发行目录里运行 |
 
 单元测试和 story 测试跑在 Chromium 里，第一次运行前要装浏览器：`pnpm --filter @nextskin/web exec playwright install chromium`。
+
+提 PR 之前按改动该跑哪些检查、CI 的各项检查挂了怎么看和怎么修，见 `docs/ci.md`。
 
 ## 不变量
 
@@ -59,7 +61,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 7. **不使用 `NEXT_PUBLIC_*`，站点配置存在数据库里。** 守护：lint。
 8. **材质和任何用户上传的图片都不经过 `next/image`，Image Optimization 保持关闭。** 守护：lint、`next.config.ts`。
 9. **插件 SDK 的公开 API 一旦变化，必须附 changeset，并通过 `packages/plugin-sdk/type-tests`。** 它是对社区的契约。守护：api-extractor 报告、CI 的 `changeset status`（见该包的 AGENTS.md）。
-10. **UI 中不写原始色值和任意值类。** 需要组件时先在 `packages/ui` 里找；没有就先补组件和 story，再写页面。见 DESIGN.md。守护：lint、`theme.css` 清空了 Tailwind 的默认调色板。
+10. **UI 中不写原始色值和任意值类。** 需要组件时先在 `packages/ui` 里找；没有就先补组件和 story，再写页面。见 `docs/DESIGN.md`。守护：lint、`theme.css` 清空了 Tailwind 的默认调色板。
 11. **日志里不得出现密码、令牌、Cookie、OAuth secret、数据库连接串。**
 
 ## 目录（落地后的约定）
@@ -93,7 +95,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 - **新功能**：领域用例（含事务、拦截器、事件）→ Hono 路由与 zod schema → UI。领域用例的错误只带 code 和参数；文案先写进 `packages/i18n` 的 `zh-CN.json`，同时写 `en.json`（ADR-0019）。
 - **新数据表**：迁移 → 类型 → 仓储；跑 `pnpm test:db`。
 - **新事件或拦截点**：先改 SDK 的类型、`interceptorPolicies` 和 type-tests，再在核心实现。这属于插件 API 变更。
-- **新组件**：写进 `packages/ui`，照 `src/button/` 的样子配 story（同时是交互测试）和截图基线，并在 DESIGN.md 的组件清单里补一行。
+- **新组件**：写进 `packages/ui`，照 `src/button/` 的样子配 story（同时是交互测试）和截图基线，并在 `docs/DESIGN.md` 的组件清单里补一行。
 - **新设置项**：在设置注册表（`packages/domain/src/settings/registry.ts`）里声明类型、默认值和分区（`section`），在 i18n 的 `admin.settings.fields` 下按键名写标签和说明（测试守着）。后台表单会自动生成，不要手写表单（ADR-0028）。
 - **新的或改动的协议行为**：先在 `tests/contract/src/cases.ts` 加用例、从 BS v6 录制，再实现。
 - **新包**：照抄现有包的 `package.json` 脚本和 `tsconfig.json`。包之间的依赖只用 `workspace:*` 声明；几个包共用的外部依赖，版本写进 `pnpm-workspace.yaml` 的 catalog。
@@ -122,4 +124,4 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 
 - 只写从代码里推断不出来的东西。agent 重复犯同一个错时才加一条；能改成 lint 或测试的规则，加上检查后就删掉文字。
 - 控制在 150 行以内。包内的局部规则写在各包自己的 AGENTS.md。
-- 进度不写在这里：切片落地时改 `PROGRESS.md`，"当前阶段"只改开头那一句。
+- 进度不写在这里：切片落地时改 `docs/PROGRESS.md`，"当前阶段"只改开头那一句。

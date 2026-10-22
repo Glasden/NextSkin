@@ -4,7 +4,7 @@ import { parseTheme, renderTokenTables, replaceSyncBlock } from '../src/tokens.t
 
 const css = readFileSync(new URL('../src/theme.css', import.meta.url), 'utf8')
 const theme = parseTheme(css)
-const docPath = new URL('../../../DESIGN.md', import.meta.url)
+const docPath = new URL('../../../docs/DESIGN.md', import.meta.url)
 const doc = readFileSync(docPath, 'utf8')
 const updated = replaceSyncBlock(doc, renderTokenTables(theme))
 

@@ -1,6 +1,6 @@
 # packages/ui
 
-组件库和设计 token（ADR-0012、DESIGN.md）。新组件照 `src/button/` 的样子写：组件、story（同时是交互测试）、截图基线，再在 DESIGN.md §6 补一行。
+组件库和设计 token（ADR-0012、`docs/DESIGN.md`）。新组件照 `src/button/` 的样子写：组件、story（同时是交互测试）、截图基线，再在 `docs/DESIGN.md` §6 补一行。
 
 ## 写组件
 

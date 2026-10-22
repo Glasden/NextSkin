@@ -25,7 +25,7 @@ pnpm --filter @nextskin/docs build    # 输出到 apps/docs/dist
 
 ## 外观
 
-- 配色、圆角、硬边阴影对齐主站（DESIGN.md），色值从 `packages/ui/src/theme.css` 转录到 `src/styles/theme.css`。主站改 token 时手工同步。
+- 配色、圆角、硬边阴影对齐主站（`docs/DESIGN.md`），色值从 `packages/ui/src/theme.css` 转录到 `src/styles/theme.css`。主站改 token 时手工同步。
 - 像素字体来自 `@nextskin/ui/fonts.css`，分片随站点发布。和主站一样只用 12、24、36、48px，不加粗：站名、页面和区块标题、侧栏分组名、表头、徽标用它，正文用系统字体。
 - 页面不从别的域名加载任何资源：国内访问只加速了 nextskin.org 自己的主机名（ADR-0054）。搜索是 Starlight 自带的 Pagefind，构建时生成索引。
 

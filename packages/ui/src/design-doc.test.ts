@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import designDoc from '../../../DESIGN.md?raw'
+import designDoc from '../../../docs/DESIGN.md?raw'
 
 // DESIGN.md §6 的组件表和 src 下的组件对得上：带 story 的组件目录都有一行，规划中、还没写的标“（未落地）”
 const PLANNED = '（未落地）'
