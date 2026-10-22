@@ -9,6 +9,8 @@ allowBuilds:
   # next-intl 的消息提取功能（useExtracted）才用到，我们不用，不跑它们的安装脚本
   '@parcel/watcher': false
   '@swc/core': false
+  # wrangler 带的本地运行时，安装脚本只是检查平台二进制；文档站只用 wrangler 部署，不跑 wrangler dev（ADR-0054）
+  workerd: false
 
 catalog:
   '@better-auth/core': 1.7.10
@@ -52,3 +54,8 @@ overrides:
   # Turbopack 追踪进 standalone，发行包只能在构建机的系统和架构上运行（ADR-0008）。Turbopack 不理会
   # outputFileTracingExcludes，所以直接不装。e2e 的 smoke.spec.ts 检查产物里没有原生库
   'next>sharp': '-'
+  # 文档站（ADR-0054）也用不到 sharp：图片原样发布（astro.config.mjs 的 passthroughImageService），
+  # miniflare 只在 wrangler dev 模拟图片服务时用它。装上的话，它会被提升进 node_modules/.pnpm/node_modules，
+  # next 也能解析到，上面那条就白排除了
+  'astro>sharp': '-'
+  'miniflare>sharp': '-'

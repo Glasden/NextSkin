@@ -9,7 +9,7 @@ import tseslint from 'typescript-eslint'
 
 // 各包的 lint 任务（`eslint .`）都用这一份配置；按目录的差异写在下面的 files 段里。
 export default defineConfig(
-  globalIgnores(['**/dist/', '**/.next/', '**/storybook-static/', '**/next-env.d.ts', 'spikes/']),
+  globalIgnores(['**/dist/', '**/.next/', '**/.astro/', '**/storybook-static/', '**/next-env.d.ts', 'spikes/']),
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
   {

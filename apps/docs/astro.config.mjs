@@ -1,22 +1,14 @@
 import { readFileSync } from 'node:fs'
 import starlight from '@astrojs/starlight'
-import { defineConfig } from 'astro/config'
+import { defineConfig, passthroughImageService } from 'astro/config'
 
-// 上线后改成实际域名；也可以由构建环境注入 SITE_URL。
-const site = process.env.SITE_URL ?? 'https://docs.nextskin.org'
-
-// sync 脚本写下的版本信息。还没跑过 sync 时不带徽章，避免拿到过期的版本号。
-let sdkVersion
-try {
-  sdkVersion = JSON.parse(
-    readFileSync(new URL('./src/data/sdk-meta.json', import.meta.url), 'utf8'),
-  ).version
-} catch {
-  sdkVersion = undefined
-}
+// scripts/sync.ts 写下的版本信息；dev、build、typecheck 都先跑它
+const { sdk } = JSON.parse(readFileSync(new URL('./src/data/versions.json', import.meta.url), 'utf8'))
 
 export default defineConfig({
-  site,
+  site: 'https://docs.nextskin.org',
+  // 图片原样发布，不装 sharp（见 pnpm-workspace.yaml 的 overrides）
+  image: { service: passthroughImageService() },
   integrations: [
     starlight({
       title: 'NextSkin',
@@ -27,12 +19,14 @@ export default defineConfig({
         alt: 'NextSkin',
       },
       favicon: '/favicon.svg',
-      customCss: ['./src/styles/theme.css'],
+      // 像素字体的分片随站点发布，和页面同源（ADR-0054）
+      customCss: ['@nextskin/ui/fonts.css', './src/styles/theme.css'],
       components: {
         // 页脚在默认的翻页链接下面补一行版本信息
         Footer: './src/components/Footer.astro',
       },
-      defaultLocale: 'zh-CN',
+      editLink: { baseUrl: 'https://github.com/Glasden/NextSkin/edit/main/apps/docs/' },
+      defaultLocale: 'root',
       locales: {
         root: { label: '简体中文', lang: 'zh-CN' },
       },
@@ -64,9 +58,9 @@ export default defineConfig({
         { label: '开发', items: [{ label: '本地开发', link: '/development/' }] },
         { label: '插件开发', items: [{ label: '总览', link: '/plugins/' }] },
         {
-          // 版本号只挂在分组上；单篇有差异时由 sync 脚本给那篇加徽章。
+          // 版本号只挂在分组上；单篇有差异时由 scripts/sync.ts 给那篇加徽章。
           label: '插件 API 参考',
-          ...(sdkVersion ? { badge: { text: `v${sdkVersion}`, variant: 'note' } } : {}),
+          badge: { text: `v${sdk}`, variant: 'note' },
           items: [{ autogenerate: { directory: 'plugins/reference' } }],
         },
       ],
