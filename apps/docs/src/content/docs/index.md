@@ -18,8 +18,8 @@ hero:
 - **玩家**：上传皮肤和披风、管理角色。见[玩家指南](/players/)。
 - **插件作者**：用 `@nextskin/plugin-sdk` 扩展站点。见[插件开发](/plugins/)。
 
-项目同时运行在 [nextskin.org](https://nextskin.org)，文档里的站点地址示例都用它。
+文档里的站点地址示例都写作 `skin.example.com`，照做时换成你自己的地址。
 
 ## 这个站点怎么更新
 
-产品文档、ADR 和源码在 [Glasden/NextSkin](https://github.com/Glasden/NextSkin)。插件 API 参考在每次构建时从主仓 `packages/plugin-sdk/docs` 同步，所以页面上标注的版本就是文档对应的 SDK 版本。
+这个站点的源码在 [Glasden/NextSkin](https://github.com/Glasden/NextSkin) 的 `apps/docs`，跟着正式版更新：每发布一个正式版，网站就换成那个版本的文档，页脚标着对应的 NextSkin 版本。插件 API 参考在构建时从同一版本的 `packages/plugin-sdk/docs` 生成，侧栏标着对应的 SDK 版本。

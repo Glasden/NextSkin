@@ -68,7 +68,7 @@ node nextskin.mjs disable-2fa owner@example.com
 
 ## 外置登录进不去
 
-先确认启动器里填的是 `https://你的站点/api/yggdrasil`，再确认游戏服务器 `server.properties` 里 `online-mode=false`。自签证书要先把证书装进客户端的信任库。
+先确认启动器里填的是 `https://你的站点/api/yggdrasil`，再确认游戏服务器的启动命令带着 `-javaagent:authlib-injector.jar=https://你的站点/api/yggdrasil`，并且 `server.properties` 里是 `online-mode=true`（设成 `false` 是离线模式，不经过站点验证）。步骤见[在游戏里用](/players/client/#外置登录)。自签证书要先把证书装进客户端的信任库。
 
 ## 数据目录能放网络盘吗
 

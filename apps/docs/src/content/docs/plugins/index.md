@@ -24,4 +24,4 @@ NextSkin 的插件运行在独立的 host 进程里：通过 RPC 调用核心，
 
 ## 版本
 
-这份参考文档在构建时从主仓 `packages/plugin-sdk/docs` 同步，页首标注对应的 SDK 版本。SDK 还在 1.0 候选期，接口可能调整；已发布的版本以 npm 上的 `@nextskin/plugin-sdk` 为准。
+这份参考文档在构建时从同一版本的 `packages/plugin-sdk/docs` 生成，侧栏的分组上标着对应的 SDK 版本。SDK 还在 1.0 候选期，接口可能调整；已发布的版本以 npm 上的 `@nextskin/plugin-sdk` 为准。
