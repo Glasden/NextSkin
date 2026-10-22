@@ -274,7 +274,8 @@ test('授权码：从登录页去注册，注册以后回到授权流程；拒�
   await page.getByLabel(t('auth.email')).fill(`signup-${suffix}@example.test`)
   await page.getByLabel(t('auth.password')).fill(password)
   await page.getByLabel(t('auth.signUp.playerName')).fill(`Su${suffix}`)
-  await page.getByRole('button', { name: t('auth.signUp.submit') }).click()
+  // 从登录页点链接过来是整页打开，水合之前点提交会按原生表单提交，等水合完再点
+  await clickHydrated(page.getByRole('button', { name: t('auth.signUp.submit') }))
 
   await expect(page).toHaveURL(/\/oauth\/consent\?/)
   await expect(page.getByText(t('oauth.owner', { nickname: `Ow${suffix}` }))).toBeVisible()
