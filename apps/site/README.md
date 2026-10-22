@@ -54,9 +54,10 @@ pnpm --filter @nextskin/site preview  # 看构建产物
 
 凭据和文档站共用 GitHub 的 `docs` environment（见 `apps/docs/README.md`）。Worker 只有静态资源，配置在 `wrangler.jsonc`：绑路由 `nextskin.org/*`，关掉 `workers.dev` 和预览地址。
 
-根域名的 DNS 记录不开代理，和 `docs` 一样解析到 `edge.nextskin.org` 那组 IP：`nextskin.org` 是 CNAME 指向 `edge`，Cloudflare 在根域名上把它拉平成 A 记录，和根域名上的 MX、TXT 共存。换 IP 只改 `edge`。
+`www.nextskin.org` 由另一个 Worker `nextskin-www`（`www/`）全部 301 到根域名，保留路径和查询参数。工作流部署宣传站时一起部署它；手动部署是 `pnpm exec wrangler deploy -c www/wrangler.jsonc`。
+
+根域名和 `www` 的 DNS 记录都不开代理，和 `docs` 一样解析到 `edge.nextskin.org` 那组 IP：两条都是 CNAME 指向 `edge`，Cloudflare 在根域名上把它拉平成 A 记录，和根域名上的 MX、TXT 共存。换 IP 只改 `edge`。
 
 ## 待办
 
 - [ ] 由工作流部署：线上现在是手动 `wrangler deploy` 的版本，等包含 `apps/site` 的正式版发布后改由工作流部署
-- [ ] `www.nextskin.org`

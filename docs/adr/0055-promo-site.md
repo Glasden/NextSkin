@@ -99,7 +99,9 @@ ADR-0054 给宣传站留了位置：根域名 `nextskin.org`，照文档站的�
 - 根域名不开代理，解析到 `edge.nextskin.org` 那组优选 IP：
   - 优先用 CNAME 指向 `edge`，Cloudflare 会在根域名上把它拉平成 A 记录，换 IP 仍然只改 `edge` 一处；
   - 根域名上有邮件的 MX 和 TXT 记录。Cloudflare 拉平的 CNAME 能和它们共存（2026-10-22 建记录时确认）；以后换了 DNS 服务商、共存不了时，就直接填同样的 A 记录。
-- `www` 先不做。
+- `www.nextskin.org` 同样是不开代理的 CNAME，指向 `edge`，路由 `www.nextskin.org/*` 交给单独的 Worker `nextskin-www`：全部 301 到根域名，路径和查询参数原样带上，http 一并换成 https。
+  - 不并进 `nextskin-site`：按 Host 判断就得让每个请求都先跑脚本，静态资源的请求全部计入 Workers 的请求额度；单独的 Worker 只有访问 `www` 时才运行。
+  - 不用区域的重定向规则：写成 Worker 就和宣传站一起放在仓库里、由同一个工作流部署，令牌也不用多给权限。
 - 部署时机同文档站：维护者发布正式版的 Release 以后，在那个标签上构建并部署，而且只部署已发布的正式版里最新的那一个。PR 和推送上，改了相关的文件时只构建、不部署。
 - 凭据用文档站的 `docs` environment：那个令牌的权限（这个账号的 Workers 脚本、`nextskin.org` 的 Workers 路由）已经够用。
 - 资源同源，理由同 ADR-0054：字体随站点发布，不接第三方统计和公共 CDN。

@@ -1,0 +1,12 @@
+// www.nextskin.org：只做跳转的 Worker（ADR-0055），和宣传站一起由 .github/workflows/site.yml 部署。
+// 不并进 nextskin-site：那边要按 Host 判断就得让每个静态资源的请求都先跑脚本，全部计入 Workers 的请求额度
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "nextskin-www",
+  "main": "worker.ts",
+  "compatibility_date": "2026-10-21",
+  // 理由同宣传站：自定义域会建一条开代理的 DNS 记录，没法指向优选 IP
+  "routes": [{ "pattern": "www.nextskin.org/*", "zone_name": "nextskin.org" }],
+  "workers_dev": false,
+  "preview_urls": false,
+}
