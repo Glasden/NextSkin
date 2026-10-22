@@ -23,7 +23,7 @@ async function register(page: Page, ip: string, name: string) {
 }
 
 test('上传皮肤、在皮肤库和详情页里看到它，改成私有后别人打不开，删除后退还积分', async ({ page, browser }) => {
-  const name = `Up${suffix}`
+  const name = `Lib${suffix}`
   await register(page, '203.0.113.70', name)
 
   await page.goto('/skinlib/upload')
