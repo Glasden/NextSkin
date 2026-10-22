@@ -1,6 +1,6 @@
 # ADR-0011 插件 UI：声明式为默认，运行时组件共享宿主 React
 
-- 状态：已采纳（S3 通过，见 `spikes/s3-plugin-ui/README.md`；第一版只有声明式 UI，见 ADR-0033）
+- 状态：已采纳（S3 通过，见 `spikes/s3-plugin-ui/README.md`；第一版只有声明式 UI，见 ADR-0033；站点的 CSP 由 ADR-0053 落地，样式不受约束）
 - 日期：2026-10-16
 
 ## 背景

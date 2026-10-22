@@ -1,6 +1,6 @@
 # ADR-0037 Yggdrasil Connect：开放 OIDC 授权服务器和设备授权，内置一个只走设备码的公用应用；OAuth 令牌沿用启动器令牌的有效期和数量上限；进服、`validate`、`invalidate`、启动器上传材质认带 Join 的 OAuth 令牌；改密码、作废在途的登录、转让和删除角色一并吊销 OAuth 令牌；用户自己管理 OAuth 应用
 
-- 状态：已采纳（令牌端点签发带 Join 的令牌之后调用插件的拦截器，被拒绝时删掉令牌、返回 `invalid_grant`，由 ADR-0045 补充；停用、删除应用另发站内通知由 ADR-0052 补充）
+- 状态：已采纳（令牌端点签发带 Join 的令牌之后调用插件的拦截器，被拒绝时删掉令牌、返回 `invalid_grant`，由 ADR-0045 补充；停用、删除应用另发站内通知由 ADR-0052 补充；授权页的 `frame-ancestors 'none'` 扩到全站由 ADR-0053 补充）
 - 日期：2026-10-20
 - 补充 ADR-0007：落地 Connect 的端点、页面、声明和 scope 规则；scope 错误在能确认回调地址时重定向回去；设备流程的认领、批准和拒绝由领域用例完成，角色随批准一起写入；取代"创建 OAuth 客户端需要管理员会话"一句：用户在用户中心自己创建，Better Auth 管理客户端的端点全部关闭
 - 补充 ADR-0018：开着 `auth.requireEmailVerification` 时，授权任何 OAuth 应用也要先验证邮箱，同启动器登录

@@ -1,6 +1,6 @@
 # ADR-0053 站点的内容安全策略：页面带严格 CSP（按请求生成的 nonce 加 `'strict-dynamic'`），只约束脚本、插件对象、`<base>`、表单和被嵌入，不维护来源白名单；全站不许嵌进别的网站
 
-- 状态：提议
+- 状态：已采纳
 - 日期：2026-10-22
 - 补充 ADR-0011：落地它定下的 nonce 方案和 Base UI 的 `CSPProvider`；样式不受约束，与 S3 spike 里的 `style-src` 不同
 - 补充 ADR-0037：授权页的 `frame-ancestors 'none'` 扩到全站
