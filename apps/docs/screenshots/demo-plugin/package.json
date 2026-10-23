@@ -1,0 +1,10 @@
+{
+  "name": "@nextskin/docs-demo-plugin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "文档站截图用的演示插件：在每个插槽里放两个挂件（ADR-0060），只在 pnpm docs:screenshots 里打包安装",
+  "type": "module",
+  "nextskin": {
+    "id": "slot-demo"
+  }
+}

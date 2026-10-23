@@ -4,6 +4,8 @@ spikes/
 packages/plugin-sdk/etc/
 # 录制脚本生成
 tests/contract/recordings/
+# 文档站 scripts/sync.ts 生成的插件 API 参考和插槽一览（ADR-0054、ADR-0060）
+apps/docs/src/content/docs/plugins/reference/
 # Astro 生成的类型和数据（文档站 ADR-0054、宣传站 ADR-0055）
 apps/docs/.astro/
 apps/site/.astro/

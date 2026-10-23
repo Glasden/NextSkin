@@ -10,6 +10,9 @@ on:
     paths:
       - apps/docs/**
       - packages/plugin-sdk/docs/**
+      # 插槽一览读插槽的登记表和页面名的文案（ADR-0060）
+      - packages/plugin-host/src/slots.ts
+      - packages/i18n/messages/zh-CN.json
       - packages/plugin-sdk/package.json
       - packages/launcher/package.json
       - packages/ui/src/fonts/**
@@ -19,6 +22,8 @@ on:
     paths:
       - apps/docs/**
       - packages/plugin-sdk/docs/**
+      - packages/plugin-host/src/slots.ts
+      - packages/i18n/messages/zh-CN.json
       - packages/plugin-sdk/package.json
       - packages/launcher/package.json
       - packages/ui/src/fonts/**

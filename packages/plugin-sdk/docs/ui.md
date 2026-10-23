@@ -101,7 +101,7 @@ source、load、submit.route、Action.route 都相对于 `/plugins/{id}`，必�
 
 ## 挂件
 
-`ui.widgets` 往核心的首页上放一块统计或 Markdown：`user.dashboard` 是用户中心首页（公告下面），`admin.dashboard` 是后台概览（站点的几个数字下面）。适合放用户一进来就该看到的东西，比如分享链接、还没完成的绑定；完整的功能还是放在插件自己的页面。
+`ui.widgets` 往核心的首页上放一块统计或 Markdown：`user.dashboard` 是用户中心首页（公告下面），`admin.dashboard` 是后台概览（站点的几个数字下面）。每个插槽在页面上的位置，见文档站上带截图的[插槽一览](https://docs.nextskin.org/plugins/reference/slots/)。适合放用户一进来就该看到的东西，比如分享链接、还没完成的绑定；完整的功能还是放在插件自己的页面。
 
 ```ts
 ui: {

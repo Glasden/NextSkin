@@ -1,0 +1,43 @@
+{
+  "nextskin": "0.3.0",
+  "slots": [
+    {
+      "number": 1,
+      "id": "user.dashboard",
+      "path": "/user"
+    },
+    {
+      "number": 2,
+      "id": "admin.dashboard",
+      "path": "/admin"
+    }
+  ],
+  "pages": [
+    {
+      "path": "/user",
+      "shots": {
+        "desktop": {
+          "file": "user-desktop.png",
+          "width": 1280
+        },
+        "mobile": {
+          "file": "user-mobile.png",
+          "width": 390
+        }
+      }
+    },
+    {
+      "path": "/admin",
+      "shots": {
+        "desktop": {
+          "file": "admin-desktop.png",
+          "width": 1280
+        },
+        "mobile": {
+          "file": "admin-mobile.png",
+          "width": 390
+        }
+      }
+    }
+  ]
+}
