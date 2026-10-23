@@ -168,6 +168,15 @@ test('邀请码：启用后注册要填邀请码，每个码只能用一次；�
 
   await toggle(page, id, name, 'enable')
   restore = () => page.request.post(`/api/admin/plugins/${id}/disable`)
+  // “这个插件会做什么”列出它放在后台概览上的挂件（ADR-0059）
+  await expect(
+    page.getByText(
+      t('admin.plugins.manifest.widgetItem', {
+        slot: t('admin.plugins.slots.admin.dashboard'),
+        title: ic('page.codes'),
+      }),
+    ),
+  ).toBeVisible()
 
   // 注册页多了邀请码一栏；不填就注册不了
   const visitorContext = await browser.newContext({ locale: 'zh-CN' })
@@ -222,6 +231,13 @@ test('邀请码：启用后注册要填邀请码，每个码只能用一次；�
     await expect(usedRow.getByRole('link', { name: visitorName })).toBeVisible({ timeout: 1000 })
   }).toPass()
 
+  // 后台概览上的挂件：可用、已使用、已过期的个数，标题右边链回邀请码页（ADR-0059）
+  await page.goto('/admin')
+  const widget = page.getByRole('region', { name: ic('page.codes') })
+  await expect(widget.locator('dl')).toHaveText(`${ic('stats.available')}1${ic('stats.used')}1${ic('stats.expired')}0`)
+  await widget.getByRole('link', { name: ic('widget.manage') }).click()
+  await expect(page).toHaveURL(`/admin/plugins/${id}/codes`)
+
   // 同一个码不能再用：拦截器拒绝，整个注册回滚
   const again = await page.request.post('/api/register', {
     headers: { 'x-forwarded-for': '203.0.113.142' },
@@ -255,6 +271,9 @@ test('邀请码：启用后注册要填邀请码，每个码只能用一次；�
   await toggle(page, id, name, 'disable')
   restore = undefined
   await expect(nav.getByRole('link', { name: ic('page.codes') })).toHaveCount(0)
+  await page.goto('/admin')
+  await expect(page.getByRole('heading', { name: t('admin.overview.title') })).toBeVisible()
+  await expect(page.getByRole('region', { name: ic('page.codes') })).toHaveCount(0)
   const laterContext = await browser.newContext({ locale: 'zh-CN' })
   await register(await laterContext.newPage(), '203.0.113.143', `After${suffix}`)
   await laterContext.close()
@@ -310,8 +329,17 @@ test('分享注册链接：经链接打开的注册页填好了分享码，注�
   await toggle(page, id, name, 'enable')
   restore = () => page.request.post(`/api/admin/plugins/${id}/disable`)
 
-  // 用户中心的导航里多了插件的页面：生成一个链接，链接的参数是插件 id 加字段名
+  // 用户中心首页多了插件的挂件（ADR-0059）：写着双方各得几分，还没有链接
   await page.goto('/user')
+  const widget = page.getByRole('region', { name: sr('widget.title') })
+  await expect(widget).toContainText(sr('widget.both').replace('{sharer}', '50').replace('{sharee}', '10'))
+  await expect(widget).toContainText(sr('widget.none'))
+  await expect(widget.getByRole('link', { name: sr('widget.manage') })).toHaveAttribute(
+    'href',
+    `/user/plugins/${id}/links`,
+  )
+
+  // 用户中心的导航里多了插件的页面：生成一个链接，链接的参数是插件 id 加字段名
   await page
     .getByRole('navigation', { name: t('user.nav.label') })
     .getByRole('link', { name: sr('page.links') })
@@ -322,7 +350,8 @@ test('分享注册链接：经链接打开的注册页填好了分享码，注�
   await page.getByRole('button', { name: sr('action.generate') }).click()
   await expect(page.getByText(t('pluginView.done'))).toBeVisible()
   await expect(table.locator('tbody tr')).toHaveCount(1)
-  const link = new URL((await table.locator('tbody code').textContent()) ?? '')
+  const linkText = (await table.locator('tbody code').textContent()) ?? ''
+  const link = new URL(linkText)
   expect(link.pathname).toBe('/sign-up')
   const code = link.searchParams.get(`${id}.code`)
   expect(code).toMatch(/^[A-HJ-NP-Z2-9]{16}$/)
@@ -347,6 +376,10 @@ test('分享注册链接：经链接打开的注册页填好了分享码，注�
   }).toPass()
   await page.goto('/user')
   await expect(history(page).getByText(sr('score.sharer'))).toBeVisible()
+  // 挂件里是最新的链接，代码块带复制按钮，下面写着经链接注册了几人
+  await expect(widget.locator('pre code')).toHaveText(linkText)
+  await expect(widget.getByRole('button', { name: t('pluginView.copyCode') })).toBeVisible()
+  await expect(widget).toContainText(sr('widget.registrations').replace('{count}', '1'))
   await page.goto(`/user/plugins/${id}/links`)
   await expect(table.getByRole('cell', { name: '1', exact: true })).toBeVisible()
 
@@ -367,6 +400,9 @@ test('分享注册链接：经链接打开的注册页填好了分享码，注�
 
   await toggle(page, id, name, 'disable')
   restore = undefined
+  await page.goto('/user')
+  await expect(history(page)).toBeVisible()
+  await expect(widget).toHaveCount(0)
   if (!pluginHost) {
     await visitorContext.close()
     return

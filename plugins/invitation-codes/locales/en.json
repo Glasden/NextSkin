@@ -45,5 +45,13 @@
   "plugin": {
     "name": "Invitation codes",
     "description": "Signing up requires an invitation code, and each code works once. Admins generate, search and delete codes, and can set how long new codes stay valid."
+  },
+  "stats": {
+    "available": "Available",
+    "used": "Used",
+    "expired": "Expired"
+  },
+  "widget": {
+    "manage": "Manage codes"
   }
 }

@@ -5,7 +5,7 @@
  * 码无效就拒绝注册。这条写入随注册一起提交或回滚，不会出现"码作废了、用户没建成"。
  * 用户建好之后，`user.registered` 事件再把用户 id 记到码上。
  */
-import { definePlugin, deny, table, z, type TableSourceResponse } from '@nextskin/plugin-sdk'
+import { definePlugin, deny, table, z, type StatsSourceResponse, type TableSourceResponse } from '@nextskin/plugin-sdk'
 
 interface CodeRow {
   code: string
@@ -125,6 +125,16 @@ export default definePlugin({
       },
     },
     nav: [{ area: 'admin', page: 'codes', label: 'page.codes', icon: 'mail' }],
+    widgets: [
+      {
+        name: 'codes',
+        slot: 'admin.dashboard',
+        title: 'page.codes',
+        permission: 'manage',
+        link: { page: 'codes', label: 'widget.manage' },
+        view: { kind: 'stats', source: '/stats' },
+      },
+    ],
   },
 
   intercept: {
@@ -156,6 +166,33 @@ export default definePlugin({
   },
 
   routes: {
+    'GET /stats': {
+      auth: 'user',
+      permission: 'manage',
+      async handler({ ctx }) {
+        const now = new Date().toISOString()
+        const query = ctx.db.selectFrom('codes').select((eb) => eb.fn.countAll().as('total'))
+        const [available, used, expired] = await Promise.all([
+          query
+            .where('status', '=', 'unused')
+            .where((eb) => eb.or([eb('expires_at', 'is', null), eb('expires_at', '>', now)]))
+            .executeTakeFirstOrThrow(),
+          query.where('status', '=', 'used').executeTakeFirstOrThrow(),
+          query
+            .where('status', '=', 'unused')
+            .where('expires_at', 'is not', null)
+            .where('expires_at', '<=', now)
+            .executeTakeFirstOrThrow(),
+        ])
+        return Response.json({
+          items: [
+            { label: 'stats.available', value: Number(available.total) },
+            { label: 'stats.used', value: Number(used.total) },
+            { label: 'stats.expired', value: Number(expired.total) },
+          ],
+        } satisfies StatsSourceResponse)
+      },
+    },
     'GET /codes': {
       auth: 'user',
       permission: 'manage',

@@ -210,3 +210,89 @@ test('每人最多 10 个链接；只能删自己的；删掉的用户的链接�
     .execute()
   expect(left).toEqual([])
 })
+
+async function widget(user: { uid: number }, locale = 'en') {
+  const response = await core.plugins.route({ ...request('GET', '/widget', user), locale })
+  expect(response.status).toBe(200)
+  expect(response.headers).toContainEqual(['content-type', 'text/markdown; charset=utf-8'])
+  return new TextDecoder().decode(response.body)
+}
+
+test('挂件：双方都没有奖励时返回 204', async () => {
+  await settings({ sharerScore: 0, shareeScore: 0, maxRewardsPerSharer: 1 })
+  const user = await createUser('user')
+  const response = await core.plugins.route(request('GET', '/widget', user))
+  expect(response.status).toBe(204)
+  expect(response.body?.byteLength ?? 0).toBe(0)
+})
+
+test.each([
+  [50, 10, 'Each new user who signs up through your link earns you 50 points, and they get 10 points too.'],
+  [50, 0, 'Each new user who signs up through your link earns you 50 points.'],
+  [0, 10, 'New users who sign up through your link get 10 extra points.'],
+] as const)('挂件：奖励 %s/%s，没有链接时只提示生成，不写注册人数', async (sharerScore, shareeScore, reward) => {
+  await settings({ sharerScore, shareeScore, maxRewardsPerSharer: 0 })
+  const user = await createUser('user')
+  expect(await widget(user)).toBe(`${reward}\n\nYou don't have a link yet. Generate one on the Share sign-up page.`)
+})
+
+test('挂件：最新链接按时间倒序、码排序，人数包括已经删掉的链接', async () => {
+  await settings({ sharerScore: 50, shareeScore: 10, maxRewardsPerSharer: 0 })
+  const user = await createUser('user')
+  const old = await generate(user)
+  const newer = [await generate(user), await generate(user)].sort((a, b) => a.code.localeCompare(b.code))
+  const db = database.db.withTables<{ p_share_registration_link__codes: { code: string; created_at: string } }>()
+  await db
+    .updateTable('p_share_registration_link__codes')
+    .set({ created_at: '2020-01-01T00:00:00.000Z' })
+    .where('code', '=', old.code)
+    .execute()
+  await db
+    .updateTable('p_share_registration_link__codes')
+    .set({ created_at: '2021-01-01T00:00:00.000Z' })
+    .where(
+      'code',
+      'in',
+      newer.map(({ code }) => code),
+    )
+    .execute()
+  await register(old.code)
+  await core.jobs.drain()
+  await register(newer[0]!.code)
+  await core.jobs.drain()
+  await core.plugins.route(request('DELETE', `/codes/${old.code}`, user))
+  expect(await widget(user)).toBe(
+    `Each new user who signs up through your link earns you 50 points, and they get 10 points too.\n\nYour newest link:\n\`\`\`\n${newer[0]!.link}\n\`\`\`\n\n2 people have signed up through your links.`,
+  )
+})
+
+test('挂件：剩余名额、满额提示和 capped 注册人数，中英文都按当前设置显示', async () => {
+  await settings({ sharerScore: 50, shareeScore: 10, maxRewardsPerSharer: 2 })
+  const user = await createUser('user')
+  const { code } = await generate(user)
+  const fresh = await widget(user)
+  expect(fresh).toContain('You can earn 2 more rewards.')
+  expect(fresh).toContain('No one has signed up through your links yet.')
+  expect(await widget(user, 'zh-CN')).toContain('还没有人经你的链接注册。')
+  await register(code)
+  await core.jobs.drain()
+  const first = await widget(user)
+  expect(first).toContain('You can earn 1 more reward.')
+  expect(first).toContain('1 person has signed up through your links.')
+  await register(code)
+  await core.jobs.drain()
+  await register(code)
+  await core.jobs.drain()
+  const capped = await widget(user)
+  expect(capped).toContain(
+    "You've reached the limit of 2 rewards. Sign-ups through your link still work, but neither of you earns points.",
+  )
+  expect(capped).toContain('3 people have signed up through your links.')
+  expect(capped).not.toContain('You can earn')
+  const chinese = await widget(user, 'zh-CN')
+  expect(chinese).toContain('你的奖励已经满 2 次：之后经你的链接注册照常成功，双方都不再得分。')
+  expect(chinese).toContain('已经有 3 人经你的链接注册。')
+  await settings({ sharerScore: 50, shareeScore: 10, maxRewardsPerSharer: 4 })
+  expect(await widget(user)).toContain('You can earn 2 more rewards.')
+  expect(await widget(user, 'zh-CN')).toContain('你还能得 2 次奖励。')
+})
