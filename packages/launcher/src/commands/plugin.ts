@@ -204,6 +204,12 @@ function printPreview(preview: PluginPackagePreview): string {
       ),
     ],
     [
+      'widgets',
+      (manifest.ui.widgets ?? []).map(({ slot, title }) =>
+        t('admin.plugins.manifest.widgetItem', { slot: t(`admin.plugins.slots.${slot}`), title: translate(title) }),
+      ),
+    ],
+    [
       'routes',
       manifest.routes.map(
         (route) =>

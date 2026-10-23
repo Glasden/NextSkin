@@ -12,6 +12,7 @@ import NextLink from 'next/link'
 import type { ReactNode } from 'react'
 import { pluginSourceQuery } from '../../lib/plugin-url'
 import { getPluginRoute, pluginName, pluginTranslator } from '../../lib/plugins'
+import { statsItems } from '../../lib/plugin-widgets'
 import { getServer } from '../../lib/server'
 import { headSrc } from '../../lib/textures'
 import { PluginAction as PluginActionButton } from './plugin-action'
@@ -97,15 +98,7 @@ export async function PluginPageView({
       break
     case 'stats': {
       const response = await getPluginRoute(user, pluginId, view.source)
-      const items =
-        response && response.status === 200 && isRecord(response.data) && Array.isArray(response.data.items)
-          ? response.data.items.filter(
-              (item): item is { label: string; value: string | number } =>
-                isRecord(item) &&
-                typeof item.label === 'string' &&
-                (typeof item.value === 'string' || typeof item.value === 'number'),
-            )
-          : null
+      const items = response && response.status === 200 ? statsItems(response.data) : null
       const format = await getFormatter()
       body = items ? (
         <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">

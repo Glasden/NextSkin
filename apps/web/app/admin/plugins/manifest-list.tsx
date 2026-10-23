@@ -149,6 +149,13 @@ export function ManifestList({
             ))}
           />
           <ManifestRow
+            label={t('manifest.widgets')}
+            none={t('manifest.none')}
+            items={(manifest.ui.widgets ?? []).map(({ name, slot, title }) => (
+              <span key={name}>{t('manifest.widgetItem', { slot: t(`slots.${slot}`), title: translate(title) })}</span>
+            ))}
+          />
+          <ManifestRow
             label={t('manifest.routes')}
             none={t('manifest.none')}
             stacked

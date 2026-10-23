@@ -1027,6 +1027,24 @@ test('升级保留在途调用；停用取消退役一代里本插件的调用�
   expect(text((await env.core.plugins.route(route('other', '/version'))).body)).toBe('other')
 })
 
+test('调用方给了更短的期限（首页的挂件，ADR-0059）：按它超时，插件的调用也中止', async () => {
+  await boot({
+    fetch: (_url, init) =>
+      new Promise<Response>((_resolve, reject) =>
+        init?.signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true }),
+      ),
+  })
+  const actor = await env.actor()
+  await install(await buildPackage({ id: 'waiter', source: waiter(1) }), actor)
+  await env.core.plugins.admin.enable(actor, 'waiter')
+  const started = Date.now()
+  await expect(env.core.plugins.route({ ...route('waiter', '/wait'), timeoutMs: 200 })).rejects.toMatchObject({
+    code: 'plugin_timeout',
+  })
+  expect(Date.now() - started).toBeLessThan(5_000)
+  await until(() => env.lines.some((line) => line.includes('WAIT_ABORTED')))
+})
+
 test('表里换成了本实例取不到的新版本：插件不可用，但在途的调用照常做完，不中止', async () => {
   const entered = Promise.withResolvers<void>()
   const outgoing = Promise.withResolvers<Response>()

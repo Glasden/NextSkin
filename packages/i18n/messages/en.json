@@ -2127,6 +2127,8 @@
         "themes": "Color themes",
         "themesLink": "Turn on in Themes",
         "formFields": "Fields it adds to the sign-up form",
+        "widgets": "Widgets on dashboards",
+        "widgetItem": "{slot}: {title}",
         "fromQuery": "Can be prefilled from a link",
         "none": "None",
         "routeAuth": "{auth, select, user {signed in} other {public}}"
@@ -2159,6 +2161,14 @@
         },
         "yggdrasil": {
           "issueToken": "Launcher login: can refuse"
+        }
+      },
+      "slots": {
+        "user": {
+          "dashboard": "User center home"
+        },
+        "admin": {
+          "dashboard": "Admin overview"
         }
       },
       "providers": {
@@ -3160,6 +3170,7 @@
   },
   "pluginView": {
     "loadFailed": "The plugin didn't return the data for this page; it may have run into an error. Refresh in a while, and contact the site administrator if it keeps happening.",
+    "widgetLoadFailed": "Couldn't load",
     "search": "Search",
     "searchLabel": "Search {title}",
     "empty": "Nothing here yet.",
