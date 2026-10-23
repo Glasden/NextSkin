@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { crc32, deflateSync } from 'node:zlib'
 import {
   decodeTexturePng,
@@ -27,11 +28,15 @@ function patch(source: string, search: string, replace: string) {
   return source.replace(search, replace)
 }
 
-/** 放宽出图密度上限的 pose.ts，外加 renderPoseSteps 和 place 的导出。写到系统临时目录：Node 不剥离 node_modules 里的类型 */
+/**
+ * 放宽出图密度上限的 pose.ts，外加 renderPoseSteps 和 place 的导出。写到系统临时目录：Node 不剥离 node_modules 里的类型。
+ * 导入的路径都换成 file: URL：Windows 的绝对路径不是合法的说明符，写进字符串里反斜杠还会被当成转义。
+ * 扩展名用 .mts：临时目录往上可能有不写 type 的 package.json，Node 会先当 CommonJS 解析再报警告
+ */
 async function loadPose() {
   let source = readFileSync(join(skinSrc, 'pose.ts'), 'utf8')
-  source = patch(source, "from './composite.ts'", `from '${join(skinSrc, 'composite.ts')}'`)
-  source = patch(source, "from './index.ts'", `from '${join(skinSrc, 'index.ts')}'`)
+  source = patch(source, "from './composite.ts'", `from '${pathToFileURL(join(skinSrc, 'composite.ts')).href}'`)
+  source = patch(source, "from './index.ts'", `from '${pathToFileURL(join(skinSrc, 'index.ts')).href}'`)
   source = patch(source, 'export const MAX_POSE_DENSITY = 16', 'export const MAX_POSE_DENSITY = 48')
   const extra = `
 /** 和 renderPose 同样的顺序画面（每个人物先内层、再按远近排好的外层），只画前 faces 个，顺带导出深度缓冲 */
@@ -58,9 +63,9 @@ export { place as placeForSite }
 `
   const dir = mkdtempSync(join(tmpdir(), 'nextskin-site-'))
   try {
-    const file = join(dir, 'pose-hd.ts')
+    const file = join(dir, 'pose-hd.mts')
     writeFileSync(file, `// 由 apps/site/scripts/figures.ts 从 packages/skin/src/pose.ts 生成\n${source}\n${extra}`)
-    return (await import(file)) as {
+    return (await import(pathToFileURL(file).href)) as {
       renderPose: (image: Rgba, type: 'steve' | 'alex', view: 'front' | 'both', p: number, raise: boolean) => Rgba
       renderPoseSteps: (
         image: Rgba,
