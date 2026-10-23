@@ -16,6 +16,7 @@ const permissions: CorePermission[] = [
   'import.manage',
   'plugins.manage',
   'jobs.manage',
+  'updates.manage',
 ]
 test('固定权限映射与严格角色顺序', () => {
   for (const [i, role] of roles.entries()) {
@@ -24,9 +25,14 @@ test('固定权限映射与严格角色顺序', () => {
       expect(can(role, permission)).toBe(
         i === 3 ||
           (i === 2 &&
-            !['users.appointAdmin', 'settings.manage', 'import.manage', 'plugins.manage', 'jobs.manage'].includes(
-              permission,
-            )),
+            ![
+              'users.appointAdmin',
+              'settings.manage',
+              'import.manage',
+              'plugins.manage',
+              'jobs.manage',
+              'updates.manage',
+            ].includes(permission)),
       )
     for (const [j, target] of roles.entries()) expect(outranks(role, target)).toBe(i > j)
   }

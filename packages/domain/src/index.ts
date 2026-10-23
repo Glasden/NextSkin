@@ -154,3 +154,5 @@ export type { ThemeEntry, InvalidTheme } from './themes/registry.ts'
 export type { ThemeChange, UserThemeView, AdminThemeView } from './themes/service.ts'
 export type { ThemeSettings } from './themes/settings.ts'
 export { DIAMOND, type ThemeIssue } from '@nextskin/theme'
+
+export type { UpdateStatus, CoreRelease, UpdateCheckOptions } from './updates/service.ts'

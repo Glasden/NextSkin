@@ -221,6 +221,9 @@ catalogs:
     eslint:
       specifier: 10.12.0
       version: 10.12.0
+    fflate:
+      specifier: 0.8.3
+      version: 0.8.3
     hono:
       specifier: 4.13.13
       version: 4.13.13
@@ -587,6 +590,9 @@ importers:
       '@nextskin/theme':
         specifier: workspace:*
         version: link:../theme
+      '@nextskin/updates':
+        specifier: workspace:*
+        version: link:../updates
       better-auth:
         specifier: 'catalog:'
         version: 1.7.10(mysql2@3.24.6(@types/node@24.19.2))(next@16.4.2(@babel/core@7.29.7(supports-color@8.1.1))(@playwright/test@1.64.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.0.5)
@@ -712,6 +718,22 @@ importers:
       rolldown:
         specifier: 'catalog:'
         version: 1.2.14
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.5(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
+  packages/manager:
+    dependencies:
+      '@nextskin/updates':
+        specifier: workspace:*
+        version: link:../updates
+      fflate:
+        specifier: 'catalog:'
+        version: 0.8.3
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
       vitest:
         specifier: 'catalog:'
         version: 5.0.5(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
@@ -913,7 +935,7 @@ importers:
         specifier: 'catalog:'
         version: 5.0.5(playwright@1.64.1)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.0.5)
       fflate:
-        specifier: 0.8.3
+        specifier: 'catalog:'
         version: 0.8.3
       harfbuzzjs:
         specifier: 1.6.3

@@ -57,8 +57,11 @@ import { createTextureManagement } from './textures/manage.ts'
 import { createTextureRemoval } from './textures/removal.ts'
 import { createTextureUpload } from './textures/upload.ts'
 import { createSigningKeyQuery } from './yggdrasil/signing-key.ts'
+import { createUpdates, UPDATE_CHECK_JOB, type CoreRelease, type UpdateCheckOptions } from './updates/service.ts'
 
 export interface CoreOptions {
+  release?: CoreRelease
+  updateCheck?: UpdateCheckOptions
   setupCodeFile?: string | null
   db: Kysely<CoreDatabase>
   textureStorage: TextureStorage
@@ -124,6 +127,8 @@ export function createCore(options: CoreOptions) {
   const events = createEvents(jobs, handlers)
   const mail = createMailService(options.db, settings, jobs, options.mailTransport)
   handlers.set(MAIL_JOB, mail.handler)
+  const { handler: updateHandler, ...updates } = createUpdates({ ...options, settings, now })
+  handlers.set(UPDATE_CHECK_JOB, updateHandler)
   const leaseMs = options.textureClaimLeaseMs ?? 600_000
   const files = createTextureFiles({
     db: options.db,
@@ -190,6 +195,7 @@ export function createCore(options: CoreOptions) {
   handlers.set(PLUGIN_KV_CLEANUP_JOB, { run: () => plugins.kv.cleanup() })
   handlers.set(PLUGIN_CLEANUP_JOB, { run: ({ payload }) => plugins.cleanupUninstalled(payload) })
   schedules.add({ name: PLUGIN_KV_CLEANUP_JOB, job: PLUGIN_KV_CLEANUP_JOB, cron: '37 4 * * *' })
+  schedules.add({ name: UPDATE_CHECK_JOB, job: UPDATE_CHECK_JOB, cron: '43 5 * * *' })
   schedules.add({ name: AUTH_CLEANUP_JOB, job: AUTH_CLEANUP_JOB, cron: '17 4 * * *' })
   schedules.add({ name: NOTIFICATION_SWEEP_JOB, job: NOTIFICATION_SWEEP_JOB, cron: '32 4 * * *' })
   schedules.add({ name: AUDIT_CLEANUP_JOB, job: AUDIT_CLEANUP_JOB, cron: '27 4 * * *' })
@@ -275,6 +281,7 @@ export function createCore(options: CoreOptions) {
     ...createProfileTextures({ db: options.db, settings, tokens, upload, closet, players }),
   }
   return {
+    updates,
     themes: createThemes({ db: options.db, settings, plugins, secretKey: options.secretKey, now }),
     home: createHomeQueries(options.db, settings, now),
     players,

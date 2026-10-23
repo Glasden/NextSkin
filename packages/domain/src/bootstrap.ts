@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path'
 import { backupSqlite, coreMigrations, createDatabase, migrateToLatest, type CoreDatabase } from '@nextskin/db'
 import type { Kysely } from 'kysely'
 import type { CoreConfig } from './config.ts'
-import { createCore, type Core } from './core.ts'
+import { createCore, type Core, type CoreOptions } from './core.ts'
 import type { PluginHostEntry } from './plugins/host.ts'
 import { createLocalPluginPackageStore, createPluginPackages } from './plugins/packages.ts'
 import type { OfficialPlugin } from './plugins/system.ts'
@@ -97,6 +97,9 @@ export function migrateCore(
 export async function openCore(
   config: CoreConfig,
   options: {
+    release?: CoreOptions['release']
+    updateCheck?: CoreOptions['updateCheck']
+    now?: CoreOptions['now']
     startJobs?: boolean
     officialPlugins?: readonly OfficialPlugin[]
     pluginHost?: PluginHostEntry | null
@@ -114,6 +117,9 @@ export async function openCore(
     const renderCache = createLocalRenderCache(config.renderCacheDirectory)
     void renderCache.pruneOtherVersions().catch(() => console.warn('旧版出图缓存清理失败'))
     const core = createCore({
+      release: options.release,
+      updateCheck: options.updateCheck,
+      now: options.now,
       setupCodeFile: join(config.dataDirectory, 'setup-code'),
       renderCache,
       db,

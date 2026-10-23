@@ -201,7 +201,9 @@
     "notification_recipients_length": "请填写 {min}–{max} 个收件人。",
     "notification_recipient_unknown": "找不到收件人「{value}」。",
     "theme_not_found": "这套主题不存在或没有启用。",
-    "theme_default_disabled": "这是站点的默认主题，不能关掉。先把别的主题设为默认。"
+    "theme_default_disabled": "这是站点的默认主题，不能关掉。先把别的主题设为默认。",
+    "updates_disabled": "更新检测已关闭，请先在高级设置中开启。",
+    "updates_unavailable": "源码运行时无法检测更新。"
   },
   "score": {
     "reasons": {
@@ -1980,6 +1982,12 @@
             "label": "通知保留天数",
             "help": "通知发出超过这么多天就删掉，已读、未读都删。填 0 表示一直保留。"
           }
+        },
+        "updates": {
+          "check": {
+            "label": "检测更新",
+            "help": "每天向 dl.nextskin.org 读取一次版本清单，不发送站点的任何信息。"
+          }
         }
       }
     },
@@ -3293,6 +3301,12 @@
             "playerTransferredOut": "把角色 {name} 转给了其他用户",
             "playerTransferredIn": "把角色 {name} 转给了你"
           }
+        }
+      },
+      "update": {
+        "available": {
+          "title": "NextSkin {version} 已发布",
+          "body": "前往后台更新页查看版本说明。"
         }
       }
     }

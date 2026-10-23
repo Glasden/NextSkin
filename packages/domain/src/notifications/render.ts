@@ -47,6 +47,15 @@ export function renderNotification(
     }
   }
   switch (row.type) {
+    case 'update.available': {
+      const params = JSON.parse(row.params!) as SystemNotificationParams['update.available']
+      return {
+        ...view,
+        title: t('notifications.types.update.available.title', params),
+        body: t('notifications.types.update.available.body', params),
+        link: '/admin/updates',
+      }
+    }
     case 'report.resolved': {
       const params = JSON.parse(row.params!) as SystemNotificationParams['report.resolved']
       return {

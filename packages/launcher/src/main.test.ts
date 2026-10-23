@@ -143,7 +143,10 @@ test('doctor 先处理帮助和参数，不读取配置', async () => {
     const result = await capture(() => doctor([flag], context, options))
     expect(result).toEqual({ code: 0, output: '用法：nextskin doctor [--json]' })
   }
-  expect(await capture(() => doctor(['extra'], context, options))).toEqual({ code: 1, output: '用法：nextskin doctor [--json]' })
+  expect(await capture(() => doctor(['extra'], context, options))).toEqual({
+    code: 1,
+    output: '用法：nextskin doctor [--json]',
+  })
 })
 
 test.each(['unset', 'same', 'different'] as const)(

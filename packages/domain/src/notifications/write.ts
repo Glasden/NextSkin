@@ -6,6 +6,7 @@ import { rolesWithPermission } from '../access/permissions.ts'
 export type AccountChange =
   Exclude<AdminAccountChange, { kind: 'binding' }> | { kind: 'binding'; pluginId: string; providerId: string }
 export interface SystemNotificationParams {
+  'update.available': { version: string }
   'report.resolved': {
     reportId: number
     tid: number
@@ -80,6 +81,33 @@ export async function notifyPendingReport(
           .where((eb) =>
             eb.not(eb.exists(eb.selectFrom(pending).select('user_id').whereRef('pending.user_id', '=', 'users.id'))),
           ),
+        'users',
+      ),
+    )
+    .execute()
+}
+
+/** 一次插入所有超级管理员；版本去重由调用方在持有 updates.state 的锁时完成。 */
+export async function notifyUpdateAvailable(
+  tx: Transaction<CoreDatabase>,
+  version: string,
+  at: IsoTimestamp,
+): Promise<void> {
+  await tx
+    .insertInto('notifications')
+    .columns(['user_id', 'type', 'params', 'created_at'])
+    .expression(
+      lockForReference(
+        tx,
+        tx
+          .selectFrom('users')
+          .select([
+            'id as user_id',
+            sql<string>`${'update.available'}`.as('type'),
+            sql<string>`${JSON.stringify({ version })}`.as('params'),
+            sql<IsoTimestamp>`${at}`.as('created_at'),
+          ])
+          .where('role', '=', 'superadmin'),
         'users',
       ),
     )

@@ -26,6 +26,7 @@
     "@nextskin/plugin-sdk": "workspace:*",
     "@nextskin/skin": "workspace:*",
     "@nextskin/theme": "workspace:*",
+    "@nextskin/updates": "workspace:*",
     "better-auth": "catalog:",
     "croner": "10.0.1",
     "hash-wasm": "4.12.0",
