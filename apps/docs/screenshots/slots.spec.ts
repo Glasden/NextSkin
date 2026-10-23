@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createTranslator } from '@nextskin/i18n'
 import { pluginSlots } from '@nextskin/plugin-host/slots'
 import { expect, test, type Browser, type BrowserContextOptions, type Page } from '@playwright/test'
 
@@ -16,6 +17,7 @@ const email = 'steve@nextskin.test'
 // 契约用例的固定数据里所有用户的密码（tests/contract/src/world.ts）
 const password = 'nextskin-test'
 const demoPlugin = 'slot-demo'
+const t = createTranslator('zh-CN')
 
 const devices = {
   desktop: { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 },
@@ -161,14 +163,16 @@ test('插槽一览的截图', async ({ browser }) => {
     for (const device of Object.keys(devices) as Device[]) {
       const context = await newContext(browser, device, storageState)
       const page = await context.newPage()
-      // 等服务接上演示插件：每个插槽里都有它的两个挂件
+      // 等服务接上演示插件：每个插槽里都有它的两个挂件，而且都取到了数据。plugin host 刚接上插件时，
+      // 挂件会先显示"没能加载"
       await expect(async () => {
         await page.goto(path)
-        for (const { id } of marks)
-          await expect(page.locator(`[data-plugin-slot="${id}"]`).getByRole('region'), `插槽 ${id}`).toHaveCount(2, {
-            timeout: 1000,
-          })
-      }).toPass({ timeout: 30_000 })
+        for (const { id } of marks) {
+          const slot = page.locator(`[data-plugin-slot="${id}"]`)
+          await expect(slot.getByRole('region'), `插槽 ${id}`).toHaveCount(2, { timeout: 1000 })
+          await expect(slot.getByText(t('pluginView.widgetLoadFailed')), `插槽 ${id}`).toHaveCount(0, { timeout: 1000 })
+        }
+      }).toPass({ timeout: 60_000 })
       for (const { id } of marks) await expect(page.locator(`[data-plugin-slot="${id}"]`)).toBeVisible()
       await page.waitForLoadState('networkidle')
       await page.evaluate(() => document.fonts.ready)
