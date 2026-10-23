@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import NextLink from 'next/link'
 import { useState, type ReactNode } from 'react'
 import { authErrorCode, postJson } from '../../../lib/api-client'
+import { PasswordStrengthMeter } from '../password-strength-meter'
 
 export interface ResetPasswordFormProps {
   token: string
@@ -19,6 +20,7 @@ export function ResetPasswordForm({ token, password, signIn }: ResetPasswordForm
   const [state, setState] = useState<'form' | 'done' | 'invalid'>('form')
   const [error, setError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [newPassword, setNewPassword] = useState('')
 
   async function submit(values: { newPassword?: string }) {
     setPending(true)
@@ -61,7 +63,16 @@ export function ResetPasswordForm({ token, password, signIn }: ResetPasswordForm
         name="newPassword"
         description={t('auth.signUp.passwordHint', password)}
       >
-        <Input type="password" autoComplete="new-password" required minLength={password.min} maxLength={password.max} />
+        <Input
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={password.min}
+          maxLength={password.max}
+          value={newPassword}
+          onValueChange={setNewPassword}
+        />
+        <PasswordStrengthMeter password={newPassword} />
       </Field>
       <div className="mt-2">
         <Button type="submit" variant="primary" size="lg" fullWidth loading={pending}>
