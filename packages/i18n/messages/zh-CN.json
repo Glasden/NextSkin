@@ -203,7 +203,24 @@
     "theme_not_found": "这套主题不存在或没有启用。",
     "theme_default_disabled": "这是站点的默认主题，不能关掉。先把别的主题设为默认。",
     "updates_disabled": "更新检测已关闭，请先在高级设置中开启。",
-    "updates_unavailable": "源码运行时无法检测更新。"
+    "updates_unavailable": "源码运行时无法检测更新。",
+    "update_unreachable": "无法连接升级管理进程，请稍后重试。",
+    "update_unauthorized": "核心连接升级管理进程的凭据无效。",
+    "update_busy": "已有升级操作正在进行。",
+    "update_readonly": "程序目录不可写，无法执行升级。",
+    "update_not_prepared": "请先准备目标版本。",
+    "update_not_newer": "目标版本不比当前版本新。",
+    "update_unknown_version": "找不到目标正式版本。",
+    "update_manager_outdated": "请先重启服务，让新的管理进程生效。",
+    "update_node_too_old": "当前 Node.js 版本不满足目标版本的要求。",
+    "update_backup_required": "请先备份数据库并确认备份已完成。",
+    "update_confirmation_required": "请先确认回滚所需的数据库恢复或数据丢失。",
+    "update_no_previous": "没有可以回滚的上一个版本。",
+    "update_backup_missing": "升级前的数据库备份已不存在，无法回滚。",
+    "update_preflight_failed": "升级预检失败。",
+    "update_download_failed": "升级文件下载失败，请稍后重试。",
+    "update_internal": "升级管理进程发生内部错误。",
+    "update_invalid_request": "升级请求参数无效。"
   },
   "score": {
     "reasons": {
@@ -1491,7 +1508,10 @@
         "oauthClientEnable": "启用 OAuth 应用",
         "oauthClientDelete": "删除 OAuth 应用",
         "notificationSend": "发送通知",
-        "notificationRecall": "撤回通知"
+        "notificationRecall": "撤回通知",
+        "updatePrepare": "准备升级",
+        "updateApply": "执行升级",
+        "updateRollback": "回滚版本"
       },
       "subjects": {
         "user": "用户 #{id}",
@@ -1504,7 +1524,8 @@
         "oauthClient": "OAuth 应用 #{id}",
         "job": "失败任务 #{id}",
         "allJobs": "全部失败任务",
-        "notificationBroadcast": "通知发送 #{id}"
+        "notificationBroadcast": "通知发送 #{id}",
+        "update": "{version, select, none {升级} other {版本 {version}}}"
       },
       "actorSystem": "系统",
       "actorPlugin": "插件 {id}",
@@ -1553,7 +1574,10 @@
         "oauthClient": "client_id {clientId}{owner, select, none {，没有主人} other {，主人 #{owner}}}",
         "oauthClientDelete": "{summary}；{users, plural, other {# 位用户的授权}}，{accessTokens, plural, other {# 个访问令牌}}、{refreshTokens, plural, other {# 个刷新令牌}}",
         "notificationSend": "收件人：{audience, select, all {全部用户} users {普通用户} admins {管理员} other {指定的 {count, plural, other {# 个用户}}}}",
-        "notificationRecall": "撤回前已送达 {recipientCount, number} 人"
+        "notificationRecall": "撤回前已送达 {recipientCount, number} 人",
+        "updatePrepare": "{accepted, select, true {已接受} other {已拒绝（{code}）}}",
+        "updateApply": "{accepted, select, true {已接受} other {已拒绝（{code}）}}；备份确认：{backupConfirmed, select, true {是} other {否}}",
+        "updateRollback": "{accepted, select, true {已接受} other {已拒绝（{code}）}}；回滚确认：{confirmed, select, true {是} other {否}}"
       },
       "filterActor": "只看操作者 #{uid}",
       "filterSubject": "只看 {subject}",
@@ -2297,7 +2321,101 @@
         "unzip": "把 ZIP 覆盖解压到现在的目录，.env 和 data/ 不受影响，然后照常启动。",
         "guide": "详细步骤见部署文档"
       },
-      "privacy": "检查更新只读一个公开的文件，签名不对的版本会被丢掉。不想让站点连外网，可以在高级设置里关掉。"
+      "privacy": "检查更新只读一个公开的文件，签名不对的版本会被丢掉。不想让站点连外网，可以在高级设置里关掉。",
+      "oneClickTitle": "一键升级",
+      "oneClickManual": "也可以手动升级：下载 ZIP、覆盖解压，再重启服务。",
+      "managerUnreachableTitle": "连不上管理进程",
+      "managerUnreachable": "一键升级暂时用不了。重启一次服务；还不行就在服务器上运行 node nextskin.mjs doctor。",
+      "managerReasons": {
+        "readonly": "管理进程写不了程序目录（releases/），所以只检测、不一键升级。要一键升级，见部署文档里各部署方式的“升级”一节。",
+        "unmanaged": "服务没有经过管理进程启动（设了 NEXTSKIN_MANAGER=off，或者直接运行了 releases/ 里某个版本的启动器），只能手动升级。"
+      },
+      "oneClick": {
+        "readyTitle": "可以升级到 {version}",
+        "ready": "先准备：下载、校验签名、解压，再对着在用的数据库预检新版本。这一步不停站，做完会列出要停多久、要不要先备份。",
+        "failedBefore": "这个版本上次没有升级成功。再准备一次会重新下载和预检。",
+        "prepare": "准备升级到 {version}",
+        "nothingTitle": "已经是最新版本",
+        "nothing": "有新的正式版时，在这里一键升级。",
+        "preparingTitle": "正在准备 {version}",
+        "cancel": "取消",
+        "stepsLabel": "准备的步骤",
+        "complete": "已完成",
+        "steps": {
+          "manifest": "读取版本清单",
+          "space": "检查磁盘空间",
+          "download": "下载",
+          "extract": "解压",
+          "preflight": "预检"
+        },
+        "stepHints": {
+          "manifest": "核对版本条目的签名",
+          "space": "计算需要的空间",
+          "download": "连接下载地址",
+          "extract": "解压到暂存目录",
+          "preflight": "对着在用的数据库检查新版本"
+        },
+        "downloading": "已下载",
+        "megabytes": "{received} / {total} MB",
+        "preparedTitle": "{version} 已经准备好",
+        "prepared": "下载、校验和预检都通过了，站点还在运行 {current}。",
+        "database": "数据库",
+        "migrations": "数据库迁移",
+        "noMigrations": "没有",
+        "migrationCount": "核心 {core, plural, other {# 个}}，官方插件 {plugins, plural, other {# 个}}",
+        "downtime": "停站",
+        "downtimeValue": "几秒到三十多秒，期间反向代理返回 502",
+        "onFailure": "新版本没起来时",
+        "tiers": {
+          "none": "自动换回现在的版本，数据库没有动过。",
+          "sqlite": "迁移之前自动备份 SQLite 库；新版本没通过健康检查，就换回备份和现在的版本。",
+          "external-backup": "迁移失败时 PostgreSQL 的库保持原样，MySQL 的库可能停在中间；迁移成功但新版本没起来时不自动回滚。这几种情况都要用你自己的备份恢复。"
+        },
+        "dialects": {
+          "sqlite": "SQLite",
+          "mysql": "MySQL / MariaDB",
+          "postgres": "PostgreSQL"
+        },
+        "incompatibleTitle": "这些插件和新版本不兼容",
+        "incompatible": "括号里是插件要求的插件 API 版本。升级以后它们加载不了，先去插件页看看有没有新版本。",
+        "backupTitle": "先备份数据库",
+        "backup": "这次升级有数据库迁移，{dialect} 不能自动回滚。先用你平时的方式（mysqldump、pg_dump、云数据库的快照）备份，再升级。",
+        "apply": "升级到 {version}",
+        "applyTitle": "升级到 {version}？",
+        "applyDescription": "站点会停几秒到三十多秒，期间玩家登录不了、材质加载不出来。",
+        "backupConfirm": "我已经备份了 {dialect} 数据库",
+        "cancelApply": "取消",
+        "switchingTitle": "正在升级到 {version}",
+        "rollingBackTitle": "正在回到 {version}",
+        "switching": "站点会停几秒到三十多秒，这段时间页面打不开是正常的。新版本起来后，这个页面会自己刷新。",
+        "switchingProgress": "切换中",
+        "lostTitle": "五分钟了还没有恢复",
+        "lost": "去服务器上看服务的日志，或者运行 node nextskin.mjs update status。",
+        "lastSuccess": "{time} 从 {from} 升级到了 {to}。",
+        "lastRollback": "{time} 从 {from} 回到了 {to}。",
+        "lastFailedTitle": "升级到 {to} 没有成功",
+        "lastRolledBackTitle": "升级到 {to} 没有成功，已经回到 {from}",
+        "lastRollbackFailedTitle": "回到 {to} 没有成功",
+        "lastHint": "{time}。每一次的结果都记在实例目录的 releases/update-log.jsonl 里。",
+        "rollbackTitle": "回到 {version}",
+        "rollbackHints": {
+          "plain": "上一次升级没有数据库迁移，直接换回 {version} 的程序。",
+          "sqlite": "用升级前的备份换回 SQLite 库：升级以后的注册、上传和所有改动都会丢失。",
+          "external": "程序不碰数据库：先用升级前的备份恢复 {dialect} 数据库，再回来确认。"
+        },
+        "rollbackBlocked": "升级前的 SQLite 备份已经不在了，不能自动回滚。",
+        "rollback": "回到 {version}",
+        "rollbackDialogTitle": "回到 {version}？",
+        "rollbackWarnings": {
+          "plain": "站点会停几秒到三十多秒。",
+          "sqlite": "数据库会换回升级前的备份，升级以后的所有写入都会丢失。站点会停几秒到三十多秒。",
+          "external": "管理进程只换程序。数据库要先由你恢复到升级之前，否则 {version} 打不开它。"
+        },
+        "rollbackConfirms": {
+          "sqlite": "我知道升级以后的所有写入都会丢失",
+          "external": "{dialect} 数据库已经恢复到升级之前"
+        }
+      }
     },
     "failedJobs": {
       "title": "失败任务",

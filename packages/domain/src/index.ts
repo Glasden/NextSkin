@@ -156,3 +156,20 @@ export type { ThemeSettings } from './themes/settings.ts'
 export { DIAMOND, type ThemeIssue } from '@nextskin/theme'
 
 export type { UpdateStatus, CoreRelease, UpdateCheckOptions } from './updates/service.ts'
+
+export {
+  managerErrorCodes,
+  updateErrorCodes,
+  managerStatusSchema,
+  updateManagerSchema,
+  updateVersionSchema,
+  managerParams,
+} from './updates/manager-client.ts'
+export type {
+  ManagerStatus,
+  UpdateManager,
+  ManagerClientOptions,
+  ManagerMethod,
+  ManagerParams,
+  ManagerResults,
+} from './updates/manager-client.ts'

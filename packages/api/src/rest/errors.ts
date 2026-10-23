@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi'
-import { DomainError, type Core } from '@nextskin/domain'
+import { DomainError, updateErrorCodes, type Core } from '@nextskin/domain'
 import {
   createTranslator,
   getMessages,
@@ -15,6 +15,23 @@ import type { AppEnv } from '../env.ts'
 
 type ErrorCode = keyof Messages['errors']
 const statuses = {
+  update_unreachable: 503,
+  update_invalid_request: 400,
+  update_unauthorized: 500,
+  update_busy: 409,
+  update_readonly: 409,
+  update_not_prepared: 409,
+  update_not_newer: 409,
+  update_unknown_version: 400,
+  update_manager_outdated: 409,
+  update_node_too_old: 409,
+  update_backup_required: 400,
+  update_confirmation_required: 400,
+  update_no_previous: 409,
+  update_backup_missing: 409,
+  update_preflight_failed: 409,
+  update_download_failed: 503,
+  update_internal: 500,
   updates_disabled: 409,
   updates_unavailable: 409,
   theme_not_found: 404,
@@ -197,6 +214,8 @@ const fieldNames: Partial<Record<ResponseCode, string>> = {
  * /api/admin/ 下的接口对管理员说话（ADR-0036"接口"）：复用的错误码在 errors 里是对本人说的（"你的账号已被封禁"），
  * admin.errors 里有同名的键就用它，否则仍用 errors。admin.errors 的参数只能是 errors 里同名键的子集（测试守着）
  */
+const updateCodes: ReadonlySet<string> = new Set(updateErrorCodes)
+const ADMIN_UPDATES_PATH = /^\/api\/admin\/updates(?:\/|$)/
 const ADMIN_PATH = /^\/api\/admin\//
 type AdminErrorCode = keyof Messages['admin']['errors'] & ResponseCode
 const adminErrorCodes: ReadonlySet<string> = new Set(Object.keys(getMessages(sourceLocale).admin.errors))
@@ -240,7 +259,13 @@ export function createErrorResponse(
       ADMIN_PATH.test(c.req.path) && isAdminErrorCode(code) ? `admin.errors.${code}` : `errors.${code}`
     const error = {
       code,
-      message: translate(messageKey, params),
+      message:
+        ADMIN_UPDATES_PATH.test(c.req.path) &&
+        updateCodes.has(code) &&
+        typeof params?.message === 'string' &&
+        params.message
+          ? params.message
+          : translate(messageKey, params),
       // 插件拒绝时给的机器可读原因（SDK 的 Deny.code）
       ...((code === 'registration_denied' || code === 'action_denied') && params
         ? { plugin: String(params.plugin), reason: String(params.reason) }

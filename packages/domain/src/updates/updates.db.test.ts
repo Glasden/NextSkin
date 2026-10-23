@@ -1,4 +1,5 @@
 import { generateKeyPairSync } from 'node:crypto'
+import { Socket } from 'node:net'
 import {
   coreMigrations,
   insertReturningId,
@@ -13,6 +14,7 @@ import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import { signEntry, type ReleaseEntry } from '@nextskin/updates'
 import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import { createCore, type Core, type CoreOptions } from '../core.ts'
+import { type ManagerClientOptions, type ManagerMethod, type ManagerStatus } from './manager-client.ts'
 import { createUpdates, UPDATE_CHECK_JOB } from './service.ts'
 import { createSettingQueries } from '../settings/queries.ts'
 
@@ -60,7 +62,10 @@ const user = (role: UserRole) =>
     created_at: writeAuthDate(db(), at()),
     updated_at: writeAuthDate(db(), at()),
   })
-function makeCore(release: CoreOptions['release'] = { version: '0.4.0', deployment: 'bundle' }) {
+function makeCore(
+  release: CoreOptions['release'] = { version: '0.4.0', deployment: 'bundle' },
+  manager?: ManagerClientOptions,
+) {
   return createCore({
     db: db(),
     secretKey,
@@ -76,16 +81,21 @@ function makeCore(release: CoreOptions['release'] = { version: '0.4.0', deployme
     },
     now: () => timestamp,
     release,
+    manager,
     updateCheck: { fetch: fetcher, keys },
   })
 }
-const service = (release: CoreOptions['release'] = { version: '0.4.0', deployment: 'bundle' }) =>
+const service = (
+  release: CoreOptions['release'] = { version: '0.4.0', deployment: 'bundle' },
+  manager?: ManagerClientOptions,
+) =>
   createUpdates({
     db: db(),
     settings: createSettingQueries(db(), secretKey),
     secretKey,
     now: () => timestamp,
     release,
+    manager,
     updateCheck: { fetch: fetcher, keys },
   })
 async function enabled(value: boolean) {
@@ -130,6 +140,7 @@ test('保存成功状态，向每位超级管理员发一次通知，重复检�
   await user('banned')
   const result = await core.updates.check(admin)
   expect(result).toEqual({
+    manager: { available: false, reason: 'unmanaged' },
     enabled: true,
     current: '0.4.0',
     deployment: 'bundle',
@@ -302,4 +313,214 @@ test('等待清单时不持有数据库事务，其他写操作可以完成', as
   }
   await checking
   expect((await state()).latest?.version).toBe('0.5.0')
+})
+
+const managerState: ManagerStatus = {
+  protocol: 1,
+  version: '0.4.0',
+  current: '0.4.0',
+  previous: '0.3.0',
+  writable: true,
+  operation: null,
+  prepared: null,
+  lastResult: null,
+  failed: [],
+  rollback: { version: '0.3.0', migrations: false, dialect: 'sqlite', backupAvailable: false },
+}
+function managerConnection() {
+  const status = structuredClone(managerState)
+  const reply = vi.fn<(method: ManagerMethod, params: unknown) => unknown>((method) => ({
+    ok: true,
+    result: method === 'status' ? status : method === 'cancel' ? { cancelled: true } : { accepted: true },
+  }))
+  const connect = vi.fn(() => {
+    const socket = new Socket()
+    vi.spyOn(socket, 'write').mockImplementation((line) => {
+      const request = JSON.parse(String(line)) as { method: ManagerMethod; params: unknown }
+      void Promise.resolve()
+        .then(() => reply(request.method, request.params))
+        .then((result) => {
+          socket.emit('data', Buffer.from(JSON.stringify(result) + '\n'))
+        })
+        .catch(() => socket.destroy())
+      return true
+    })
+    queueMicrotask(() => socket.emit('connect'))
+    return socket
+  })
+  return { options: { address: 'unused', token: 'a'.repeat(64), connect }, connect, reply, status }
+}
+const logs = async () =>
+  (await db().selectFrom('audit_logs').selectAll().orderBy('id').execute()).map((row) => ({
+    ...row,
+    details: JSON.parse(row.details) as Record<string, unknown>,
+  }))
+const commandCases = [
+  ['prepare', { version: '0.5.0' }],
+  ['apply', { version: '0.5.0', backupConfirmed: true }],
+  ['rollback', { confirmed: true }],
+] as const
+function invoke(updates: ReturnType<typeof createUpdates>, method: 'prepare' | 'apply' | 'rollback') {
+  if (method === 'prepare') return updates.prepare(admin, '0.5.0')
+  if (method === 'apply') return updates.apply(admin, '0.5.0', { backupConfirmed: true })
+  return updates.rollback(admin, { confirmed: true })
+}
+test.each(commandCases)('%s 转发后独立事务写成功审计', async (method, params) => {
+  const manager = managerConnection()
+  const updates = service(undefined, manager.options)
+  expect(await invoke(updates, method)).toEqual({ accepted: true })
+  expect(manager.reply).toHaveBeenLastCalledWith(method, params)
+  expect(await logs()).toMatchObject([
+    {
+      actor_type: 'user',
+      actor_user_id: admin.uid,
+      actor_plugin_id: null,
+      action: `update.${method}`,
+      subject_type: 'update',
+      subject_id: 0,
+      ip: admin.ip,
+      created_at: at(),
+      details: {
+        version: method === 'rollback' ? '0.3.0' : '0.5.0',
+        accepted: true,
+        ...(method === 'apply' ? { backupConfirmed: true } : {}),
+        ...(method === 'rollback' ? { confirmed: true } : {}),
+      },
+    },
+  ])
+})
+test.each(commandCases)('%s 被拒绝同样写审计，只记错误码不记消息', async (method) => {
+  const manager = managerConnection()
+  manager.reply.mockImplementation((m) =>
+    m === 'status'
+      ? { ok: true, result: manager.status }
+      : { ok: false, error: { code: 'busy', message: '详细原因 ' + manager.options.token } },
+  )
+  const updates = service(undefined, manager.options)
+  await expect(invoke(updates, method)).rejects.toMatchObject({
+    code: 'update_busy',
+    params: { message: '详细原因 [redacted]' },
+  })
+  const entries = await logs()
+  expect(entries).toHaveLength(1)
+  expect(entries[0]!.details).toEqual({
+    version: method === 'rollback' ? '0.3.0' : '0.5.0',
+    accepted: false,
+    code: 'update_busy',
+    ...(method === 'apply' ? { backupConfirmed: true } : {}),
+    ...(method === 'rollback' ? { confirmed: true } : {}),
+  })
+  expect(JSON.stringify(entries)).not.toContain(manager.options.token)
+  expect(JSON.stringify(entries)).not.toContain('详细原因')
+})
+test.each(['admin', 'user', 'banned'] as const)('%s 不能调用管理进程，身份以数据库为准', async (role) => {
+  const manager = managerConnection()
+  const updates = service(undefined, manager.options)
+  await db().updateTable('users').set({ role }).where('id', '=', admin.uid).execute()
+  for (const method of ['prepare', 'apply', 'rollback'] as const)
+    await expect(invoke(updates, method)).rejects.toMatchObject({ code: 'permission_denied' })
+  await expect(updates.cancel(admin)).rejects.toMatchObject({ code: 'permission_denied' })
+  await expect(updates.status(admin)).rejects.toMatchObject({ code: 'permission_denied' })
+  expect(manager.connect).not.toHaveBeenCalled()
+  expect(await logs()).toEqual([])
+})
+test.each(['1.2', 'v1.2.3', '01.2.3', '1.2.3-rc.1', '1.2.3+build', '1.2.3\n', '', '../1.2.3'])(
+  '正式版本号校验：%j',
+  async (version) => {
+    const manager = managerConnection()
+    const updates = service(undefined, manager.options)
+    await expect(updates.prepare(admin, version)).rejects.toMatchObject({ code: 'invalid_request' })
+    await expect(updates.apply(admin, version, { backupConfirmed: false })).rejects.toMatchObject({
+      code: 'invalid_request',
+    })
+    expect(manager.connect).not.toHaveBeenCalled()
+    expect(await logs()).toEqual([])
+  },
+)
+test.each([undefined, null, 0, 1, 'false', 'true'])('确认值严格校验：%j', async (value) => {
+  const manager = managerConnection()
+  const updates = service(undefined, manager.options)
+  await expect(updates.apply(admin, '0.5.0', { backupConfirmed: value as unknown as boolean })).rejects.toMatchObject({
+    code: 'invalid_request',
+  })
+  await expect(updates.rollback(admin, { confirmed: value as unknown as boolean })).rejects.toMatchObject({
+    code: 'invalid_request',
+  })
+  expect(manager.connect).not.toHaveBeenCalled()
+})
+test('false 确认值原样传递，cancel 返回管理进程结果且不写审计', async () => {
+  const manager = managerConnection()
+  const updates = service(undefined, manager.options)
+  await updates.apply(admin, '0.5.0', { backupConfirmed: false })
+  await updates.rollback(admin, { confirmed: false })
+  expect(manager.reply).toHaveBeenCalledWith('apply', { version: '0.5.0', backupConfirmed: false })
+  expect(manager.reply).toHaveBeenCalledWith('rollback', { confirmed: false })
+  manager.reply.mockReturnValue({ ok: true, result: { cancelled: false } })
+  expect(await updates.cancel(admin)).toEqual({ cancelled: false })
+  expect(manager.reply).toHaveBeenLastCalledWith('cancel', {})
+  expect(await logs()).toHaveLength(2)
+})
+test('status 的五种不可用原因与完整可用状态；源码和 Docker 不连接', async () => {
+  const manager = managerConnection()
+  const source = createUpdates({
+    db: db(),
+    settings: core.settings,
+    secretKey,
+    now: () => timestamp,
+    manager: manager.options,
+  })
+  expect((await source.status(admin)).manager).toEqual({ available: false, reason: 'source' })
+  expect((await service({ version: '0.4.0', deployment: 'docker' }, manager.options).status(admin)).manager).toEqual({
+    available: false,
+    reason: 'docker',
+  })
+  expect((await service().status(admin)).manager).toEqual({ available: false, reason: 'unmanaged' })
+  expect(manager.connect).not.toHaveBeenCalled()
+  const updates = service(undefined, manager.options)
+  expect((await updates.status(admin)).manager).toEqual({ available: true, ...managerState })
+  manager.status.writable = false
+  expect((await updates.status(admin)).manager).toEqual({ available: false, reason: 'readonly' })
+  manager.reply.mockReturnValue({ ok: true, result: { invalid: true } })
+  expect((await updates.status(admin)).manager).toEqual({ available: false, reason: 'unreachable' })
+  manager.connect.mockImplementation(() => {
+    throw new Error('untrusted')
+  })
+  expect((await updates.status(admin)).manager).toEqual({ available: false, reason: 'unreachable' })
+  await expect(updates.prepare(admin, '0.5.0')).rejects.toMatchObject({ code: 'update_unreachable' })
+  expect((await logs())[0]!.details).toEqual({ version: '0.5.0', accepted: false, code: 'update_unreachable' })
+  await expect(source.prepare(admin, '0.5.0')).rejects.toMatchObject({ code: 'updates_unavailable' })
+})
+test('核心构造选项把控制通道注入 updates', async () => {
+  const manager = managerConnection()
+  const managedCore = makeCore(undefined, manager.options)
+  try {
+    expect((await managedCore.updates.status(admin)).manager).toEqual({ available: true, ...managerState })
+  } finally {
+    await managedCore.shutdown()
+  }
+})
+test('等 IPC 的时候没有数据库事务，其他写操作可完成，审计等确认之后才写', async () => {
+  const manager = managerConnection()
+  let started!: () => void
+  const arrived = new Promise<void>((resolve) => {
+    started = resolve
+  })
+  let finish!: (value: unknown) => void
+  const response = new Promise((resolve) => {
+    finish = resolve
+  })
+  manager.reply.mockImplementation(() => {
+    started()
+    return response
+  })
+  const preparing = service(undefined, manager.options).prepare(admin, '0.5.0')
+  await arrived
+  try {
+    await user('user')
+    expect(await logs()).toEqual([])
+  } finally {
+    finish({ ok: true, result: { accepted: true } })
+  }
+  await preparing
+  expect(await logs()).toHaveLength(1)
 })

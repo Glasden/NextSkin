@@ -62,7 +62,7 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(49)
+  expect(routes).toHaveLength(53)
   for (const route of routes) {
     const path = route.path
       .slice('/api'.length)
@@ -87,8 +87,14 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
     // 请求体要能通过 zod 和用例在查权限之前做的格式检查，才会走到权限检查
     const image = new FormData()
     image.set('file', new Blob([new Uint8Array([1])]), 'logo.png')
+    const updateBodies: Record<string, unknown> = {
+      '/api/admin/updates/prepare': { version: '0.5.0' },
+      '/api/admin/updates/apply': { version: '0.5.0', backupConfirmed: false },
+      '/api/admin/updates/rollback': { confirmed: false },
+    }
     const body =
-      route.path === '/api/admin/themes'
+      updateBodies[route.path] ??
+      (route.path === '/api/admin/themes'
         ? { default: 'diamond' }
         : route.path === '/api/admin/notifications' && route.method === 'POST'
           ? { audience: 'all', title: '通知', body: '' }
@@ -118,7 +124,7 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
                                   ? { action: 'dismiss' }
                                   : route.method === 'PATCH'
                                     ? { role: 'banned' }
-                                    : undefined
+                                    : undefined)
     for (const loggedIn of [true, false]) {
       authenticated = loggedIn
       const response = await request(route.method, path + query, body)

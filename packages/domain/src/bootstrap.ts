@@ -99,6 +99,7 @@ export async function openCore(
   options: {
     release?: CoreOptions['release']
     updateCheck?: CoreOptions['updateCheck']
+    manager?: CoreOptions['manager']
     now?: CoreOptions['now']
     startJobs?: boolean
     officialPlugins?: readonly OfficialPlugin[]
@@ -119,6 +120,7 @@ export async function openCore(
     const core = createCore({
       release: options.release,
       updateCheck: options.updateCheck,
+      manager: options.manager,
       now: options.now,
       setupCodeFile: join(config.dataDirectory, 'setup-code'),
       renderCache,

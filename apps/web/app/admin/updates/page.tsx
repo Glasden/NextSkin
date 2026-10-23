@@ -8,6 +8,7 @@ import { getServer } from '../../../lib/server'
 import { requireAdmin } from '../../../lib/session'
 import { settingsHref } from '../settings/setting-text'
 import { UpdateCheckButton } from './check-button'
+import { OneClickUpgrade } from './one-click'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('admin.updates')
@@ -31,7 +32,7 @@ export default async function AdminUpdatesPage() {
   ])
   const time = (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short' })
   const source = status.deployment === 'source'
-  const { latest, failure } = status
+  const { latest, failure, manager } = status
   // 镜像自带 Node，换镜像就换了 Node；发行包用的是服务器上装的那个
   const node = Number(process.versions.node.split('.')[0])
   const nodeTooOld = latest !== null && status.deployment === 'bundle' && latest.minNode > node
@@ -90,45 +91,68 @@ export default async function AdminUpdatesPage() {
         <LatestPanel status={status} nodeTooOld={nodeTooOld} node={process.versions.node} time={time} />
       </div>
 
-      <section aria-labelledby="updates-how" className="flex flex-col gap-3">
-        <h2 id="updates-how" className="font-pixel text-pixel-1 text-text-muted">
-          {t('how')}
-        </h2>
-        <Panel gap={4}>
-          {source ? (
-            <div className="flex flex-col gap-1">
-              <h3 className="text-base font-medium text-text">{t('sourceTitle')}</h3>
-              <p className="text-sm text-pretty text-text-muted">{t('source')}</p>
-            </div>
-          ) : status.deployment === 'docker' ? (
-            <UpgradeSteps
-              steps={[
-                <p key="backup">{t('dockerSteps.backup')}</p>,
-                <div key="pull" className="flex min-w-0 flex-col gap-2">
-                  <p>{t('dockerSteps.pull')}</p>
-                  <pre className="overflow-x-auto rounded-sm bg-surface-sunken px-3 py-2 font-mono text-sm text-text">
-                    {DOCKER_UPGRADE}
-                  </pre>
-                </div>,
-              ]}
-              footer={t('dockerSteps.after')}
-            />
-          ) : (
-            <UpgradeSteps
-              steps={[
-                <p key="download">{t('bundleSteps.download')}</p>,
-                <p key="stop">{t('bundleSteps.stop')}</p>,
-                <p key="unzip">{t('bundleSteps.unzip')}</p>,
-              ]}
-              footer={
-                <Link href={BUNDLE_GUIDE} target="_blank" rel="noreferrer">
-                  {t('bundleSteps.guide')}
-                </Link>
-              }
-            />
+      {manager.available ? (
+        <section aria-labelledby="updates-how" className="flex flex-col gap-3">
+          <h2 id="updates-how" className="font-pixel text-pixel-1 text-text-muted">
+            {t('oneClickTitle')}
+          </h2>
+          <OneClickUpgrade initial={{ ...status, manager }} />
+          <p className="text-sm text-pretty text-text-muted">
+            {t('oneClickManual')}{' '}
+            <Link href={BUNDLE_GUIDE} target="_blank" rel="noreferrer">
+              {t('bundleSteps.guide')}
+            </Link>
+          </p>
+        </section>
+      ) : (
+        <section aria-labelledby="updates-how" className="flex flex-col gap-3">
+          <h2 id="updates-how" className="font-pixel text-pixel-1 text-text-muted">
+            {t('how')}
+          </h2>
+          {status.deployment === 'bundle' && manager.reason === 'unreachable' && (
+            <Alert tone="warning" title={t('managerUnreachableTitle')}>
+              {t('managerUnreachable')}
+            </Alert>
           )}
-        </Panel>
-      </section>
+          {status.deployment === 'bundle' && (manager.reason === 'readonly' || manager.reason === 'unmanaged') && (
+            <p className="max-w-3xl text-sm text-pretty text-text-muted">{t(`managerReasons.${manager.reason}`)}</p>
+          )}
+          <Panel gap={4}>
+            {source ? (
+              <div className="flex flex-col gap-1">
+                <h3 className="text-base font-medium text-text">{t('sourceTitle')}</h3>
+                <p className="text-sm text-pretty text-text-muted">{t('source')}</p>
+              </div>
+            ) : status.deployment === 'docker' ? (
+              <UpgradeSteps
+                steps={[
+                  <p key="backup">{t('dockerSteps.backup')}</p>,
+                  <div key="pull" className="flex min-w-0 flex-col gap-2">
+                    <p>{t('dockerSteps.pull')}</p>
+                    <pre className="overflow-x-auto rounded-sm bg-surface-sunken px-3 py-2 font-mono text-sm text-text">
+                      {DOCKER_UPGRADE}
+                    </pre>
+                  </div>,
+                ]}
+                footer={t('dockerSteps.after')}
+              />
+            ) : (
+              <UpgradeSteps
+                steps={[
+                  <p key="download">{t('bundleSteps.download')}</p>,
+                  <p key="stop">{t('bundleSteps.stop')}</p>,
+                  <p key="unzip">{t('bundleSteps.unzip')}</p>,
+                ]}
+                footer={
+                  <Link href={BUNDLE_GUIDE} target="_blank" rel="noreferrer">
+                    {t('bundleSteps.guide')}
+                  </Link>
+                }
+              />
+            )}
+          </Panel>
+        </section>
+      )}
 
       {!source && <p className="max-w-3xl text-sm text-pretty text-text-muted">{t('privacy')}</p>}
     </div>

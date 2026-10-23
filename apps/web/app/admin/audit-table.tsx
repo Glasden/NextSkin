@@ -57,6 +57,9 @@ const actionKeys = {
   'oauthClient.delete': 'oauthClientDelete',
   'notification.send': 'notificationSend',
   'notification.recall': 'notificationRecall',
+  'update.prepare': 'updatePrepare',
+  'update.apply': 'updateApply',
+  'update.rollback': 'updateRollback',
 } as const satisfies Record<AuditAction, string>
 
 function isAuditAction(action: string): action is AuditAction {
@@ -144,6 +147,12 @@ export async function AuditTable({
 
   function subject(entry: AuditEntry) {
     const { type, id, exists } = entry.subject
+    if (type === 'update')
+      return (
+        <Link render={<NextLink href="/admin/updates" />}>
+          {t('subjects.update', { version: text(entry.details.version) ?? 'none' })}
+        </Link>
+      )
     // 插件也没有整数 id（记作 0），插件 id 在 details 里；插件还在就链接到它的页面（ADR-0033）
     if (type === 'plugin') {
       if (entry.action === 'plugin.restartHost') return t('subjects.pluginHost')
@@ -437,6 +446,23 @@ export async function AuditTable({
       }),
     'notification.recall': (details) =>
       t('details.notificationRecall', { recipientCount: count(details.recipientCount) }),
+    'update.prepare': (details) =>
+      t('details.updatePrepare', {
+        accepted: String(details.accepted === true),
+        code: text(details.code) ?? '',
+      }),
+    'update.apply': (details) =>
+      t('details.updateApply', {
+        accepted: String(details.accepted === true),
+        code: text(details.code) ?? '',
+        backupConfirmed: String(details.backupConfirmed === true),
+      }),
+    'update.rollback': (details) =>
+      t('details.updateRollback', {
+        accepted: String(details.accepted === true),
+        code: text(details.code) ?? '',
+        confirmed: String(details.confirmed === true),
+      }),
   }
 
   function details(entry: AuditEntry) {
