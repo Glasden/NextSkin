@@ -1,4 +1,12 @@
-import { checkTheme, describeThemeIssue, diamond, lockedColorNames, themeColorNames } from '@nextskin/theme'
+import {
+  checkTheme,
+  describeThemeIssue,
+  diamond,
+  diamondStructure,
+  lockedColorNames,
+  structureVariables,
+  themeColorNames,
+} from '@nextskin/theme'
 import { describe, expect, it } from 'vitest'
 import designDoc from '../../../docs/DESIGN.md?raw'
 import diamondModule from '../../theme/src/diamond.ts?raw'
@@ -144,6 +152,12 @@ describe('theme.css', () => {
       expect(diamond.light[color.name as keyof typeof diamond.light], message).toBe(color.light)
       expect(diamond.dark[color.name as keyof typeof diamond.dark], message).toBe(color.dark)
     }
+  })
+
+  // 主题的结构生成的是同名变量（ADR-0058），钻石青那一组必须就是 theme.css 的默认值
+  it('packages/theme 里钻石青的结构与 theme.css 一致', () => {
+    for (const [name, value] of Object.entries(structureVariables(diamondStructure)))
+      expect(theme.others.find((token) => token.name === name)?.value, name).toBe(value)
   })
 
   it('DESIGN.md 的 token 表与 theme.css 一致', () => {

@@ -14,6 +14,13 @@ definePlugin({
   ui: {
     themes: [
       { name: 'cobalt', label: 'themes.cobalt', colors: { light: { accent: '#2a52e5' }, dark: { accent: '#86A2FF' } } },
+      {
+        name: 'high-contrast',
+        label: 'themes.highContrast',
+        structure: { radius: 'square', borders: 'thick', cards: 'raised' },
+        colors: { light: { 'accent-fill': '#d4ff1e', 'accent-fill-fg': '#000000' } },
+      },
+      { name: 'partial', label: 'themes.partial', structure: { radius: 'rounded' }, colors: {} },
       { name: 'default', label: 'themes.default', colors: {} },
       { name: 'light', label: 'themes.light', colors: { light: { focus: '#2a52e5' } } },
       { name: 'dark', label: 'themes.dark', colors: { dark: { 'accent-subtle': '#282f41' } } },
@@ -51,6 +58,40 @@ definePlugin({
             // @ts-expect-error 色值必须以 # 开头，六位格式在构建时检查
             accent: '86a2ff',
           },
+        },
+      },
+    ],
+  },
+})
+
+definePlugin({
+  capabilities: [],
+  ui: {
+    themes: [
+      {
+        name: 'typo',
+        label: 'themes.typo',
+        colors: {},
+        structure: {
+          // @ts-expect-error 圆角只能选 rounded 或 square
+          radius: 'round',
+        },
+      },
+    ],
+  },
+})
+
+definePlugin({
+  capabilities: [],
+  ui: {
+    themes: [
+      {
+        name: 'unknown',
+        label: 'themes.unknown',
+        colors: {},
+        structure: {
+          // @ts-expect-error 结构不接受未知键或 CSS
+          shadow: 'none',
         },
       },
     ],

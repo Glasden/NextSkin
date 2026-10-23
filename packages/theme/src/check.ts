@@ -20,6 +20,7 @@ export const contrastPairs: readonly (readonly [ColorName, ColorName, number])[]
   ['text-muted', 'accent-subtle', 4.5],
   ['text-inverse', 'text', 4.5],
   ['accent-fg', 'accent', 4.5],
+  ['accent-fill-fg', 'accent-fill', 4.5],
   ['accent', 'bg', 4.5],
   ['accent', 'surface', 4.5],
   ['success-fg', 'success', 4.5],
@@ -43,8 +44,14 @@ export const lightnessPairs: readonly (readonly [ColorName, ColorName])[] = [
   ['text-inverse', 'text'],
 ]
 
-/** 主要按钮和删除按钮不能看着一样：两者在 OKLab 里至少差这么多 */
-export const distancePairs: readonly (readonly [ColorName, ColorName, number])[] = [['accent', 'danger', 0.12]]
+/**
+ * 强调色和危险色不能看着一样：两者在 OKLab 里至少差这么多。主要按钮用的是色块 accent-fill（ADR-0058），
+ * 选中态和链接用的是 accent，两组都查
+ */
+export const distancePairs: readonly (readonly [ColorName, ColorName, number])[] = [
+  ['accent', 'danger', 0.12],
+  ['accent-fill', 'danger', 0.12],
+]
 
 export type ThemeIssue =
   | {
@@ -62,26 +69,38 @@ export type ThemeIssue =
       values: readonly [HexColor, HexColor]
     }
 
-/** 检查补齐以后的取值，没有问题时返回空数组 */
+const fills = new Set<ColorName>(['accent-fill', 'accent-fill-fg'])
+
+/**
+ * 检查补齐以后的取值，没有问题时返回空数组。色块的两组和 accent 的那两组查出同一组值时不重复报：
+ * 没写色块的主题，accent-fill、accent-fill-fg 就是 accent、accent-fg
+ */
 export function checkTheme(theme: ResolvedTheme): ThemeIssue[] {
   const issues: ThemeIssue[] = []
+  const seen = new Set<string>()
+  const report = (issue: ThemeIssue) => {
+    const key = `${issue.mode} ${issue.check} ${issue.values.join(' ')}`
+    if (issue.pair.some((name) => fills.has(name)) && seen.has(key)) return
+    seen.add(key)
+    issues.push(issue)
+  }
   for (const mode of colorModes) {
     const colors = theme[mode]
     const values = (pair: readonly [ColorName, ColorName]) => [colors[pair[0]], colors[pair[1]]] as const
     for (const [foreground, background, minimum] of contrastPairs) {
       const pair = [foreground, background] as const
       const actual = contrastRatio(colors[foreground], colors[background])
-      if (actual < minimum) issues.push({ mode, check: 'contrast', pair, values: values(pair), actual, minimum })
+      if (actual < minimum) report({ mode, check: 'contrast', pair, values: values(pair), actual, minimum })
     }
     for (const pair of lightnessPairs) {
       const [first, second] = pair.map((name) => relativeLuminance(colors[name])) as [number, number]
       if (mode === 'light' ? first <= second : first >= second)
-        issues.push({ mode, check: 'lightness', pair, values: values(pair) })
+        report({ mode, check: 'lightness', pair, values: values(pair) })
     }
     for (const [first, second, minimum] of distancePairs) {
       const pair = [first, second] as const
       const actual = oklabDistance(colors[first], colors[second])
-      if (actual < minimum) issues.push({ mode, check: 'distance', pair, values: values(pair), actual, minimum })
+      if (actual < minimum) report({ mode, check: 'distance', pair, values: values(pair), actual, minimum })
     }
   }
   return issues

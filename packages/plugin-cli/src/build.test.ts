@@ -217,14 +217,15 @@ async function buildIn(dir: string): Promise<string> {
 }
 
 /* eslint-disable nextskin/no-raw-color -- 构建测试直接核对 manifest 中的主题色值数据。 */
-test('构建主题写进 manifest，色值统一为小写', async () => {
+test('构建主题和结构写进 manifest，色值统一为小写', async () => {
   const dir = await project()
   try {
     await writeFile(
       join(dir, 'src', 'index.ts'),
       `export default {
       capabilities: [],
-      ui: { themes: [{ name: 'cobalt', label: 'themes.cobalt', colors: {
+      ui: { themes: [{ name: 'cobalt', label: 'themes.cobalt',
+        structure: { radius: 'square', borders: 'thick', cards: 'raised' }, colors: {
         light: { accent: '#2A52E5' }, dark: { accent: '#86A2FF' }
       } }] }
     }`,
@@ -234,9 +235,30 @@ test('构建主题写进 manifest，色值统一为小写', async () => {
       {
         name: 'cobalt',
         label: 'themes.cobalt',
+        structure: { radius: 'square', borders: 'thick', cards: 'raised' },
         colors: { light: { accent: '#2a52e5' }, dark: { accent: '#86a2ff' } },
       },
     ])
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+}, 30_000)
+
+test('结构取值错误使构建退出 1，并指出 structure', async () => {
+  const dir = await project()
+  try {
+    await writeFile(
+      join(dir, 'src', 'index.ts'),
+      `export default {
+      capabilities: [],
+      ui: { themes: [{ name: 'bad', label: 'themes.bad', colors: {}, structure: { radius: 'round' } }] }
+    }`,
+    )
+    await expect(exec(process.execPath, [cli, 'build', dir], { timeout: 20_000 })).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining('structure.radius') as unknown,
+    })
+    await expect(readFile(join(dir, 'dist', 'test-1.0.0.tgz'))).rejects.toMatchObject({ code: 'ENOENT' })
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

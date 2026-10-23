@@ -1,6 +1,6 @@
 # 配色主题
 
-`ui.themes` 声明的是数据，不是 CSS：插件只写要改的颜色，核心补齐、检查后生成样式。不需要能力，也不能通过主题交付脚本、字体、圆角、动效或页面结构。
+`ui.themes` 声明的是数据，不是 CSS：插件只写要改的颜色和结构枚举，核心补齐、检查后生成样式。不需要能力，也不能通过主题交付脚本、字体、动效或页面布局。
 
 ```ts
 import { definePlugin } from '@nextskin/plugin-sdk'
@@ -28,7 +28,7 @@ export default definePlugin({
 
 ## 能改哪些颜色
 
-`ThemeColor` 是以下 20 个 token 名的联合，不带 `--color-` 前缀。这些名字是公开 API，改名或删除要发大版本。
+`ThemeColor` 是以下 22 个 token 名的联合，不带 `--color-` 前缀。这些名字是公开 API，改名或删除要发大版本。
 
 | token | 用途 |
 |---|---|
@@ -41,9 +41,11 @@ export default definePlugin({
 | `text` | 正文 |
 | `text-muted` | 次要文字 |
 | `text-inverse` | 反色文字 |
-| `accent` | 强调色 |
+| `accent` | 画在表面上的强调色（链接、图标、选中态等） |
 | `accent-fg` | 强调色上的前景 |
 | `accent-subtle` | 强调色淡底 |
+| `accent-fill` | 主要按钮这类色块 |
+| `accent-fill-fg` | 色块上的前景 |
 | `success` | 成功色 |
 | `success-fg` | 成功色上的前景 |
 | `warning` | 警告色 |
@@ -61,17 +63,38 @@ export default definePlugin({
 
 没有声明的颜色按模式补齐：
 
+- `accent-fill` 等于本主题的 `accent`，`accent-fill-fg` 等于本主题的 `accent-fg`；
 - `focus` 等于本主题的 `accent`；
 - `accent-subtle` 是本主题的 `accent` 按 12%（亮色）或 16%（暗色）在 sRGB 中混入本主题的 `surface`，各通道四舍五入；
 - 其余取钻石青的默认值。
 
 上例只改 `accent`，推导出的淡底就是亮色 `#e5eafc`、暗色 `#282f41`。需要别的焦点框或淡底时可以显式声明。不要抄一整份默认配色：核心以后微调灰色时，省略的值会跟着更新。
 
+`accent` 要在页面、卡片等表面上看得清；如果颜色在白底上太浅，只适合当有自己前景色的色块，就单独写 `accent-fill` 和 `accent-fill-fg`。例如高对比主题在亮色下用黑色作为 `accent`，荧光黄绿 `#d4ff1e` 作为 `accent-fill`，色块上的字用黑色；暗色下荧光色看得清，`accent` 用它，色块跟着推导即可。`focus` 和 `accent-subtle` 仍从 `accent` 推导。
+
+## 结构
+
+`structure` 和 `colors` 并列，每项都可以省略，省略的取钻石青。亮暗共用一份结构，切换亮暗时边框粗细等尺寸不会跟着变。
+
+| 项 | 取值 | 默认 | 效果 |
+|---|---|---|---|
+| `radius` | `rounded`、`square` | `rounded` | `square` 时 2px、4px 圆角变直角 |
+| `borders` | `thin`、`thick` | `thin` | `thick` 时常规边框从 1px 变 2px，选中框从 2px 变 4px；原本固定为 2px 的勾选框等不变 |
+| `cards` | `flat`、`raised` | `flat` | `raised` 时面板和卡片静止带 4px 硬边阴影，颜色取 `shadow`，悬停照旧上移 2px |
+
+三项互不影响，可以只写一项，例如 `structure: { borders: 'thick' }`；高对比主题写的是：
+
+```ts
+structure: { radius: 'square', borders: 'thick', cards: 'raised' }
+```
+
+交枚举是为了让每种组合都在核心的设计规范内，样式中也只会出现核心生成的值。不接受 CSS 值，CSS 变量名也不是插件 API；插件作者只依赖这三项枚举。未知键或取值会使构建、安装失败。
+
 ## 检查规则
 
 检查针对补齐后的完整配色，两种模式分别检查以下三条。
 
-1. **对比度**：正文相关组合至少 4.5:1，边框和焦点框至少 3:1。下表同一行有多个背景时，每个都单独检查，共 25 组。
+1. **对比度**：正文相关组合至少 4.5:1，边框和焦点框至少 3:1。下表同一行有多个背景时，每个都单独检查，共 26 组。
 
    | 前景 | 背景 | 最低比值 |
    |---|---|---|
@@ -79,6 +102,7 @@ export default definePlugin({
    | `text-muted` | `bg`、`surface`、`surface-raised`、`surface-sunken`、`stage`、`accent-subtle` | 4.5 |
    | `text-inverse` | `text` | 4.5 |
    | `accent-fg` | `accent` | 4.5 |
+   | `accent-fill-fg` | `accent-fill` | 4.5 |
    | `accent` | `bg`、`surface` | 4.5 |
    | `success-fg` | `success` | 4.5 |
    | `success` | `surface` | 4.5 |
@@ -90,7 +114,9 @@ export default definePlugin({
    | `focus` | `bg`、`surface` | 3 |
 
 2. **明暗方向**：亮色模式下 `bg`、`text-inverse` 的相对亮度都必须大于 `text`；暗色模式下都必须小于 `text`，使浏览器原生控件和二维码的明暗方向一致。
-3. **强调色和危险色分开**：`accent` 和 `danger` 的 OKLab 欧氏距离至少为 0.12。主要按钮和删除按钮不能看着一样。其他状态色之间不检查距离，仍建议肉眼核对。
+3. **强调色和危险色分开**：`accent`、`accent-fill` 各自和 `danger` 的 OKLab 欧氏距离至少为 0.12。主要按钮和删除按钮不能看着一样。其他状态色之间不检查距离，仍建议肉眼核对。
+
+`accent-fill` 和表面的对比度不检查：色块靠自己的前景色和阴影辨认。没写两个色块颜色时，新检查与原有强调色检查使用同一组值，以前通过的主题仍然通过。
 
 `nextskin-plugin build` 会检查形状和这三条规则；不通过就构建失败，逐条列出主题名、亮暗模式、哪一组和实际值。洋红强调色配默认危险色的距离只有约 0.10，需要调整危险色；调整以后也要注意它是否与警告色太接近。
 

@@ -5,6 +5,7 @@ import {
   describeThemeIssue,
   diamond,
   DIAMOND,
+  diamondStructure,
   isHexColor,
   isThemeId,
   lockedColorNames,
@@ -13,15 +14,67 @@ import {
   oklabDistance,
   pluginThemeId,
   pluginThemesError,
+  resolveStructure,
   resolveTheme,
+  structureVariables,
   themeColorNames,
   themeColorsError,
   themeCss,
+  themeStructureError,
 } from './index.ts'
 
 // DESIGN.md 附录里的两套备选主题：只给了强调色，focus 和 accent-subtle 按推导补
 const cobalt = { light: { accent: '#2a52e5' }, dark: { accent: '#86a2ff' } }
 const magenta = { light: { accent: '#c2186b' }, dark: { accent: '#ff7ab8' } }
+// ADR-0058 的高对比：亮色下荧光色只当色块，表面上的强调色用黑色
+const highContrast = {
+  light: {
+    bg: '#ffffff',
+    surface: '#ffffff',
+    'surface-raised': '#ffffff',
+    'surface-sunken': '#f0f0f0',
+    border: '#bdbdbd',
+    'border-strong': '#000000',
+    text: '#000000',
+    'text-muted': '#4a4a4a',
+    'text-inverse': '#ffffff',
+    accent: '#000000',
+    'accent-fg': '#ffffff',
+    'accent-subtle': '#f0ffb0',
+    'accent-fill': '#d4ff1e',
+    'accent-fill-fg': '#000000',
+    success: '#00813a',
+    'success-fg': '#ffffff',
+    warning: '#a85600',
+    'warning-fg': '#ffffff',
+    danger: '#d0021b',
+    'danger-fg': '#ffffff',
+    focus: '#0040ff',
+    shadow: '#000000',
+  },
+  dark: {
+    bg: '#000000',
+    surface: '#0b0b0b',
+    'surface-raised': '#161616',
+    'surface-sunken': '#050505',
+    border: '#3d3d3d',
+    'border-strong': '#ffffff',
+    text: '#ffffff',
+    'text-muted': '#b5b5b5',
+    'text-inverse': '#000000',
+    accent: '#d4ff1e',
+    'accent-fg': '#000000',
+    'accent-subtle': '#37410f',
+    success: '#3ddc84',
+    'success-fg': '#000000',
+    warning: '#ffb020',
+    'warning-fg': '#000000',
+    danger: '#ff4d5e',
+    'danger-fg': '#000000',
+    focus: '#d4ff1e',
+    shadow: '#e6e6e6',
+  },
+} as const
 
 describe('contrastRatio', () => {
   it('黑白是 21，同色是 1', () => {
@@ -88,6 +141,14 @@ describe('推导', () => {
     expect(theme.light.text).toBe(diamond.light.text)
   })
 
+  it('没写色块时跟着 accent 和 accent-fg，写了的不推导', () => {
+    const theme = resolveTheme(cobalt)
+    expect(theme.light).toMatchObject({ 'accent-fill': '#2a52e5', 'accent-fill-fg': diamond.light['accent-fg'] })
+    expect(resolveTheme({ light: { 'accent-fg': '#000000' } }).light['accent-fill-fg']).toBe('#000000')
+    const fill = resolveTheme({ light: { accent: '#000000', 'accent-fill': '#D4FF1E', 'accent-fill-fg': '#000000' } })
+    expect(fill.light).toMatchObject({ accent: '#000000', 'accent-fill': '#d4ff1e', 'accent-fill-fg': '#000000' })
+  })
+
   it('写了的 token 不推导；淡底按这个主题的 surface 混', () => {
     const theme = resolveTheme({
       light: { accent: '#2a52e5', focus: '#000000', 'accent-subtle': '#FAFAFA', surface: '#f0f0f0' },
@@ -116,6 +177,28 @@ describe('检查', () => {
       { mode: 'light', check: 'distance', pair: ['accent', 'danger'] },
       { mode: 'dark', check: 'distance', pair: ['accent', 'danger'] },
     ])
+  })
+
+  it('高对比通过：荧光色只当色块，不查它和表面的对比度', () => {
+    expect(checkTheme(resolveTheme(highContrast)).map(describeThemeIssue)).toEqual([])
+    const asIs = resolveTheme({
+      ...highContrast,
+      light: { ...highContrast.light, accent: '#d4ff1e', 'accent-fg': '#000000' },
+    })
+    expect(checkTheme(asIs).map(({ mode, pair }) => ({ mode, pair }))).toEqual([
+      { mode: 'light', pair: ['accent', 'bg'] },
+      { mode: 'light', pair: ['accent', 'surface'] },
+    ])
+  })
+
+  it('色块单独查上面的字和危险色的距离；和 accent 那组的值相同时不重复报', () => {
+    const issues = checkTheme(resolveTheme({ light: { 'accent-fill': '#c32b2b', 'accent-fill-fg': '#c32b2b' } }))
+    expect(issues.map(({ check, pair }) => ({ check, pair }))).toEqual([
+      { check: 'contrast', pair: ['accent-fill-fg', 'accent-fill'] },
+      { check: 'distance', pair: ['accent-fill', 'danger'] },
+    ])
+    const same = checkTheme(resolveTheme({ light: { 'accent-fg': '#08736b' } }))
+    expect(same.map(({ pair }) => pair)).toEqual([['accent-fg', 'accent']])
   })
 
   it('对比度不够时报出哪一组、实际值和最低值', () => {
@@ -174,6 +257,20 @@ describe('形状', () => {
     expect(pluginThemesError([{ name: 'a', label: 1, colors: {} }])).toContain('label')
     expect(pluginThemesError([{ name: 'a', label: 'x', colors: {}, css: '' }])).toContain('css')
     expect(pluginThemesError([{ name: 'a', label: 'x' }])).toContain('colors 必须是对象')
+    expect(pluginThemesError([{ ...theme('a'), structure: { radius: 'square' } }])).toBeNull()
+    expect(pluginThemesError([{ ...theme('a'), structure: { radius: 'round' } }])).toContain(
+      '主题 a 的 structure.radius 只能是 rounded、square',
+    )
+  })
+
+  it('结构', () => {
+    expect(themeStructureError({})).toBeNull()
+    expect(themeStructureError({ radius: 'square', borders: 'thick', cards: 'raised' })).toBeNull()
+    expect(themeStructureError(null)).toBe('structure 必须是对象')
+    expect(themeStructureError([])).toBe('structure 必须是对象')
+    expect(themeStructureError({ shadow: 'none' })).toBe('structure 里没有 shadow 这一项')
+    expect(themeStructureError({ borders: 2 })).toBe('structure.borders 只能是 thin、thick：2')
+    expect(themeStructureError({ cards: '4px 4px 0 0 red' })).toContain('structure.cards 只能是 flat、raised')
   })
 
   it('色值转小写，省略的模式不补', () => {
@@ -182,9 +279,37 @@ describe('形状', () => {
   })
 })
 
+describe('结构', () => {
+  it('没写的和不认识的取钻石青', () => {
+    expect(resolveStructure()).toEqual(diamondStructure)
+    expect(resolveStructure({ radius: 'square' })).toEqual({ ...diamondStructure, radius: 'square' })
+    expect(resolveStructure({ radius: 'round', borders: 'thick' } as never)).toEqual({
+      ...diamondStructure,
+      borders: 'thick',
+    })
+  })
+
+  it('每项只改自己的变量，选中框是常规边框的两倍', () => {
+    expect(structureVariables(diamondStructure)).toEqual({
+      'radius-sm': '2px',
+      'radius-md': '4px',
+      'border-width-base': '1px',
+      'outline-width-selected': '2px',
+      'card-shadow': '0 0 #0000',
+    })
+    expect(structureVariables({ radius: 'square', borders: 'thick', cards: 'raised' })).toEqual({
+      'radius-sm': '0',
+      'radius-md': '0',
+      'border-width-base': '2px',
+      'outline-width-selected': '4px',
+      'card-shadow': '4px 4px 0 0 var(--color-shadow)',
+    })
+  })
+})
+
 describe('CSS', () => {
   it('两种模式下的全部颜色，锁住的取钻石青', () => {
-    const css = themeCss(pluginThemeId('color-themes', 'cobalt'), resolveTheme(cobalt))
+    const css = themeCss(pluginThemeId('color-themes', 'cobalt'), resolveTheme(cobalt), diamondStructure)
     expect(css.startsWith("[data-theme='color-themes/cobalt']{--color-bg:#f2f3f5;")).toBe(true)
     expect(css).toContain("}[data-theme='color-themes/cobalt'][data-mode='dark']{--color-bg:#0e1013;")
     expect(css.match(/--color-/g)).toHaveLength((themeColorNames.length + lockedColorNames.length) * 2)
@@ -192,12 +317,22 @@ describe('CSS', () => {
     expect(css).toContain('--color-focus:#86a2ff;')
     expect(css).toContain(`--color-stage:${diamond.light.stage};`)
     expect(css).toContain(`--color-stage:${diamond.dark.stage};`)
-    expect(css.length).toBeLessThan(1600)
+    expect(css.length).toBeLessThan(1800)
+  })
+
+  it('结构只写在不分亮暗的那一块里，钻石青的也写', () => {
+    const structured = themeCss('a/b', diamond, { radius: 'square', borders: 'thick', cards: 'raised' })
+    const [light, dark] = structured.split("}[data-theme='a/b'][data-mode='dark']{")
+    expect(light).toContain('--radius-sm:0;--radius-md:0;--border-width-base:2px;--outline-width-selected:4px;')
+    expect(light).toContain('--card-shadow:4px 4px 0 0 var(--color-shadow);')
+    expect(dark).not.toContain('--radius')
+    expect(themeCss(DIAMOND, diamond, diamondStructure)).toContain('--radius-sm:2px;')
   })
 
   it('id 只能是内置主题或 <插件 id>/<名字>', () => {
     expect(isThemeId(DIAMOND)).toBe(true)
     expect(isThemeId('color-themes/cobalt')).toBe(true)
-    for (const id of ['', 'a/b/c', "x']{}", 'A', 'a b', '/a', 'a/']) expect(() => themeCss(id, diamond), id).toThrow()
+    for (const id of ['', 'a/b/c', "x']{}", 'A', 'a b', '/a', 'a/'])
+      expect(() => themeCss(id, diamond, diamondStructure), id).toThrow()
   })
 })

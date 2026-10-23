@@ -1,5 +1,5 @@
 /**
- * 主题能改的颜色（ADR-0057"主题的形状"）。名字和 packages/ui/src/theme.css 里的 `--color-*` 相同，不带前缀。
+ * 主题能改的颜色（ADR-0057"主题的形状"，色块的两个由 ADR-0058 加上）。名字和 packages/ui/src/theme.css 里的 `--color-*` 相同，不带前缀。
  * 它们也是插件 SDK 的 `ThemeColor`：改名或删除是插件 API 的大版本。核心以后加颜色 token，要么加在这里
  * （同时给它一条从已有 token 推导的默认值，旧主题才照样通过检查），要么加进 lockedColorNames
  */
@@ -16,6 +16,8 @@ export const themeColorNames = [
   'accent',
   'accent-fg',
   'accent-subtle',
+  'accent-fill',
+  'accent-fill-fg',
   'success',
   'success-fg',
   'warning',

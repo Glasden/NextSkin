@@ -5,7 +5,7 @@ import type { Json } from './dto.ts'
  *
  * 全部是声明式的：插件只描述"要什么"，由核心用 @nextskin/ui 的组件渲染。
  * 这样插件界面自动继承站点的视觉语言、暗色模式和无障碍处理，插件也拿不到浏览器里的执行权。
- * 配色主题也只交数据：在 `themes` 里声明要改的颜色，由核心检查并生成 CSS，不需要能力。
+ * 配色主题也只交数据：在 `themes` 里声明要改的颜色和结构，由核心检查并生成 CSS，不需要能力。
  *
  * 插件的名字和简介显示在后台的插件页，按约定取文案键 `plugin.name`、`plugin.description`；没写名字就显示 id。
  *
@@ -127,6 +127,8 @@ export interface StatsSourceResponse {
 
 /**
  * 主题能改的颜色，和核心 theme.css 里的 `--color-*` 同名（不带前缀）。它们是公开 API：改名或删除是大版本。
+ * `accent` 是画在表面上的强调色；`accent-fill` 是主要按钮这类色块，没写时跟着 `accent`，
+ * `accent-fill-fg` 没写时跟着 `accent-fg`。
  * 展台 `stage` 和透明区域的棋盘格 `checker-a`、`checker-b` 锁住，在任何主题下都取默认值（ADR-0057）
  */
 export type ThemeColor =
@@ -142,6 +144,8 @@ export type ThemeColor =
   | 'accent'
   | 'accent-fg'
   | 'accent-subtle'
+  | 'accent-fill'
+  | 'accent-fill-fg'
   | 'success'
   | 'success-fg'
   | 'warning'
@@ -155,14 +159,30 @@ export type ThemeColor =
 export type ThemeColorValue = `#${string}`
 
 /**
+ * 主题结构：每项可省略，省略的取钻石青；亮暗共用一份。
+ * 插件交的是枚举，CSS 变量名不是插件 API（ADR-0058）
+ */
+export interface ThemeStructure {
+  /** 默认 rounded；square 时 2px、4px 圆角都变直角 */
+  readonly radius?: 'rounded' | 'square'
+  /** 默认 thin；thick 时常规边框从 1px 变 2px，选中框从 2px 变 4px */
+  readonly borders?: 'thin' | 'thick'
+  /** 默认 flat；raised 时面板和卡片静止带 4px 硬边阴影 */
+  readonly cards?: 'flat' | 'raised'
+}
+
+/**
  * 一套配色主题：只是数据，核心检查对比度后生成 CSS。主题 id 是 `<插件 id>/<name>`。
- * 只写要改的颜色：没写的 `focus` 跟着 `accent`，`accent-subtle` 由 `accent` 混入 `surface` 得到，其余取默认主题钻石青
+ * 只写要改的颜色：没写的 `focus` 跟着 `accent`，`accent-subtle` 由 `accent` 混入 `surface` 得到，`accent-fill`、`accent-fill-fg` 跟着 `accent`、`accent-fg`，其余取默认主题钻石青。
+ * 结构只选枚举，不交 CSS，没写的项取钻石青
  */
 export interface ThemeContribution {
   /** `[a-z][a-z0-9]*(-[a-z0-9]+)*`，最多 32 个字符，同一插件内不重复；一个插件最多 16 套 */
   readonly name: string
   /** 主题名的文案键，例如 `themes.cobalt` */
   readonly label: MessageKey
+  /** 圆角、边框和卡片的结构，不分亮暗，每项可省略 */
+  readonly structure?: ThemeStructure
   /** 亮色、暗色下要改的颜色，都可以省略 */
   readonly colors: {
     readonly light?: Readonly<Partial<Record<ThemeColor, ThemeColorValue>>>
