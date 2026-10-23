@@ -1,0 +1,19 @@
+{
+  "name": "@nextskin/theme",
+  "version": "0.0.0",
+  "private": true,
+  "description": "配色主题：可改的颜色 token、钻石青的取值、推导、检查和生成 CSS，没有依赖的纯函数（ADR-0057）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -35,7 +35,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 | `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑 `*.db.test.ts`（需要 Docker，测试库容器跑完后保留；`pnpm test` 只用 SQLite 跑） |
 | `pnpm test:contract` | 协议契约测试：回放从真实 BS v6 录制的用例，不需要 Docker，`pnpm check` 也会跑。录制见 `tests/contract/README.md` |
 | `pnpm storybook` | 组件工作台 |
-| `pnpm design:sync` | 改了 `packages/ui/src/theme.css` 或标志的图形之后，重新生成 `docs/DESIGN.md` §3 的 token 表和 `apps/web/public` 里的默认站点图标（不同步时 ui 的测试会失败） |
+| `pnpm design:sync` | 改了 `packages/ui/src/theme.css` 或标志的图形之后，重新生成 `docs/DESIGN.md` §3 的 token 表、`packages/theme` 里钻石青的取值和 `apps/web/public` 里的默认站点图标（不同步时 ui 的测试会失败） |
 | `pnpm font:sync` | 重新生成像素字体的分片（DESIGN.md §4），需要联网；只在换字体版本或改切片规则时运行 |
 | `pnpm e2e` | Playwright 端到端测试：从 `dist/nextskin` 经启动器启动服务、用打包后的命令行设定身份；也经过 Next standalone 回放全部契约用例 |
 | `pnpm test:visual` | 组件截图回归：给每个 story 拍亮暗两张截图，和基线比较（需要 Docker，浏览器跑在容器里）。外观改动是有意的，就加 `-- --update-snapshots` 更新基线，并检查新截图 |
@@ -78,6 +78,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 | `packages/skin` | 材质的前处理和出图（皮肤的 3D 人物、披风的 2D 正背面、头像），纯函数，服务端出图和浏览器上传页共用（ADR-0017、ADR-0048） |
 | `packages/i18n` | 界面文案（`messages/<语言>.json`）和语言解析，网页和领域层共用（ADR-0019） |
 | `packages/email` | 邮件模板，无依赖的 HTML 模板函数（ADR-0020） |
+| `packages/theme` | 配色主题：可改的颜色 token、钻石青的取值、推导、对比度检查和生成 CSS，无依赖的纯函数；ui 的测试、plugin host 的 manifest 校验和核心的主题注册表共用（ADR-0057） |
 | `packages/plugin-sdk`、`plugin-host` | 插件 API（公开面，ADR-0033）；插件侧的运行时：host 进程的入口和帧协议、加载插件定义、构造 `ctx`、插件包的格式和校验。核心侧的注册表、网关、换代和安装在 `packages/domain/src/plugins/` |
 | `packages/plugin-cli` | `nextskin-plugin build`：把插件打成插件包（manifest、单文件的服务端代码、文案），插件作者和测试共用。和 SDK 一起发布到 npm，版本号相同；发布的是连同 plugin-host、SDK、zod 打成的单文件（ADR-0035） |
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |

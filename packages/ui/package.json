@@ -34,6 +34,7 @@
     "skinview3d": "catalog:"
   },
   "devDependencies": {
+    "@nextskin/theme": "workspace:*",
     "@playwright/test": "catalog:",
     "@storybook/addon-docs": "catalog:",
     "@storybook/addon-vitest": "catalog:",
