@@ -1,5 +1,6 @@
 import authmePassword from '@nextskin/plugin-authme-password/official'
 import cdnRefresh from '@nextskin/plugin-cdn-refresh/official'
+import colorThemes from '@nextskin/plugin-color-themes/official'
 import invitationCodes from '@nextskin/plugin-invitation-codes/official'
 import oauthGithub from '@nextskin/plugin-oauth-github/official'
 import oauthGoogle from '@nextskin/plugin-oauth-google/official'
@@ -18,4 +19,5 @@ export const officialPlugins: readonly OfficialPlugin[] = [
   oauthMicrosoft,
   oauthGoogle,
   oauthLittleskin,
+  colorThemes,
 ]

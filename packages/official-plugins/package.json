@@ -20,6 +20,7 @@
     "@nextskin/domain": "workspace:*",
     "@nextskin/plugin-authme-password": "workspace:*",
     "@nextskin/plugin-cdn-refresh": "workspace:*",
+    "@nextskin/plugin-color-themes": "workspace:*",
     "@nextskin/plugin-invitation-codes": "workspace:*",
     "@nextskin/plugin-oauth-github": "workspace:*",
     "@nextskin/plugin-oauth-google": "workspace:*",

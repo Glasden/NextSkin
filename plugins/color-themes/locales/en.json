@@ -1,0 +1,10 @@
+{
+  "plugin": {
+    "name": "More colors",
+    "description": "Adds Cobalt and Magenta color themes for users to choose after a super administrator enables them."
+  },
+  "themes": {
+    "cobalt": "Cobalt",
+    "magenta": "Magenta"
+  }
+}

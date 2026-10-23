@@ -16,6 +16,7 @@ import {
 import invitation from '../../../plugins/invitation-codes/src/official.ts'
 import cdn from '../../../plugins/cdn-refresh/src/official.ts'
 import share from '../../../plugins/share-registration-link/src/official.ts'
+import colorThemes from '../../../plugins/color-themes/src/official.ts'
 import { expect, test } from 'vitest'
 
 const exec = promisify(execFile)
@@ -36,6 +37,7 @@ test.each([
   ['invitation-codes', invitation],
   ['cdn-refresh', cdn],
   ['share-registration-link', share],
+  ['color-themes', colorThemes],
 ] as const)(
   '构建官方插件 %s 并还原清单和文案',
   async (id, official) => {
