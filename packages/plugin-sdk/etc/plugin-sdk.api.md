@@ -773,6 +773,9 @@ export { Selectable }
 // @public (undocumented)
 export type SettingsSchema = z.ZodObject;
 
+// @public
+export type SlotName = 'user.dashboard' | 'admin.dashboard';
+
 // @public (undocumented)
 export interface StatsSourceResponse {
     // (undocumented)
@@ -897,6 +900,7 @@ export interface UiContributions<P> {
         readonly view: View;
     }>>;
     readonly themes?: readonly ThemeContribution[];
+    readonly widgets?: readonly WidgetContribution<P>[];
 }
 
 // @public
@@ -990,6 +994,27 @@ export type View = {
     readonly kind: 'markdown';
     readonly source: PluginPath;
 };
+
+// @public
+export interface WidgetContribution<P> {
+    readonly link?: {
+        readonly page: string;
+        readonly label: MessageKey;
+    };
+    readonly name: string;
+    readonly permission?: NoInfer<keyof P & string>;
+    // (undocumented)
+    readonly slot: SlotName;
+    // (undocumented)
+    readonly title: MessageKey;
+    // (undocumented)
+    readonly view: WidgetView;
+}
+
+// @public
+export type WidgetView = Extract<View, {
+    readonly kind: 'stats' | 'markdown';
+}>;
 
 export { z }
 

@@ -1,4 +1,11 @@
+import type { SlotName } from '@nextskin/plugin-sdk'
 import { z } from 'zod'
+
+export const widgetSlots = {
+  'user.dashboard': 'user',
+  'admin.dashboard': 'admin',
+} as const satisfies Record<SlotName, 'user' | 'admin'>
+export const MAX_WIDGETS_PER_SLOT = 2
 
 export const pluginPathSchema = z
   .string()

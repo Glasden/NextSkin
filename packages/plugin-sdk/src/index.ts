@@ -87,5 +87,8 @@ export {
   type ThemeColorValue,
   type ThemeContribution,
   type ThemeStructure,
+  type SlotName,
+  type WidgetView,
+  type WidgetContribution,
   type UiContributions,
 } from './ui.ts'
