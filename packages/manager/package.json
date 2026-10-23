@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint --max-warnings 0 .",
-    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p . && node ../../node_modules/typescript-native/bin/tsc -p scripts",
     "test": "vitest run"
   },
   "dependencies": {

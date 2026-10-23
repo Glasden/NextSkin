@@ -2,7 +2,15 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
-import { port, accountPort, setupNewPort, setupImportPort, pluginsPort, pluginsHostPort } from './e2e/ports'
+import {
+  port,
+  accountPort,
+  setupNewPort,
+  setupImportPort,
+  pluginsPort,
+  pluginsHostPort,
+  managerPort,
+} from './e2e/ports'
 
 const directories: string[] = []
 function temporaryDirectory(prefix: string): string {
@@ -44,7 +52,10 @@ const pluginsHostSite = `http://localhost:${pluginsHostPort}`
 const pluginsHostDataDirectory = (process.env.NEXTSKIN_E2E_PLUGINS_HOST_DATA_DIR ??=
   temporaryDirectory('nextskin-e2e-plugins-host-'))
 const oldSiteDirectory = (process.env.NEXTSKIN_E2E_OLD_SITE_DIR ??= temporaryDirectory('nextskin-e2e-bs-'))
-const server = { NEXTSKIN_SECRET: secret, NEXTSKIN_HOST: '127.0.0.1' }
+const managerSite = `http://localhost:${managerPort}`
+const managerDirectory = (process.env.NEXTSKIN_E2E_MANAGER_DIR ??= temporaryDirectory('nextskin-e2e-manager-'))
+// 六个服务共用发行目录：绕过管理锁，也不能把 current.json 等运行文件带进发布 ZIP。
+const server = { NEXTSKIN_SECRET: secret, NEXTSKIN_HOST: '127.0.0.1', NEXTSKIN_MANAGER: 'off' }
 // e2e 任务依赖 pnpm build 组装出的发行目录（turbo.json），每个服务都经启动器启动（ADR-0039）
 const start = 'node ../../dist/nextskin/nextskin.mjs start'
 // 收尾时给启动器发 SIGTERM，走它按顺序停止的路径（先收任务、再关 HTTP）；启动器最多等核心 30 秒
@@ -73,6 +84,7 @@ export default defineConfig<{ pluginHost: boolean }>({
         'captcha.spec.ts',
         'maintenance.spec.ts',
         'themes.spec.ts',
+        'manager.spec.ts',
       ],
     },
     {
@@ -102,6 +114,11 @@ export default defineConfig<{ pluginHost: boolean }>({
     },
     // 每个用例自己指定站点（两个未初始化的服务），用例之间不共享状态
     { name: 'setup', use: { ...devices['Desktop Chrome'] }, testMatch: ['setup.spec.ts'] },
+    {
+      name: 'manager',
+      use: { ...devices['Desktop Chrome'], baseURL: managerSite },
+      testMatch: ['manager.spec.ts'],
+    },
   ],
   webServer: [
     {
@@ -152,6 +169,18 @@ export default defineConfig<{ pluginHost: boolean }>({
       command: [`node ../../packages/importer/scripts/bs-sqlite-site.ts ${oldSiteDirectory}`, start].join(' && '),
       env: { ...server, NEXTSKIN_PORT: String(setupImportPort), NEXTSKIN_DATA_DIR: setupImportDataDirectory },
       url: `http://localhost:${setupImportPort}/api/health`,
+      reuseExistingServer: false,
+      gracefulShutdown,
+    },
+    {
+      command: [
+        `node ../../packages/manager/scripts/copy-instance.ts "${managerDirectory}"`,
+        `node ../../tests/contract/scripts/seed-sqlite.ts "${join(managerDirectory, 'data')}" ${managerSite}`,
+        `node "${join(managerDirectory, 'nextskin.mjs')}" start`,
+      ].join(' && '),
+      // 不传 NEXTSKIN_DATA_DIR：版本启动器必须把默认 data/ 放在实例目录下（ADR-0061）。
+      env: { NEXTSKIN_SECRET: secret, NEXTSKIN_HOST: '127.0.0.1', NEXTSKIN_PORT: String(managerPort) },
+      url: `${managerSite}/api/health`,
       reuseExistingServer: false,
       gracefulShutdown,
     },
