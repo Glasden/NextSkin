@@ -19,8 +19,58 @@ const migrationBackupsKey = Symbol.for('nextskin.migrationBackups')
 const holder = globalThis as typeof globalThis & { [migrationBackupsKey]?: Map<string, MigrationBackup> }
 const migrationBackups = (holder[migrationBackupsKey] ??= new Map<string, MigrationBackup>())
 
+type PluginMigrations = { plugin: string; migrations: string[] }[]
+type MigrationReport = { core: string[]; plugins: PluginMigrations; backup: string | null }
+
+async function backupMigrations(
+  config: CoreConfig,
+  pending: { core: string[]; plugins: PluginMigrations },
+  existing?: string,
+): Promise<string | null> {
+  const { database } = config
+  if (database.dialect !== 'sqlite' || database.file === ':memory:') return null
+  const key = JSON.stringify([resolve(database.file), pending])
+  if (existing) {
+    // 核心迁移成功、插件迁移失败后，下次只剩插件迁移，也要沿用核心迁移前的还原点。
+    migrationBackups.set(key, { backup: Promise.resolve(existing) })
+    return existing
+  }
+  let attempt = migrationBackups.get(key)
+  if (attempt?.failedAt !== undefined && Date.now() - attempt.failedAt >= 60_000) attempt = undefined
+  const reused = attempt !== undefined
+  if (!attempt) {
+    const first = pending.plugins[0]
+    const current: MigrationBackup = {
+      backup: backupSqlite({
+        file: database.file,
+        directory: config.backupDirectory,
+        label: pending.core[0] ?? `${first!.plugin}-${first!.migrations[0]}`,
+      }),
+    }
+    current.backup = current.backup.catch((error: unknown) => {
+      current.failedAt = Date.now()
+      throw error
+    })
+    migrationBackups.set(key, current)
+    attempt = current
+  }
+  // 核心尚未打开，同一批迁移沿用备份。期间手工改过库时须重启，清空内存记录后重新备份。
+  const file = await attempt.backup
+  const count = pending.core.length + pending.plugins.reduce((total, item) => total + item.migrations.length, 0)
+  console.info(
+    reused
+      ? `[nextskin] 有 ${count} 个迁移要执行，沿用本进程为这批迁移做的备份 ${file}；核心打不开期间手工改过库的话，请重启服务，会重新备份`
+      : `[nextskin] 有 ${count} 个迁移要执行，已先把数据库备份到 ${file}`,
+  )
+  return file
+}
+
 /** SQLite 已有核心迁移时先备份，再升级；全新库和其他方言直接迁移（ADR-0040）。 */
-export function migrateCore(db: Kysely<CoreDatabase>, config: CoreConfig): Promise<string[]> {
+export function migrateCore(
+  db: Kysely<CoreDatabase>,
+  config: CoreConfig,
+  options: { onBackup?(file: string): void } = {},
+): Promise<string[]> {
   const { database } = config
   // 单独的连接看不到同一个内存库；:memory: 直接迁移，不做文件备份。
   return migrateToLatest(
@@ -29,32 +79,8 @@ export function migrateCore(db: Kysely<CoreDatabase>, config: CoreConfig): Promi
     database.dialect === 'sqlite' && database.file !== ':memory:'
       ? {
           beforeUpgrade: async (pending) => {
-            const key = JSON.stringify([resolve(database.file), pending])
-            let attempt = migrationBackups.get(key)
-            if (attempt?.failedAt !== undefined && Date.now() - attempt.failedAt >= 60_000) attempt = undefined
-            const reused = attempt !== undefined
-            if (!attempt) {
-              const current: MigrationBackup = {
-                backup: backupSqlite({
-                  file: database.file,
-                  directory: config.backupDirectory,
-                  label: pending[0]!,
-                }),
-              }
-              current.backup = current.backup.catch((error: unknown) => {
-                current.failedAt = Date.now()
-                throw error
-              })
-              migrationBackups.set(key, current)
-              attempt = current
-            }
-            // 核心尚未打开，本进程没有改过库；同一批迁移沿用备份。期间手工改过库时须重启，清空内存记录后重新备份。
-            const file = await attempt.backup
-            console.info(
-              reused
-                ? `[nextskin] 有 ${pending.length} 个迁移要执行，沿用本进程为这批迁移做的备份 ${file}；核心打不开期间手工改过库的话，请重启服务，会重新备份`
-                : `[nextskin] 有 ${pending.length} 个迁移要执行，已先把数据库备份到 ${file}`,
-            )
+            const file = await backupMigrations(config, { core: pending, plugins: [] })
+            if (file) options.onBackup?.(file)
           },
         }
       : {},
@@ -78,11 +104,13 @@ export async function openCore(
     /** 插件系统的日志，默认写 stdout；管理插件的命令行有自己的输出，传空函数 */
     pluginLog?: (line: string) => void
   } = {},
-): Promise<{ core: Core; close(): Promise<void> }> {
+): Promise<{ core: Core; migrations: MigrationReport; close(): Promise<void> }> {
   if (config.database.dialect === 'sqlite') await mkdir(dirname(config.database.file), { recursive: true })
   const db = createDatabase<CoreDatabase>(config.database)
+  let opened: Core | undefined
   try {
-    await migrateCore(db, config)
+    const migrations: MigrationReport = { core: [], plugins: [], backup: null }
+    migrations.core = await migrateCore(db, config, { onBackup: (file) => (migrations.backup = file) })
     const renderCache = createLocalRenderCache(config.renderCacheDirectory)
     void renderCache.pruneOtherVersions().catch(() => console.warn('旧版出图缓存清理失败'))
     const core = createCore({
@@ -105,6 +133,16 @@ export async function openCore(
         }),
       },
     })
+    opened = core
+    migrations.plugins = await core.plugins.migrateEnabledOfficial({
+      beforeUpgrade: async (pending) => {
+        migrations.backup = await backupMigrations(
+          config,
+          { core: [], plugins: pending },
+          migrations.backup ?? undefined,
+        )
+      },
+    })
     // 先切到表里启用的插件，再启动执行器：插件的任务处理函数和定时任务要先登记上。
     // 命令行脚本也要切：它们的用例发出的事件同样要展开给已启用的插件
     await core.plugins.start()
@@ -117,6 +155,7 @@ export async function openCore(
     }
     return {
       core,
+      migrations,
       async close() {
         await core.schedules.stop()
         await core.jobs.stop()
@@ -125,6 +164,7 @@ export async function openCore(
       },
     }
   } catch (error) {
+    await opened?.shutdown().catch(() => {})
     await db.destroy()
     throw error
   }
