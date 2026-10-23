@@ -7,6 +7,58 @@
  */
 import { definePlugin, deny, secret, table, z, type ExternalIdentity } from '@nextskin/plugin-sdk'
 
+// 主题是数据，不需要能力；亮暗都可以省略或只写部分颜色。
+/* eslint-disable nextskin/no-raw-color -- 公开主题类型接受的色值是数据，需直接验证类型约束。 */
+definePlugin({
+  capabilities: [],
+  ui: {
+    themes: [
+      { name: 'cobalt', label: 'themes.cobalt', colors: { light: { accent: '#2a52e5' }, dark: { accent: '#86A2FF' } } },
+      { name: 'default', label: 'themes.default', colors: {} },
+      { name: 'light', label: 'themes.light', colors: { light: { focus: '#2a52e5' } } },
+      { name: 'dark', label: 'themes.dark', colors: { dark: { 'accent-subtle': '#282f41' } } },
+    ],
+  },
+})
+
+definePlugin({
+  capabilities: [],
+  ui: {
+    themes: [
+      {
+        name: 'typo',
+        label: 'themes.typo',
+        colors: {
+          light: {
+            // @ts-expect-error token 名必须属于公开的 ThemeColor
+            acent: '#2a52e5',
+          },
+        },
+      },
+    ],
+  },
+})
+
+definePlugin({
+  capabilities: [],
+  ui: {
+    themes: [
+      {
+        name: 'invalid',
+        label: 'themes.invalid',
+        colors: {
+          dark: {
+            // @ts-expect-error 色值必须以 # 开头，六位格式在构建时检查
+            accent: '86a2ff',
+          },
+        },
+      },
+    ],
+  },
+})
+
+/* eslint-enable nextskin/no-raw-color */
+
 // 转让事件不需要能力，携带新主人和原主人的 uid。
 definePlugin({
   capabilities: [],

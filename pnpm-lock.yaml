@@ -753,6 +753,9 @@ importers:
       '@nextskin/plugin-sdk':
         specifier: workspace:*
         version: link:../plugin-sdk
+      '@nextskin/theme':
+        specifier: workspace:*
+        version: link:../theme
       kysely:
         specifier: 'catalog:'
         version: 0.29.6

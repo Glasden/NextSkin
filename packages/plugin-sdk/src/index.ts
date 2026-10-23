@@ -83,5 +83,8 @@ export {
   type View,
   type TableSourceResponse,
   type StatsSourceResponse,
+  type ThemeColor,
+  type ThemeColorValue,
+  type ThemeContribution,
   type UiContributions,
 } from './ui.ts'

@@ -3,6 +3,7 @@ export { remoteDialect, NO_TRANSACTIONS, type CoreDialect, type PluginDbRpc } fr
 export {
   buildManifest,
   describePlugin,
+  pluginThemeIssues,
   PluginDefinitionError,
   PLUGIN_API_VERSION,
   pluginApiRange,
@@ -13,6 +14,8 @@ export {
   type ExtractedPluginManifest,
   type PluginPackageJson,
 } from './manifest.ts'
+// 构建命令通过 host 使用同一份检查文案，随 host 一起打进单文件。
+export { describeThemeIssue } from '@nextskin/theme'
 export { eventNames } from './events.ts'
 export { hasPluginMessage, translatePlugin, type PluginMessages } from './messages.ts'
 export {

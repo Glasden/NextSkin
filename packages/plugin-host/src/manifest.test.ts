@@ -1,5 +1,6 @@
-import { definePlugin, secret, table } from '@nextskin/plugin-sdk'
-import { expect, test } from 'vitest'
+import { definePlugin, secret, table, type ThemeColor } from '@nextskin/plugin-sdk'
+import type { ThemeColorName } from '@nextskin/theme'
+import { expect, expectTypeOf, test } from 'vitest'
 import { z } from 'zod'
 import sdkPackage from '@nextskin/plugin-sdk/package.json' with { type: 'json' }
 import {
@@ -8,11 +9,92 @@ import {
   PLUGIN_API_VERSION,
   pluginApiRange,
   PluginDefinitionError,
+  pluginThemeIssues,
   type AnyPluginDefinition,
 } from './manifest.ts'
 import { satisfies } from './package/semver.ts'
 
 const pkg = { name: '@test/example', version: '1.2.3', nextskin: { id: 'example' } }
+
+/* eslint-disable nextskin/no-raw-color -- 主题校验的输入数据，需要覆盖合法色值和非法格式。 */
+test('SDK 的公开颜色和核心可改颜色完全相同', () => {
+  expectTypeOf<ThemeColor>().toEqualTypeOf<ThemeColorName>()
+})
+
+test('主题提取为小写，不修改定义，也不因配色失效拒绝提取', () => {
+  const definition = definePlugin({
+    capabilities: [],
+    ui: {
+      themes: [
+        {
+          name: 'cobalt',
+          label: 'themes.cobalt',
+          colors: { light: { accent: '#2A52E5' }, dark: { accent: '#86A2FF' } },
+        },
+        { name: 'empty', label: 'themes.empty', colors: {} },
+        { name: 'invalid', label: 'themes.invalid', colors: { light: { accent: '#FFFFFF' } } },
+      ],
+    },
+  })
+  const manifest = buildManifest(definition, pkg)
+  expect(manifest.ui.themes![0]!.colors).toEqual({ light: { accent: '#2a52e5' }, dark: { accent: '#86a2ff' } })
+  expect(definition.ui!.themes![0]!.colors.light!.accent).toBe('#2A52E5')
+  expect(pluginThemeIssues(manifest)).toEqual([
+    {
+      name: 'invalid',
+      issues: expect.arrayContaining([
+        expect.objectContaining({ mode: 'light', check: 'contrast', pair: ['accent-fg', 'accent'] }),
+      ]) as unknown,
+    },
+  ])
+  expect(pluginThemeIssues(buildManifest(definePlugin({ capabilities: [] }), pkg))).toEqual([])
+})
+
+test.each(
+  [
+    null,
+    {},
+    [null],
+    [{ name: 'Bad', label: 'x', colors: {} }],
+    [{ name: 'a--b', label: 'x', colors: {} }],
+    [{ name: 'a'.repeat(33), label: 'x', colors: {} }],
+    [{ name: 'a', colors: {} }],
+    [{ name: 'a', label: 1, colors: {} }],
+    [{ name: 'a', label: 'x' }],
+    [{ name: 'a', label: 'x', colors: null }],
+    [{ name: 'a', label: 'x', colors: [] }],
+    [{ name: 'a', label: 'x', colors: { light: null } }],
+    [{ name: 'a', label: 'x', colors: { dark: [] } }],
+    [{ name: 'a', label: 'x', colors: { auto: {} } }],
+    ...['stage', 'checker-a', 'checker-b', 'acent'].map((name) => [
+      { name: 'a', label: 'x', colors: { light: { [name]: '#ffffff' } } },
+    ]),
+    ...['fff', '#fff', '#ffffffff', '#gggggg', '#ffffff\n', 'rgb(0 0 0)', 1, null].map((accent) => [
+      { name: 'a', label: 'x', colors: { dark: { accent } } },
+    ]),
+    [{ name: 'a', label: 'x', colors: {}, extra: true }],
+    Array.from({ length: 2 }, () => ({ name: 'same', label: 'x', colors: {} })),
+    Array.from({ length: 17 }, (_, i) => ({ name: `theme-${i}`, label: 'x', colors: {} })),
+  ].map((themes) => ({ themes })),
+)('主题形状错误时拒绝提取：%j', ({ themes }) => {
+  expect(() => describePlugin({ capabilities: [], ui: { themes } } as unknown as AnyPluginDefinition)).toThrow(
+    /ui.themes/,
+  )
+})
+
+test('主题名 32 字符、16 套可用，未知 ui 项仍被拒绝', () => {
+  const themes = Array.from({ length: 16 }, (_, i) => ({
+    name: `${'a'.repeat(30)}${String(i).padStart(2, '0')}`,
+    label: 'x',
+    colors: {},
+  }))
+  expect(describePlugin(definePlugin({ capabilities: [], ui: { themes } })).ui.themes).toHaveLength(16)
+  expect(() => describePlugin({ capabilities: [], ui: { unknown: [] } } as unknown as AnyPluginDefinition)).toThrow(
+    'unknown',
+  )
+})
+
+/* eslint-enable nextskin/no-raw-color */
 
 test.each(['Bad', 'a_b', 'a--b', '../a', '1a', 'a-'])('buildManifest 拒绝非法 id %s', (id) => {
   expect(() => buildManifest(definePlugin({ capabilities: [] }), { ...pkg, nextskin: { id } })).toThrow(

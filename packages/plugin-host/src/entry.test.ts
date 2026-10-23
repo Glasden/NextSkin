@@ -11,11 +11,12 @@ import type { CoreToHost, HostToCore, HostPluginSpec } from './protocol.ts'
 
 const repository = fileURLToPath(new URL('../../../', import.meta.url))
 
-test('源码模式只允许 host、SDK 和依赖各自的 pnpm 层，不允许应用和共享依赖目录', () => {
+test('源码模式只允许 host、SDK、主题包和依赖各自的 pnpm 层，不允许应用和共享依赖目录', () => {
   const { readPaths } = pluginHostEntry({ root: repository, bundled: false })
   const modules = join(repository, 'node_modules')
   expect(readPaths).toContain(join(repository, 'packages', 'plugin-host'))
   expect(readPaths).toContain(join(repository, 'packages', 'plugin-sdk'))
+  expect(readPaths).toContain(join(repository, 'packages', 'theme'))
   expect(readPaths).not.toContain(modules)
   expect(readPaths).not.toContain(join(modules, '.pnpm'))
   expect(readPaths).not.toContain(join(modules, '.pnpm', 'node_modules'))

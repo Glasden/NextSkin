@@ -5,6 +5,7 @@ import type { Json } from './dto.ts'
  *
  * 全部是声明式的：插件只描述"要什么"，由核心用 @nextskin/ui 的组件渲染。
  * 这样插件界面自动继承站点的视觉语言、暗色模式和无障碍处理，插件也拿不到浏览器里的执行权。
+ * 配色主题也只交数据：在 `themes` 里声明要改的颜色，由核心检查并生成 CSS，不需要能力。
  *
  * 插件的名字和简介显示在后台的插件页，按约定取文案键 `plugin.name`、`plugin.description`；没写名字就显示 id。
  *
@@ -124,6 +125,51 @@ export interface StatsSourceResponse {
   readonly items: readonly { readonly label: MessageKey; readonly value: number | string }[]
 }
 
+/**
+ * 主题能改的颜色，和核心 theme.css 里的 `--color-*` 同名（不带前缀）。它们是公开 API：改名或删除是大版本。
+ * 展台 `stage` 和透明区域的棋盘格 `checker-a`、`checker-b` 锁住，在任何主题下都取默认值（ADR-0057）
+ */
+export type ThemeColor =
+  | 'bg'
+  | 'surface'
+  | 'surface-raised'
+  | 'surface-sunken'
+  | 'border'
+  | 'border-strong'
+  | 'text'
+  | 'text-muted'
+  | 'text-inverse'
+  | 'accent'
+  | 'accent-fg'
+  | 'accent-subtle'
+  | 'success'
+  | 'success-fg'
+  | 'warning'
+  | 'warning-fg'
+  | 'danger'
+  | 'danger-fg'
+  | 'focus'
+  | 'shadow'
+
+/** `#rrggbb`，不分大小写 */
+export type ThemeColorValue = `#${string}`
+
+/**
+ * 一套配色主题：只是数据，核心检查对比度后生成 CSS。主题 id 是 `<插件 id>/<name>`。
+ * 只写要改的颜色：没写的 `focus` 跟着 `accent`，`accent-subtle` 由 `accent` 混入 `surface` 得到，其余取默认主题钻石青
+ */
+export interface ThemeContribution {
+  /** `[a-z][a-z0-9]*(-[a-z0-9]+)*`，最多 32 个字符，同一插件内不重复；一个插件最多 16 套 */
+  readonly name: string
+  /** 主题名的文案键，例如 `themes.cobalt` */
+  readonly label: MessageKey
+  /** 亮色、暗色下要改的颜色，都可以省略 */
+  readonly colors: {
+    readonly light?: Readonly<Partial<Record<ThemeColor, ThemeColorValue>>>
+    readonly dark?: Readonly<Partial<Record<ThemeColor, ThemeColorValue>>>
+  }
+}
+
 export interface UiContributions<P> {
   readonly nav?: readonly {
     readonly area: 'user' | 'admin'
@@ -146,4 +192,6 @@ export interface UiContributions<P> {
     >
   >
   readonly formFields?: readonly FormFieldContribution[]
+  /** 配色主题：新带来的主题默认不启用，由超级管理员在后台的主题页启用（ADR-0057） */
+  readonly themes?: readonly ThemeContribution[]
 }

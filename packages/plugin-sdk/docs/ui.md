@@ -122,3 +122,7 @@ formFields: [
 这里与插件自己的 form 不同：extra 统一是字符串。文本 trim，默认最多 1000 个 Unicode 码点，禁止 NUL；空值省略，必填空值报错。number 须能转为有限数字，select 须在 options 中。boolean 转成"true"/"false"，required boolean 必须为 true。错误字段键为 `<插件id>.<字段名>`。不要把密码、令牌当成注册 extra，因为它会进入持久事件载荷。
 
 完整例子见 [invitation-codes](https://github.com/Glasden/NextSkin/tree/main/plugins/invitation-codes) 和 [cdn-refresh](https://github.com/Glasden/NextSkin/tree/main/plugins/cdn-refresh)。
+
+## 配色主题
+
+`ui.themes` 可以声明多套配色主题，不需要能力。主题只交颜色数据，由核心补齐、检查并生成 CSS；新主题默认不启用，由超级管理员在后台主题页启用，用户在用户中心选择。可改的 token、推导和检查规则见[配色主题](./themes.md)。

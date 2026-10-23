@@ -1,4 +1,5 @@
 import { capabilities, interceptorPolicies, type PluginManifest } from '@nextskin/plugin-sdk'
+import { MAX_THEME_NAME_LENGTH, THEME_NAME, themeColorNames } from '@nextskin/theme'
 import { z } from 'zod'
 import { eventNames } from '../events.ts'
 import { KEY, MAX_BODY_BYTES, MAX_LOGIN_ID_LENGTH, OBJECT_NAME, PLUGIN_ID, ROUTE_KEY, validateUi } from '../manifest.ts'
@@ -53,6 +54,18 @@ const view = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('markdown'), source: path }),
 ])
 const ui = z.strictObject({
+  themes: z
+    .array(
+      z.strictObject({
+        name: matching(THEME_NAME).max(MAX_THEME_NAME_LENGTH),
+        label: z.string(),
+        colors: z.strictObject({
+          light: z.partialRecord(z.enum(themeColorNames), matching(/^#[0-9a-f]{6}$/i)).optional(),
+          dark: z.partialRecord(z.enum(themeColorNames), matching(/^#[0-9a-f]{6}$/i)).optional(),
+        }),
+      }),
+    )
+    .optional(),
   nav: z.array(z.strictObject({ area, page: z.string(), label: z.string(), icon: z.string() })).optional(),
   pages: z
     .record(
