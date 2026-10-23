@@ -1,5 +1,5 @@
-import { definePlugin, secret, table, type ThemeColor } from '@nextskin/plugin-sdk'
-import type { ThemeColorName } from '@nextskin/theme'
+import { definePlugin, secret, table, type ThemeColor, type ThemeStructure } from '@nextskin/plugin-sdk'
+import type { ThemeColorName, ThemeStructure as CoreThemeStructure } from '@nextskin/theme'
 import { expect, expectTypeOf, test } from 'vitest'
 import { z } from 'zod'
 import sdkPackage from '@nextskin/plugin-sdk/package.json' with { type: 'json' }
@@ -21,6 +21,10 @@ test('SDK 的公开颜色和核心可改颜色完全相同', () => {
   expectTypeOf<ThemeColor>().toEqualTypeOf<ThemeColorName>()
 })
 
+test('SDK 的公开结构和核心的键、取值完全相同', () => {
+  expectTypeOf<ThemeStructure>().toEqualTypeOf<CoreThemeStructure>()
+})
+
 test('主题提取为小写，不修改定义，也不因配色失效拒绝提取', () => {
   const definition = definePlugin({
     capabilities: [],
@@ -29,6 +33,7 @@ test('主题提取为小写，不修改定义，也不因配色失效拒绝提�
         {
           name: 'cobalt',
           label: 'themes.cobalt',
+          structure: { radius: 'square', borders: 'thick', cards: 'raised' },
           colors: { light: { accent: '#2A52E5' }, dark: { accent: '#86A2FF' } },
         },
         { name: 'empty', label: 'themes.empty', colors: {} },
@@ -38,6 +43,7 @@ test('主题提取为小写，不修改定义，也不因配色失效拒绝提�
   })
   const manifest = buildManifest(definition, pkg)
   expect(manifest.ui.themes![0]!.colors).toEqual({ light: { accent: '#2a52e5' }, dark: { accent: '#86a2ff' } })
+  expect(manifest.ui.themes![0]!.structure).toEqual({ radius: 'square', borders: 'thick', cards: 'raised' })
   expect(definition.ui!.themes![0]!.colors.light!.accent).toBe('#2A52E5')
   expect(pluginThemeIssues(manifest)).toEqual([
     {
@@ -81,6 +87,21 @@ test.each(
     /ui.themes/,
   )
 })
+
+test.each([null, [], { shadow: 'none' }, { radius: 'round' }, { borders: 'wide' }, { cards: 'floating' }])(
+  '结构形状错误时拒绝提取并指出 structure：%j',
+  (structure) => {
+    expect(() =>
+      buildManifest(
+        {
+          capabilities: [],
+          ui: { themes: [{ name: 'a', label: 'themes.a', colors: {}, structure }] },
+        } as unknown as AnyPluginDefinition,
+        pkg,
+      ),
+    ).toThrow(/structure/)
+  },
+)
 
 test('主题名 32 字符、16 套可用，未知 ui 项仍被拒绝', () => {
   const themes = Array.from({ length: 16 }, (_, i) => ({

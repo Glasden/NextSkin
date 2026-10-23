@@ -86,5 +86,6 @@ export {
   type ThemeColor,
   type ThemeColorValue,
   type ThemeContribution,
+  type ThemeStructure,
   type UiContributions,
 } from './ui.ts'

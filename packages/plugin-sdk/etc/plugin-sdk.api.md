@@ -848,7 +848,7 @@ export interface TexturesApi {
 export type TextureType = 'steve' | 'alex' | 'cape' | (string & {});
 
 // @public
-export type ThemeColor = 'bg' | 'surface' | 'surface-raised' | 'surface-sunken' | 'border' | 'border-strong' | 'text' | 'text-muted' | 'text-inverse' | 'accent' | 'accent-fg' | 'accent-subtle' | 'success' | 'success-fg' | 'warning' | 'warning-fg' | 'danger' | 'danger-fg' | 'focus' | 'shadow';
+export type ThemeColor = 'bg' | 'surface' | 'surface-raised' | 'surface-sunken' | 'border' | 'border-strong' | 'text' | 'text-muted' | 'text-inverse' | 'accent' | 'accent-fg' | 'accent-subtle' | 'accent-fill' | 'accent-fill-fg' | 'success' | 'success-fg' | 'warning' | 'warning-fg' | 'danger' | 'danger-fg' | 'focus' | 'shadow';
 
 // @public
 export type ThemeColorValue = `#${string}`;
@@ -861,6 +861,14 @@ export interface ThemeContribution {
     };
     readonly label: MessageKey;
     readonly name: string;
+    readonly structure?: ThemeStructure;
+}
+
+// @public
+export interface ThemeStructure {
+    readonly borders?: 'thin' | 'thick';
+    readonly cards?: 'flat' | 'raised';
+    readonly radius?: 'rounded' | 'square';
 }
 
 // @public (undocumented)

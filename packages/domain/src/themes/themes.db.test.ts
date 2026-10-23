@@ -1,6 +1,6 @@
 import { toIsoTimestamp, upsert } from '@nextskin/db'
 import { definePlugin } from '@nextskin/plugin-sdk'
-import { checkTheme, contrastRatio, resolveTheme, themeCss } from '@nextskin/theme'
+import { checkTheme, contrastRatio, diamondStructure, resolveTheme, themeCss } from '@nextskin/theme'
 import { buildManifest, packPluginPackage, sha256Hex } from '@nextskin/plugin-host'
 import { expect, test } from 'vitest'
 import { official, pluginEnvironment } from '../plugins/plugins.test-helper.ts'
@@ -44,11 +44,42 @@ test('钻石青、插件 id 和声明顺序；新主题默认不启用，小样�
     pluginId: null,
     label: 'diamond',
     default: true,
-    css: themeCss('diamond', resolveTheme()),
+    css: themeCss('diamond', resolveTheme(), diamondStructure),
   })
-  expect(view.themes[1]).toMatchObject({ pluginId: 'a', label: 'themes.one', css: themeCss('a/one', resolveTheme()) })
+  expect(view.themes[1]).toMatchObject({
+    pluginId: 'a',
+    label: 'themes.one',
+    css: themeCss('a/one', resolveTheme(), diamondStructure),
+  })
   expect(await env.core.themes.current(null)).toEqual({ id: 'diamond', css: null })
   expect(await env.core.themes.selectableCount()).toBe(1)
+})
+
+test('插件结构进入列表和当前主题的 CSS，钻石青的小样显式写默认结构', async () => {
+  await env.boot([
+    official(
+      'structured',
+      definePlugin({
+        capabilities: [],
+        ui: {
+          themes: [{ ...contribution('one'), structure: { radius: 'square', borders: 'thick', cards: 'raised' } }],
+        },
+      }),
+    ),
+  ])
+  const actor = await env.actor()
+  await env.core.plugins.admin.enable(actor, 'structured')
+  await env.core.themes.update(actor, { enable: 'structured/one' })
+  await env.core.themes.setTheme(actor, 'structured/one')
+  const view = await env.core.themes.adminView(actor)
+  expect(view.themes[0]!.css).toContain('--radius-sm:2px;')
+  const css = view.themes[1]!.css
+  expect(css).toContain('--radius-sm:0;')
+  expect(css).toContain('--border-width-base:2px;')
+  expect(css).toContain('--outline-width-selected:4px;')
+  expect(css).toContain('--card-shadow:4px 4px 0 0 var(--color-shadow);')
+  expect(await env.core.themes.current(actor.uid)).toEqual({ id: 'structured/one', css })
+  expect((await env.core.themes.userView(actor.uid)).themes.find(({ id }) => id === 'structured/one')?.css).toBe(css)
 })
 
 test('用户可选、跟随默认、已失效的选择和默认不可用时回落；读不改写存着的值', async () => {
@@ -56,7 +87,10 @@ test('用户可选、跟随默认、已失效的选择和默认不可用时回�
   await env.core.themes.update(actor, { default: 'a/one' })
   await env.core.themes.update(actor, { enable: 'b/one' })
   await env.core.themes.setTheme(actor, 'b/one')
-  expect(await env.core.themes.current(actor.uid)).toEqual({ id: 'b/one', css: themeCss('b/one', resolveTheme()) })
+  expect(await env.core.themes.current(actor.uid)).toEqual({
+    id: 'b/one',
+    css: themeCss('b/one', resolveTheme(), diamondStructure),
+  })
   expect((await env.core.themes.current(null)).id).toBe('a/one')
   await env.core.themes.update(actor, { disable: 'b/one' })
   expect(await env.core.themes.userView(actor.uid)).toMatchObject({

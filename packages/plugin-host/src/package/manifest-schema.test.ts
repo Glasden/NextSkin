@@ -14,7 +14,12 @@ const base = { ...buildManifest(definePlugin({ capabilities: [] }), pkg), entry:
 /* eslint-disable nextskin/no-raw-color -- manifest 的主题是色值数据，这里校验合法输入和非法格式。 */
 test('安装清单允许部分主题和大写色值，形状校验不拒绝失效配色', () => {
   const themes = [
-    { name: 'partial', label: 'themes.partial', colors: { dark: { accent: '#86A2FF' } } },
+    {
+      name: 'partial',
+      label: 'themes.partial',
+      structure: { radius: 'square' },
+      colors: { dark: { accent: '#86A2FF', 'accent-fill': '#86A2FF', 'accent-fill-fg': '#000000' } },
+    },
     { name: 'empty', label: 'themes.empty', colors: {} },
     { name: 'invalid', label: 'themes.invalid', colors: { light: { accent: '#ffffff' } } },
   ]
@@ -49,6 +54,15 @@ test.each(
   expect(() => parsePluginManifest({ ...base, ui: { themes } })).toThrow(PluginPackageError)
   expect(() => parsePluginManifest({ ...base, ui: { themes } })).toThrow(/ui/)
 })
+
+test.each([null, [], { shadow: 'none' }, { radius: 'round' }, { borders: 'wide' }, { cards: 'floating' }])(
+  '安装清单拒绝错误结构并指出 structure：%j',
+  (structure) => {
+    expect(() =>
+      parsePluginManifest({ ...base, ui: { themes: [{ name: 'a', label: 'themes.a', colors: {}, structure }] } }),
+    ).toThrow(/structure/)
+  },
+)
 
 /* eslint-enable nextskin/no-raw-color */
 

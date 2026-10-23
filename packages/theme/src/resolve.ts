@@ -1,5 +1,6 @@
 import { isHexColor, mix } from './color.ts'
 import { diamond } from './diamond.ts'
+import { themeStructureError, type ThemeStructure } from './structure.ts'
 import {
   colorModes,
   MAX_PLUGIN_THEMES,
@@ -27,8 +28,8 @@ export const ACCENT_SUBTLE_WEIGHT: Readonly<Record<ColorMode, number>> = { light
 const editable = new Set<string>(themeColorNames)
 
 /**
- * 补齐一套主题：没写的 token 先按推导补（focus 等于 accent，accent-subtle 是 accent 混入 surface），
- * 其余的取钻石青；锁住的颜色总是钻石青。色值存成小写。只认可改的 token，别的键忽略，形状由 themeColorsError 检查
+ * 补齐一套主题：没写的 token 先按推导补（focus 等于 accent，accent-subtle 是 accent 混入 surface，
+ * accent-fill 和 accent-fill-fg 等于 accent 和 accent-fg），其余的取钻石青；锁住的颜色总是钻石青。色值存成小写。只认可改的 token，别的键忽略，形状由 themeColorsError 检查
  */
 export function resolveTheme(colors: ThemeColors = {}): ResolvedTheme {
   const resolve = (mode: ColorMode) => {
@@ -37,6 +38,8 @@ export function resolveTheme(colors: ThemeColors = {}): ResolvedTheme {
       if (editable.has(name) && isHexColor(value)) given[name as ThemeColorName] = value.toLowerCase() as HexColor
     const result: Record<ColorName, HexColor> = { ...diamond[mode], ...given }
     if (given.focus === undefined) result.focus = result.accent
+    if (given['accent-fill'] === undefined) result['accent-fill'] = result.accent
+    if (given['accent-fill-fg'] === undefined) result['accent-fill-fg'] = result['accent-fg']
     if (given['accent-subtle'] === undefined)
       result['accent-subtle'] = mix(result.accent, result.surface, ACCENT_SUBTLE_WEIGHT[mode])
     return result
@@ -69,6 +72,7 @@ export interface PluginTheme {
   readonly name: string
   readonly label: string
   readonly colors: ThemeColors
+  readonly structure?: ThemeStructure
 }
 
 /** 插件的 `ui.themes` 形状不对时返回原因，对了返回 null。不查对比度，那是 checkTheme 的事 */
@@ -79,14 +83,15 @@ export function pluginThemesError(value: unknown): string | null {
   for (const [index, theme] of value.entries()) {
     if (!plain(theme)) return `themes[${index}] 必须是对象`
     for (const key of Object.keys(theme))
-      if (key !== 'name' && key !== 'label' && key !== 'colors') return `themes[${index}] 里没有 ${key} 这一项`
-    const { name, label, colors } = theme
+      if (key !== 'name' && key !== 'label' && key !== 'colors' && key !== 'structure')
+        return `themes[${index}] 里没有 ${key} 这一项`
+    const { name, label, colors, structure } = theme
     if (typeof name !== 'string' || name.length > MAX_THEME_NAME_LENGTH || !THEME_NAME.test(name))
       return `themes[${index}] 的 name 只能用小写字母、数字和单个连字符，最多 ${MAX_THEME_NAME_LENGTH} 个字符`
     if (names.has(name)) return `主题 ${name} 重复了`
     names.add(name)
     if (typeof label !== 'string') return `主题 ${name} 的 label 必须是文案键`
-    const error = themeColorsError(colors)
+    const error = themeColorsError(colors) ?? (structure === undefined ? null : themeStructureError(structure))
     if (error) return `主题 ${name} 的 ${error}`
   }
   return null

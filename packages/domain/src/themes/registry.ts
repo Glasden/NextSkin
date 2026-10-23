@@ -1,9 +1,12 @@
 import {
   checkTheme,
   DIAMOND,
+  diamondStructure,
   pluginThemeId,
+  resolveStructure,
   resolveTheme,
   themeCss,
+  type ResolvedStructure,
   type ResolvedTheme,
   type ThemeIssue,
 } from '@nextskin/theme'
@@ -27,9 +30,16 @@ export interface InvalidTheme {
 
 export function createThemeRegistry(plugins: Pick<PluginSystem, 'activeUi'>) {
   const resolved = resolveTheme()
-  const diamond = { entry: { id: DIAMOND, pluginId: null, label: DIAMOND, css: themeCss(DIAMOND, resolved) }, resolved }
+  const diamond = {
+    entry: { id: DIAMOND, pluginId: null, label: DIAMOND, css: themeCss(DIAMOND, resolved, diamondStructure) },
+    resolved,
+    structure: diamondStructure,
+  }
   type Ui = ReturnType<PluginSystem['activeUi']>[number]['ui']
-  const cache = new WeakMap<Ui, { themes: (ThemeEntry & { resolved: ResolvedTheme })[]; invalid: InvalidTheme[] }>()
+  const cache = new WeakMap<
+    Ui,
+    { themes: (ThemeEntry & { resolved: ResolvedTheme; structure: ResolvedStructure })[]; invalid: InvalidTheme[] }
+  >()
   return () => {
     const themes: ThemeEntry[] = [{ ...diamond.entry }]
     const invalid: InvalidTheme[] = []
@@ -40,9 +50,18 @@ export function createThemeRegistry(plugins: Pick<PluginSystem, 'activeUi'>) {
         for (const theme of ui.themes ?? []) {
           const id = pluginThemeId(pluginId, theme.name)
           const resolved = resolveTheme(theme.colors)
+          const structure = resolveStructure(theme.structure)
           const issues = checkTheme(resolved)
           if (issues.length) entries.invalid.push({ id, pluginId, label: theme.label, issues })
-          else entries.themes.push({ id, pluginId, label: theme.label, css: themeCss(id, resolved), resolved })
+          else
+            entries.themes.push({
+              id,
+              pluginId,
+              label: theme.label,
+              css: themeCss(id, resolved, structure),
+              resolved,
+              structure,
+            })
         }
         cache.set(ui, entries)
       }

@@ -87,9 +87,11 @@
 | `text` | `#14171c` | `#e7e9ec` | 正文 |
 | `text-muted` | `#5a616c` | `#9ba2ad` | 次要文字 |
 | `text-inverse` | `#ffffff` | `#0e1013` | 以 text 为底色时的文字（深色徽标、名牌） |
-| `accent` | `#08736b` | `#3dd6c4` | 强调色：主要按钮、链接、选中态、标志的前脸 |
-| `accent-fg` | `#ffffff` | `#0e1013` | 强调色上的文字 |
+| `accent` | `#08736b` | `#3dd6c4` | 强调色，画在表面上：链接、图标、选中态、指示条 |
+| `accent-fg` | `#ffffff` | `#0e1013` | 强调色的选中态上的文字和勾 |
 | `accent-subtle` | `#e1eeed` | `#1c3738` | 强调色淡底：选中的表格行、筛选标签、导航当前项、公告条 |
+| `accent-fill` | `#08736b` | `#3dd6c4` | 强调色的色块：主要按钮、标志的前脸、领奖台第一名、当前步骤，靠上面的字和阴影辨认 |
+| `accent-fill-fg` | `#ffffff` | `#0e1013` | 色块上的文字和图形 |
 | `success` | `#3a7a14` | `#8fce4f` | 成功；色相偏黄，和强调色拉开 |
 | `success-fg` | `#ffffff` | `#0e1013` | 成功色上的文字 |
 | `warning` | `#985a00` | `#f0a63c` | 警告 |
@@ -104,8 +106,12 @@
 | Token | 值 | 用途 |
 |---|---|---|
 | `radius-none` | `0` | 直角 |
-| `radius-sm` | `2px` | 控件、徽标 |
-| `radius-md` | `4px` | 卡片、面板；不提供更大的圆角 |
+| `radius-sm` | `2px` | 控件、徽标；主题选直角时是 0（ADR-0058） |
+| `radius-md` | `4px` | 卡片、面板；不提供更大的圆角；主题选直角时是 0 |
+| `border-width-base` | `1px` | 常规边框；主题选粗边框时是 2px |
+| `default-border-width` | `var(--border-width-base)` | border、border-b、divide-y 这些不写粗细的读它 |
+| `outline-width-selected` | `2px` | 选中的卡片和选项的框，总是常规边框的两倍 |
+| `card-shadow` | `0 0 #0000` | 面板和卡片静止时的阴影；不放进 --shadow-*（Tailwind 会把值内联进工具类，主题改不了），没有阴影也不写 none（它在 box-shadow 的列表里会让整条声明失效） |
 | `shadow-pixel` | `2px 2px 0 0 var(--color-shadow)` | 按钮；按下时下沉 2px、阴影消失 |
 | `shadow-pixel-lg` | `4px 4px 0 0 var(--color-shadow)` | 面板、对话框、悬停抬起的卡片 |
 | `font-sans` | `-apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif` | 正文、表单、按钮、用户产生的内容 |

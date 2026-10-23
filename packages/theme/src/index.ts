@@ -25,6 +25,16 @@ export {
   type ThemeColorName,
 } from './names.ts'
 export {
+  diamondStructure,
+  resolveStructure,
+  structureVariables,
+  themeStructureError,
+  themeStructureOptions,
+  type ResolvedStructure,
+  type ThemeStructure,
+  type ThemeStructureKey,
+} from './structure.ts'
+export {
   ACCENT_SUBTLE_WEIGHT,
   normalizeThemeColors,
   pluginThemesError,
