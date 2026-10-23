@@ -227,6 +227,13 @@
     "illustration": "Skin by {name}",
     "email": "Email",
     "password": "Password",
+    "passwordStrength": {
+      "label": "Password strength: {level}",
+      "weak": "Weak",
+      "fair": "Fair",
+      "strong": "Strong",
+      "veryStrong": "Very strong"
+    },
     "backToSignIn": "Back to sign in",
     "signIn": {
       "title": "Sign in",
