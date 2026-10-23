@@ -1219,7 +1219,8 @@
       "plugins": "插件",
       "failedJobs": "失败任务",
       "oauthClients": "OAuth 应用",
-      "notifications": "通知"
+      "notifications": "通知",
+      "updates": "更新"
     },
     "roles": {
       "banned": "已封禁",
@@ -1246,6 +1247,8 @@
       "pendingAction": "去处理",
       "failedJobsAlert": "有 {count, plural, other {#}} 个后台任务失败了，不会再自动执行。",
       "failedJobsAction": "去看看",
+      "updateAlert": "NextSkin {version} 已发布。",
+      "updateAction": "查看更新",
       "recentAudit": "最近的管理操作",
       "allAudit": "查看全部",
       "noAudit": "还没有管理操作。",
@@ -2247,6 +2250,54 @@
           "createdAt": "时间"
         }
       }
+    },
+    "updates": {
+      "title": "更新",
+      "description": "检查有没有新版本，以及这个站点该怎么升级。每天自动检查一次，只读取 dl.nextskin.org 上签过名的版本清单，不发送站点的任何信息。",
+      "current": "当前版本",
+      "deployments": {
+        "bundle": "发行包",
+        "docker": "Docker 镜像",
+        "source": "源码运行"
+      },
+      "checkedAt": "上次检查：{time}",
+      "neverChecked": "还没检查过",
+      "check": "立即检查",
+      "checked": "已检查",
+      "latest": "新版本",
+      "releasedAt": "发布于 {date}",
+      "notes": "发布说明",
+      "upToDate": "已是最新版本",
+      "upToDateHint": "有新的正式版时，这里和通知里都会提示。",
+      "unknown": "还不知道有没有新版本",
+      "unknownHint": "点“立即检查”，或者等每天的自动检查。",
+      "nodeTooOld": "这个版本需要 Node {required} 或更新，服务器上是 {current}。升级之前先换 Node。",
+      "disabledTitle": "更新检查已关闭",
+      "disabled": "不会再去读版本清单，也不会提示新版本。",
+      "enable": "去高级设置里打开",
+      "failureTitle": "上次检查没有成功",
+      "failures": {
+        "network": "{time} 没连上 dl.nextskin.org，可能是网络或代理的问题。",
+        "http": "{time} dl.nextskin.org 返回了 HTTP {status}。",
+        "invalid": "{time} 读到的版本清单格式不对，或者签名校验不过，已经忽略。",
+        "too_large": "{time} 读到的版本清单太大，已经忽略。"
+      },
+      "failureHint": "下面显示的是上一次成功检查的结果。",
+      "how": "怎么升级",
+      "sourceTitle": "源码运行时不检查更新",
+      "source": "在仓库里拉取新的代码、重新构建。正式部署请用发行包或镜像。",
+      "dockerSteps": {
+        "backup": "先备份数据卷。SQLite 在执行迁移之前会自动备份到数据目录，MySQL、PostgreSQL 请自己备份。",
+        "pull": "拉取新镜像并重建容器：",
+        "after": "升级之后不能直接换回旧镜像：有迁移时，旧版本打不开迁移过的库，回退要先恢复备份。"
+      },
+      "bundleSteps": {
+        "download": "从 GitHub Releases 下载新版本的 ZIP，用同一页的 SHA256SUMS 核对。",
+        "stop": "停止服务，先备份。SQLite 在执行迁移之前会自动备份到数据目录，MySQL、PostgreSQL 请自己备份。",
+        "unzip": "把 ZIP 覆盖解压到现在的目录，.env 和 data/ 不受影响，然后照常启动。",
+        "guide": "详细步骤见部署文档"
+      },
+      "privacy": "检查更新只读一个公开的文件，签名不对的版本会被丢掉。不想让站点连外网，可以在高级设置里关掉。"
     },
     "failedJobs": {
       "title": "失败任务",
