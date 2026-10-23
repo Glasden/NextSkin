@@ -1,36 +1,17 @@
+import { checkTheme, describeThemeIssue, diamond, lockedColorNames, themeColorNames } from '@nextskin/theme'
 import { describe, expect, it } from 'vitest'
 import designDoc from '../../../docs/DESIGN.md?raw'
+import diamondModule from '../../theme/src/diamond.ts?raw'
 import themeCss from './theme.css?raw'
 import {
-  contrastRatio,
   extractSyncBlock,
   parseTheme,
+  renderDiamondModule,
   renderTokenTables,
   replaceSyncBlock,
   SYNC_END,
   SYNC_START,
 } from './tokens.ts'
-
-describe('contrastRatio', () => {
-  it('黑白是 21，同色是 1', () => {
-    expect(contrastRatio('#000000', '#ffffff')).toBe(21)
-    expect(contrastRatio('#123456', '#123456')).toBe(1)
-    expect(contrastRatio('#ff0000', '#ffffff')).toBeCloseTo(3.99847677)
-  })
-
-  it('对调前景背景结果相同，接受大写十六进制', () => {
-    expect(contrastRatio('#123456', '#ABCDEF')).toBe(contrastRatio('#ABCDEF', '#123456'))
-    expect(contrastRatio('#abcdef', '#123456')).toBe(contrastRatio('#ABCDEF', '#123456'))
-  })
-
-  it.each(['', '#fff', '#12345678', '123456', '#gg0000', 'rgb(0, 0, 0)', ' #123456', '#123456\n'])(
-    '非法输入 %j 抛错',
-    (value) => {
-      expect(() => contrastRatio(value, '#ffffff')).toThrow()
-      expect(() => contrastRatio('#ffffff', value)).toThrow()
-    },
-  )
-})
 
 describe('parseTheme', () => {
   it('只读 theme 中的 token，跳过 initial、合并行高、读取暗色覆盖和同行注释', () => {
@@ -144,47 +125,26 @@ describe('theme.css', () => {
     expect(new Set(names).size).toBe(names.length)
   })
 
-  const pairs: [string, string, number][] = [
-    ['text', 'bg', 4.5],
-    ['text', 'surface', 4.5],
-    ['text', 'surface-raised', 4.5],
-    ['text', 'stage', 4.5],
-    ['text', 'accent-subtle', 4.5],
-    ['text-muted', 'bg', 4.5],
-    ['text-muted', 'surface', 4.5],
-    ['text-muted', 'surface-raised', 4.5],
-    ['text-muted', 'surface-sunken', 4.5],
-    ['text-muted', 'stage', 4.5],
-    ['text-muted', 'accent-subtle', 4.5],
-    ['text-inverse', 'text', 4.5],
-    ['accent-fg', 'accent', 4.5],
-    ['accent', 'bg', 4.5],
-    ['accent', 'surface', 4.5],
-    ['success-fg', 'success', 4.5],
-    ['success', 'surface', 4.5],
-    ['warning-fg', 'warning', 4.5],
-    ['warning', 'surface', 4.5],
-    ['danger-fg', 'danger', 4.5],
-    ['danger', 'surface', 4.5],
-    ['border-strong', 'surface', 3],
-    ['border-strong', 'bg', 3],
-    ['focus', 'bg', 3],
-    ['focus', 'surface', 3],
-  ]
+  // 对比度、明暗方向、强调色和危险色的距离，和插件主题同一套检查（packages/theme，ADR-0057）
+  it('亮暗两套颜色都通过主题检查', () => {
+    const colors = (mode: 'light' | 'dark') =>
+      Object.fromEntries(theme.colors.map((color) => [color.name, color[mode]])) as (typeof diamond)['light']
+    const issues = checkTheme({ light: colors('light'), dark: colors('dark') })
+    expect(issues.map(describeThemeIssue)).toEqual([])
+  })
 
-  for (const mode of ['light', 'dark'] as const) {
-    it.each(pairs)(`${mode} %s/%s ≥ %s`, (foreground, background, minimum) => {
-      const fg = theme.colors.find(({ name }) => name === foreground)?.[mode]
-      const bg = theme.colors.find(({ name }) => name === background)?.[mode]
-      expect(fg, `${mode} 缺少 ${foreground}`).toBeDefined()
-      expect(bg, `${mode} 缺少 ${background}`).toBeDefined()
-      const ratio = contrastRatio(fg!, bg!)
-      expect(
-        ratio,
-        `${mode} ${foreground}/${background} 实际比值 ${ratio.toFixed(4)}，最低 ${minimum}`,
-      ).toBeGreaterThanOrEqual(minimum)
-    })
-  }
+  it('颜色正好是主题能改的加上锁住的', () => {
+    expect(theme.colors.map(({ name }) => name).sort()).toEqual([...themeColorNames, ...lockedColorNames].sort())
+  })
+
+  it('packages/theme 里钻石青的取值与 theme.css 一致', () => {
+    const message = 'packages/theme/src/diamond.ts 过期了，运行 pnpm design:sync'
+    expect(diamondModule, message).toBe(renderDiamondModule(theme))
+    for (const color of theme.colors) {
+      expect(diamond.light[color.name as keyof typeof diamond.light], message).toBe(color.light)
+      expect(diamond.dark[color.name as keyof typeof diamond.dark], message).toBe(color.dark)
+    }
+  })
 
   it('DESIGN.md 的 token 表与 theme.css 一致', () => {
     const message = 'DESIGN.md 的 token 表过期了，运行 pnpm design:sync'

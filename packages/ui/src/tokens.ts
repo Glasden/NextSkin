@@ -49,21 +49,6 @@ export function parseTheme(css: string): ThemeTokens {
   return theme
 }
 
-export function contrastRatio(foreground: string, background: string): number {
-  function luminance(color: string): number {
-    if (color.length !== 7 || !/^#[\da-f]{6}$/i.test(color)) throw new Error(`颜色必须是 #rrggbb：${color}`)
-    const channels = [1, 3, 5].map((offset) => {
-      const channel = parseInt(color.slice(offset, offset + 2), 16) / 255
-      return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
-    })
-    return channels[0]! * 0.2126 + channels[1]! * 0.7152 + channels[2]! * 0.0722
-  }
-
-  const first = luminance(foreground)
-  const second = luminance(background)
-  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05)
-}
-
 export function renderTokenTables(theme: ThemeTokens): string {
   const escape = (value: string) => value.replaceAll('|', '\\|')
   const code = (value: string) => `\`${escape(value)}\``
@@ -82,6 +67,31 @@ export function renderTokenTables(theme: ThemeTokens): string {
       ({ name, value, lineHeight, note }) =>
         `| ${code(name)} | ${code(lineHeight === undefined ? value : `${value} / ${lineHeight}`)} | ${escape(note)} |`,
     ),
+  ].join('\n')
+}
+
+/**
+ * 钻石青的全部颜色，写成 packages/theme 的 `diamond.ts`（ADR-0057）：插件主题没写的颜色取它，检查和生成 CSS 都用它。
+ * theme.css 仍是唯一来源，由 `pnpm design:sync` 生成，tokens.test.ts 守着两边一致
+ */
+export function renderDiamondModule(theme: ThemeTokens): string {
+  const key = (name: string) => (/^[a-z]+$/.test(name) ? name : `'${name}'`)
+  const block = (mode: 'light' | 'dark') =>
+    theme.colors.map((color) => `    ${key(color.name)}: '${color[mode] ?? ''}',`).join('\n')
+  return [
+    '// 由 `pnpm design:sync` 从 packages/ui/src/theme.css 生成，不要手改；packages/ui 的 tokens.test.ts 守着两边一致',
+    "import type { ColorMode, ColorName, HexColor } from './names.ts'",
+    '',
+    '/** 默认主题钻石青的全部颜色（ADR-0057） */',
+    'export const diamond: Readonly<Record<ColorMode, Readonly<Record<ColorName, HexColor>>>> = {',
+    '  light: {',
+    block('light'),
+    '  },',
+    '  dark: {',
+    block('dark'),
+    '  },',
+    '}',
+    '',
   ].join('\n')
 }
 

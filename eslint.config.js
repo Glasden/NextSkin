@@ -67,6 +67,11 @@ export default defineConfig(
     rules: { 'nextskin/no-raw-color': 'off' },
   },
   {
+    // 配色主题以色值为数据：钻石青由 design:sync 从 theme.css 生成，插件的主题由核心检查对比度后生成 CSS（ADR-0057）
+    files: ['packages/theme/**', 'plugins/color-themes/**'],
+    rules: { 'nextskin/no-raw-color': 'off' },
+  },
+  {
     // SQLite 方言和跨数据库 SQL 辅助函数就在这里实现，需要使用底层方言 API
     files: ['packages/db/**'],
     rules: { 'nextskin/no-sqlite-dialect': 'off', 'nextskin/no-dialect-specific-sql': 'off' },
