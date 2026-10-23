@@ -7,13 +7,13 @@ import { usePathname } from 'next/navigation'
 import { Image } from 'pixelarticons/react/Image.js'
 import { Upload } from 'pixelarticons/react/Upload.js'
 
-/** 页头里的全站导航。上传页在皮肤库下面，但单独算一项 */
-export function SiteNav() {
+/** 全站导航：宽屏在页头里横排，窄屏在页头打开的 Sheet 里竖排（placement 同 Nav）。上传页在皮肤库下面，但单独算一项 */
+export function SiteNav({ placement = 'header' }: { placement?: 'header' | 'sidebar' }) {
   const t = useTranslations('site.nav')
   const pathname = usePathname()
   const uploading = pathname === '/skinlib/upload'
   return (
-    <Nav label={t('label')} placement="header">
+    <Nav label={t('label')} placement={placement}>
       <NavItem
         render={<NextLink href="/skinlib" />}
         icon={<Image />}

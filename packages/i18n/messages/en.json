@@ -896,6 +896,10 @@
       "skinlib": "Skin library",
       "upload": "Upload"
     },
+    "navSheet": {
+      "open": "Open navigation",
+      "close": "Close navigation"
+    },
     "signIn": "Sign in",
     "signUp": "Sign up",
     "colorMode": {

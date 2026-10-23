@@ -55,10 +55,10 @@ export function Dialog({
         <BaseDialog.Backdrop
           className={
             // 页面蒙上一层底色：亮色下变浅、暗色下变暗，对话框靠边框和硬边阴影浮起来
-            'fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--color-bg)_80%,transparent)] transition-opacity duration-base ease-step motion-reduce:transition-none data-ending-style:opacity-0 data-starting-style:opacity-0'
+            'fixed inset-0 z-40 bg-[color-mix(in_srgb,var(--color-bg)_80%,transparent)] transition-opacity duration-base ease-step motion-reduce:transition-none data-ending-style:opacity-0 data-starting-style:opacity-0'
           }
         />
-        <BaseDialog.Viewport className="fixed inset-0 z-50 grid place-items-center overflow-y-auto p-4">
+        <BaseDialog.Viewport className="fixed inset-0 z-40 grid place-items-center overflow-y-auto p-4">
           <BaseDialog.Popup
             className={cx(
               // 渲染在 body 下，不在页面的字体设置范围内，字体自己设。进出场与 Toast 相同：四格阶跃，上移 8px 并淡入

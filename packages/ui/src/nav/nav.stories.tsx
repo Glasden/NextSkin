@@ -52,20 +52,6 @@ export const Sidebar: Story = {
   },
 }
 
-/** 窄屏：横排在页头下面，当前项的标记换到底边；放不下时横向滚动 */
-export const NarrowScreen: Story = {
-  name: 'Narrow screen',
-  // 断点按视口宽度，截图用 720px 宽的视口
-  tags: ['screenshot-viewport'],
-  decorators: [
-    (Story) => (
-      <div className="w-80 px-4">
-        <Story />
-      </div>
-    ),
-  ],
-}
-
 /** 页头里的全站导航：始终横排，当前项的标记在底边 */
 export const Header: Story = {
   args: {

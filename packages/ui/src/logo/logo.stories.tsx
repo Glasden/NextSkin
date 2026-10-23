@@ -42,6 +42,23 @@ export const AsLink: Story = {
   },
 }
 
+/**
+ * 页头里的标志：md 以下只显示图形，站点名留给读屏软件；更宽时站点名放不下就截断。
+ * 截图的视口比 md 宽，这里看到的是截断
+ */
+export const Compact: Story = {
+  // 和页头里一样放在 flex 容器里：截断靠它把标志压窄
+  render: () => (
+    <div className="flex w-48">
+      <Logo name="像素方块 Minecraft 皮肤站" compact render={<a href="#home" />} />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    // 不管哪种宽度，链接的名称都是完整的站点名
+    await expect(canvas.getByRole('link', { name: '像素方块 Minecraft 皮肤站' })).toBeVisible()
+  },
+}
+
 /** 站长上传了标志（ADR-0042）：换掉像素图形，尺寸不变，站点名照旧 */
 export const WithImage: Story = {
   name: 'With image',

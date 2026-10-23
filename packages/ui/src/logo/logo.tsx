@@ -17,6 +17,10 @@ export interface LogoProps {
    */
   image?: string
   /**
+   * 页头用：md 以下只显示图形，站点名留给读屏软件；更宽时站点名太长就截断，不去挤页头里的导航
+   */
+  compact?: boolean
+  /**
    * 页头的标志一般链接到首页：传框架的链接组件，例如 `render={<NextLink href="/" />}`。
    * 链接不加下划线，键盘聚焦时显示焦点框
    */
@@ -32,14 +36,14 @@ const sizes = {
  * 标志：折起来的头，前脸用强调色（DESIGN.md §2.2）。图形按整数倍放大，像素锐利；
  * favicon 由同一份图形生成（scripts/design-sync.ts）。站长上传了标志时换成那张图
  */
-export function Logo({ name, size = 'md', render, image }: LogoProps) {
+export function Logo({ name, size = 'md', render, image, compact = false }: LogoProps) {
   const style = sizes[size]
   const px = LOGO_MARK_SIZE * style.cell
   return useRender({
     defaultTagName: 'span',
     render,
     props: {
-      className: cx('inline-flex items-center', style.gap, render && cx('rounded-sm', focusRing)),
+      className: cx('inline-flex items-center', style.gap, compact && 'min-w-0', render && cx('rounded-sm', focusRing)),
       children: (
         <>
           {image ? (
@@ -48,7 +52,14 @@ export function Logo({ name, size = 'md', render, image }: LogoProps) {
           ) : (
             <LogoMark cell={style.cell} />
           )}
-          <span className={cx('font-pixel text-text', style.name)}>{name}</span>
+          {compact ? (
+            // 同一段文字：md 以下只留给读屏软件，更宽时显示出来、放不下就截断
+            <span className="min-w-0 sr-only md:not-sr-only">
+              <span className={cx('block truncate font-pixel text-text', style.name)}>{name}</span>
+            </span>
+          ) : (
+            <span className={cx('font-pixel text-text', style.name)}>{name}</span>
+          )}
         </>
       ),
     },

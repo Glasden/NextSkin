@@ -15,7 +15,11 @@ import { adminNavItems } from './nav-items'
  * 没有登录时由各页面跳到登录页（requireAdmin 要知道原路径，布局拿不到）；没有任何后台权限的用户返回 404
  */
 export default async function AdminLayout({ children }: { readonly children: ReactNode }) {
-  const [user, common] = await Promise.all([getSessionUser(), getTranslations('common')])
+  const [user, common, t] = await Promise.all([
+    getSessionUser(),
+    getTranslations('common'),
+    getTranslations('admin.nav'),
+  ])
   if (!user) return children
   if (!hasAdminAccess(user.role)) notFound()
   const allowed = adminNavItems
@@ -30,14 +34,14 @@ export default async function AdminLayout({ children }: { readonly children: Rea
       : null,
     pluginNavItems('admin', user),
   ])
+  const nav = <AdminNav allowed={allowed} pendingReports={pending} pluginItems={pluginItems} />
   return (
     <ToastProvider label={common('notifications')} closeLabel={common('close')}>
       <div className="flex min-h-dvh flex-col">
-        <SiteHeader wide />
+        {/* 窄屏没有侧栏，分区导航放进页头左边滑出的导航里 */}
+        <SiteHeader wide section={{ label: t('label'), nav }} />
         <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 sm:px-6 lg:flex-row lg:gap-8">
-          <aside className="shrink-0 border-b border-border py-3 lg:w-52 lg:border-b-0 lg:py-8">
-            <AdminNav allowed={allowed} pendingReports={pending} pluginItems={pluginItems} />
-          </aside>
+          <aside className="hidden w-52 shrink-0 py-8 lg:block">{nav}</aside>
           <main className="min-w-0 flex-1 py-6 lg:py-8">{children}</main>
         </div>
       </div>

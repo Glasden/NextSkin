@@ -16,11 +16,14 @@ export default async function UserLayout({ children }: { readonly children: Reac
   const [user, t, common] = await Promise.all([getSessionUser(), getTranslations('user'), getTranslations('common')])
   if (!user) return children
   const pluginItems = await pluginNavItems('user', user)
+  const banned = user.role === 'banned'
+  const nav = <UserNav pluginItems={pluginItems} />
   return (
     <ToastProvider label={common('notifications')} closeLabel={common('close')}>
       <div className="flex min-h-dvh flex-col">
-        <SiteHeader />
-        {user.role === 'banned' ? (
+        {/* 窄屏没有侧栏，分区导航放进页头左边滑出的导航里 */}
+        <SiteHeader section={banned ? undefined : { label: t('nav.label'), nav }} />
+        {banned ? (
           <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-start gap-4 px-4 py-16">
             <h1 className="font-pixel text-pixel-2 text-text">{t('banned.title')}</h1>
             <p className="text-base text-text">{t('banned.description')}</p>
@@ -28,9 +31,7 @@ export default async function UserLayout({ children }: { readonly children: Reac
           </main>
         ) : (
           <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 sm:px-6 lg:flex-row lg:gap-10">
-            <aside className="shrink-0 border-b border-border py-3 lg:w-52 lg:border-b-0 lg:py-8">
-              <UserNav pluginItems={pluginItems} />
-            </aside>
+            <aside className="hidden w-52 shrink-0 py-8 lg:block">{nav}</aside>
             <main className="min-w-0 flex-1 py-6 lg:py-8">{children}</main>
           </div>
         )}

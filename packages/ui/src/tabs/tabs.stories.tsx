@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
-import { expect, fn, userEvent } from 'storybook/test'
+import { expect, fn, screen, userEvent } from 'storybook/test'
 import { Tabs } from './tabs.tsx'
 
 const onValueChange = fn()
@@ -115,4 +115,51 @@ export const Overflow: Story = {
       </Tabs>
     </div>
   ),
+}
+
+/** 标签多的放在窄容器里：开了 collapse 换成 Select，选了一样切换；容器宽了照旧是一排标签 */
+export const Collapse: Story = {
+  args: {
+    'aria-label': '设置分区',
+    collapse: true,
+    items: [
+      { value: 'site', label: '站点' },
+      { value: 'registration', label: '注册' },
+      { value: 'captcha', label: '验证码' },
+      { value: 'score', label: '积分' },
+      { value: 'content', label: '角色和材质' },
+      { value: 'mail', label: '邮件' },
+      { value: 'yggdrasil', label: 'Yggdrasil' },
+      { value: 'maintenance', label: '维护' },
+      { value: 'advanced', label: '高级' },
+    ],
+  },
+  render: function Render(args) {
+    const [value, setValue] = useState('site')
+    return (
+      <div className="w-80">
+        <Tabs
+          {...args}
+          value={value}
+          onValueChange={(next) => {
+            setValue(next)
+            args.onValueChange?.(next)
+          }}
+        >
+          <p className="text-sm text-text-muted">{value === 'site' ? '站点名称、标志' : '邮件服务器'}</p>
+        </Tabs>
+      </div>
+    )
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole('tablist')).toBeNull()
+    const select = canvas.getByRole('combobox', { name: '设置分区' })
+    await expect(select).toHaveTextContent('站点')
+    await userEvent.click(select)
+    await userEvent.click(await screen.findByRole('option', { name: '邮件' }))
+    await expect(onValueChange).toHaveBeenLastCalledWith('mail')
+    await expect(canvas.getByRole('tabpanel')).toHaveTextContent('邮件服务器')
+    await expect(select).toHaveTextContent('邮件')
+    ;(document.activeElement as HTMLElement | null)?.blur()
+  },
 }

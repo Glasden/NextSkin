@@ -896,6 +896,10 @@
       "skinlib": "皮肤库",
       "upload": "上传"
     },
+    "navSheet": {
+      "open": "打开导航",
+      "close": "关闭导航"
+    },
     "signIn": "登录",
     "signUp": "注册",
     "colorMode": {

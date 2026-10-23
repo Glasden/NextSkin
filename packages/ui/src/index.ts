@@ -53,6 +53,7 @@ export {
   type SegmentedControlProps,
 } from './segmented-control/segmented-control.tsx'
 export { Select, type SelectOption, type SelectProps } from './select/select.tsx'
+export { Sheet, type SheetProps } from './sheet/sheet.tsx'
 export { SkinFigure, type SkinFigureProps } from './skin-figure/skin-figure.tsx'
 export { SkinViewer, type SkinViewerLabels, type SkinViewerProps } from './skin-viewer/skin-viewer.tsx'
 export { Stage, type StageProps } from './stage/stage.tsx'

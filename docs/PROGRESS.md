@@ -35,6 +35,7 @@
   - 安装向导 `/setup`（安装码、"新站"、从 BS 导入）、后台的"数据迁移"、导入期间的维护模式（页面换成维护页，接口返回 503，任务和定时任务暂停）。
 - **亮暗模式**（DESIGN.md §10）：页头、认证页和安装向导右上角的菜单（跟随系统、亮色、暗色），偏好按设备记在 Cookie 里；根布局的内联脚本在第一次绘制之前设好 `data-theme`，跟随系统时随系统切换；组件 `MenuRadioGroup`。
 - **首页**（ADR-0032）：领奖台（最近 7 天新加进衣柜最多的三个皮肤）、站点统计、最新上传、外置登录三步；全站页脚；站点描述、关键词和页脚文字三个设置项；标志"折起来的头"，站点图标由 `pnpm design:sync` 从 token 生成。
+- **窄屏布局**（DESIGN.md §10）：页头始终一行，最左边的"打开导航"从左边滑出侧边栏（组件 Sheet，基于 Base UI Drawer）：前台 sm 以下收起全站导航，用户中心和后台 lg 以下没有侧栏，全站导航和该区域的分区一起收进去；点了里面的链接或换了页面就关上。站点名 md 以下只留图形。后台设置的九个分区在窄容器里换成选择框（Tabs 的 `collapse`）。浮层的层级挪到对话框之上，对话框里的选择框不再被盖住。
 - **站点外观**（ADR-0042）：站点标志 `site.logo` 和站点图标 `site.favicon`（图标没传时用标志）；设置表单的图片控件（组件 ImageInput，按实际尺寸预览）和上传接口 `POST /api/admin/site-images`（PNG、正方形、边长 16～512，小图按最近邻放大，重新编码，另存白底的一份）；单独的存储 `<数据目录>/site-images` 和 `/site-images/<hash>.png`；每周清理没引用的图（`core:site-image-sweep`）；根布局自己写图标的 `<link>`，默认图标挪到 `apps/web/public/`，`/favicon.ico` 有自定义图标时重定向；页头、页脚、登录注册页和全屏页的标志显示上传的图；页脚 Markdown 里的图片缩到一行字高；导入报告提示重新上传图标。
 - **站点的 CSP**（ADR-0053）：页面带 `script-src 'nonce-…' 'strict-dynamic'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`，nonce 由 `proxy.ts` 按请求生成、经请求头交给 Next 和根布局（`lib/csp.ts`），开发模式多 `'unsafe-eval'`；样式、图片、请求、iframe 不约束，不维护来源白名单。亮暗模式的内联脚本带 nonce，Base UI 经 `packages/ui` 的 `CspProvider` 拿到它；全站发 `X-Frame-Options: DENY`；进 Hono 的路径不加。lint `nextskin/no-script-without-nonce`；e2e 的共用 fixture（`e2e/fixtures.ts`）在任何页面出现 CSP 违规时判失败。部署文档写了 CDN（Cloudflare）哪些功能要关。
 - **插件系统第一版**（ADR-0033），按 ADR 的三步落地：

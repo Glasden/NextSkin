@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useOptimistic, useTransition, type ReactNode } from 'react'
 import { settingsHref } from './setting-text'
 
-/** 分区切换改的是地址，服务端只读当前分区的设置。标签先切过去，内容随后换上 */
+/** 分区切换改的是地址，服务端只读当前分区的设置。标签先切过去，内容随后换上。窄屏九个标签放不下，换成选择框 */
 export function SettingsTabs({
   section,
   items,
@@ -24,6 +24,7 @@ export function SettingsTabs({
   return (
     <Tabs
       aria-label={label}
+      collapse
       value={current}
       onValueChange={(next) =>
         startTransition(() => {

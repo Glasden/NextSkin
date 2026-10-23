@@ -38,7 +38,7 @@ export function Popover({
     <BasePopover.Root open={open} onOpenChange={onOpenChange ? (next) => onOpenChange(next) : undefined}>
       <BasePopover.Trigger render={trigger} />
       <BasePopover.Portal>
-        <BasePopover.Positioner className="z-30 outline-none" sideOffset={8} align={align} collisionPadding={16}>
+        <BasePopover.Positioner className="z-50 outline-none" sideOffset={8} align={align} collisionPadding={16}>
           <BasePopover.Popup
             className={
               // 渲染在 body 下，字体自己设。和 Menu 一样是四格阶跃的淡入；窄屏两边各留 16px

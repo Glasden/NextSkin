@@ -34,7 +34,8 @@ export function Menu({ label, trigger, children, align = 'start' }: MenuProps) {
       ) : (
         <BaseMenu.Trigger
           className={cx(
-            'inline-flex h-10 max-w-full items-center gap-1 rounded-sm pr-1 pl-3 text-sm font-medium text-text select-none',
+            // 一行里放不下时（窄屏页头里很长的昵称）缩窄，文字截断
+            'inline-flex h-10 max-w-full min-w-0 items-center gap-1 rounded-sm pr-1 pl-3 text-sm font-medium text-text select-none',
             hover,
             'data-popup-open:bg-[color-mix(in_srgb,var(--color-surface)_88%,var(--color-text))]',
             focusRing,
@@ -45,11 +46,11 @@ export function Menu({ label, trigger, children, align = 'start' }: MenuProps) {
         </BaseMenu.Trigger>
       )}
       <BaseMenu.Portal>
-        <BaseMenu.Positioner className="z-30 outline-none" sideOffset={8} align={align} collisionPadding={16}>
+        <BaseMenu.Positioner className="z-50 outline-none" sideOffset={8} align={align} collisionPadding={16}>
           <BaseMenu.Popup
             className={cx(
-              // 渲染在 body 下，字体自己设。弹出是四格阶跃的淡入
-              'min-w-48 rounded-md border border-border-strong bg-surface-raised py-1 font-sans text-text shadow-pixel-lg outline-none',
+              // 渲染在 body 下，字体自己设。弹出是四格阶跃的淡入；比视口剩下的高度高时在菜单里滚动
+              'max-h-(--available-height) min-w-48 overflow-y-auto rounded-md border border-border-strong bg-surface-raised py-1 font-sans text-text shadow-pixel-lg outline-none',
               'transition-opacity duration-fast ease-step motion-reduce:transition-none data-ending-style:opacity-0 data-starting-style:opacity-0',
             )}
           >
