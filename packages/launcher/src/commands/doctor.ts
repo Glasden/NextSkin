@@ -1,13 +1,13 @@
 /** 只检查环境，不打开核心、不生成配置、不创建数据目录或执行迁移（ADR-0039）。 */
 import { constants } from 'node:fs'
 import { access, mkdtemp, rm, stat, statfs, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { coreMigrations, createDatabase, type DatabaseConfig } from '@nextskin/db'
 import { HostStartError, hostNetworkRestricted, probePluginHost } from '@nextskin/domain'
 import { coreConfigFromEnv, type CoreConfig } from '@nextskin/domain/config'
 import { ConfigError, currentUser, envFilePath, listenAddress, mergeEnv, readEnvFile } from '../config.ts'
-import type { LauncherContext } from '../context.ts'
+import { instanceDirectory, type LauncherContext } from '../context.ts'
 import { acquireDataLock } from '../lock.ts'
 import { launcherPluginHost } from '../plugin-host.ts'
 import { assertRelease } from '../release.ts'
@@ -88,7 +88,7 @@ export function checkConfig(
     // 缺密钥单独报告；占位值仅用于解析路径和数据库，不会写回环境变量。
     const config = coreConfigFromEnv(
       { ...env, NEXTSKIN_SECRET: env.NEXTSKIN_SECRET || 'doctor-placeholder-secret-32-characters' },
-      { cwd: context.root, production: !context.source || env.NODE_ENV === 'production' },
+      { cwd: instanceDirectory(context), production: !context.source || env.NODE_ENV === 'production' },
     )
     const { host, port } = listenAddress(env)
     return { result: result('其余配置', 'pass', '路径、数据库配置和监听配置已解析'), config, host, port }
@@ -298,7 +298,10 @@ export async function run(
     return argv.length === 1 && (argv[0] === '--help' || argv[0] === '-h') ? 0 : 1
   }
   const env = options.env ?? process.env
-  console.log(`NextSkin ${context.version} 环境自检，根目录 ${context.root}`)
+  const home = instanceDirectory(context)
+  console.log(
+    `NextSkin ${context.version} 环境自检，根目录 ${context.root}${resolve(home) === resolve(context.root) ? '' : `，实例目录 ${home}`}`,
+  )
   const skipped = (item: string) => result(item, 'skip', '配置有错，没有检查')
   const results = [checkNode()]
   const file = await checkEnvFile(context, env)

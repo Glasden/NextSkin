@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { removeTestDirectory } from '@nextskin/db/testing'
 import { afterEach, expect, test } from 'vitest'
-import { ConfigError, readConfig } from './config.ts'
+import { ConfigError, envFilePath, readConfig } from './config.ts'
 import type { LauncherContext } from './context.ts'
 
 const directories: string[] = []
@@ -21,7 +21,7 @@ test('环境优先于 .env，配置和 SQLite 相对路径按根目录解析，�
   const ctx = await context()
   await writeFile(
     join(ctx.root, '.env'),
-    'NEXTSKIN_DATA_DIR=from-file\nNEXTSKIN_SECRET=from-file\nNEXTSKIN_DATABASE_URL=sqlite:db/site.sqlite\nNEXTSKIN_HOST=127.0.0.1\n',
+    'NEXTSKIN_HOME=ignored\nNEXTSKIN_DATA_DIR=from-file\nNEXTSKIN_SECRET=from-file\nNEXTSKIN_DATABASE_URL=sqlite:db/site.sqlite\nNEXTSKIN_HOST=127.0.0.1\n',
   )
   const env: NodeJS.ProcessEnv = { NEXTSKIN_SECRET: secret, NEXTSKIN_DATA_DIR: 'storage', HOSTNAME: 'inherited' }
   const result = await readConfig(ctx, env)
@@ -47,6 +47,37 @@ test('NEXTSKIN_ENV_FILE 相对根目录解析，MySQL 和 PostgreSQL 地址原�
   }
 })
 
+test('实例目录决定 .env、数据目录和 SQLite 相对路径，.env 不能改变实例目录', async () => {
+  const ctx = { ...(await context()), home: (await context()).root }
+  await writeFile(
+    join(ctx.home, '.env'),
+    'NEXTSKIN_HOME=ignored\nNEXTSKIN_DATA_DIR=storage\nNEXTSKIN_DATABASE_URL=sqlite:db/site.sqlite\nNEXTSKIN_HOST=127.0.0.1\n',
+  )
+  const result = await readConfig(ctx, { NEXTSKIN_SECRET: secret })
+  expect(result.home).toBe(ctx.home)
+  expect(result.env.NEXTSKIN_ENV_FILE).toBe(join(ctx.home, '.env'))
+  expect(result.host).toBe('127.0.0.1')
+  expect(result.config.dataDirectory).toBe(join(ctx.home, 'storage'))
+  expect(result.config.database).toEqual({ dialect: 'sqlite', file: join(ctx.home, 'db/site.sqlite') })
+  expect(envFilePath(ctx, { NEXTSKIN_ENV_FILE: 'custom.env' })).toBe(join(ctx.home, 'custom.env'))
+  const absoluteFile = join(ctx.root, 'absolute.env')
+  expect(envFilePath(ctx, { NEXTSKIN_ENV_FILE: absoluteFile })).toBe(absoluteFile)
+})
+
+test('核心环境去掉 NEXTSKIN_MANAGED，保留其他环境变量且不改调用方的值', async () => {
+  const env = {
+    NEXTSKIN_SECRET: secret,
+    NEXTSKIN_MANAGED: '1',
+    NEXTSKIN_HOME: '/instance',
+    NODE_OPTIONS: '--no-warnings',
+  }
+  const result = await readConfig(await context(), env)
+  expect(result.env).not.toHaveProperty('NEXTSKIN_MANAGED')
+  expect(result.env.NEXTSKIN_HOME).toBe('/instance')
+  expect(result.env.NODE_OPTIONS).toBe('--no-warnings')
+  expect(env.NEXTSKIN_MANAGED).toBe('1')
+})
+
 test.each([
   [{}, 3000],
   [{ PORT: '4000' }, 4000],
@@ -65,14 +96,19 @@ test.each(['', '0', '65536', '-1', '1.5', 'abc', '1e3', ' 80'])('非法端口 %j
   )
 })
 
-test('自动生成随机密钥和 0600 文件，提示中不含密钥', async () => {
+test.each([false, true])('自动生成随机密钥和 0600 文件，提示中不含密钥（独立实例目录：%s）', async (separate) => {
   const ctx = await context()
+  if (separate) ctx.home = (await context()).root
+  const home = ctx.home ?? ctx.root
   const warnings: string[] = []
   const result = await readConfig(ctx, {}, (message) => warnings.push(message))
   const key = result.config.secretKey
   expect(key).toMatch(/^[A-Za-z0-9_-]{43}$/)
-  expect(await readFile(join(ctx.root, '.env'), 'utf8')).toContain(`NEXTSKIN_SECRET=${key}`)
-  if (process.platform !== 'win32') expect((await stat(join(ctx.root, '.env'))).mode & 0o777).toBe(0o600)
+  expect(await readFile(join(home, '.env'), 'utf8')).toContain(`NEXTSKIN_SECRET=${key}`)
+  if (process.platform !== 'win32') expect((await stat(join(home, '.env'))).mode & 0o777).toBe(0o600)
+  expect(result.config.dataDirectory).toBe(join(home, 'data'))
+  expect(result.config.database).toEqual({ dialect: 'sqlite', file: join(home, 'data/nextskin.sqlite') })
+  if (separate) await expect(stat(join(ctx.root, '.env'))).rejects.toThrow()
   expect(warnings.join()).toContain('请备份这个文件')
   expect(warnings.join()).not.toContain(key)
 })

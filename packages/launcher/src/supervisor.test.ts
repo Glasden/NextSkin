@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { removeTestDirectory } from '@nextskin/db/testing'
-import { afterEach, expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
+import { supervise } from './supervisor.ts'
 
 const cleanups: (() => Promise<void>)[] = []
 afterEach(async () => {
@@ -105,4 +106,55 @@ test('退避等待期间停止不再重启', async () => {
   expect(await stop(child)).toEqual([0, null])
   expect(await readFile(state, 'utf8')).toBe('1')
   expect(messages.filter((m) => m.log.includes('核心已启动'))).toHaveLength(0)
+})
+
+test('注册额外停止来源时已收到停止请求，不拉起核心且收回全部监听器', async () => {
+  const before = process.listenerCount('SIGTERM')
+  const dispose = vi.fn()
+  const ready = vi.fn()
+  expect(
+    await supervise({
+      serverJs: '/must-not-start/server.js',
+      env: {},
+      onReady: ready,
+      stopOn: (stop) => {
+        stop()
+        return dispose
+      },
+    }),
+  ).toBe(0)
+  expect(dispose).toHaveBeenCalledOnce()
+  expect(ready).not.toHaveBeenCalled()
+  expect(process.listenerCount('SIGTERM')).toBe(before)
+})
+
+test('退避期间的额外停止来源取消重启，并且只注销一次', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'launcher-supervisor-'))
+  cleanups.push(() => removeTestDirectory(dir))
+  const state = join(dir, 'runs')
+  const before = process.listenerCount('SIGTERM')
+  const dispose = vi.fn()
+  let stop: () => void = () => {}
+  let crashed: () => void = () => {}
+  const crash = new Promise<void>((resolve) => {
+    crashed = resolve
+  })
+  const supervised = supervise({
+    serverJs: fileURLToPath(new URL('./fixtures/core.mjs', import.meta.url)),
+    env: { ...process.env, LAUNCHER_TEST_STATE: state, LAUNCHER_TEST_PLAN: JSON.stringify([{ exitAfter: 5 }]) },
+    initialDelay: 60_000,
+    stopOn: (requestStop) => {
+      stop = requestStop
+      return dispose
+    },
+    log: (message) => {
+      if (message.includes('后重启')) crashed()
+    },
+  })
+  await crash
+  stop()
+  expect(await supervised).toBe(0)
+  expect(dispose).toHaveBeenCalledOnce()
+  expect(await readFile(state, 'utf8')).toBe('1')
+  expect(process.listenerCount('SIGTERM')).toBe(before)
 })
