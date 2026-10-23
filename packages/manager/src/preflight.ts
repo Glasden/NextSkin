@@ -86,10 +86,19 @@ export function parsePreflight(version: string, command: CommandResult): Preflig
 export class MigrationError extends ManagerError {
   readonly detail: { kind: string; message: string }
   readonly backup: string | null
-  constructor(detail: { kind: string; message: string }, backup: string | null = null) {
+  readonly core: string[]
+  readonly plugins: MigrationResult['plugins']
+  constructor(
+    detail: { kind: string; message: string },
+    backup: string | null = null,
+    core: string[] = [],
+    plugins: MigrationResult['plugins'] = [],
+  ) {
     super(detail.message)
     this.detail = detail
     this.backup = backup
+    this.core = core
+    this.plugins = plugins
   }
 }
 export function parseMigration(command: CommandResult): MigrationResult {
@@ -108,6 +117,8 @@ export function parseMigration(command: CommandResult): MigrationResult {
     throw new MigrationError(
       { kind: body.error.kind, message: body.error.message },
       typeof body.backup === 'string' && isAbsolute(body.backup) ? body.backup : null,
+      strings(body.core) ? body.core : [],
+      pluginMigrations(body.plugins) ? body.plugins : [],
     )
   if (command.code !== 0) throw new ManagerError('迁移失败，无法确认数据库状态')
   if (

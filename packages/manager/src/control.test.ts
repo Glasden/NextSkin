@@ -1,3 +1,4 @@
+import { ManagerError } from './types.ts'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { access, mkdir, readFile, rm, stat, type chown } from 'node:fs/promises'
 import { createConnection, Socket } from 'node:net'
@@ -5,7 +6,7 @@ import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { MANAGER_PROTOCOL } from '@nextskin/updates'
-import { controlAddress, controlRequest, createControl, managerStatus } from './control.ts'
+import { controlAddress, controlRequest, createControl, managerStatus, redactPaths } from './control.ts'
 import { createManager } from './pipeline.ts'
 import { fixture } from './fixtures.ts'
 import { initialCurrent, writeCurrent } from './state.ts'
@@ -352,4 +353,61 @@ it.skipIf(process.platform === 'win32')('权限分离的 socket 归 root:服务�
   expect((await stat(service.address)).mode & 0o777).toBe(0o660)
   expect((await stat(join(f.home, 'releases/manager.token'))).mode & 0o777).toBe(0o600)
   expect(await controlRequest(service.address, service.token, 'status', {})).toMatchObject({ current: '1.0.0' })
+})
+
+it.each([
+  ['/opt/nextskin/data/db.sqlite', '<路径>'],
+  ['数据目录/opt/nextskin/data 无法写入，配置在“/opt/nextskin/.env”。', '数据目录<路径> 无法写入，配置在“<路径>”。'],
+  [
+    String.raw`数据库 C:\nextskin\data.sqlite；配置 C:/nextskin/.env，备份 \\server\share\backup.sqlite。`,
+    '数据库 <路径>；配置 <路径>，备份 <路径>。',
+  ],
+  [
+    'https://dl.nextskin.org/releases/v1.json 1.2.3 ADR-0040 --backup-confirmed --to 1.2.3 y/N',
+    'https://dl.nextskin.org/releases/v1.json 1.2.3 ADR-0040 --backup-confirmed --to 1.2.3 y/N',
+  ],
+])('控制说明的路径清理：%s', (input, expected) => {
+  expect(redactPaths(input)).toBe(expected)
+})
+
+it('线上 lastResult 和错误说明去掉路径，本地转换保留完整说明', async () => {
+  const f = await setup()
+  const explanation =
+    '不能读取 /opt/nextskin/.env，请检查 C:/nextskin/data。参考 https://dl.nextskin.org/releases/v1.json'
+  f.state.lastResult = {
+    at: new Date().toISOString(),
+    kind: 'manual',
+    from: '1.0.0',
+    to: '1.1.0',
+    result: 'failed',
+    step: 5,
+    reason: explanation,
+  }
+  expect(((await f.call('status')) as ManagerStatus).lastResult?.reason).toBe(redactPaths(explanation))
+  expect((await managerStatus(f.home, '1.0.0', f.manager, true, false)).lastResult?.reason).toBe(explanation)
+  const status = vi.spyOn(f.manager, 'status').mockImplementationOnce(() => {
+    throw new ManagerError(explanation)
+  })
+  await expect(f.call('status')).rejects.toThrow(redactPaths(explanation))
+  status.mockRestore()
+  expect(f.state.lastResult.reason).toBe(explanation)
+})
+
+it('请求在 status 期间断开，不执行操作、不永久占住预留', async () => {
+  const f = await setup()
+  const pause = vi.spyOn(Socket.prototype, 'pause')
+  const status = vi.spyOn(f.manager, 'status').mockImplementationOnce(() => {
+    const socket = pause.mock.contexts.at(-1) as Socket
+    socket.destroy()
+    return structuredClone(f.state)
+  })
+  try {
+    await expect(f.call('prepare', { version: '1.1.0' })).rejects.toThrow()
+    await vi.waitFor(async () => expect(((await f.call('status')) as ManagerStatus).operation).toBeNull())
+    expect(f.manager.prepareLocal).not.toHaveBeenCalled()
+    expect(await f.call('prepare', { version: '1.1.0' })).toEqual({ accepted: true })
+  } finally {
+    status.mockRestore()
+    pause.mockRestore()
+  }
 })

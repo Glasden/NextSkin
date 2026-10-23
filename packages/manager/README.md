@@ -104,7 +104,7 @@ pnpm exec prettier --check packages/manager
 
 所有方法都可能返回 unauthorized、invalid_request；非预期异常返回 internal。prepare 后台错误进入日志和 lastResult。流水线保留 not_newer、unknown_version、manager_outdated、node_too_old、preflight_failed、download_failed 等错误码；预检包括 unknownCore、空间不足、doctor 失败或超时；下载错误包括清单读取、大小、SHA-256、解压及发行包校验失败。本地已解压目录不完整归为 preflight_failed。
 
-线上类型定义在 `src/types.ts` 的 `ManagerStatus`，与内部 `InternalManagerStatus` 分开：包含 protocol、version、current、previous、writable、operation、prepared、lastResult、failed、rollback。步骤编号转为 manifest / space / download / extract / preflight / confirm / stop / migrate / switch / start / cleanup；check 对外为 null。下载进度是 `{ received, total }`，total 来自签名条目的 size。mariadb 映射成 mysql，待执行迁移数组转为条数。rollback 由 previous 和 upgrades[current] 得出，仅暴露 SQLite 备份是否存在；不暴露数据目录、SQLite 文件或备份路径。
+线上类型定义在 `src/types.ts` 的 `ManagerStatus`，与内部 `InternalManagerStatus` 分开：包含 protocol、version、current、previous、writable、operation、prepared、lastResult、failed、rollback。步骤编号转为 manifest / space / download / extract / preflight / confirm / stop / migrate / switch / start / cleanup；check 对外为 null。下载进度是 `{ received, total }`，total 来自签名条目的 size。mariadb 映射成 mysql，待执行迁移数组转为条数。rollback 由 previous 和 upgrades[current] 得出，仅暴露 SQLite 备份是否存在；不暴露数据目录、SQLite 文件或备份路径；`lastResult.reason` 和错误响应的 `message` 里的绝对路径换成 `<路径>`，完整的说明留在 `update-log.jsonl` 和管理进程的日志里。
 
 ## 命令行
 

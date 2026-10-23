@@ -375,3 +375,44 @@ it('转给启动器的普通命令不解析 RUN_AS，保持管理员选择的运
     else process.env.NEXTSKIN_HOME = oldHome
   }
 })
+
+it('旧布局 PostgreSQL 有迁移时退出 78 并给出离线确认命令，不执行 apply', async () => {
+  const f = await setup()
+  await rm(join(f.home, 'releases/current.json'))
+  await mkdir(join(f.home, 'server'))
+  await mkdir(join(f.home, 'cli'))
+  await writeFile(join(f.home, 'server/VERSION'), '0.9.0')
+  f.behavior['1.1.0'] = { dialect: 'postgres', pending: true }
+  await f.configure()
+  await expect(selectVersion({ ...f, bundled: '1.1.0' })).rejects.toMatchObject({
+    exitCode: 78,
+    message: contains('--backup-confirmed'),
+  })
+  expect(await exists(join(f.home, 'server/VERSION'))).toBe(true)
+  expect(await exists(join(f.home, 'cli'))).toBe(true)
+  expect((await events(f.home)).some((e) => e.command === 'migrate')).toBe(false)
+  expect(await readCurrent(f.home)).toBeNull()
+})
+
+it('管理进程运行时拒绝 import，关闭后正常转给启动器', async () => {
+  const f = await setup()
+  const { createControl } = await import('./control.ts')
+  const service = await createControl({ home: f.home, bundled: '1.0.0', manager: f.manager })
+  disposers.push(service.close)
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+  const load = vi.fn(() => Promise.resolve())
+  const oldHome = process.env.NEXTSKIN_HOME
+  try {
+    expect(await dispatch(f.home, '1.0.0', 'import', load)).toBe(1)
+    expect(load).not.toHaveBeenCalled()
+    expect(log).toHaveBeenCalledWith('NextSkin 正在运行（管理进程），先停掉服务再导入')
+    await service.close()
+    disposers.pop()
+    expect(await dispatch(f.home, '1.0.0', 'import', load)).toBe(0)
+    expect(load).toHaveBeenCalledWith('1.0.0')
+  } finally {
+    log.mockRestore()
+    if (oldHome === undefined) delete process.env.NEXTSKIN_HOME
+    else process.env.NEXTSKIN_HOME = oldHome
+  }
+})

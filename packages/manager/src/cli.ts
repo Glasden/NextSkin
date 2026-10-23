@@ -6,6 +6,7 @@ import { createInterface } from 'node:readline/promises'
 import { compareVersions } from '@nextskin/updates'
 import { connectControl, managerStatus } from './control.ts'
 import { logRunAs, resolveRunAs } from './run-as.ts'
+import { readLegacyVersion, removeLegacy } from './start.ts'
 import { acquireLock } from './lock.ts'
 import { createManager, type ManagerOptions } from './pipeline.ts'
 import { readCurrent, sleep, validVersion } from './state.ts'
@@ -129,7 +130,9 @@ export async function runManagementCommand(
           /* 只读查询仍可报告版本。 */
         }
       }
-      const value = remote ? await getRemoteStatus() : await managerStatus(home, bundled, await makeManager(), writable)
+      const value = remote
+        ? await getRemoteStatus()
+        : await managerStatus(home, bundled, await makeManager(), writable, false)
       if (values.json) output(JSON.stringify(value))
       else {
         output(`管理进程：${remote ? '运行中' : '未运行'}；当前：${value.current}；上一个：${value.previous ?? '无'}`)
@@ -169,7 +172,7 @@ export async function runManagementCommand(
     }
     try {
       if (!remote) manager = await makeManager()
-      const getStatus = remote ? getRemoteStatus : () => managerStatus(home, bundled, manager!, true)
+      const getStatus = remote ? getRemoteStatus : () => managerStatus(home, bundled, manager!, true, false)
       if (command === 'rollback') {
         const value = await getStatus()
         const rollback = value.rollback
@@ -191,7 +194,21 @@ export async function runManagementCommand(
         printResult((await getStatus()).lastResult)
         return result.result === 'success' ? 0 : 1
       }
+      const legacy = remote ? null : await readLegacyVersion(home)
       let target = values.to
+      if (legacy) {
+        if (target && target !== bundled)
+          throw new ManagerError('旧布局要先换到已解压的自带版本，再选择其他版本', 'invalid_request')
+        target ??= bundled
+      } else if (!remote && !target) {
+        const pointer = await readCurrent(home)
+        if (
+          pointer &&
+          compareVersions(bundled, pointer.current) > 0 &&
+          (await readdir(join(home, 'releases'))).includes(bundled)
+        )
+          target = bundled
+      }
       if (!target) {
         const releases = await (await makeManager()).check()
         target = releases[0]?.version
@@ -205,7 +222,8 @@ export async function runManagementCommand(
         await poll(getStatus, 'prepare', target)
       } else {
         const value = await getStatus()
-        if (
+        if (legacy) await manager!.prepareLocal(bundled, { from: legacy, legacy: true })
+        else if (
           target === bundled &&
           compareVersions(target, value.current) > 0 &&
           (await readdir(join(home, 'releases'))).includes(target)
@@ -234,6 +252,7 @@ export async function runManagementCommand(
       }
       const result = await manager!.apply(target, { backupConfirmed: !!values['backup-confirmed'] })
       printResult((await getStatus()).lastResult)
+      if (legacy && result.result === 'success') await removeLegacy(home, errorOutput)
       return result.result === 'success' ? 0 : 1
     } finally {
       lock?.release()

@@ -411,13 +411,18 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
         stopped = true
         dataLock = await lock(preflight)
         if (!dataLock) throw new ManagerError('管理进程正在停止')
+        // 停站前的在途请求可能刚启用插件；未确认外部备份时必须在数据锁内再核对。
+        if (preflight.dialect !== 'sqlite' && !confirmation.backupConfirmed) {
+          const stoppedPreflight = await doctor(version, options.signal)
+          if (JSON.stringify(stoppedPreflight) !== JSON.stringify(preflight))
+            throw new ManagerError('停站期间有了新的数据库迁移，先备份，再重新准备并确认', 'backup_required')
+        }
         step(8)
         migrationAttempted = true
         const report = await command(version, 'migrate', options.migrateTimeout ?? 30 * 60_000, options.signal)
-        // 退出 0 但报告损坏时，库可能已经改变；缺少备份信息不能冒险启动旧程序。
-        migrationSucceeded = report.code === 0
-        migrations = migrationSucceeded
+        // 退出 0 但报告损坏也不能断言成功；失败恢复在数据锁内核对实际迁移状态。
         const result: MigrationResult = parseMigration(report)
+        migrationSucceeded = true
         migrations = result.core.length > 0 || result.plugins.some((item) => item.migrations.length > 0)
         backup = result.backup
         // 有迁移却没有可恢复的 SQLite 备份时，不能再把它归到无迁移档。
@@ -465,14 +470,35 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
         const entry = base()
         entry.reason = reason(error)
         if (error instanceof MigrationError) {
-          migrationSucceeded = false
           entry.error = error.detail
           backup = error.backup
           entry.backup = backup
         }
         if (stopped) {
           try {
-            const externalChanged = migrationSucceeded && migrations && preflight.dialect !== 'sqlite'
+            let partial: 'changed' | 'unchanged' | 'unknown' | null = null
+            if (migrationAttempted && !migrationSucceeded) {
+              if (error instanceof MigrationError && (error.core.length || error.plugins.length)) partial = 'changed'
+              else {
+                try {
+                  // migrate 可能在返回报告前崩溃，只有持锁复查待执行项才能区分未变和部分提交。
+                  const after = await doctor(version, options.signal)
+                  partial =
+                    JSON.stringify([after.pendingCore, after.pendingPlugins]) ===
+                    JSON.stringify([preflight.pendingCore, preflight.pendingPlugins])
+                      ? 'unchanged'
+                      : 'changed'
+                } catch {
+                  partial = 'unknown'
+                }
+              }
+              migrations = partial !== 'unchanged'
+              entry.migrations = migrations
+              if (partial === 'unknown') entry.reason += '；无法确认数据库是否已经部分迁移'
+            }
+            const externalChanged =
+              (migrationSucceeded && migrations && preflight.dialect !== 'sqlite') ||
+              (partial === 'changed' && !(preflight.dialect === 'sqlite' && backup))
             if (externalChanged) {
               dataLock?.release()
               dataLock = null
@@ -485,10 +511,16 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
                   upgrades: { [version]: { from, migrations, dialect: preflight.dialect, backup } },
                 })
               supervisor.resume(version)
-              entry.reason += '；数据库已经迁移，新版本保留运行，需要管理员人工处理'
+              entry.reason +=
+                partial === 'changed'
+                  ? '；数据库已经部分迁移，新版本保留，需要管理员用升级前的备份恢复'
+                  : '；数据库已经迁移，新版本保留运行，需要管理员人工处理'
             } else {
               await supervisor.stop()
-              if (migrationSucceeded && migrations && preflight.dialect === 'sqlite') {
+              if (
+                preflight.dialect === 'sqlite' &&
+                ((migrationSucceeded && migrations) || (partial !== null && backup))
+              ) {
                 dataLock ??= await lock(preflight)
                 if (!dataLock) throw new ManagerError('管理进程正在停止，数据库尚未恢复')
                 await restoreSqlite(preflight, backup)

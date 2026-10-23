@@ -47,6 +47,7 @@ export async function managerStatus(
   bundled: string,
   manager: Manager,
   writable: boolean,
+  redact = true,
 ): Promise<ManagerStatus> {
   const state = manager.status()
   const pointer = await readCurrent(home)
@@ -81,7 +82,7 @@ export async function managerStatus(
           },
         }
       : null,
-    lastResult: publicResult(entry),
+    lastResult: publicResult(entry, redact),
     failed: pointer?.failed ?? [],
     rollback: pointer?.previous
       ? {
@@ -98,7 +99,14 @@ export async function managerStatus(
       : null,
   }
 }
-function publicResult(entry: UpdateLog | null): ManagerStatus['lastResult'] {
+/** 只在控制通道边界去掉本机路径；持久日志和离线命令行仍供管理员定位问题。 */
+export function redactPaths(message: string): string {
+  return message.replace(
+    /[a-z][a-z\d+.-]*:\/\/[^\s，。；：、（）"'`“”‘’]+|(?:[a-z]:[\\/]|\\\\|(?<![a-z\d_./:\\-])\/)[^\s，。；：、（）"'`“”‘’]+/gi,
+    (value) => (/^[a-z][a-z\d+.-]*:\/\//i.test(value) ? value : '<路径>'),
+  )
+}
+function publicResult(entry: UpdateLog | null, redact = true): ManagerStatus['lastResult'] {
   return entry
     ? {
         at: entry.at,
@@ -107,7 +115,7 @@ function publicResult(entry: UpdateLog | null): ManagerStatus['lastResult'] {
         to: entry.to,
         result: entry.result,
         step: stepName(entry.step),
-        reason: entry.reason ?? null,
+        reason: entry.reason === undefined ? null : redact ? redactPaths(entry.reason) : entry.reason,
       }
     : null
 }
@@ -200,7 +208,11 @@ export async function createControl(options: {
   const server = createServer((socket) => {
     sockets.add(socket)
     socket.on('error', () => {})
-    socket.once('close', () => sockets.delete(socket))
+    let disconnected = false
+    socket.once('close', () => {
+      disconnected = true
+      sockets.delete(socket)
+    })
     let chunks = Buffer.alloc(0)
     let handled = false
     const timer = setTimeout(() => socket.destroy(), 5000)
@@ -273,10 +285,17 @@ export async function createControl(options: {
         } catch (error) {
           response = {
             ok: false,
-            error: { code: error instanceof ManagerError ? error.code : 'internal', message: reason(error) },
+            error: {
+              code: error instanceof ManagerError ? error.code : 'internal',
+              message: redactPaths(reason(error)),
+            },
           }
         }
         if (run) {
+          if (disconnected) {
+            reserved = null
+            return
+          }
           const action = run
           const operationContext = context!
           socket.once('close', () => {

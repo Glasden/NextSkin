@@ -269,3 +269,91 @@ it.skipIf(process.platform === 'win32')('内存 journal 的数据锁仍阻止其
   await supervisor.start('1.0.0', true)
   expect(supervisor.running).toBe(true)
 })
+
+it('强杀同时杀核心，并等它消失后 stop 才返回；使用最近一次 ready 的 pid', async () => {
+  const { EventEmitter } = await import('node:events')
+  const child = Object.assign(new EventEmitter(), {
+    connected: true,
+    send: vi.fn(),
+    kill: vi.fn(() => {
+      queueMicrotask(() => child.emit('close', null, 'SIGKILL'))
+      return true
+    }),
+  }) as unknown as import('node:child_process').ChildProcess
+  let gone = false
+  let clock = 0
+  let release!: () => void
+  let entered!: () => void
+  const waiting = new Promise<void>((resolve) => {
+    entered = resolve
+  })
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const kill = vi.fn<typeof process.kill>((_pid, signal) => {
+    if (signal === 0 && gone) throw Object.assign(new Error('gone'), { code: 'ESRCH' })
+    return true
+  })
+  const supervisor = new LauncherSupervisor('/unused', {
+    spawn: vi.fn(() => child) as unknown as typeof spawn,
+    kill,
+    now: () => clock,
+    sleep: async (ms) => {
+      clock += ms
+      entered()
+      await gate
+    },
+    shutdownTimeout: 1,
+    log: vi.fn(),
+  })
+  disposers.push(() => supervisor.shutdown())
+  await supervisor.start('1.0.0')
+  for (const pid of [1234, 5678])
+    child.emit('message', { nextskin: 'ready', version: '1.0.0', host: '127.0.0.1', port: 3000, pid })
+  let finished = false
+  const stopped = supervisor.stop().then(() => {
+    finished = true
+  })
+  await waiting
+  expect(kill.mock.calls[0]).toEqual([5678, 'SIGKILL'])
+  expect(finished).toBe(false)
+  gone = true
+  release()
+  await stopped
+  expect(kill.mock.calls.at(-1)).toEqual([5678, 0])
+})
+
+it.each([false, true])('强杀缺少 pid 时直接返回，有 pid 但未消失时最多等待五秒（有 pid=%s）', async (hasPid) => {
+  const { EventEmitter } = await import('node:events')
+  const child = Object.assign(new EventEmitter(), {
+    connected: true,
+    send: vi.fn(),
+    kill: vi.fn(() => {
+      queueMicrotask(() => child.emit('close', null, 'SIGKILL'))
+      return true
+    }),
+  }) as unknown as import('node:child_process').ChildProcess
+  const log = vi.fn()
+  const kill = vi.fn<typeof process.kill>(() => true)
+  let clock = 0
+  const supervisor = new LauncherSupervisor('/unused', {
+    spawn: vi.fn(() => child) as unknown as typeof spawn,
+    kill,
+    now: () => clock,
+    sleep: (ms) => {
+      clock += ms
+      return Promise.resolve()
+    },
+    shutdownTimeout: 1,
+    log,
+  })
+  await supervisor.start('1.0.0')
+  if (hasPid) child.emit('message', { nextskin: 'ready', version: '1.0.0', host: '127.0.0.1', port: 3000, pid: 5678 })
+  await supervisor.stop()
+  expect(clock).toBe(hasPid ? 5000 : 0)
+  if (hasPid) expect(log).toHaveBeenCalledWith(expect.stringContaining('5 秒内仍未退出'))
+  else {
+    expect(kill).not.toHaveBeenCalled()
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('没有核心 pid'))
+  }
+})

@@ -5,6 +5,7 @@ import { basename, dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { ConfigError, reason } from './types.ts'
 import { requireVersion } from './state.ts'
+import { connectControl } from './control.ts'
 import { selectedVersion, start } from './start.ts'
 
 export async function dispatch(
@@ -22,6 +23,10 @@ export async function dispatch(
   const args = process.argv.slice(process.argv[2] === '--' ? 3 : 2)
   if (['update', 'rollback', 'releases'].includes(command))
     return runManagementCommand(home, bundled, [command, ...args.slice(1)])
+  if (command === 'import' && (await connectControl(home))) {
+    console.error('NextSkin 正在运行（管理进程），先停掉服务再导入')
+    return 1
+  }
   if (command === 'help') console.log(managerHelp)
   if (command === 'start') return start({ home, bundled, importLauncher })
   process.env.NEXTSKIN_HOME = home

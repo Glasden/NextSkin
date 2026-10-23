@@ -208,7 +208,13 @@ test.each(['shutdown', 'disconnect', 'timeout', 'restart'] as const)(
     try {
       await vi.waitFor(() =>
         expect(parent.send).toHaveBeenCalledWith(
-          { nextskin: 'ready', version: context.version, host: '127.0.0.1', port: 4567 },
+          {
+            nextskin: 'ready',
+            version: context.version,
+            host: '127.0.0.1',
+            port: 4567,
+            pid: expect.any(Number) as unknown,
+          },
           expect.any(Function),
         ),
       )
@@ -240,17 +246,17 @@ test('每次核心 ready 都转发，通道断开和发送失败不影响停止�
   vi.mocked(acquireDataLock).mockResolvedValue(lock)
   vi.spyOn(console, 'error').mockImplementation(() => {})
   vi.mocked(supervise).mockImplementation((options) => {
-    options.onReady?.()
-    options.onReady?.()
+    options.onReady?.(1234)
+    options.onReady?.(1234)
     expect(parent.send).toHaveBeenCalledTimes(2)
     parent.connected = false
-    options.onReady?.()
+    options.onReady?.(1234)
     expect(parent.send).toHaveBeenCalledTimes(2)
     parent.connected = true
     parent.send.mockImplementationOnce(() => {
       throw new Error('channel closed')
     })
-    expect(() => options.onReady?.()).not.toThrow()
+    expect(() => options.onReady?.(1234)).not.toThrow()
     const callback = parent.send.mock.calls[0]?.[1] as unknown as (error: Error) => void
     expect(() => callback(new Error('channel closed'))).not.toThrow()
     return Promise.resolve(0)

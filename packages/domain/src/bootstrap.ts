@@ -20,7 +20,7 @@ const holder = globalThis as typeof globalThis & { [migrationBackupsKey]?: Map<s
 const migrationBackups = (holder[migrationBackupsKey] ??= new Map<string, MigrationBackup>())
 
 type PluginMigrations = { plugin: string; migrations: string[] }[]
-type MigrationReport = { core: string[]; plugins: PluginMigrations; backup: string | null }
+export type MigrationReport = { core: string[]; plugins: PluginMigrations; backup: string | null }
 
 async function backupMigrations(
   config: CoreConfig,
@@ -107,13 +107,15 @@ export async function openCore(
     pluginHostMode?: 'run' | 'stage'
     /** 插件系统的日志，默认写 stdout；管理插件的命令行有自己的输出，传空函数 */
     pluginLog?: (line: string) => void
+    /** 核心和插件分批提交；调用方持有报告，失败时仍能取到已提交迁移和还原点。 */
+    migrationReport?: MigrationReport
   } = {},
 ): Promise<{ core: Core; migrations: MigrationReport; close(): Promise<void> }> {
   if (config.database.dialect === 'sqlite') await mkdir(dirname(config.database.file), { recursive: true })
   const db = createDatabase<CoreDatabase>(config.database)
   let opened: Core | undefined
   try {
-    const migrations: MigrationReport = { core: [], plugins: [], backup: null }
+    const migrations = options.migrationReport ?? { core: [], plugins: [], backup: null }
     migrations.core = await migrateCore(db, config, { onBackup: (file) => (migrations.backup = file) })
     const renderCache = createLocalRenderCache(config.renderCacheDirectory)
     void renderCache.pruneOtherVersions().catch(() => console.warn('旧版出图缓存清理失败'))
