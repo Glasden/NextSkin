@@ -18,6 +18,7 @@
 ## 发布和文档
 
 - **发布的后续**（ADR-0040）：ZIP 和镜像加构建来源证明（`actions/attest-build-provenance`）；GHCR 的镜像在真实环境里运行一次（发布工作流冒烟的是 runner 上本地构建的 amd64 镜像）；部署文档里标了"未实测"的条目（宝塔和 1Panel 的反向代理、Windows 的 Ctrl+C 和 NSSM、Docker 里导入）在真实环境里核对；国内的下载渠道看反馈再定。
+- **更新检测和一键升级**（ADR-0061）：五个切片都还没做（`feat/updates`）。
 - **文档站的后续**（ADR-0054）：`edge` 的 IP 在国内网络上实测；`docs/deploy` 的面板、systemd、Windows 步骤迁进文档站；玩家指南补截图；SDK 1.0 之后的版本快照。
 
 ## 维护这份文件
