@@ -28,6 +28,7 @@ export function SignInForm({
 }) {
   const t = useTranslations('auth')
   const errors = useTranslations('errors')
+  const common = useTranslations('common')
   const captcha = useCaptcha(captchaConfig)
   const router = useRouter()
   const [pending, setPending] = useState(false)
@@ -76,7 +77,7 @@ export function SignInForm({
     <div className="flex flex-col gap-4">
       <Form onFormSubmit={(values) => void submit(values)}>
         {error && <Alert tone="danger">{error}</Alert>}
-        <Field label={t('email')} name="email">
+        <Field label={t('email')} name="email" formatError={common('emailFormat')}>
           {/* webauthn：浏览器支持时，在这个输入框的自动填充建议里列出本站的通行密钥 */}
           <Input type="email" autoComplete="username webauthn" required />
         </Field>

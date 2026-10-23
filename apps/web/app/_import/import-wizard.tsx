@@ -58,6 +58,7 @@ export function ImportWizard({
   leave?: { label: string; onLeave: () => void }
 }) {
   const t = useTranslations('import.wizard')
+  const common = useTranslations('common')
   const [step, setStep] = useState<Step>('env')
   const [source, setSource] = useState<SourceValues>(() => fromDefaults(defaults))
   const [nonLocal, setNonLocal] = useState(false)
@@ -265,7 +266,12 @@ export function ImportWizard({
       {step === 'confirm' && dryRun && (
         <Panel title={t('confirm.title')} description={t('confirm.description')}>
           <Form errors={errors} onFormSubmit={() => void start(false)}>
-            <Field label={t('confirm.siteUrl')} name="siteUrl" description={t('confirm.siteUrlHint')}>
+            <Field
+              label={t('confirm.siteUrl')}
+              name="siteUrl"
+              description={t('confirm.siteUrlHint')}
+              formatError={common('urlFormat')}
+            >
               <Input type="url" value={siteUrl} onValueChange={setSiteUrl} required />
             </Field>
             {hasData && target && (

@@ -53,6 +53,7 @@ export function SignUpForm({
 }: SignUpFormProps) {
   const t = useTranslations('auth')
   const errorText = useTranslations('errors')
+  const common = useTranslations('common')
   const captcha = useCaptcha(captchaConfig)
   const router = useRouter()
   const [pending, setPending] = useState(false)
@@ -120,7 +121,7 @@ export function SignUpForm({
   return (
     <Form errors={errors} onFormSubmit={(values) => void submit(values)}>
       {error && <Alert tone="danger">{error}</Alert>}
-      <Field label={t('email')} name="email" description={emailHint()}>
+      <Field label={t('email')} name="email" description={emailHint()} formatError={common('emailFormat')}>
         <Input type="email" autoComplete="email" required defaultValue={external?.email ?? undefined} />
       </Field>
       {!external && (

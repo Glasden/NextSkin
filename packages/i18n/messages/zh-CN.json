@@ -3,7 +3,16 @@
     "close": "关闭",
     "notifications": "通知",
     "cancel": "取消",
-    "sentences": "{first}{second}"
+    "sentences": "{first}{second}",
+    "validation": {
+      "required": "请填写这一项。",
+      "format": "格式不对，检查一下写法。",
+      "tooShort": "太短了，再多输入几个字符。",
+      "range": "超出了允许的范围。"
+    },
+    "emailFormat": "邮箱地址要写成 name@example.com。",
+    "urlFormat": "网址要以 http:// 或 https:// 开头。",
+    "integerFormat": "只能填整数，可以带正负号。"
   },
   "mail": {
     "greeting": "{nickname}，你好：",

@@ -1,5 +1,8 @@
+'use client'
+
 import { Field as BaseField } from '@base-ui/react/field'
 import type { ReactNode } from 'react'
+import { useValidationMessages, type ValidationMessages } from './validation-messages.tsx'
 
 export interface FieldProps {
   label: ReactNode
@@ -7,9 +10,14 @@ export interface FieldProps {
   description?: ReactNode
   /**
    * 错误信息，写“发生了什么，加上怎么办”（DESIGN.md §8）。不传时，放在 Form 里的 Field 显示 Form 的 errors 里
-   * 同名字段的错误，或者浏览器约束校验（required、type="email"……）的提示
+   * 同名字段的错误；没填就提交（required）和其他浏览器约束校验的提示也显示在这里
    */
   error?: ReactNode
+  /**
+   * 内容格式不对（type="email"、type="url"、pattern）时的提示，写清楚该输入什么。
+   * 不传时用 ValidationMessages 里的通用说法：Field 看不到控件是什么类型，具体格式只有调用点知道
+   */
+  formatError?: ReactNode
   disabled?: boolean
   name?: string
   /**
@@ -24,7 +32,20 @@ export interface FieldProps {
 const errorClass = 'text-sm text-danger'
 
 /** 包裹表单控件，统一标签、说明和错误信息的位置，并把它们和控件关联起来（aria-describedby） */
-export function Field({ label, description, error, disabled, name, nativeLabel = true, children }: FieldProps) {
+export function Field({
+  label,
+  description,
+  error,
+  formatError,
+  disabled,
+  name,
+  nativeLabel = true,
+  children,
+}: FieldProps) {
+  // 提示文案由 ValidationMessagesProvider 按站点语言统一给，调用点不用管；没有 Provider 时用浏览器给的消息
+  const messages = useValidationMessages()
+  // 不能传 children（哪怕是 undefined），否则不显示 Form 和浏览器给的错误信息
+  const browserError = <BaseField.Error className={errorClass} />
   return (
     <BaseField.Root
       name={name}
@@ -46,10 +67,43 @@ export function Field({ label, description, error, disabled, name, nativeLabel =
         <BaseField.Error match className={errorClass}>
           {error}
         </BaseField.Error>
+      ) : messages ? (
+        // 认识的约束换成站点文案；不认识的（tooLong、badInput 这些在界面上到不了）仍然用浏览器的
+        <BaseField.Validity>
+          {({ validity }) => {
+            const message = validityMessage(validity, messages, formatError)
+            return message ? (
+              <BaseField.Error match className={errorClass}>
+                {message}
+              </BaseField.Error>
+            ) : (
+              browserError
+            )
+          }}
+        </BaseField.Validity>
       ) : (
-        // 不能传 children（哪怕是 undefined），否则不显示 Form 和浏览器给的错误信息
-        <BaseField.Error className={errorClass} />
+        browserError
       )}
     </BaseField.Root>
   )
+}
+
+/** Base UI 报上来的约束状态（不是 DOM 的 ValidityState，多一个 valid） */
+interface Validity {
+  valueMissing: boolean
+  typeMismatch: boolean
+  patternMismatch: boolean
+  tooShort: boolean
+  rangeUnderflow: boolean
+  rangeOverflow: boolean
+  stepMismatch: boolean
+}
+
+/** 当前该显示哪一条，按用户撞上的先后排：没填、格式、太短、超出范围 */
+function validityMessage(validity: Validity, messages: ValidationMessages, formatError: ReactNode): ReactNode | null {
+  if (validity.valueMissing) return messages.required
+  if (validity.typeMismatch || validity.patternMismatch) return formatError ?? messages.format
+  if (validity.tooShort) return messages.tooShort
+  if (validity.rangeUnderflow || validity.rangeOverflow || validity.stepMismatch) return messages.range
+  return null
 }

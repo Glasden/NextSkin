@@ -114,6 +114,7 @@ function NewSiteForm({
   onBack: () => void
 }) {
   const t = useTranslations('setup.newSite')
+  const common = useTranslations('common')
   const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -146,7 +147,7 @@ function NewSiteForm({
             <Field label={t('siteName')} name="siteName">
               <Input defaultValue={siteName} required maxLength={64} />
             </Field>
-            <Field label={t('siteUrl')} name="siteUrl" description={t('siteUrlHint')}>
+            <Field label={t('siteUrl')} name="siteUrl" description={t('siteUrlHint')} formatError={common('urlFormat')}>
               <Input type="url" defaultValue={siteUrl} required />
             </Field>
           </div>
@@ -154,7 +155,7 @@ function NewSiteForm({
         <fieldset className="flex flex-col gap-4">
           <legend className="mb-4 font-pixel text-pixel-1 text-text-muted">{t('admin')}</legend>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={t('email')} name="email">
+            <Field label={t('email')} name="email" formatError={common('emailFormat')}>
               <Input type="email" autoComplete="email" required />
             </Field>
             <Field label={t('nickname')} name="nickname">
