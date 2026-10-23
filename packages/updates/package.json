@@ -1,0 +1,19 @@
+{
+  "name": "@nextskin/updates",
+  "version": "0.0.0",
+  "private": true,
+  "description": "版本清单的格式、签名和校验、版本比较，没有依赖的纯函数；核心和管理进程共用（ADR-0061）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

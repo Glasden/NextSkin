@@ -12,7 +12,7 @@
 
 ## 发行包
 
-- GitHub Releases 上的 `nextskin-<版本>.zip`，用同一页的 `SHA256SUMS` 核对：`sha256sum -c SHA256SUMS`。镜像见 [docker.md](docker.md)。
+- GitHub Releases 上的 `nextskin-<版本>.zip`，用同一页的 `SHA256SUMS` 核对：`sha256sum -c SHA256SUMS`。正式版另附 `SHA256SUMS.sig`，用发布公钥（`apps/docs/public/release-keys/`，文档站上是 `https://docs.nextskin.org/release-keys/<key id>.pem`）核对：`openssl pkeyutl -verify -pubin -inkey 2026-10.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig`（ADR-0061）。镜像见 [docker.md](docker.md)。
 - 需要 Node 24 或更新，推荐 26：24、25 上 plugin host 拦不住插件绕过站点直接连网，`start` 和 `doctor` 会提示。包里不带 Node，也不需要 `npm install`。
 - 解压后：
 

@@ -1,0 +1,18 @@
+{
+  "name": "@nextskin/dl",
+  "version": "0.0.0",
+  "private": true,
+  "description": "dl.nextskin.org：从 R2 读出发行包和版本清单的 Worker，正式版发布后由 release-dl.yml 部署（ADR-0061）",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

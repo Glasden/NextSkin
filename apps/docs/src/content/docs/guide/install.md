@@ -24,6 +24,12 @@ NextSkin 只需要 Node 和一个可写的数据目录：默认用 SQLite，不�
    sha256sum -c SHA256SUMS
    ```
 
+   正式版还附带 `SHA256SUMS.sig`：发布时用 NextSkin 的发布私钥对 `SHA256SUMS` 签的名，站点自己检查更新、下载升级包时也认这把钥匙。要确认 `SHA256SUMS` 本身没被换过，下载[发布公钥](/release-keys/2026-10.pem)，用 OpenSSL 3 核对：
+
+   ```bash
+   openssl pkeyutl -verify -pubin -inkey 2026-10.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig
+   ```
+
 2. 解压并启动。包里不带 Node，也不需要 `npm install`：
 
    ```bash

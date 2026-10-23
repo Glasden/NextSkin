@@ -1,0 +1,143 @@
+# 正式版的 Release 发布以后（ADR-0061）：把 ZIP 传到 R2、重建版本清单 releases/v1.json，部署 dl.nextskin.org 的 Worker。
+# 清单由各个正式版 Release 附带的 release-entry.json 拼成，条目在 release-site.yml 的批准任务里签过名；这里只搬运，拿不到私钥，
+# 改不了条目，最坏是不更新清单。上传或部署失败后从 Actions 页面手动运行，选一个 v* 标签：缺了的 ZIP 会补传，清单整个重建。
+# 第三方 action 固定到提交 SHA，升级时连同注释里的版本号一起改（同 ci.yml）。
+name: Release downloads
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 默认只留一个排队中的运行，后来的会顶掉它：接连发布几个版本时，排队的每一个都要跑
+concurrency:
+  group: release-dl
+  cancel-in-progress: false
+  queue: max
+
+env:
+  WRANGLER_SEND_METRICS: false
+
+jobs:
+  target:
+    # 插件 SDK 的 Release（标签是 @nextskin/plugin-sdk@…）和预发布不走这里
+    if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && !github.event.release.prerelease) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      tags: ${{ steps.target.outputs.tags }}
+      latest: ${{ steps.target.outputs.latest }}
+    steps:
+      - id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" != tag ]; then
+            echo '::error::手动运行时选一个 v* 标签'
+            exit 1
+          fi
+          version=${GITHUB_REF_NAME#v}
+          if ! [[ "$GITHUB_REF_NAME" == v* && "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$GITHUB_REF_NAME 不是正式版的标签"
+            exit 1
+          fi
+          # 已发布的正式版（不含草稿和预发布），再加上这一个：列表可能还没反映刚发布的这次
+          tags=$(
+            {
+              gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 1000 \
+                --json tagName --jq '.[].tagName'
+              echo "$GITHUB_REF_NAME"
+            } | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -uV
+          )
+          echo "tags=$(echo "$tags" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          echo "latest=$(echo "$tags" | tail -n 1)" >> "$GITHUB_OUTPUT"
+
+  upload:
+    needs: target
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # R2 的 S3 凭据只能读写 nextskin-releases 这一个桶，不和 docs environment 的令牌放在一起；environment 只允许 v* 标签使用
+    environment: dl
+    steps:
+      # 用最新的正式版的代码重建清单：给旧的次版本发修订版时，旧代码里可能没有后来换上的公钥
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.target.outputs.latest }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+      - name: 收集签过名的条目、生成清单
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAGS: ${{ needs.target.outputs.tags }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/entries"
+          for tag in $TAGS; do
+            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx release-entry.json; then
+              gh release download "$tag" --repo "$GITHUB_REPOSITORY" -p release-entry.json -O "$RUNNER_TEMP/entries/$tag.json"
+            else
+              echo "::notice::$tag 没有 release-entry.json（早于 ADR-0061 的版本），不进清单"
+            fi
+          done
+          # 用内置的公钥逐个校验，有一个不通过就失败：宁可清单不更新，也不发出去一个站点会拒收的条目
+          node packages/updates/scripts/build-manifest.ts --entries "$RUNNER_TEMP/entries" --out "$RUNNER_TEMP/v1.json"
+      - name: 补传 R2 上缺的 ZIP，最后换清单
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          AWS_ENDPOINT_URL_S3: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          # 只在必须时加校验和：照 R2 文档对新版 AWS CLI 的建议
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+        run: |
+          bucket=nextskin-releases
+          mkdir -p "$RUNNER_TEMP/zips"
+          for entry in "$RUNNER_TEMP"/entries/*.json; do
+            [ -e "$entry" ] || continue
+            # 条目上一步校验过签名，这里的 sha256 可信
+            version=$(jq -r '.entry | fromjson | .version' "$entry")
+            sha256=$(jq -r '.entry | fromjson | .sha256' "$entry")
+            file="nextskin-$version.zip"
+            key="releases/$version/$file"
+            if aws s3api head-object --bucket "$bucket" --key "$key" > /dev/null 2>&1; then continue; fi
+            gh release download "v$version" --repo "$GITHUB_REPOSITORY" -p "$file" -D "$RUNNER_TEMP/zips"
+            echo "$sha256  $RUNNER_TEMP/zips/$file" | sha256sum -c -
+            aws s3 cp "$RUNNER_TEMP/zips/$file" "s3://$bucket/$key" --content-type application/zip --no-progress
+            rm "$RUNNER_TEMP/zips/$file"
+          done
+          # 清单最后换：里面的每个版本，ZIP 都已经在桶里了
+          aws s3 cp "$RUNNER_TEMP/v1.json" "s3://$bucket/releases/v1.json" \
+            --content-type 'application/json; charset=utf-8' --no-progress
+
+  worker:
+    needs: target
+    # 只在这是已发布的正式版里最新的一个时部署，同 site.yml：给旧的次版本发修订版，不会把 Worker 换回旧代码
+    if: needs.target.outputs.latest == github.ref_name
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # 和文档站、宣传站共用 docs environment 的令牌：只能改这个账号的 Workers 脚本和 nextskin.org 的 Workers 路由
+    environment: docs
+    concurrency:
+      group: dl-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+      # 只装 Worker 自己的依赖：要的是锁文件里那个版本的 wrangler
+      - run: pnpm install --frozen-lockfile --filter @nextskin/dl
+      - run: pnpm --filter @nextskin/dl exec wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}

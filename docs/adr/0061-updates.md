@@ -112,10 +112,11 @@ nextskin/                 实例目录，环境变量 NEXTSKIN_HOME
   - 版本号、发布日期、发布说明的链接、是否含安全修复；
   - ZIP 的文件名、SHA-256、大小；
   - 最低 Node 版本、`managerProtocol`。
+  - 落地补充：条目里没有下载地址，由版本号和文件名拼出来（`packages/updates` 的 `downloadUrls`）。"是否含安全修复"先不进条目：签名在批准发布任务时完成，那时发布说明还没写，见 `docs/PROGRESS.md`。
 - **每个条目单独签名**，不签整份清单：
   - ed25519，用 `node:crypto` 校验，不加依赖。公钥内置在核心和管理进程里。
   - 私钥是 environment `release` 的 secret。签名在批准后的发布任务里完成，签的是这个版本的条目和 `SHA256SUMS`，两份签名作为 Release 的附件。草稿发布后把条目合进清单、上传到 R2 的工作流只搬运签好的条目，用不到私钥。
-  - 手动下载的服主也能核对：`SHA256SUMS.sig` 可以用 OpenSSL 3 校验（`openssl pkeyutl -verify -pubin -inkey nextskin-release.pub -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig`），部署文档写明，公钥另放在文档站和仓库里。
+  - 手动下载的服主也能核对：`SHA256SUMS.sig` 可以用 OpenSSL 3 校验（`openssl pkeyutl -verify -pubin -inkey 2026-10.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig`），部署文档写明，公钥另放在文档站（`/release-keys/<key id>.pem`）和仓库里，测试守着它和内置的一致。
   - 换密钥要先发一个内置了新公钥的版本。
 - **防的是什么**：
   - Cloudflare 账号或任何下载渠道被攻破：攻击者能换掉 ZIP、`SHA256SUMS` 和清单，但签不出条目，管理进程和核心都拒绝。最多扣住新版本不让站点看到，或者让下载失败；后台显示最近一次成功检查的时间，扣得久了看得出来。
@@ -229,6 +230,7 @@ nextskin/                 实例目录，环境变量 NEXTSKIN_HOME
 ### 发布流程
 
 - 发布任务在批准后生成并签名这个版本的条目和 `SHA256SUMS`，附在草稿 Release 上。草稿发布时，和加镜像标签的工作流一样，另一个工作流把 ZIP 和签好的条目上传到 R2、重新生成 `v1.json`。它用的 Cloudflare 令牌只有这个桶的写权限，和私钥不在同一个 environment。预发布不进清单。
+  - 落地补充：工作流是 `release-dl.yml`。上传用只能读写这个桶的 R2 S3 凭据，放在单独的 environment `dl`；Worker 用 `docs` environment 的令牌部署，同文档站。清单每次从所有正式版 Release 附带的 `release-entry.json` 整个重建，R2 上缺的 ZIP 顺手补传，所以失败了重跑一次就行。
 - e2e 加升级用例：从上一个正式版的 ZIP 经管理进程升到这次构建的版本，SQLite 和 PostgreSQL 各一遍；注入"健康检查不过"和"迁移失败"，核对回滚。
 - 发布说明照旧要写有没有迁移（ADR-0040）；后台显示的迁移情况以预检的结果为准。
 
