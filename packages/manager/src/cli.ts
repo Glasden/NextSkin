@@ -11,12 +11,15 @@ import { createManager, type ManagerOptions } from './pipeline.ts'
 import { readCurrent, sleep, validVersion } from './state.ts'
 import { ConfigError, ManagerError, reason, type Manager, type ManagerStatus } from './types.ts'
 
-export const managerHelp = `  update status [--json]   查看管理进程和最近一次升级结果
-  update --check [--json]   检查比当前新的正式版
-  update [--to <版本>] [--yes] [--backup-confirmed]
-                           准备并切换版本；外部数据库有迁移时先备份
-  rollback [--yes]         回到上一个版本；有迁移时先确认数据库恢复
-  releases [--json]       列出本机版本和管理进程状态`
+export const managerHelp = `管理进程的命令（升级和回滚，ADR-0061）：
+  update [--to <版本>]     升级，默认到最新的正式版；不再询问加 --yes，
+                           MySQL、PostgreSQL 有迁移时先备份、再加 --backup-confirmed
+  update --check           列出比当前新的正式版
+  update status            当前版本、进行中的操作和最近一次的结果
+  rollback [--yes]         回到上一个版本
+  releases                 列出本机的版本目录
+update --check、update status、releases 加 --json 输出机器可读的结果。
+`
 
 export interface CliOptions {
   manager?: Omit<ManagerOptions, 'home' | 'bundled' | 'supervisor'>
