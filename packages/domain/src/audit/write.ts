@@ -46,6 +46,9 @@ export const AUDIT_ACTIONS = {
   'job.deadLetter': 'job',
   'notification.send': 'notificationBroadcast',
   'notification.recall': 'notificationBroadcast',
+  'update.prepare': 'update',
+  'update.apply': 'update',
+  'update.rollback': 'update',
 } as const satisfies Record<string, string>
 export type AuditAction = keyof typeof AUDIT_ACTIONS
 

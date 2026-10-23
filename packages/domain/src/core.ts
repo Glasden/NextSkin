@@ -58,8 +58,10 @@ import { createTextureRemoval } from './textures/removal.ts'
 import { createTextureUpload } from './textures/upload.ts'
 import { createSigningKeyQuery } from './yggdrasil/signing-key.ts'
 import { createUpdates, UPDATE_CHECK_JOB, type CoreRelease, type UpdateCheckOptions } from './updates/service.ts'
+import type { ManagerClientOptions } from './updates/manager-client.ts'
 
 export interface CoreOptions {
+  manager?: ManagerClientOptions
   release?: CoreRelease
   updateCheck?: UpdateCheckOptions
   setupCodeFile?: string | null

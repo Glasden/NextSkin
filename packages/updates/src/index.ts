@@ -1,7 +1,7 @@
 import { createPrivateKey, createPublicKey, sign, verify } from 'node:crypto'
 import { compareVersions, keyIdPattern, releaseVersionPattern } from './versions.ts'
 
-export { compareVersions } from './versions.ts'
+export { compareVersions, releaseVersionPattern } from './versions.ts'
 
 /** 核心和管理进程使用同一份清单。 */
 export const MANIFEST_URL = 'https://dl.nextskin.org/releases/v1.json'

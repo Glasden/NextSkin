@@ -2,7 +2,14 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { createImportService, type ImportService } from '@nextskin/importer'
 import { createApp } from '@nextskin/api'
-import { coreConfigFromEnv, DomainError, openCore, pluginHostEntry, type Core } from '@nextskin/domain'
+import {
+  coreConfigFromEnv,
+  DomainError,
+  openCore,
+  pluginHostEntry,
+  type Core,
+  type CoreOptions,
+} from '@nextskin/domain'
 import { officialPlugins } from '@nextskin/official-plugins'
 
 export interface Server {
@@ -12,7 +19,10 @@ export interface Server {
 }
 
 // Route Handler 和 proxy 可能各自打包出一份模块，靠 globalThis 共用同一个连接池；next dev 热更新后也不会重复连接
-const holder = globalThis as typeof globalThis & { nextskinServer?: Promise<Server> }
+const holder = globalThis as typeof globalThis & {
+  nextskinServer?: Promise<Server>
+  nextskinOpen?: () => Promise<Server>
+}
 
 /**
  * 第一次调用时连接数据库并执行迁移（由核心进程负责）。失败后下一次调用会重试。
@@ -21,7 +31,8 @@ const holder = globalThis as typeof globalThis & { nextskinServer?: Promise<Serv
 export function getServer(): Promise<Server> {
   if (process.env.NEXT_PHASE === 'phase-production-build')
     return Promise.reject(new Error('构建期间不打开核心：页面应当动态渲染（app/layout.tsx）'))
-  holder.nextskinServer ??= open().catch((error: unknown) => {
+  holder.nextskinOpen ??= createOpener()
+  holder.nextskinServer ??= holder.nextskinOpen().catch((error: unknown) => {
     holder.nextskinServer = undefined
     throw error
   })
@@ -42,19 +53,29 @@ async function releaseVersion(): Promise<string | undefined> {
   }
 }
 
-async function open(): Promise<Server> {
+function createOpener(): () => Promise<Server> {
+  // 移除环境里的凭据，但在共享的闭包里保留，打开核心失败后重试时控制通道仍然可用。
+  const address = process.env.NEXTSKIN_MANAGER_ADDRESS
+  const token = process.env.NEXTSKIN_MANAGER_TOKEN
+  delete process.env.NEXTSKIN_MANAGER_ADDRESS
+  delete process.env.NEXTSKIN_MANAGER_TOKEN
+  const manager = address && token ? { address, token } : undefined
+  return () => open(manager)
+}
+
+async function open(manager: CoreOptions['manager']): Promise<Server> {
   const production = process.env.NODE_ENV === 'production'
   const config = coreConfigFromEnv(process.env, { cwd: process.cwd(), production })
   // 工作目录是 apps/web（next dev）或 standalone 产物里的 apps/web（server.js 会切过去），上两级是根目录。
   // 产物里运行打好包的 host，它由 next.config.ts 的 outputFileTracingIncludes 带进去
   const pluginHost = pluginHostEntry({ root: resolve(process.cwd(), '../..'), bundled: production })
   const version = await releaseVersion()
+  const deployment = process.env.NEXTSKIN_DEPLOYMENT === 'docker' ? 'docker' : 'bundle'
   const opened = await openCore(config, {
+    ...(version && deployment === 'bundle' && manager ? { manager } : {}),
     officialPlugins,
     pluginHost,
-    ...(version
-      ? { release: { version, deployment: process.env.NEXTSKIN_DEPLOYMENT === 'docker' ? 'docker' : 'bundle' } }
-      : {}),
+    ...(version ? { release: { version, deployment } } : {}),
   })
   const { core } = opened
   try {

@@ -203,7 +203,24 @@
     "theme_not_found": "This theme doesn't exist or isn't enabled.",
     "theme_default_disabled": "This is the site's default theme and can't be turned off. Make another theme the default first.",
     "updates_disabled": "Update checks are disabled. Enable them in advanced settings first.",
-    "updates_unavailable": "Update checks are unavailable when running from source."
+    "updates_unavailable": "Update checks are unavailable when running from source.",
+    "update_unreachable": "The update manager could not be reached. Please try again later.",
+    "update_unauthorized": "The core could not authenticate with the update manager.",
+    "update_busy": "An update operation is already in progress.",
+    "update_readonly": "The program directory is read-only. Updates are unavailable.",
+    "update_not_prepared": "Prepare the target version first.",
+    "update_not_newer": "The target version is not newer than the current version.",
+    "update_unknown_version": "The target release could not be found.",
+    "update_manager_outdated": "Restart the service to activate the new update manager first.",
+    "update_node_too_old": "The current Node.js version does not meet the target release requirements.",
+    "update_backup_required": "Back up the database and confirm the backup first.",
+    "update_confirmation_required": "Confirm the database restore or data loss required for rollback first.",
+    "update_no_previous": "There is no previous version to roll back to.",
+    "update_backup_missing": "The database backup from before the update is missing. Rollback is unavailable.",
+    "update_preflight_failed": "The update preflight check failed.",
+    "update_download_failed": "The update download failed. Please try again later.",
+    "update_internal": "An internal error occurred in the update manager.",
+    "update_invalid_request": "The update request is invalid."
   },
   "score": {
     "reasons": {
@@ -1491,7 +1508,10 @@
         "oauthClientEnable": "Enable OAuth app",
         "oauthClientDelete": "Delete OAuth app",
         "notificationSend": "Send notification",
-        "notificationRecall": "Recall notification"
+        "notificationRecall": "Recall notification",
+        "updatePrepare": "Prepare update",
+        "updateApply": "Apply update",
+        "updateRollback": "Roll back version"
       },
       "subjects": {
         "user": "User #{id}",
@@ -1504,7 +1524,8 @@
         "oauthClient": "OAuth app #{id}",
         "job": "Failed job #{id}",
         "allJobs": "All failed jobs",
-        "notificationBroadcast": "Notification broadcast #{id}"
+        "notificationBroadcast": "Notification broadcast #{id}",
+        "update": "{version, select, none {Update} other {Version {version}}}"
       },
       "actorSystem": "System",
       "actorPlugin": "Plugin {id}",
@@ -1553,7 +1574,10 @@
         "oauthClient": "client_id {clientId}{owner, select, none {, no owner} other {, owner #{owner}}}",
         "oauthClientDelete": "{summary}; {users, plural, one {# user’s authorization} other {# users’ authorizations}}, {accessTokens, plural, one {# access token} other {# access tokens}}, {refreshTokens, plural, one {# refresh token} other {# refresh tokens}}",
         "notificationSend": "Recipients: {audience, select, all {all users} users {regular users} admins {administrators} other {{count, plural, one {# chosen user} other {# chosen users}}}}",
-        "notificationRecall": "Delivered to {recipientCount, number} recipients before recall"
+        "notificationRecall": "Delivered to {recipientCount, number} recipients before recall",
+        "updatePrepare": "{accepted, select, true {accepted} other {rejected ({code})}}",
+        "updateApply": "{accepted, select, true {accepted} other {rejected ({code})}}; backup confirmed: {backupConfirmed, select, true {yes} other {no}}",
+        "updateRollback": "{accepted, select, true {accepted} other {rejected ({code})}}; rollback confirmed: {confirmed, select, true {yes} other {no}}"
       },
       "filterActor": "Only actor #{uid}",
       "filterSubject": "Only {subject}",
@@ -2297,7 +2321,101 @@
         "unzip": "Unzip over the current directory (.env and data/ stay as they are), then start as usual.",
         "guide": "Step-by-step guide"
       },
-      "privacy": "Checking only reads one public file, and versions with bad signatures are dropped. To keep the site off the internet, turn checks off in advanced settings."
+      "privacy": "Checking only reads one public file, and versions with bad signatures are dropped. To keep the site off the internet, turn checks off in advanced settings.",
+      "oneClickTitle": "One-click upgrade",
+      "oneClickManual": "You can also upgrade by hand: download the ZIP, unzip it over the current directory and restart the service.",
+      "managerUnreachableTitle": "The manager process is unreachable",
+      "managerUnreachable": "One-click upgrades are unavailable for now. Restart the service; if that does not help, run node nextskin.mjs doctor on the server.",
+      "managerReasons": {
+        "readonly": "The manager process cannot write the program directory (releases/), so it only checks for updates. To upgrade with one click, see the “Upgrading” section for your deployment in the deployment guide.",
+        "unmanaged": "The service was not started through the manager process (NEXTSKIN_MANAGER=off is set, or a version's launcher in releases/ was run directly), so upgrades are manual."
+      },
+      "oneClick": {
+        "readyTitle": "{version} is available",
+        "ready": "Prepare first: download, verify the signature, unzip, then check the new version against the database in use. The site keeps running; afterwards you see how long it will be down and whether to back up first.",
+        "failedBefore": "The last upgrade to this version did not succeed. Preparing again downloads and checks it anew.",
+        "prepare": "Prepare {version}",
+        "nothingTitle": "Up to date",
+        "nothing": "When a new stable release is out, upgrade it here with one click.",
+        "preparingTitle": "Preparing {version}",
+        "cancel": "Cancel",
+        "stepsLabel": "Preparation steps",
+        "complete": "done",
+        "steps": {
+          "manifest": "Read the release list",
+          "space": "Check disk space",
+          "download": "Download",
+          "extract": "Unzip",
+          "preflight": "Preflight"
+        },
+        "stepHints": {
+          "manifest": "Verifying the entry's signature",
+          "space": "Working out the space needed",
+          "download": "Connecting to the download server",
+          "extract": "Unzipping into the staging directory",
+          "preflight": "Checking the new version against the database in use"
+        },
+        "downloading": "Downloaded",
+        "megabytes": "{received} / {total} MB",
+        "preparedTitle": "{version} is ready",
+        "prepared": "Download, verification and preflight passed. The site is still running {current}.",
+        "database": "Database",
+        "migrations": "Migrations",
+        "noMigrations": "None",
+        "migrationCount": "{core, plural, other {# in core}}, {plugins, plural, one {# from an official plugin} other {# from official plugins}}",
+        "downtime": "Downtime",
+        "downtimeValue": "A few seconds to over thirty; the reverse proxy answers 502 meanwhile",
+        "onFailure": "If the new version does not come up",
+        "tiers": {
+          "none": "Switches back to the current version automatically; the database is untouched.",
+          "sqlite": "The SQLite database is backed up before migrating; if the new version fails its health check, the backup and the current version are restored.",
+          "external-backup": "If a migration fails, a PostgreSQL database is left as it was while a MySQL one may be left halfway; if the migrations succeed but the new version does not come up, nothing is rolled back. In each case restore from your own backup."
+        },
+        "dialects": {
+          "sqlite": "SQLite",
+          "mysql": "MySQL / MariaDB",
+          "postgres": "PostgreSQL"
+        },
+        "incompatibleTitle": "These plugins do not support the new version",
+        "incompatible": "The plugin API version each one requires is in parentheses. They will not load after the upgrade, so check the plugins page for new versions first.",
+        "backupTitle": "Back up the database first",
+        "backup": "This upgrade runs database migrations, and {dialect} cannot be rolled back automatically. Back it up the way you usually do (mysqldump, pg_dump, a snapshot of a managed database), then upgrade.",
+        "apply": "Upgrade to {version}",
+        "applyTitle": "Upgrade to {version}?",
+        "applyDescription": "The site will be down for a few seconds to over thirty; players cannot log in and textures do not load meanwhile.",
+        "backupConfirm": "I have backed up the {dialect} database",
+        "cancelApply": "Cancel",
+        "switchingTitle": "Upgrading to {version}",
+        "rollingBackTitle": "Going back to {version}",
+        "switching": "The site is down for a few seconds to over thirty, so it is normal that pages do not load meanwhile. This page refreshes itself once the new version is up.",
+        "switchingProgress": "Switching",
+        "lostTitle": "Still not back after five minutes",
+        "lost": "Check the service log on the server, or run node nextskin.mjs update status.",
+        "lastSuccess": "Upgraded from {from} to {to} on {time}.",
+        "lastRollback": "Went back from {from} to {to} on {time}.",
+        "lastFailedTitle": "The upgrade to {to} did not succeed",
+        "lastRolledBackTitle": "The upgrade to {to} did not succeed; back on {from}",
+        "lastRollbackFailedTitle": "Going back to {to} did not succeed",
+        "lastHint": "{time}. Every result is recorded in releases/update-log.jsonl in the instance directory.",
+        "rollbackTitle": "Go back to {version}",
+        "rollbackHints": {
+          "plain": "The last upgrade had no database migrations, so the {version} program is simply switched back in.",
+          "sqlite": "The SQLite database is replaced by the backup taken before the upgrade: every sign-up, upload and change since then is lost.",
+          "external": "The database is not touched: restore the {dialect} database from the backup taken before the upgrade, then come back and confirm."
+        },
+        "rollbackBlocked": "The SQLite backup taken before the upgrade is gone, so it cannot be rolled back automatically.",
+        "rollback": "Go back to {version}",
+        "rollbackDialogTitle": "Go back to {version}?",
+        "rollbackWarnings": {
+          "plain": "The site will be down for a few seconds to over thirty.",
+          "sqlite": "The database is replaced by the backup taken before the upgrade, and everything written since is lost. The site will be down for a few seconds to over thirty.",
+          "external": "Only the program is switched. Restore the database to its state before the upgrade first, or {version} cannot open it."
+        },
+        "rollbackConfirms": {
+          "sqlite": "I understand everything written since the upgrade is lost",
+          "external": "The {dialect} database has been restored to its state before the upgrade"
+        }
+      }
     },
     "failedJobs": {
       "title": "Failed jobs",
