@@ -14,6 +14,8 @@ function sourceReadPaths(root: string): string[] {
   const packages = join(root, 'packages')
   const host = join(packages, 'plugin-host')
   const sdk = join(packages, 'plugin-sdk')
+  // 能读的工作区包：SDK，和校验插件主题要用的 packages/theme（没有依赖的纯函数，ADR-0057）
+  const workspace = new Set([sdk, join(packages, 'theme')])
   const store = join(root, 'node_modules', '.pnpm')
   const paths = new Set([host, sdk])
   const visited = new Set<string>()
@@ -42,7 +44,8 @@ function sourceReadPaths(root: string): string[] {
         throw new Error(`plugin host 缺少运行时依赖 ${name}`)
       }
       if (dependency === packages || dependency.startsWith(packages + sep)) {
-        if (dependency !== sdk) throw new Error(`plugin host 不允许读取工作区依赖 ${name}`)
+        if (!workspace.has(dependency)) throw new Error(`plugin host 不允许读取工作区依赖 ${name}`)
+        paths.add(dependency)
       } else {
         const parts = relative(store, dependency).split(sep)
         if (parts[0] === '..' || parts[1] !== 'node_modules' || parts.length < 3)

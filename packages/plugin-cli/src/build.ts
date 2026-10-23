@@ -6,6 +6,9 @@ import * as sdk from '@nextskin/plugin-sdk'
 import sdkPackage from '@nextskin/plugin-sdk/package.json' with { type: 'json' }
 import {
   buildManifest,
+  describeThemeIssue,
+  PluginDefinitionError,
+  pluginThemeIssues,
   compareVersions,
   importPluginDefinition,
   installPluginModuleHooks,
@@ -112,6 +115,10 @@ export async function buildPluginPackage({ dir }: { dir: string }): Promise<{
     installPluginModuleHooks({ '@nextskin/plugin-sdk': sdk, zod })
     const definition = await importPluginDefinition(server)
     const extracted = buildManifest(definition as AnyPluginDefinition, pkg)
+    const themeErrors = pluginThemeIssues(extracted).flatMap(({ name, issues }) =>
+      issues.map((issue) => `主题 ${name}：${describeThemeIssue(issue)}`),
+    )
+    if (themeErrors.length) throw new PluginDefinitionError(themeErrors.join('\n'))
     const files = new Map<string, Uint8Array>([['server.mjs', await readFile(server)]])
     let locales: string[] = []
     try {

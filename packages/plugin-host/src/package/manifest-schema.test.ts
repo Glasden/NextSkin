@@ -10,6 +10,47 @@ import { PluginPackageError } from './error.ts'
 const pkg = { name: 'test', version: '1.0.0', nextskin: { id: 'test' } }
 const base = { ...buildManifest(definePlugin({ capabilities: [] }), pkg), entry: { server: 'server.mjs' } }
 
+/* eslint-disable nextskin/no-raw-color -- manifest 的主题是色值数据，这里校验合法输入和非法格式。 */
+test('安装清单允许部分主题和大写色值，形状校验不拒绝失效配色', () => {
+  const themes = [
+    { name: 'partial', label: 'themes.partial', colors: { dark: { accent: '#86A2FF' } } },
+    { name: 'empty', label: 'themes.empty', colors: {} },
+    { name: 'invalid', label: 'themes.invalid', colors: { light: { accent: '#ffffff' } } },
+  ]
+  expect(parsePluginManifest({ ...base, ui: { themes } }).ui.themes).toEqual(themes)
+})
+
+test.each(
+  [
+    null,
+    {},
+    [null],
+    [{ name: 'Bad', label: 'x', colors: {} }],
+    [{ name: 'a'.repeat(33), label: 'x', colors: {} }],
+    [{ name: 'a', colors: {} }],
+    [{ name: 'a', label: 1, colors: {} }],
+    [{ name: 'a', label: 'x' }],
+    [{ name: 'a', label: 'x', colors: null }],
+    [{ name: 'a', label: 'x', colors: { light: null } }],
+    [{ name: 'a', label: 'x', colors: { dark: [] } }],
+    [{ name: 'a', label: 'x', colors: { auto: {} } }],
+    [{ name: 'a', label: 'x', colors: {}, extra: true }],
+    ...['stage', 'checker-a', 'checker-b', 'acent'].map((name) => [
+      { name: 'a', label: 'x', colors: { light: { [name]: '#ffffff' } } },
+    ]),
+    ...['#fff', '#ffffffff', '#ffffff\n', 'ffffff', 'rgb(0 0 0)', null].map((accent) => [
+      { name: 'a', label: 'x', colors: { dark: { accent } } },
+    ]),
+    Array.from({ length: 2 }, () => ({ name: 'same', label: 'x', colors: {} })),
+    Array.from({ length: 17 }, (_, i) => ({ name: `theme-${i}`, label: 'x', colors: {} })),
+  ].map((themes) => ({ themes })),
+)('manifest.json 拒绝错误的主题或多余键：%j', ({ themes }) => {
+  expect(() => parsePluginManifest({ ...base, ui: { themes } })).toThrow(PluginPackageError)
+  expect(() => parsePluginManifest({ ...base, ui: { themes } })).toThrow(/ui/)
+})
+
+/* eslint-enable nextskin/no-raw-color */
+
 test('官方插件的清单都能通过严格校验', () => {
   const manifests = [
     buildManifest(invitation.definition, invitation.package),

@@ -15,6 +15,7 @@ import {
   type PluginPackageField,
 } from '@nextskin/plugin-sdk'
 import sdkPackage from '@nextskin/plugin-sdk/package.json' with { type: 'json' }
+import { checkTheme, normalizeThemeColors, pluginThemesError, resolveTheme, type ThemeIssue } from '@nextskin/theme'
 import { z } from 'zod'
 import { eventNames } from './events.ts'
 import { isValidVersion, parseVersion } from './package/semver.ts'
@@ -300,6 +301,9 @@ export function describePlugin(definition: AnyPluginDefinition): PluginContribut
 
   const ui = json(record(d.ui, 'ui'), 'ui') as PluginContributions['ui']
   validateUi(ui, declaredPermissions)
+  const normalizedUi = ui.themes
+    ? { ...ui, themes: ui.themes.map((theme) => ({ ...theme, colors: normalizeThemeColors(theme.colors) })) }
+    : ui
 
   return {
     capabilities: [...capabilities] as PluginContributions['capabilities'],
@@ -314,13 +318,17 @@ export function describePlugin(definition: AnyPluginDefinition): PluginContribut
     routes,
     jobs,
     cron,
-    ui,
+    ui: normalizedUi as PluginContributions['ui'],
   }
 }
 
 export function validateUi(ui: PluginContributions['ui'], permissions: ReadonlySet<string>) {
   for (const key of Object.keys(ui))
-    if (key !== 'nav' && key !== 'pages' && key !== 'formFields') fail(`ui 里没有 ${key} 这一项`)
+    if (key !== 'nav' && key !== 'pages' && key !== 'formFields' && key !== 'themes') fail(`ui 里没有 ${key} 这一项`)
+  if (ui.themes !== undefined) {
+    const error = pluginThemesError(ui.themes)
+    if (error) fail(`ui.themes：${error}`)
+  }
   const checkField = (field: unknown) => {
     const result = pluginFieldSchema.safeParse(field)
     if (!result.success) fail('UI 字段的类型、选项或属性不匹配')
@@ -372,6 +380,14 @@ export function validateUi(ui: PluginContributions['ui'], permissions: ReadonlyS
     checkField(field)
     names.add(field.name)
   }
+}
+
+/** 只列出未通过检查的主题；加载时由核心单独禁用这些主题，不影响插件其他功能。 */
+export function pluginThemeIssues(manifest: Pick<PluginContributions, 'ui'>): { name: string; issues: ThemeIssue[] }[] {
+  return (manifest.ui.themes ?? []).flatMap(({ name, colors }) => {
+    const issues = checkTheme(resolveTheme(colors))
+    return issues.length ? [{ name, issues }] : []
+  })
 }
 
 export function buildManifest(definition: AnyPluginDefinition, pkg: PluginPackageJson): ExtractedPluginManifest {

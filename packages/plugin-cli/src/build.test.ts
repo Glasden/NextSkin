@@ -213,3 +213,56 @@ async function buildIn(dir: string): Promise<string> {
   await exec(process.execPath, [cli, 'build', dir, '--out', out], { timeout: 20_000 })
   return out
 }
+
+/* eslint-disable nextskin/no-raw-color -- 构建测试直接核对 manifest 中的主题色值数据。 */
+test('构建主题写进 manifest，色值统一为小写', async () => {
+  const dir = await project()
+  try {
+    await writeFile(
+      join(dir, 'src', 'index.ts'),
+      `export default {
+      capabilities: [],
+      ui: { themes: [{ name: 'cobalt', label: 'themes.cobalt', colors: {
+        light: { accent: '#2A52E5' }, dark: { accent: '#86A2FF' }
+      } }] }
+    }`,
+    )
+    const { manifest } = unpackPluginPackage(await readFile(await buildIn(dir)))
+    expect(manifest.ui.themes).toEqual([
+      {
+        name: 'cobalt',
+        label: 'themes.cobalt',
+        colors: { light: { accent: '#2a52e5' }, dark: { accent: '#86a2ff' } },
+      },
+    ])
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+}, 30_000)
+
+test('不通过的主题使构建退出 1，逐条报出主题名、模式和检查组合', async () => {
+  const dir = await project()
+  try {
+    await writeFile(
+      join(dir, 'src', 'index.ts'),
+      `export default {
+      capabilities: [],
+      ui: { themes: [
+        { name: 'bad-contrast', label: 'bad', colors: { light: { accent: '#ffffff' } } },
+        { name: 'bad-direction', label: 'bad', colors: { light: { bg: '#000000' } } },
+        { name: 'bad-distance', label: 'bad', colors: { dark: { accent: '#ff6b6b' } } }
+      ] }
+    }`,
+    )
+    await expect(exec(process.execPath, [cli, 'build', dir], { timeout: 20_000 })).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringMatching(
+        /主题 bad-contrast：亮色下 accent-fg 和 accent 的对比度[\s\S]*主题 bad-direction：亮色下 bg 要比 text 亮[\s\S]*主题 bad-distance：暗色下 accent 和 danger 在 OKLab/,
+      ) as unknown,
+    })
+    await expect(readFile(join(dir, 'dist', 'test-1.0.0.tgz'))).rejects.toMatchObject({ code: 'ENOENT' })
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+}, 30_000)
+/* eslint-enable nextskin/no-raw-color */

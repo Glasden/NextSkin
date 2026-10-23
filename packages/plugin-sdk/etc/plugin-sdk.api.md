@@ -847,6 +847,22 @@ export interface TexturesApi {
 // @public
 export type TextureType = 'steve' | 'alex' | 'cape' | (string & {});
 
+// @public
+export type ThemeColor = 'bg' | 'surface' | 'surface-raised' | 'surface-sunken' | 'border' | 'border-strong' | 'text' | 'text-muted' | 'text-inverse' | 'accent' | 'accent-fg' | 'accent-subtle' | 'success' | 'success-fg' | 'warning' | 'warning-fg' | 'danger' | 'danger-fg' | 'focus' | 'shadow';
+
+// @public
+export type ThemeColorValue = `#${string}`;
+
+// @public
+export interface ThemeContribution {
+    readonly colors: {
+        readonly light?: Readonly<Partial<Record<ThemeColor, ThemeColorValue>>>;
+        readonly dark?: Readonly<Partial<Record<ThemeColor, ThemeColorValue>>>;
+    };
+    readonly label: MessageKey;
+    readonly name: string;
+}
+
 // @public (undocumented)
 export type Tid = number;
 
@@ -872,6 +888,7 @@ export interface UiContributions<P> {
         readonly permission?: NoInfer<keyof P & string>;
         readonly view: View;
     }>>;
+    readonly themes?: readonly ThemeContribution[];
 }
 
 // @public
