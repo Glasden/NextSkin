@@ -1,6 +1,6 @@
 /**
  * 亮暗模式（DESIGN.md §10）：跟随系统，或者固定亮色、暗色。偏好按设备记在 Cookie 里，不进数据库；跟随系统时不写 Cookie。
- * <html> 上的 data-theme 只由内联脚本设置（亮色时也写），React 不管这个属性：否则从固定暗色改回跟随系统之后，
+ * <html> 上的 data-mode 只由内联脚本设置（亮色时也写），React 不管这个属性：否则从固定暗色改回跟随系统之后，
  * 一次 router.refresh 就会按服务端渲染的结果把它删掉
  */
 export const colorModes = ['system', 'light', 'dark'] as const
@@ -8,7 +8,7 @@ export type ColorMode = (typeof colorModes)[number]
 
 export const COLOR_MODE_COOKIE = 'nextskin-color-mode'
 
-/** 改了偏好之后在 window 上派发：内联脚本据此重设 data-theme，页头的菜单据此更新选中项 */
+/** 改了偏好之后在 window 上派发：内联脚本据此重设 data-mode，页头的菜单据此更新选中项 */
 export const COLOR_MODE_CHANGE = 'nextskin:color-mode'
 
 export function parseColorMode(value: string | undefined): ColorMode {
@@ -34,7 +34,7 @@ function applyColorMode(cookie: string, event: string) {
       .split('; ')
       .find((pair) => pair.startsWith(`${cookie}=`))
       ?.slice(cookie.length + 1)
-    document.documentElement.dataset.theme =
+    document.documentElement.dataset.mode =
       value === 'light' || value === 'dark' ? value : query.matches ? 'dark' : 'light'
   }
   apply()
@@ -43,7 +43,7 @@ function applyColorMode(cookie: string, event: string) {
 }
 
 /**
- * 根布局写进 <head> 的内联脚本：在第一次绘制之前设好 data-theme，不会先闪一下亮色；跟随系统时，系统切换亮暗也跟着变。
+ * 根布局写进 <head> 的内联脚本：在第一次绘制之前设好 data-mode，不会先闪一下亮色；跟随系统时，系统切换亮暗也跟着变。
  * 页面的 CSP 只执行带 nonce 的脚本，根布局给它带上（ADR-0053）
  */
 export const colorModeScript = `(${applyColorMode.toString()})(${JSON.stringify(COLOR_MODE_COOKIE)},${JSON.stringify(COLOR_MODE_CHANGE)})`

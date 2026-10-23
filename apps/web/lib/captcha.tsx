@@ -154,7 +154,7 @@ export function useCaptcha(config: CaptchaConfig | null): Captcha {
         // 每次渲染进一个新元素：reCAPTCHA 不能在同一个元素上渲染两次
         const target = document.createElement('div')
         host.replaceChildren(target)
-        const theme = host.closest('[data-theme="dark"]') ? 'dark' : 'light'
+        const theme = host.closest('[data-mode="dark"]') ? 'dark' : 'light'
         const id = api.render(target, {
           sitekey: siteKey,
           ...adapters[provider].options({ locale, theme, invisible }),

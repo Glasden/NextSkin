@@ -17,8 +17,8 @@ const index = JSON.parse(readFileSync(new URL('../storybook-static/index.json', 
 const stories = Object.values(index.entries).filter((entry) => entry.type === 'story')
 
 for (const story of stories) {
-  for (const theme of ['light', 'dark'] as const) {
-    test(`${story.title} / ${story.name}（${theme}）`, async ({ page }) => {
+  for (const mode of ['light', 'dark'] as const) {
+    test(`${story.title} / ${story.name}（${mode}）`, async ({ page }) => {
       // 通知、对话框这类浮层渲染在 body 下、按视口定位，这类 story 带 screenshot-viewport 标签，截整个视口
       const wholeViewport = story.tags?.includes('screenshot-viewport') ?? false
       if (wholeViewport) await page.setViewportSize({ width: 720, height: 480 })
@@ -36,7 +36,7 @@ for (const story of stories) {
           },
         })
       })
-      await page.goto(`/iframe.html?id=${story.id}&viewMode=story&globals=theme:${theme}`)
+      await page.goto(`/iframe.html?id=${story.id}&viewMode=story&globals=mode:${mode}`)
       // play 函数可能留下焦点之类的状态，等它跑完再截图；它失败时截图没有意义
       const phase = await page.waitForFunction(() => {
         const preview = (window as { __STORYBOOK_PREVIEW__?: { currentRender?: { phase?: string } } })
@@ -47,7 +47,7 @@ for (const story of stories) {
       expect(await phase.jsonValue()).toBe('finished')
       expect(await page.evaluate(() => (window as { playError?: string }).playError), 'play 函数失败').toBeUndefined()
       await page.evaluate(() => document.fonts.ready)
-      const name = `${story.id}--${theme}.png`
+      const name = `${story.id}--${mode}.png`
       if (wholeViewport) await expect(page).toHaveScreenshot(name)
       else await expect(page.locator('[data-screenshot]')).toHaveScreenshot(name)
     })

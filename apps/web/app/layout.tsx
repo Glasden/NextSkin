@@ -38,7 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-// data-theme 由 <head> 里的内联脚本在第一次绘制之前设上（lib/color-mode.ts）。服务端渲染的 <html> 上没有这个属性，
+// data-mode 由 <head> 里的内联脚本在第一次绘制之前设上（lib/color-mode.ts）。服务端渲染的 <html> 上没有这个属性，
 // 水合时和页面对不上，所以 <html> 不报水合不一致。
 // 内联脚本要带 proxy.ts 生成的 nonce 才会执行（ADR-0053），Base UI 插的脚本和样式经 CspProvider 拿到它
 export default async function RootLayout({ children }: { readonly children: ReactNode }) {

@@ -30,7 +30,7 @@ export function parseTheme(css: string): ThemeTokens {
   const block = css.match(/@theme\s+static\s*\{([^}]*)\}/)?.[1]
   if (block === undefined) throw new Error('找不到 @theme static 块')
 
-  const darkBlock = css.match(/\[data-theme\s*=\s*['"]dark['"]\]\s*\{([^}]*)\}/)?.[1] ?? ''
+  const darkBlock = css.match(/\[data-mode\s*=\s*['"]dark['"]\]\s*\{([^}]*)\}/)?.[1] ?? ''
   const darkValues = new Map(declarations(darkBlock).map(({ name, value }) => [name, value]))
   const theme: ThemeTokens = { colors: [], others: [] }
 
