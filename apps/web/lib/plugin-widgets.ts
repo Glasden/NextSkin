@@ -1,4 +1,11 @@
-import { canPlugin, type PluginSlotName, type PluginView, type PluginWidgetView, type UserRole } from '@nextskin/domain'
+import {
+  canPlugin,
+  pluginSlots,
+  type PluginSlotName,
+  type PluginView,
+  type PluginWidgetView,
+  type UserRole,
+} from '@nextskin/domain'
 
 // 插件放在首页上的挂件（ADR-0059）：挑出当前用户看得到的、把数据源的响应变成要显示的内容。
 // 不碰请求和会话，取数据在 lib/plugins.ts
@@ -7,11 +14,6 @@ import { canPlugin, type PluginSlotName, type PluginView, type PluginWidgetView,
 export const WIDGET_TIMEOUT_MS = 3000
 /** 首页上的统计是概要，多的不显示 */
 export const WIDGET_STATS_LIMIT = 4
-
-export const SLOT_AREA = { 'user.dashboard': 'user', 'admin.dashboard': 'admin' } as const satisfies Record<
-  PluginSlotName,
-  'user' | 'admin'
->
 
 interface WidgetDefinition {
   name: string
@@ -43,7 +45,7 @@ export interface VisibleWidget {
  */
 export function visibleWidgets(plugins: readonly PluginUi[], slot: PluginSlotName, role: UserRole): VisibleWidget[] {
   if (role === 'banned') return []
-  const area = SLOT_AREA[slot]
+  const area = pluginSlots[slot].area
   return [...plugins]
     .sort((a, b) => a.id.localeCompare(b.id))
     .flatMap(({ id, ui }) =>

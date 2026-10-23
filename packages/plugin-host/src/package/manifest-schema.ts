@@ -4,7 +4,8 @@ import { z } from 'zod'
 import { eventNames } from '../events.ts'
 import { KEY, MAX_BODY_BYTES, MAX_LOGIN_ID_LENGTH, OBJECT_NAME, PLUGIN_ID, ROUTE_KEY, validateUi } from '../manifest.ts'
 import { settingProperties } from '../settings.ts'
-import { pluginFieldSchema, pluginPathSchema, widgetSlots } from '../ui-schema.ts'
+import { pluginSlots } from '../slots.ts'
+import { pluginFieldSchema, pluginPathSchema } from '../ui-schema.ts'
 import { PluginPackageError } from './error.ts'
 import { isValidRange, isValidVersion } from './semver.ts'
 
@@ -60,7 +61,7 @@ const ui = z.strictObject({
     .array(
       z.strictObject({
         name: matching(/^[a-z][a-z0-9-]{0,63}$/),
-        slot: z.enum(Object.keys(widgetSlots) as SlotName[]),
+        slot: z.enum(Object.keys(pluginSlots) as SlotName[]),
         title: z.string(),
         permission: z.string().optional(),
         link: z.strictObject({ page: z.string(), label: z.string() }).optional(),

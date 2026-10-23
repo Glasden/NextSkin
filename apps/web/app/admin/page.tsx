@@ -92,7 +92,7 @@ export default async function AdminOverviewPage() {
         </dl>
       </section>
 
-      <PluginWidgets widgets={widgets} mutedHeadings />
+      <PluginWidgets slot="admin.dashboard" widgets={widgets} mutedHeadings />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-4">
