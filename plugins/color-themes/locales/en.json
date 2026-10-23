@@ -1,10 +1,11 @@
 {
   "plugin": {
     "name": "More colors",
-    "description": "Adds Cobalt and Magenta color themes for users to choose after a super administrator enables them."
+    "description": "Adds Cobalt, Magenta, and High contrast color themes for users to choose after a super administrator enables them. High contrast uses square corners, thick borders, and cards with shadows."
   },
   "themes": {
     "cobalt": "Cobalt",
-    "magenta": "Magenta"
+    "magenta": "Magenta",
+    "highContrast": "High contrast"
   }
 }
