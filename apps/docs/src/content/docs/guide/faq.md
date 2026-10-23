@@ -76,4 +76,6 @@ SQLite 是单写锁、同步执行，放 NFS/SMB 这类网络盘会又慢又容�
 
 ## 升级失败了怎么回退
 
-升级前先备份 `data/`。回退时停服务、换回旧版本的 `server/`、`cli/`、`nextskin.mjs`，把备份恢复成 `data/nextskin.sqlite`，再删掉 `data/nextskin.sqlite-wal` 和 `data/nextskin.sqlite-shm`。完整步骤见[安装部署](/guide/install/#升级与回退)。
+发行包：新版本没通过健康检查时，管理进程自己换回旧版本（SQLite 连同升级前的备份）；MySQL、PostgreSQL 有迁移而新版本起不来时不自动回滚，后台“更新”页写明要怎么做。升级成功以后想回去，在“更新”页或用 `node nextskin.mjs rollback` 回到上一个版本，见[安装部署](/guide/install/#升级与回退)。
+
+Docker：标签改回旧版本；有迁移时先用 `/data/backups/` 里的备份换回库，步骤见 [docker.md](https://github.com/Glasden/NextSkin/blob/main/docs/deploy/docker.md#升级和回退)。

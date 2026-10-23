@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-NextSkin 只需要 Node 和一个可写的数据目录：默认用 SQLite，不需要 Redis、消息队列或 pm2。启动器负责监管核心进程，插件在独立的 host 进程里跑。
+NextSkin 只需要 Node 和一个可写的数据目录：默认用 SQLite，不需要 Redis、消息队列或 pm2。管理进程负责选版本和升级，启动器负责监管核心进程，插件在独立的 host 进程里跑。
 
 ## 环境要求
 
@@ -50,7 +50,7 @@ NextSkin 只需要 Node 和一个可写的数据目录：默认用 SQLite，不�
 
 4. 生产环境放在反向代理后面，见下一节。
 
-发行目录里的 `data/` 是数据目录：SQLite 库、材质、插件、备份和 `setup-code` 都在里面，运行用户要能写。
+发行目录里的 `data/` 是数据目录：SQLite 库、材质、插件、备份和 `setup-code` 都在里面，运行用户要能写。程序在 `releases/<版本>/` 里，`releases/current.json` 指向在用的版本。
 
 ## 反向代理
 
@@ -107,11 +107,33 @@ docker compose exec nextskin cat /data/setup-code
 ## 升级与回退
 
 - 迁移是单向的：升级到带迁移的版本之后，旧版本打不开这个库。先读发布说明。
-- 升级：停服务 → 备份 `data/` 和 `.env` → 删掉 `server/`、`cli/` → 解压新包覆盖 → 启动。启动时自动执行迁移。
-- SQLite 有要执行的迁移时，迁移之前自动备份到 `data/backups/`（留最近 3 份）；MySQL、PostgreSQL 请自己备份。
-- 回退（SQLite）：停服务 → 换回旧版本的程序 → 把备份复制成 `data/nextskin.sqlite` → 删掉旁边的 `nextskin.sqlite-wal`、`nextskin.sqlite-shm` → 启动。
+- 站点每天读一次签过名的版本清单（`dl.nextskin.org`，不带站点的任何信息），有新版本时后台提示。后台“设置 → 高级”里能关掉。
 
-完整步骤见 [docs/deploy 的升级与回退](https://github.com/Glasden/NextSkin/blob/main/docs/deploy/README.md#升级和回退)。
+### 发行包：后台一键升级
+
+后台的“更新”页（超级管理员）：先**准备**——下载、核对签名、解压、对着在用的库预检，站点照常运行；看过预检结果再**升级**，站点停几秒到三十多秒。程序按版本放在 `releases/` 下，升级只是换一个指针，上一个版本留着，可以回滚。
+
+| 情况 | 升级前 | 新版本没起来时 |
+| --- | --- | --- |
+| 没有迁移 | — | 自动换回旧版本 |
+| SQLite 有迁移 | 自动备份到 `data/backups/` | 自动换回备份和旧版本 |
+| MySQL、PostgreSQL 有迁移 | 自己备份，在后台确认 | 不自动回滚数据库，按后台的说明用备份恢复 |
+
+- 回滚只能回到上一个版本。SQLite 有迁移时用升级前的备份换回库，**之后的写入都会丢失**；MySQL、PostgreSQL 有迁移时先自己恢复库，再确认。
+- 命令行也能做：`node nextskin.mjs update`、`rollback`，见[命令行](/guide/commands/#update)。
+- 运行管理进程的用户要能写 `releases/`，否则只检测。
+
+### 发行包：手动升级
+
+停服务 → 备份 `data/` 和 `.env` → 把新的 ZIP 覆盖解压到原目录 → 启动。启动时管理进程发现新版本，照一键升级的流程预检、迁移、启动，失败时回到旧版本。MySQL、PostgreSQL 有迁移时不会自己升级：照旧运行旧版本，备份以后到后台确认，或者停着服务运行 `node nextskin.mjs update --backup-confirmed`。
+
+0.4 及更早的版本是旧的目录布局，也是覆盖解压就行，这一次没有可回滚的上一个版本。失败时启动以 78 退出、旧程序留着；MySQL、PostgreSQL 有迁移时也以 78 退出，备份以后停着服务运行 `node nextskin.mjs update --backup-confirmed`，再启动。
+
+### Docker
+
+镜像里只检测、不一键升级：备份数据卷，把 `compose.yaml` 里的标签换成新版本，`docker compose pull && docker compose up -d`。SQLite 的迁移前备份照样在 `/data/backups/`。
+
+完整步骤和手工回退见 [docs/deploy 的升级和回退](https://github.com/Glasden/NextSkin/blob/main/docs/deploy/README.md#升级和回退)。
 
 ## 接下来
 

@@ -59,6 +59,8 @@ docker run --rm --network host --env-file .env \
 
 ## 升级和回退
 
+镜像里不做一键升级（ADR-0061）：根目录只读、版本就是标签。后台"更新"页照样提示新版本和发布说明，升级照下面的步骤换标签。镜像里设了 `NEXTSKIN_MANAGER=off`，没有管理进程，进程模型和以前一样。
+
 ```bash
 docker compose stop
 docker run --rm -v <项目名>_data:/data:ro -v "$PWD":/backup debian:trixie-slim \

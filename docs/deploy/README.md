@@ -10,21 +10,29 @@
 | systemd               | [systemd.md](systemd.md)                 | 临时单元：停止、强杀后重启、退出码 78 不重启；单元文件：启动、重启；开机自启未实测 |
 | Windows               | [windows.md](windows.md)                 | 从发行目录启动；Ctrl+C 停止和做成服务未实测                 |
 
+上表的实测用的是 0.4 的布局（根目录直接是启动器）。之后的版本多了一层管理进程（ADR-0061）：从上一个正式版覆盖解压升级由发布工作流冒烟（SQLite、PostgreSQL），systemd 的权限分离在容器里以 root 实测过；各面板上的一键升级和回滚未实测，见各页的"升级"一节。
+
 ## 发行包
 
 - GitHub Releases 上的 `nextskin-<版本>.zip`，用同一页的 `SHA256SUMS` 核对：`sha256sum -c SHA256SUMS`。正式版另附 `SHA256SUMS.sig`，用发布公钥（`apps/docs/public/release-keys/`，文档站上是 `https://docs.nextskin.org/release-keys/<key id>.pem`）核对：`openssl pkeyutl -verify -pubin -inkey 2026-10.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig`（ADR-0061）。镜像见 [docker.md](docker.md)。
 - 需要 Node 24 或更新，推荐 26：24、25 上 plugin host 拦不住插件绕过站点直接连网，`start` 和 `doctor` 会提示。包里不带 Node，也不需要 `npm install`。
-- 解压后：
+- 解压后（ADR-0061）：
 
   ```
-  nextskin/
-  ├─ nextskin.mjs    启动器和命令行的入口
-  ├─ cli/ server/    程序，升级时整个替换
-  ├─ package.json    只有 scripts.start = "node nextskin.mjs start"，给面板用
+  nextskin/                 实例目录
+  ├─ nextskin.mjs           入口：管理进程和命令行，面板、systemd 都运行它
+  ├─ manager/               管理进程：选版本启动、监管、升级、回滚
+  ├─ releases/
+  │  ├─ <版本>/             一个版本的程序（nextskin.mjs、cli/、server/），运行时不改
+  │  ├─ current.json        指针：当前版本、上一个版本，第一次 start 时生成
+  │  └─ update-log.jsonl    每次升级、回滚的结果
+  ├─ package.json           只有 scripts.start = "node nextskin.mjs start"，给面板用
   ├─ README.md  .env.example
-  ├─ .env            第一次 start 时生成（权限 600），存 NEXTSKIN_SECRET
-  └─ data/           数据目录：SQLite 库、材质、插件、setup-code、backups/
+  ├─ .env                   第一次 start 时生成（权限 600），存 NEXTSKIN_SECRET
+  └─ data/                  数据目录：SQLite 库、材质、插件、setup-code、backups/
   ```
+
+  `releases/` 里平时有两个版本：在用的和上一个（留作回滚），升级时还有下载中的 `.staging/`。运行中还有 `manager.lock`、`manager.sock`、`manager.token`（POSIX 上 600）。
 
 ## 配置
 
@@ -81,11 +89,12 @@ location / {
 
 ## 进程管理
 
-- `start` 是启动器：拉起核心，核心崩溃时自己重启（退避），不需要 pm2。
-- 停止：给启动器发 SIGTERM 或 SIGINT（Windows 上是 Ctrl+C）。核心先收尾正在处理的请求和后台任务，最多 30 秒后被强杀；监管方的停止超时设成 40 秒。整棵进程树一起收到 SIGTERM 也没问题。
-- 退出码：`0` 正常停止；`78` 配置错误（密钥太短、数据目录不可写、端口无效、数据目录已有服务在用……），重启也没用，监管方不要重启；`1` 其他错误。
-- 同一个数据目录同时只能运行一个 `start`。上一个还在退出时，新的最多等 40 秒，所以"停止后立即启动"的重启也能用。
+- `start` 是管理进程：按 `releases/current.json` 启动那个版本的启动器并监管它；启动器再拉起核心，核心崩溃时自己重启（退避）。不需要 pm2。
+- 停止：给 `start` 发 SIGTERM 或 SIGINT（Windows 上是 Ctrl+C）。它经 IPC 让启动器按顺序停下：核心先收尾正在处理的请求和后台任务，最多 30 秒后被强杀；启动器 35 秒还没退出就被强杀。监管方的停止超时设成 40 秒。整棵进程树一起收到 SIGTERM 也没问题；管理进程被强杀时，启动器发现 IPC 断了也会自己停下。
+- 退出码：`0` 正常停止；`78` 配置错误（密钥太短、数据目录不可写、端口无效、数据目录已有服务在用、`current.json` 损坏……），重启也没用，监管方不要重启；`1` 其他错误。
+- 同一个实例目录同时只能运行一个 `start`。上一个还在退出时，新的最多等 40 秒，所以"停止后立即启动"的重启也能用。
 - 日志写到 stdout、stderr，不含密码、令牌、Cookie、连接串。
+- 不想要管理进程（只检测、不一键升级）：设环境变量 `NEXTSKIN_MANAGER=off`，入口在本进程里直接运行当前版本的启动器，进程模型和以前一样。镜像里设了它。
 
 ## 命令行
 
@@ -106,11 +115,68 @@ location / {
 
 ## 升级和回退
 
-- 迁移是单向的：升级到带迁移的版本之后，旧版本打不开这个库。先读发布说明。
-- 升级：停服务 → 备份 `data/` 和 `.env` → 删掉 `server/`、`cli/` → 解压新包覆盖 → 启动。启动时自动执行迁移。
+- 迁移是单向的：升级到带迁移的版本之后，旧版本打不开这个库。先读发布说明；要不要停、迁移有几个、失败时会怎样，以后台的预检结果为准。
+- 站点每天读一次 `https://dl.nextskin.org/releases/v1.json`（签过名的版本清单，不带站点的任何信息），有新版本时后台概览和"更新"页提示，超级管理员收到一条通知。后台"设置 → 高级"里能关掉。
+
+### 一键升级（发行包）
+
+后台"更新"页（只有超级管理员能进）：
+
+1. **准备**：下载 ZIP（先试 `dl.nextskin.org`，再试 GitHub）、核对签名和 SHA-256、解压到 `releases/<版本>/`，再用新版本的 `doctor` 对着在用的库预检。站点照常运行。
+2. 看预检的结果：数据库、迁移有几个、和新版本不兼容的插件、失败时会怎样。
+3. **升级**：管理进程停掉旧版本（站点停几秒到三十多秒，期间反向代理返回 502）→ 用新版本执行迁移 → 改指针 → 启动新版本，等它的 `/api/health` 返回 200（最多 2 分钟）→ 删掉在用和上一个以外的版本目录。
+
+新版本没有通过健康检查时：
+
+| 情况 | 升级前 | 新版本没起来时 |
+| ---- | ------ | -------------- |
+| 没有迁移 | — | 自动换回旧版本 |
+| SQLite 有迁移 | 迁移前自动备份到 `data/backups/` | 换回备份（连同删掉 `-wal`、`-shm`）和旧版本 |
+| PostgreSQL 有迁移 | 自己备份，在后台勾选"已经备份" | 迁移失败：库没变，换回旧版本。迁移成功但新版本没起来：不自动回滚，新版本留着，按后台的说明用备份恢复 |
+| MySQL、MariaDB 有迁移 | 同上 | 迁移失败：库可能停在中间（DDL 不能回滚），换回旧版本；旧版本打不开时就停在那里，用备份恢复。迁移成功但新版本没起来：同上 |
+
+- 要求：运行管理进程的用户能写 `releases/`。写不了时只检测，更新页说明原因。各部署方式见各自的页面。
+- 新版本要的 Node 比服务器上的新：预检拦下，先换 Node。新版本要的管理进程比在用的新（很少见）：先重启一次服务，让 ZIP 里带来的新管理进程生效。
+- 结果记在 `releases/update-log.jsonl`，后台显示最近一次。
+
+命令行（在实例目录里，用运行管理进程的用户）：
+
+| 命令 | 用途 |
+| ---- | ---- |
+| `node nextskin.mjs update --check` | 列出比当前新的正式版 |
+| `node nextskin.mjs update [--to <版本>] [--yes] [--backup-confirmed]` | 升级，默认到最新的正式版。服务运行时交给管理进程，和后台一样；服务停着时自己执行同一条流水线，最后不启动服务（也就不做健康检查）。MySQL、PostgreSQL 有迁移时要 `--backup-confirmed`；不是终端时要 `--yes` |
+| `node nextskin.mjs rollback [--yes]` | 回到上一个版本，规则见下 |
+| `node nextskin.mjs update status` | 当前版本、上一个版本、进行中的操作、最近一次的结果 |
+| `node nextskin.mjs releases` | 列出 `releases/` 里的版本和指针 |
+
+### 回滚
+
+只能回到上一个版本（`current.json` 里的 `previous`）：后台"更新"页，或 `node nextskin.mjs rollback`。
+
+- 那次升级没有迁移：直接换回去。
+- SQLite 有迁移：用那次升级前的备份换回库，**升级以后的所有写入都会丢失**，要确认。之后上传的材质文件留在存储里，由孤儿文件的回收清掉。
+- MySQL、PostgreSQL 有迁移：程序不碰库。先自己用升级前的备份恢复，再确认"库已经恢复到升级之前"。
+
+### 手动升级
+
+- 照旧可以手动升级：停服务 → 备份 `data/` 和 `.env` → 把新的 ZIP 覆盖解压到实例目录 → 启动。不用删任何东西。
+- 启动时管理进程发现解压进来的版本比在用的新，就按一键升级的流水线从预检开始（不下载），失败时同样回到旧版本。
+- MySQL、PostgreSQL 有迁移时不会自己升级：照旧运行旧版本，日志说明原因。备份以后到后台"更新"页确认升级，或停掉服务后运行 `node nextskin.mjs update --backup-confirmed`。
+
+### 从 0.4 及更早的版本升级
+
+0.4 及更早的发行包是旧的布局（根目录里直接是 `server/`、`cli/`）：
+
+- 照"手动升级"覆盖解压新包，再启动。管理进程第一次启动时用新版本预检、迁移、启动，新版本通过健康检查后删掉根目录的 `server/`、`cli/`。
+- 失败时以 78 退出（面板和 systemd 不会反复重启），日志说明原因；`server/`、`cli/` 还在，排除原因后再启动会重试，要回到旧版本照下一条。
+- MySQL、PostgreSQL 有迁移时同样不替你确认备份：启动以 78 退出。备份以后在服务停着时运行 `node nextskin.mjs update --backup-confirmed`，再启动。
+- 这一次没有可回滚的上一个版本。要回到旧版本：停服务 → 删掉 `nextskin.mjs`、`manager/`、`releases/` → 解压旧版本的 ZIP → SQLite 照下面的手工回退换回备份 → 启动。
+
+### 手工回退（SQLite）
+
 - 手工备份 SQLite：先停服务，再拷整个 `data/`。停止后 `nextskin.sqlite-wal` 可能还在，最近的写入在里面，只拷 `nextskin.sqlite` 会丢。
-- SQLite：有要执行的迁移（核心的，或者已启用的官方插件随新版本带来的）时，迁移之前自动备份到 `data/backups/nextskin-<UTC 时间>-<第一个迁移>.sqlite`（只有插件迁移时是 `<插件 id>-<迁移>`），留最近 3 份。备份失败就不迁移、核心不启动，日志说明原因（多半是空间或权限）。MySQL、PostgreSQL 不自动备份，升级前自己备份。
-- 回退（SQLite）：停服务 → 换回旧版本的 `server/`、`cli/`、`nextskin.mjs` → 把备份复制成 `data/nextskin.sqlite` → 删掉 `data/nextskin.sqlite-wal`、`data/nextskin.sqlite-shm`（留着会把新库的页面重放到旧文件上）→ 启动。
+- SQLite 有要执行的迁移（核心的，或者已启用的官方插件随新版本带来的）时，迁移之前自动备份到 `data/backups/nextskin-<UTC 时间>-<第一个迁移>.sqlite`（只有插件迁移时是 `<插件 id>-<迁移>`），留最近 3 份。备份失败就不迁移，日志说明原因（多半是空间或权限）。MySQL、PostgreSQL 不自动备份。
+- SQLite 有迁移时，一键回滚要用到那次升级前的备份（路径记在 `releases/current.json` 的 `upgrades` 里），备份不在就拒绝。挪走了的放回原处再回滚。
 
 ## 检查
 

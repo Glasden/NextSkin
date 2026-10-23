@@ -5,14 +5,14 @@ sidebar:
   order: 2
 ---
 
-启动器 `nextskin` 负责进程监管和运维命令，站点本身不用登录后台也能管。这一页是完整参考。
+发行包根目录的 `nextskin.mjs` 是管理进程的入口：`start`、`update`、`rollback`、`releases` 由它自己处理，其余命令转给当前版本的启动器（`releases/<版本>/nextskin.mjs`）。站点本身不用登录后台也能管。这一页是完整参考。
 
 ## 在哪里运行
 
 - **发行包**：在解压目录里运行 `node nextskin.mjs <命令>`。
 - **源码**：在仓库根目录运行 `pnpm nextskin <命令>`。它读 `apps/web/.env` 和环境变量，数据目录与 `pnpm dev` 相同。
 
-`start` 只能在发行目录里运行；其余命令在两种环境下都可用。
+`start`、`update`、`rollback`、`releases` 只能在发行目录里运行；其余命令在两种环境下都可用。
 
 ## 通用约定
 
@@ -31,7 +31,7 @@ sidebar:
 | 0 | 成功，或者 `doctor` 只有警告 |
 | 1 | 参数不对、检查失败、执行失败 |
 | 2 | `import blessing-skin` 拿不到数据目录的锁：服务还在运行，或者目录权限不对 |
-| 78 | 配置错误，例如 `NEXTSKIN_SECRET` 太短、端口不合法、数据目录写不了 |
+| 78 | 配置错误，例如 `NEXTSKIN_SECRET` 太短、端口不合法、数据目录写不了、`releases/current.json` 损坏 |
 
 ## 命令一览
 
@@ -47,6 +47,9 @@ sidebar:
 | [`maintenance`](#maintenance) | 查看或开关维护模式 |
 | [`plugin`](#plugin) | 列出、安装、启用、停用、卸载插件 |
 | [`import blessing-skin`](#import-blessing-skin) | 从 Blessing Skin v6 导入 |
+| [`update`](#update) | 检查、准备并切换到新版本 |
+| [`rollback`](#rollback) | 回到上一个版本 |
+| [`releases`](#releases) | 列出本机的版本目录 |
 | [`version`](#version) | 显示版本 |
 
 不带命令、或者 `help`，会打印这份列表的简版。
@@ -57,7 +60,11 @@ sidebar:
 node nextskin.mjs start
 ```
 
-启动核心进程并监管它：核心崩溃时按退避重启，收到停止信号时转发并等它退出。前台运行，日志写 stdout/stderr，交给 systemd、Docker 或面板托管。
+启动管理进程：按 `releases/current.json` 选版本，拉起那个版本的启动器；启动器再启动核心进程并监管它，核心崩溃时按退避重启。收到停止信号时经 IPC 让启动器按顺序停下。前台运行，日志写 stdout/stderr，交给 systemd、面板或 NSSM 托管。
+
+- 发现解压进来的版本比在用的新（手动覆盖解压了新包），按一键升级的流程预检、迁移、启动，失败时回到旧版本。MySQL、PostgreSQL 有迁移时不会自己升级，日志说明怎么确认。
+- 环境变量 `NEXTSKIN_MANAGER=off` 时不启动管理进程，直接在本进程里运行当前版本的启动器，只能手动升级。镜像里设了它。
+- `NEXTSKIN_RUN_AS=<用户>`（只在 Linux 等 POSIX 系统上）：管理进程以 root 运行，站点降到这个用户，见 [systemd.md](https://github.com/Glasden/NextSkin/blob/main/docs/deploy/systemd.md)。
 
 - 启动前检查发行目录是否完整、数据目录能否写入，并打印版本、Node 版本、数据目录、数据库方言和监听地址。
 - 同一个数据目录同时只能有一个 `start`。上一个实例没退干净时会等它退出，最多 40 秒。
@@ -176,6 +183,43 @@ node nextskin.mjs import blessing-skin --bs-env /path/to/old/.env --textures /pa
 - `--report <文件>` 报告位置，默认是数据目录下的 `import-<时间>.md`。
 
 细节和导入后的核对步骤见[迁移指南](https://github.com/Glasden/NextSkin/blob/main/packages/importer/MIGRATION.md)。
+
+## update
+
+```bash
+node nextskin.mjs update --check [--json]
+node nextskin.mjs update [--to <版本>] [--yes] [--backup-confirmed]
+node nextskin.mjs update status [--json]
+```
+
+和后台的“更新”页是同一条流程（[安装部署](/guide/install/#升级与回退)）。
+
+- `--check` 读签过名的版本清单，列出比当前新的正式版，什么也不改。
+- 不带 `--check` 时升级，默认到最新的正式版，`--to` 指定版本（只能是清单里比当前新的）。先准备（下载、核对签名、解压、预检），打印预检的结果，再问一次确认；不是终端时要 `--yes`。MySQL、PostgreSQL 有迁移时，先自己备份，再加 `--backup-confirmed`。
+- 服务运行时交给管理进程执行，命令等到结束、打印结果。服务停着时命令自己执行同一条流程，拿着管理进程的锁和数据目录的锁，最后**不启动服务**，也就不做健康检查。
+- `update status` 打印当前版本、上一个版本、进行中的操作和最近一次的结果。
+- 成功退出 0；回滚了、失败了或取消了退出 1。
+- 要能写 `releases/`：用运行管理进程的用户执行（systemd 的权限分离下是 root）。
+
+## rollback
+
+```bash
+node nextskin.mjs rollback [--yes]
+```
+
+回到上一个版本（`releases/current.json` 里的 `previous`），只能回到它。
+
+- 那次升级没有迁移：直接换回去。
+- SQLite 有迁移：用升级前的备份换回库，**升级以后的所有写入都会丢失**。备份不在就拒绝。
+- MySQL、PostgreSQL 有迁移：程序不碰库。先自己用升级前的备份恢复，再运行这个命令确认。
+
+## releases
+
+```bash
+node nextskin.mjs releases [--json]
+```
+
+列出 `releases/` 下的版本目录，标出在用的、上一个、ZIP 自带的和升级失败过的，以及管理进程在不在运行。
 
 ## version
 
