@@ -7,6 +7,7 @@ import type { ReactNode } from 'react'
 import { COLOR_MODE_COOKIE, colorModeScript, parseColorMode } from '../lib/color-mode'
 import { NONCE_HEADER } from '../lib/csp'
 import { getServer } from '../lib/server'
+import { getSessionUser } from '../lib/session'
 import { iconsMetadata, siteIconHash } from '../lib/site-icons'
 import { ColorModeProvider } from './color-mode-menu'
 import './globals.css'
@@ -40,14 +41,25 @@ export async function generateMetadata(): Promise<Metadata> {
 
 // data-mode 由 <head> 里的内联脚本在第一次绘制之前设上（lib/color-mode.ts）。服务端渲染的 <html> 上没有这个属性，
 // 水合时和页面对不上，所以 <html> 不报水合不一致。
-// 内联脚本要带 proxy.ts 生成的 nonce 才会执行（ADR-0053），Base UI 插的脚本和样式经 CspProvider 拿到它
+// 内联脚本要带 proxy.ts 生成的 nonce 才会执行（ADR-0053），Base UI 插的脚本和样式经 CspProvider 拿到它。
+// 配色主题（ADR-0057）：data-theme 写在 <html> 上，不是钻石青时输出这一套的 CSS（样式不受 CSP 约束，不用 nonce）。
+// 导入期间不查会话，用站点默认（同 i18n/request.ts）
 export default async function RootLayout({ children }: { readonly children: ReactNode }) {
-  const [locale, cookieStore, headerList] = await Promise.all([getLocale(), cookies(), headers()])
+  const [locale, cookieStore, headerList, { core, importer }] = await Promise.all([
+    getLocale(),
+    cookies(),
+    headers(),
+    getServer(),
+  ])
   const nonce = headerList.get(NONCE_HEADER) ?? undefined
+  const user = importer.maintenance() ? null : await getSessionUser()
+  const theme = await core.themes.current(user?.uid ?? null)
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} data-theme={theme.id} suppressHydrationWarning>
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: colorModeScript }} />
+        {/* 主题 id 和色值都校验过格式（packages/theme 的 themeCss），拼不出别的东西 */}
+        {theme.css && <style dangerouslySetInnerHTML={{ __html: theme.css }} />}
       </head>
       <body className="min-h-dvh bg-bg font-sans text-text">
         <CspProvider nonce={nonce}>

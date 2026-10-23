@@ -19,6 +19,7 @@ export interface UsersTable {
   role: Generated<UserRole>
   score: Generated<number>
   avatar_texture_id: number | null
+  theme: string | null
   locale: string | null
   registration_ip: string | null
   last_check_in_at: IsoTimestamp | null

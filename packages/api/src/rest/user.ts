@@ -47,6 +47,12 @@ const profile = createRoute({
   },
   responses: { 200: jsonResponse(userSchema, '个人资料已保存'), ...errors },
 })
+const theme = createRoute({
+  method: 'put',
+  path: '/user/theme',
+  request: { body: jsonBody(z.object({ theme: z.string().max(128).nullable() })) },
+  responses: { 200: jsonResponse(z.object({ theme: z.string().nullable() }), '主题已保存'), ...errors },
+})
 const email = createRoute({
   method: 'post',
   path: '/user/email',
@@ -78,6 +84,7 @@ const deleted = createRoute({
 export function registerUser(app: OpenAPIHono<AppEnv>, core: Core, limiter: RateLimiter) {
   const session = requireSession(core)
   app.patch('/user', session)
+  app.put('/user/theme', session)
   app.post('/user/email', session)
   app.delete('/user', session)
   async function limit(uid: number) {
@@ -87,6 +94,9 @@ export function registerUser(app: OpenAPIHono<AppEnv>, core: Core, limiter: Rate
   }
   app.openapi(profile, async (c) =>
     c.json(await core.users.updateProfile({ uid: c.get('user')!.uid }, c.req.valid('json')), 200),
+  )
+  app.openapi(theme, async (c) =>
+    c.json(await core.themes.setTheme({ uid: c.get('user')!.uid }, c.req.valid('json').theme), 200),
   )
   app.openapi(email, async (c) => {
     const uid = c.get('user')!.uid

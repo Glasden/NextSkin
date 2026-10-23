@@ -23,6 +23,8 @@ import {
 } from '@nextskin/plugin-host'
 import type { Actor, Capability } from '@nextskin/plugin-sdk'
 import type { ExtractedPluginManifest as PluginManifest } from '@nextskin/plugin-host'
+import { checkTheme, DIAMOND, resolveTheme } from '@nextskin/theme'
+import { lockThemeSettings } from '../themes/settings.ts'
 import { highRiskCapabilities } from './capabilities.ts'
 import type { Kysely, Transaction } from 'kysely'
 import { can } from '../access/permissions.ts'
@@ -139,6 +141,7 @@ const clip = (text: string) => [...text].slice(0, MAX_ERROR_LENGTH).join('')
 export function createPluginAdmin(options: {
   db: Kysely<CoreDatabase>
   plugins: PluginSystem
+  secretKey: string
   externalLogin: Pick<ExternalLogin, 'strandedByUninstall'>
   now: () => Date
 }) {
@@ -326,6 +329,20 @@ export function createPluginAdmin(options: {
       throw error
     }
     const { manifest } = unpacked
+    for (const theme of manifest.ui.themes ?? []) {
+      const issue = checkTheme(resolveTheme(theme.colors))[0]
+      if (!issue) continue
+      const digits = issue.check === 'contrast' ? 2 : 3
+      throw new DomainError('plugin_theme_invalid', {
+        theme: theme.name,
+        mode: issue.mode,
+        check: issue.check,
+        pair: issue.pair.join(' / '),
+        values: issue.values.join(' / '),
+        actual: issue.check === 'lightness' ? '' : issue.actual.toFixed(digits),
+        minimum: issue.check === 'lightness' ? '' : issue.minimum.toFixed(digits),
+      })
+    }
     try {
       settingProperties(manifest)
     } catch {
@@ -707,6 +724,21 @@ export function createPluginAdmin(options: {
           await tx.deleteFrom('job_schedules').where('name', 'like', prefix).execute()
           await tx.deleteFrom('failed_jobs').where('name', 'like', prefix).execute()
           await plugins.settingsStore.clear(tx, id)
+          const themeSettings = await lockThemeSettings(tx, timestamp(), options.secretKey)
+          const values = {
+            ...themeSettings.values,
+            enabled: themeSettings.values.enabled.filter((theme) => !theme.startsWith(`${id}/`)),
+          }
+          if (values.default.startsWith(`${id}/`)) {
+            values.default = DIAMOND
+            if (!values.enabled.includes(DIAMOND)) values.enabled.push(DIAMOND)
+          }
+          await themeSettings.save(values, eventActor, actor.ip)
+          const themeUsers = await tx
+            .updateTable('users')
+            .set({ theme: null })
+            .where('theme', 'like', `${id}/%`)
+            .executeTakeFirst()
           const bindings = await tx.deleteFrom('accounts').where('provider_id', 'like', prefix).executeTakeFirst()
           await clearExternalLoginState(tx, id)
           await tx.deleteFrom('plugins').where('id', '=', id).execute()
@@ -720,6 +752,7 @@ export function createPluginAdmin(options: {
               version: row.version,
               wasEnabled: row.is_enabled === 1,
               bindings: Number(bindings.numDeletedRows),
+              themeUsers: Number(themeUsers.numUpdatedRows),
             },
             ip: actor.ip,
             now: timestamp(),

@@ -41,6 +41,7 @@ Better Auth 的 user 模型加上我们的领域字段。领域字段都有默�
 | score | integer | 非空，默认 0 | 只能原子增减，并同时写积分流水 |
 | avatar_texture_id | integer | 可空；外键 → textures，set null | |
 | locale | varchar(16) | 可空 | |
+| theme | varchar(128) | 可空 | 主题 id；null 表示跟随站点默认，回落在读取时计算，卸载插件时清掉引用（ADR-0057） |
 | registration_ip | varchar(45) | 可空 | 用于"同一 IP 注册数"限制 |
 | last_check_in_at | 时间 | 可空 | 上次签到时间。签到用一条带条件的 UPDATE 同时改它和积分，保证一天只能签到一次 |
 | email_version | integer | 非空，默认 0 | 邮箱每改一次加一；后台发起改邮箱、作废在途的登录时也加一（ADR-0036）。改邮箱的确认链接带着签发时的版本，版本对不上就作废（ADR-0024） |

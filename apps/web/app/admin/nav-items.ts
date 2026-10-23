@@ -1,6 +1,7 @@
 import { Bell } from 'pixelarticons/react/Bell.js'
 import { Chart } from 'pixelarticons/react/Chart.js'
 import { Code } from 'pixelarticons/react/Code.js'
+import { ColorsSwatch } from 'pixelarticons/react/ColorsSwatch.js'
 import { Database } from 'pixelarticons/react/Database.js'
 import { Flag } from 'pixelarticons/react/Flag.js'
 import { Gamepad } from 'pixelarticons/react/Gamepad.js'
@@ -25,6 +26,7 @@ export const adminNavItems = [
   { href: '/admin/notifications', icon: Bell, label: 'notifications', permission: 'notifications.send' },
   { href: '/admin/audit', icon: Notebook, label: 'audit', permission: 'audit.read' },
   { href: '/admin/settings', icon: Sliders, label: 'settings', permission: 'settings.manage' },
+  { href: '/admin/themes', icon: ColorsSwatch, label: 'themes', permission: 'settings.manage' },
   { href: '/admin/plugins', icon: Plug, label: 'plugins', permission: 'plugins.manage' },
   { href: '/admin/failed-jobs', icon: WarningDiamond, label: 'failedJobs', permission: 'jobs.manage' },
   { href: '/admin/migration', icon: Database, label: 'migration', permission: 'import.manage' },

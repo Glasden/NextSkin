@@ -146,3 +146,8 @@ export { CAPTCHA_HEADER, type CaptchaPublicConfig, type CaptchaInput, type Captc
 
 export type { NotificationView } from './notifications/render.ts'
 export type { SendNotificationInput } from './notifications/admin.ts'
+
+export type { ThemeEntry, InvalidTheme } from './themes/registry.ts'
+export type { ThemeChange, UserThemeView, AdminThemeView } from './themes/service.ts'
+export type { ThemeSettings } from './themes/settings.ts'
+export { DIAMOND, type ThemeIssue } from '@nextskin/theme'

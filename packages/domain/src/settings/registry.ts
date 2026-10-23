@@ -236,6 +236,14 @@ export const coreSettingsRegistry = {
   'audit.retentionDays': { schema: z.int().min(0).max(3650), default: 0, section: 'advanced', secret: false },
   // 通知的保留天数，已读、未读都清理；0 表示不清理（ADR-0052）。
   'notifications.retentionDays': { schema: z.int().min(0).max(3650), default: 365, section: 'advanced', secret: false },
+  // 站点默认的配色主题和启用的主题，只由后台的主题页改（ADR-0057，themes/service.ts）
+  'theme.default': { schema: z.string().max(128), default: 'diamond', section: null, secret: false },
+  'theme.enabled': {
+    schema: z.array(z.string().max(128)).max(1024),
+    default: ['diamond'],
+    section: null,
+    secret: false,
+  },
   // 旧站 .env 的 SALT：BS 的带盐摘要算法用它当全站 pepper，导入时写入（auth/legacy-passwords.ts）
   'auth.legacyPasswordSalt': { schema: z.string(), default: '', section: null, secret: true },
 } as const satisfies Record<string, SettingDefinition>

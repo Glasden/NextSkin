@@ -1,7 +1,9 @@
 'use client'
 
-import { IconButton, Menu, MenuRadioGroup, MenuRadioItem } from '@nextskin/ui'
+import { IconButton, Menu, MenuLinkItem, MenuRadioGroup, MenuRadioItem, MenuSeparator } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
+import NextLink from 'next/link'
+import { ColorsSwatch } from 'pixelarticons/react/ColorsSwatch.js'
 import { Monitor } from 'pixelarticons/react/Monitor.js'
 import { Moon } from 'pixelarticons/react/Moon.js'
 import { Sun } from 'pixelarticons/react/Sun.js'
@@ -34,15 +36,24 @@ function setColorMode(mode: ColorMode) {
   dispatchEvent(new Event(COLOR_MODE_CHANGE))
 }
 
-/** 页头右上角的亮暗模式菜单：跟随系统、亮色、暗色。按钮的图标是当前的偏好 */
-export function ColorModeMenu() {
-  const t = useTranslations('site.colorMode')
+/** 当前的偏好和改它的函数。页头的菜单和用户中心的主题页共用，改了一处另一处跟着变 */
+export function useColorMode() {
   const requested = use(RequestColorMode)
   const mode = useSyncExternalStore(
     subscribe,
     () => readColorMode(document.cookie),
     () => requested,
   )
+  return [mode, setColorMode] as const
+}
+
+/**
+ * 页头右上角的亮暗模式菜单：跟随系统、亮色、暗色。按钮的图标是当前的偏好。
+ * themeLink：登录用户、启用的主题有两套以上时，下面多一项去用户中心的主题页（ADR-0057）
+ */
+export function ColorModeMenu({ themeLink = false }: { themeLink?: boolean }) {
+  const t = useTranslations('site.colorMode')
+  const [mode] = useColorMode()
   const Icon = icons[mode]
   return (
     <Menu
@@ -63,6 +74,14 @@ export function ColorModeMenu() {
           )
         })}
       </MenuRadioGroup>
+      {themeLink && (
+        <>
+          <MenuSeparator />
+          <MenuLinkItem render={<NextLink href="/user/theme" />} icon={<ColorsSwatch aria-hidden />}>
+            {t('theme')}
+          </MenuLinkItem>
+        </>
+      )}
     </Menu>
   )
 }

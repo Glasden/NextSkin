@@ -54,3 +54,20 @@ test('维护默认关闭，说明最长 2000 字且使用 Markdown 控件', () =
   expect(message.safeParse('x'.repeat(2001)).success).toBe(false)
   expect(message.meta()).toMatchObject({ contentMediaType: 'text/markdown' })
 })
+
+test('主题设置不进表单，id 最多 128 字，启用列表最多 1024 项', () => {
+  const defaults = coreSettingsRegistry['theme.default']
+  const enabled = coreSettingsRegistry['theme.enabled']
+  expect(defaults.default).toBe('diamond')
+  expect(enabled.default).toEqual(['diamond'])
+  for (const definition of [defaults, enabled]) {
+    expect(definition.section).toBeNull()
+    expect(definition.secret).toBe(false)
+    expect(definition.schema.safeParse(definition.default).success).toBe(true)
+  }
+  expect(defaults.schema.safeParse('a'.repeat(128)).success).toBe(true)
+  expect(defaults.schema.safeParse('a'.repeat(129)).success).toBe(false)
+  expect(enabled.schema.safeParse(['a'.repeat(128)]).success).toBe(true)
+  for (const value of [['a'.repeat(129)], Array.from({ length: 1025 }, () => 'diamond'), 'diamond'])
+    expect(enabled.schema.safeParse(value).success).toBe(false)
+})

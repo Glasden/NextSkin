@@ -165,6 +165,7 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0044_add_users_oauth_version',
     '0045_add_score_transactions_plugin_columns',
     '0046_create_notifications',
+    '0047_add_users_theme',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -228,6 +229,7 @@ test('类型化写入完整引用关系，读回各列、默认值和认证字�
     score: 0,
     email_version: 0,
     oauth_version: 0,
+    theme: null,
     created_at: timestamp,
     updated_at: timestamp,
   })
@@ -302,6 +304,7 @@ test('用户领域字段均可省略，认证可空字段保留 NULL', async () 
     score: 0,
     email_version: 0,
     oauth_version: 0,
+    theme: null,
     avatar_texture_id: null,
     image: null,
     two_factor_enabled: null,
@@ -1122,4 +1125,38 @@ test('通知三张表的列、外键行为和永久插件幂等键', async () =>
     { user_id: userId },
     { user_id: userId },
   ])
+})
+
+test('0047 为已有和新用户保留空主题，可存主题 id 并清空', async () => {
+  const upgrade = await createTestDatabase<CoreDatabase>()
+  try {
+    await migrateToLatest(
+      upgrade.db,
+      Object.fromEntries(Object.entries(coreMigrations).filter(([name]) => name < '0047')),
+    )
+    const timestamp = toIsoTimestamp(new Date())
+    const values = {
+      nickname: '升级前的用户',
+      email: 'theme-before@example.test',
+      email_verified: false,
+      created_at: writeAuthDate(upgrade.db, timestamp),
+      updated_at: writeAuthDate(upgrade.db, timestamp),
+    }
+    const existing = await insertReturningId(upgrade.db, 'users', values)
+    expect(await migrateToLatest(upgrade.db, coreMigrations)).toEqual(['0047_add_users_theme'])
+    const added = await insertReturningId(upgrade.db, 'users', { ...values, email: 'theme-after@example.test' })
+    expect(await upgrade.db.selectFrom('users').select('theme').where('id', 'in', [existing, added]).execute()).toEqual(
+      [{ theme: null }, { theme: null }],
+    )
+    await upgrade.db.updateTable('users').set({ theme: 'color-themes/cobalt' }).where('id', '=', existing).execute()
+    expect(
+      await upgrade.db.selectFrom('users').select('theme').where('id', '=', existing).executeTakeFirstOrThrow(),
+    ).toEqual({ theme: 'color-themes/cobalt' })
+    await upgrade.db.updateTable('users').set({ theme: null }).where('id', '=', existing).execute()
+    expect(
+      await upgrade.db.selectFrom('users').select('theme').where('id', '=', existing).executeTakeFirstOrThrow(),
+    ).toEqual({ theme: null })
+  } finally {
+    await upgrade.cleanup()
+  }
 })

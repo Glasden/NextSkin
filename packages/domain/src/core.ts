@@ -13,6 +13,7 @@ import { AUDIT_CLEANUP_JOB, createAuditCleanup } from './audit/cleanup.ts'
 import { TEXTURE_SWEEP_JOB, createTextureSweep } from './textures/sweep.ts'
 import { SITE_IMAGE_SWEEP_JOB, createSiteImageSweep } from './site-images/sweep.ts'
 import { createMemorySiteImageStorage, isSiteImageFile, type SiteImageStorage } from './site-images/storage.ts'
+import { createThemes } from './themes/service.ts'
 import { createAdmin } from './admin/service.ts'
 import { createCloset } from './closet/service.ts'
 import { createReports } from './reports/service.ts'
@@ -274,6 +275,7 @@ export function createCore(options: CoreOptions) {
     ...createProfileTextures({ db: options.db, settings, tokens, upload, closet, players }),
   }
   return {
+    themes: createThemes({ db: options.db, settings, plugins, secretKey: options.secretKey, now }),
     home: createHomeQueries(options.db, settings, now),
     players,
     setup: createSetup({
@@ -301,7 +303,7 @@ export function createCore(options: CoreOptions) {
     notifications: createNotifications({ db: options.db, plugins, now }),
     renders,
     plugins: Object.assign(plugins, {
-      admin: createPluginAdmin({ db: options.db, plugins, externalLogin, now }),
+      admin: createPluginAdmin({ db: options.db, plugins, externalLogin, secretKey: options.secretKey, now }),
       references: (input: Parameters<typeof pluginReferences>[1]) => pluginReferences(options.db, input),
     }),
     async shutdown() {

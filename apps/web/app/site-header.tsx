@@ -25,9 +25,12 @@ export async function SiteHeader({ wide = false, section }: { wide?: boolean; se
     getTranslations('site'),
     getLocale(),
   ])
-  const [settings, notifications] = await Promise.all([
+  const active = user && user.role !== 'banned'
+  const [settings, notifications, themes] = await Promise.all([
     core.settings.read(['site.name', 'site.logo', 'maintenance.enabled', 'maintenance.blockProtocols']),
-    user && user.role !== 'banned' ? core.notifications.summary(user.uid, locale) : null,
+    active ? core.notifications.summary(user.uid, locale) : null,
+    // 启用的主题不到两套时没得挑，不给主题页的入口（ADR-0057）
+    active ? core.themes.selectableCount() : 0,
   ])
   const { 'site.name': siteName, 'site.logo': logo } = settings
   const logoUrl = logo ? siteImageUrl(logo) : undefined
@@ -54,10 +57,10 @@ export async function SiteHeader({ wide = false, section }: { wide?: boolean; se
             <SiteNav />
           </div>
           <div className="ml-auto flex min-w-0 items-center gap-4 text-sm md:shrink-0">
-            <ColorModeMenu />
+            <ColorModeMenu themeLink={themes > 1} />
             {notifications && <NotificationBell initial={notifications} />}
             {user ? (
-              <UserMenu nickname={user.nickname} admin={admin} />
+              <UserMenu nickname={user.nickname} admin={admin} themes={themes > 1} />
             ) : (
               <>
                 <Link render={<NextLink href="/sign-in" />}>{t('signIn')}</Link>
