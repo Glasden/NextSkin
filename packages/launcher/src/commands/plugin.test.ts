@@ -323,7 +323,7 @@ test.each([true, false])('升级新增能力，终端确认=%s', async (accepted
   expect(admin.installAsSystem).toHaveBeenCalledTimes(accepted ? 1 : 0)
 })
 
-test('完整升级预览：高风险、新增、接口、Provider、字段、任务、页面和去掉的登录方式', async () => {
+test('完整升级预览：高风险、新增、接口、Provider、字段、任务、页面、挂件和去掉的登录方式', async () => {
   upgrade({
     enabled: true,
     addedCapabilities: ['users.readPrivate'],
@@ -336,7 +336,11 @@ test('完整升级预览：高风险、新增、接口、Provider、字段、任
   preview.highRisk = ['users.readPrivate', 'provider.login', 'future.unknown']
   preview.messages = {
     'zh-CN': { plugin: { name: '中文名' }, login: { label: '新登录', old: '旧登录' }, field: { label: '注册信息' } },
-    en: { plugin: { name: 'English', description: 'English description' }, page: { title: 'Plugin page' } },
+    en: {
+      plugin: { name: 'English', description: 'English description' },
+      page: { title: 'Plugin page' },
+      widget: { title: 'Widget title' },
+    },
   }
   preview.manifest = {
     ...preview.manifest,
@@ -357,6 +361,10 @@ test('完整升级预览：高风险、新增、接口、Provider、字段、任
         { form: 'auth.register', field: { type: 'text', name: 'info', label: 'field.label' }, fromQuery: true },
       ],
       pages: { home: { area: 'user', title: 'page.title', view: { kind: 'markdown', source: '/' } } },
+      widgets: [
+        { name: 'home', slot: 'user.dashboard', title: 'widget.title', view: { kind: 'markdown', source: '/' } },
+        { name: 'admin', slot: 'admin.dashboard', title: 'missing', view: { kind: 'stats', source: '/stats' } },
+      ],
     },
   }
   expect(await run(['install', 'plugin.tgz', '--yes'], read, options)).toBe(0)
@@ -374,6 +382,7 @@ test('完整升级预览：高风险、新增、接口、Provider、字段、任
     '  拦截的操作：注册：可以拒绝',
     '  提供的功能：第三方登录：新登录（高风险）',
     '  在注册表单上加的字段：注册信息（可以从链接预填）',
+    `  ${t('admin.plugins.manifest.widgets')}：${t('admin.plugins.manifest.widgetItem', { slot: t('admin.plugins.slots.user.dashboard'), title: 'Widget title' })}、${t('admin.plugins.manifest.widgetItem', { slot: t('admin.plugins.slots.admin.dashboard'), title: 'missing' })}`,
     '  提供的接口：GET /plugins/test-plugin（公开）、POST /plugins/test-plugin/private（要登录）',
     '  自己的数据表：records',
     '  后台任务：sync',
@@ -395,7 +404,7 @@ test('包文案缺少时名字回退到 id、没有描述，空 manifest 每行�
     output()
       .split('\n')
       .filter((line) => line.startsWith('  ')),
-  ).toHaveLength(11)
+  ).toHaveLength(12)
   expect(output()).toContain('  提供的接口：无')
 })
 

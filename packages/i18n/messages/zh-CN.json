@@ -2127,6 +2127,8 @@
         "themes": "配色主题",
         "themesLink": "去主题页启用",
         "formFields": "在注册表单上加的字段",
+        "widgets": "放在首页的挂件",
+        "widgetItem": "{slot}：{title}",
         "fromQuery": "可以从链接预填",
         "none": "无",
         "routeAuth": "{auth, select, user {要登录} other {公开}}"
@@ -2159,6 +2161,14 @@
         },
         "yggdrasil": {
           "issueToken": "外置登录：可以拒绝"
+        }
+      },
+      "slots": {
+        "user": {
+          "dashboard": "用户中心首页"
+        },
+        "admin": {
+          "dashboard": "后台概览"
         }
       },
       "providers": {
@@ -3160,6 +3170,7 @@
   },
   "pluginView": {
     "loadFailed": "插件没有返回这个页面的数据，它可能出错了。稍后刷新看看，一直这样的话请联系站点管理员。",
+    "widgetLoadFailed": "没能加载",
     "search": "搜索",
     "searchLabel": "在{title}里搜索",
     "empty": "还没有内容。",

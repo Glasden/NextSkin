@@ -147,6 +147,8 @@ export interface PluginRouteRequest {
   user: { uid: number; role: UserRole } | null
   ip: string
   locale: string
+  /** 比路由的期限（30 秒）更短的期限，例如首页的挂件只等 3 秒（ADR-0059）；不能延长 */
+  timeoutMs?: number
 }
 
 /** 卸载安装插件之后删表、删插件包的任务（ADR-0033"卸载"） */
@@ -1718,7 +1720,7 @@ export function createPluginSystem(options: {
             request: input.request,
             scope: { requestId: randomUUID(), actor, locale: input.locale, ip: input.ip },
           },
-          { timeoutMs: ROUTE_TIMEOUT_MS, locale: input.locale },
+          { timeoutMs: Math.min(input.timeoutMs ?? ROUTE_TIMEOUT_MS, ROUTE_TIMEOUT_MS), locale: input.locale },
         )
       } catch (error) {
         if (error instanceof PluginInvocationError && error.reason === 'timeout')

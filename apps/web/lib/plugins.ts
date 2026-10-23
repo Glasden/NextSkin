@@ -1,4 +1,4 @@
-import { canPlugin, resolveClientIp, type Core, type SessionUser } from '@nextskin/domain'
+import { canPlugin, resolveClientIp, type Core, type PluginSlotName, type SessionUser } from '@nextskin/domain'
 import { getLocale } from 'next-intl/server'
 import { headers } from 'next/headers'
 import * as icons from 'pixelarticons/react'
@@ -7,6 +7,7 @@ import { createElement, type ReactElement } from 'react'
 import type { PluginFieldText } from '../app/_plugins/types'
 import { peerAddress } from './peer-address'
 import { pluginUrl } from './plugin-url'
+import { visibleWidgets, WIDGET_TIMEOUT_MS, widgetContent, type WidgetContent } from './plugin-widgets'
 import { getServer } from './server'
 import { getRequestRoot } from './session'
 
@@ -118,12 +119,14 @@ export interface PluginResponse {
 
 /**
  * 服务端组件里调用插件的 GET 路由（表格、统计、Markdown 的数据源，表单的初始值），和浏览器经过网关一样检查权限，
- * 只是不走 HTTP。插件出错、超时、没有这条路由都返回 null：页面显示“没能加载”，不整页报错
+ * 只是不走 HTTP。插件出错、超时、没有这条路由都返回 null：页面显示“没能加载”，不整页报错。
+ * timeoutMs 只能比路由的期限短，首页的挂件用它
  */
 export async function getPluginRoute(
   user: SessionUser,
   pluginId: string,
   pathWithQuery: string,
+  options: { timeoutMs?: number } = {},
 ): Promise<PluginResponse | null> {
   const [{ core }, headerList, root, locale] = await Promise.all([
     getServer(),
@@ -154,6 +157,7 @@ export async function getPluginRoute(
       user: { uid: user.uid, role: user.role },
       ip,
       locale,
+      timeoutMs: options.timeoutMs,
     })
     const text = response.body ? new TextDecoder().decode(response.body) : ''
     const contentType = response.headers.find(([name]) => name.toLowerCase() === 'content-type')?.[1] ?? ''
@@ -169,4 +173,39 @@ export async function getPluginRoute(
   } catch {
     return null
   }
+}
+
+export interface PluginWidget {
+  /** `<插件 id>/<挂件名>` */
+  key: string
+  title: string
+  link: { href: string; label: string } | null
+  /** null：没能加载 */
+  content: WidgetContent | null
+}
+
+/**
+ * 插槽里当前用户看得到的挂件（ADR-0059），文案翻译好、数据源都取完：和页面的其余数据一起渲染，不分块流式。
+ * 各个数据源同时取，每个最多等 3 秒；返回 204 的挂件不在结果里
+ */
+export async function pluginWidgets(slot: PluginSlotName, user: SessionUser): Promise<PluginWidget[]> {
+  const [{ core }, locale] = await Promise.all([getServer(), getLocale()])
+  const widgets = await Promise.all(
+    visibleWidgets(core.plugins.activeUi(), slot, user.role).map(async ({ pluginId, widget, href }) => {
+      const response = await getPluginRoute(user, pluginId, widget.view.source, { timeoutMs: WIDGET_TIMEOUT_MS })
+      const content = widgetContent(widget.view, response)
+      if (content === 'hidden') return null
+      const translate = pluginTranslator(core, pluginId, locale)
+      return {
+        key: `${pluginId}/${widget.name}`,
+        title: translate(widget.title),
+        link: href && widget.link ? { href, label: translate(widget.link.label) } : null,
+        content:
+          content?.kind === 'stats'
+            ? { kind: 'stats', items: content.items.map((item) => ({ ...item, label: translate(item.label) })) }
+            : content,
+      } satisfies PluginWidget
+    }),
+  )
+  return widgets.filter((widget) => widget !== null)
 }

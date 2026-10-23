@@ -128,9 +128,11 @@ export type {
   Action as PluginAction,
   Column as PluginColumn,
   Field as PluginField,
+  SlotName as PluginSlotName,
   StatsSourceResponse as PluginStatsResponse,
   TableSourceResponse as PluginTableResponse,
   View as PluginView,
+  WidgetView as PluginWidgetView,
 } from '@nextskin/plugin-sdk'
 export type { DeadLetter } from './jobs/store.ts'
 export { pluginFieldKey } from './plugins/form-fields.ts'

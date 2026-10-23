@@ -4,11 +4,13 @@ import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { redirect } from 'next/navigation'
+import { pluginWidgets } from '../../lib/plugins'
 import { getServer } from '../../lib/server'
 import { scoreReasonText } from '../../lib/score-reason'
 import { getRequestRoot, requireUser } from '../../lib/session'
 import { figureSrc } from '../../lib/textures'
 import { yggdrasilApiUrl } from '../../lib/yggdrasil'
+import { PluginWidgets } from '../_plugins/plugin-widgets'
 import { CheckInButton } from './check-in-button'
 import { LauncherCopyButton } from './launcher-copy-button'
 import { VerifyEmailAlert } from './verify-email-alert'
@@ -25,7 +27,7 @@ const LAUNCHER_STEPS = ['add', 'login', 'twoFactor'] as const
 export default async function DashboardPage() {
   const user = await requireUser('/user')
   const { core } = await getServer()
-  const [overview, players, history, settings, mailConfigured, hasPassword, root, t, format, reasonOf] =
+  const [overview, players, history, settings, mailConfigured, hasPassword, root, t, format, reasonOf, widgets] =
     await Promise.all([
       core.users.overview(user.uid),
       core.players.listOwned(user.uid),
@@ -43,6 +45,7 @@ export default async function DashboardPage() {
       getTranslations('user.dashboard'),
       getFormatter(),
       scoreReasonText(),
+      pluginWidgets('user.dashboard', user),
     ])
   // 会话还在、用户已经被删掉的极少数情况
   if (!overview) redirect('/sign-in')
@@ -107,6 +110,8 @@ export default async function DashboardPage() {
           </Panel>
         </section>
       )}
+      {/* 插件的挂件（ADR-0059）：在公告下面、快速配置上面，插件的提醒比快速配置更需要被看到 */}
+      <PluginWidgets widgets={widgets} />
       {/* 外置登录的快速配置（BS 的 ygg_show_config_section），总是显示（ADR-0030） */}
       <section id="launcher" aria-labelledby="launcher-heading" className="flex flex-col gap-3">
         <h2 id="launcher-heading" className="font-pixel text-pixel-1 text-text">
