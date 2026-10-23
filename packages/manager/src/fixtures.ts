@@ -93,6 +93,9 @@ if (command === 'doctor') {
 }
 `
 
+// 健康检查的期限从拉起启动器算起；Windows 在整套检查的负载下光启动 node 就要一两秒
+export const healthTimeout = process.platform === 'win32' ? 5000 : 1000
+
 export async function fixture(versions = ['1.0.0', '1.1.0']) {
   const home = await mkdtemp(join(tmpdir(), 'nextskin-manager-'))
   const behavior: Record<string, Behavior> = {}
@@ -112,7 +115,12 @@ export async function fixture(versions = ['1.0.0', '1.1.0']) {
   const configure = () => writeFile(join(home, 'fixture.json'), JSON.stringify(behavior))
   await configure()
   await writeCurrent(home, initialCurrent(versions[0]!))
-  return { home, behavior, configure, dispose: () => rm(home, { recursive: true, force: true }) }
+  return {
+    home,
+    behavior,
+    configure, // Windows 上刚退出的子进程可能还没放开目录
+    dispose: () => rm(home, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }),
+  }
 }
 export async function events(
   home: string,

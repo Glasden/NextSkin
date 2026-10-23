@@ -6,7 +6,7 @@ import { createManager } from './pipeline.ts'
 import { LauncherSupervisor } from './process.ts'
 import { selectVersion, selectedVersion, start } from './start.ts'
 import { dispatch } from './main.ts'
-import { fixture, events, contains } from './fixtures.ts'
+import { fixture, events, contains, healthTimeout } from './fixtures.ts'
 import { acquireLock } from './lock.ts'
 import { initialCurrent, readCurrent, writeCurrent } from './state.ts'
 
@@ -18,7 +18,7 @@ async function setup() {
   const f = await fixture(['1.0.0', '1.1.0', '0.9.0'])
   disposers.push(f.dispose)
   const supervisor = new LauncherSupervisor(f.home, {
-    healthTimeout: 500,
+    healthTimeout,
     healthInterval: 10,
     shutdownTimeout: 100,
     log: vi.fn(),

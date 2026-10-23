@@ -144,7 +144,7 @@ location / {
 | 命令 | 用途 |
 | ---- | ---- |
 | `node nextskin.mjs update --check` | 列出比当前新的正式版 |
-| `node nextskin.mjs update [--to <版本>] [--yes] [--backup-confirmed]` | 升级，默认到最新的正式版。服务运行时交给管理进程，和后台一样；服务停着时自己执行同一条流水线，最后不启动服务（也就不做健康检查）。MySQL、PostgreSQL 有迁移时要 `--backup-confirmed`；不是终端时要 `--yes` |
+| `node nextskin.mjs update [--to <版本>] [--yes] [--backup-confirmed]` | 升级，默认到最新的正式版（手动解压了更新的版本时到解压的版本）。服务运行时交给管理进程，和后台一样；服务停着时自己执行同一条流水线，最后不启动服务（也就不做健康检查）。MySQL、PostgreSQL 有迁移时要 `--backup-confirmed`；不是终端时要 `--yes` |
 | `node nextskin.mjs rollback [--yes]` | 回到上一个版本，规则见下 |
 | `node nextskin.mjs update status` | 当前版本、上一个版本、进行中的操作、最近一次的结果 |
 | `node nextskin.mjs releases` | 列出 `releases/` 里的版本和指针 |
