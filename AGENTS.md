@@ -72,6 +72,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 | `apps/web` | Next.js 页面，只做 UI |
 | `apps/docs` | 文档站：Astro + Starlight 的静态页（ADR-0054）。安装、命令行的内容和 `docs/deploy`、启动器的帮助有重复，改了那边要一起改 |
 | `apps/site` | 宣传站：Astro 静态页，场景是从介绍视频分叉的 React 组件（ADR-0055）。画面和文案里的说法要和代码对得上，约定见该目录 README |
+| `apps/dl` | dl.nextskin.org：从 R2 读出发行包和版本清单的 Worker（ADR-0061），正式版发布后由 `release-dl.yml` 部署 |
 | `packages/api` | Hono 应用：协议端点、REST API、插件路由网关 |
 | `packages/domain` | 领域用例与查询服务，按业务领域分目录（users、players、textures、closet……） |
 | `packages/db` | Kysely 实例、迁移、方言辅助函数 |
@@ -80,6 +81,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 | `packages/i18n` | 界面文案（`messages/<语言>.json`）和语言解析，网页和领域层共用（ADR-0019） |
 | `packages/email` | 邮件模板，无依赖的 HTML 模板函数（ADR-0020） |
 | `packages/theme` | 配色主题：可改的颜色 token、钻石青的取值、推导、对比度检查和生成 CSS，无依赖的纯函数；ui 的测试、plugin host 的 manifest 校验和核心的主题注册表共用（ADR-0057） |
+| `packages/updates` | 版本清单的格式、ed25519 签名和校验、版本比较，无依赖，核心和管理进程共用；发布用的签名和生成清单的脚本。内置公钥换钥的步骤见 `RELEASE_KEYS` 的注释（ADR-0061） |
 | `packages/plugin-sdk`、`plugin-host` | 插件 API（公开面，ADR-0033）；插件侧的运行时：host 进程的入口和帧协议、加载插件定义、构造 `ctx`、插件包的格式和校验。核心侧的注册表、网关、换代和安装在 `packages/domain/src/plugins/` |
 | `packages/plugin-cli` | `nextskin-plugin build`：把插件打成插件包（manifest、单文件的服务端代码、文案），插件作者和测试共用。和 SDK 一起发布到 npm，版本号相同；发布的是连同 plugin-host、SDK、zod 打成的单文件（ADR-0035） |
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |
