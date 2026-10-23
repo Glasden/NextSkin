@@ -8,6 +8,7 @@ export const stopSignals: readonly NodeJS.Signals[] =
   process.platform === 'win32' ? ['SIGINT', 'SIGTERM', 'SIGHUP'] : ['SIGINT', 'SIGTERM']
 export interface Runtime extends RunAsOptions {
   spawn?: typeof spawn
+  kill?: typeof process.kill
   fetch?: typeof fetch
   now?: () => number
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>
@@ -94,6 +95,7 @@ export interface Ready {
   version: string
   host: string
   port: number
+  pid?: number
 }
 interface Session {
   version: string
@@ -103,6 +105,7 @@ interface Session {
   ready?: Ready
   readyAt?: number
   startedAt: number
+  forced?: boolean
 }
 export function healthUrl(ready: Pick<Ready, 'host' | 'port'>): string {
   let host = ready.host === '0.0.0.0' ? '127.0.0.1' : ready.host === '::' ? '::1' : ready.host
@@ -184,7 +187,8 @@ export class LauncherSupervisor {
         !Number.isInteger(message.port) ||
         message.port < 1 ||
         message.port > 65535 ||
-        session.ready
+        (message.pid !== undefined &&
+          (typeof message.pid !== 'number' || !Number.isSafeInteger(message.pid) || message.pid <= 0))
       )
         return
       session.ready = message as unknown as Ready
@@ -266,7 +270,38 @@ export class LauncherSupervisor {
     return !!this.session && !this.session.exit
   }
   force(): void {
-    if (this.session && !this.session.exit) this.session.child.kill('SIGKILL')
+    const session = this.session
+    if (!session || session.exit) return
+    session.forced = true
+    session.child.kill('SIGKILL')
+    const pid = session.ready?.pid
+    if (!pid) {
+      this.log('强杀启动器时没有核心 pid，无法确认核心是否已经退出')
+      return
+    }
+    try {
+      ;(this.options.kill ?? process.kill)(pid, 'SIGKILL')
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') this.log('无法强杀核心，请人工检查核心是否已经退出')
+    }
+  }
+  private async waitForCore(session: Session): Promise<void> {
+    const pid = session.ready?.pid
+    if (!session.forced || !pid) return
+    const deadline = this.now() + 5000
+    for (;;) {
+      try {
+        ;(this.options.kill ?? process.kill)(pid, 0)
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ESRCH') return
+      }
+      if (this.now() >= deadline) {
+        this.log('强杀后核心在 5 秒内仍未退出，请人工检查')
+        return
+      }
+      // 启动器已经退了，核心可能还在收尾；停止信号不能跳过这段等待。
+      await (this.options.sleep ?? interruptibleSleep)(Math.min(50, deadline - this.now()))
+    }
   }
   stop(): Promise<void> {
     if (this.stopping) return this.stopping
@@ -274,7 +309,11 @@ export class LauncherSupervisor {
     this.restart?.abort()
     const session = this.session
     this.stopping = (async () => {
-      if (!session || session.exit) return
+      if (!session) return
+      if (session.exit) {
+        await this.waitForCore(session)
+        return
+      }
       this.log('正在停止启动器')
       if (session.child.connected) {
         try {
@@ -289,6 +328,7 @@ export class LauncherSupervisor {
       } finally {
         clearTimeout(timer)
       }
+      await this.waitForCore(session)
     })().finally(() => {
       this.stopping = undefined
     })

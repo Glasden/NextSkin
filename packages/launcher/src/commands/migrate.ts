@@ -1,5 +1,5 @@
 import { parseArgs } from 'node:util'
-import { openCore, MigrationBackupError, OfficialPluginMigrationError } from '@nextskin/domain'
+import { openCore, MigrationBackupError, OfficialPluginMigrationError, type MigrationReport } from '@nextskin/domain'
 import { officialPlugins } from '@nextskin/official-plugins'
 import type { ReadCommandContext } from '../context.ts'
 
@@ -28,9 +28,11 @@ export async function run(argv: string[], read: ReadCommandContext): Promise<num
   try {
     // 配置错误交给 main 映射为 78，不当作迁移失败。
     const context = await read()
+    const migrationReport: MigrationReport = { core: [], plugins: [], backup: null }
     try {
       const opened = await openCore(context.config, {
         startJobs: false,
+        migrationReport,
         officialPlugins,
         pluginLog: (line) => console.error(line),
       })
@@ -52,7 +54,7 @@ export async function run(argv: string[], read: ReadCommandContext): Promise<num
         error instanceof MigrationBackupError || error instanceof OfficialPluginMigrationError
           ? error.message
           : '执行迁移失败；请检查数据库配置、连接和权限。'
-      if (json) log(JSON.stringify({ error: { kind, message } }))
+      if (json) log(JSON.stringify({ error: { kind, message }, ...migrationReport }))
       else console.error(`[nextskin] ${message}`)
       return 1
     }

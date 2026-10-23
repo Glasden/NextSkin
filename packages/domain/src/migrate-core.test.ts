@@ -6,7 +6,7 @@ import { coreMigrations, createDatabase, migrateToLatest, type CoreDatabase } fr
 import { removeTestDirectory } from '@nextskin/db/testing'
 import type { Kysely } from 'kysely'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { coreConfigFromEnv, migrateCore } from './bootstrap.ts'
+import { coreConfigFromEnv, migrateCore, openCore, type MigrationReport } from './bootstrap.ts'
 import type { CoreConfig } from './config.ts'
 import { MigrationBackupError } from './index.ts'
 
@@ -142,4 +142,16 @@ test('备份失败后六十秒内重抛同一个错误，冷却结束后可以�
   expect(await migrateCore(db, config)).toEqual([last])
   expect(await readdir(config.backupDirectory)).toHaveLength(1)
   expect(await executed()).toEqual(names)
+})
+
+test('调用方持有的迁移报告在核心迁移失败后仍保留备份路径', async () => {
+  await migrateToLatest(db, previous)
+  vi.spyOn(coreMigrations[last]!, 'up').mockRejectedValue(new Error('migration failed'))
+  vi.spyOn(console, 'info').mockImplementation(() => {})
+  const migrationReport: MigrationReport = { core: [], plugins: [], backup: null }
+  await expect(openCore(config, { startJobs: false, migrationReport })).rejects.toThrow()
+  expect(migrationReport.core).toEqual([])
+  expect(migrationReport.plugins).toEqual([])
+  expect(migrationReport.backup).toBe(join(config.backupDirectory, (await readdir(config.backupDirectory))[0]!))
+  expect(await executed()).toEqual(names.slice(0, -1))
 })

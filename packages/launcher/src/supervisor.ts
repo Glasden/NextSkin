@@ -10,7 +10,7 @@ export interface SupervisorOptions {
   stableTime?: number
   shutdownTimeout?: number
   log?: (message: string) => void
-  onReady?: () => void
+  onReady?: (pid: number | undefined) => void
   stopOn?: (stop: () => void) => () => void
 }
 
@@ -90,7 +90,7 @@ export function supervise(options: SupervisorOptions): Promise<number> {
           return
         readyAt = Date.now()
         log('核心已启动')
-        options.onReady?.()
+        options.onReady?.(current.pid)
       })
       // spawn 失败也会发 close；统一在 close 重启，避免一次失败排两个定时器。
       current.on('error', () => log('无法启动核心进程'))

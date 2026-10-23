@@ -99,7 +99,12 @@ for (const json of [false, true]) {
     const call = vi.mocked(openCore).mock.calls[0]!
     expect(call).toEqual([
       context.config,
-      { startJobs: false, officialPlugins, pluginLog: expect.any(Function) as unknown },
+      {
+        startJobs: false,
+        officialPlugins,
+        pluginLog: expect.any(Function) as unknown,
+        migrationReport: expect.any(Object) as unknown,
+      },
     ])
     expect(up).toHaveBeenCalledOnce()
     expect(await migrateToLatest(db, coreMigrations)).toEqual([])
@@ -162,7 +167,8 @@ test.each([false, true])('升级前备份失败安全输出，json=%s', async (j
   await writeFile(context.config.backupDirectory, '')
   expect(await run(json ? ['--json'] : [], read)).toBe(1)
   const message = `迁移前备份数据库失败：没法写入 ${context.config.backupDirectory}；没有执行迁移。请检查数据目录的剩余空间和权限后重试`
-  if (json) expect(output).toEqual([JSON.stringify({ error: { kind: 'backup', message } })])
+  if (json)
+    expect(JSON.parse(output[0]!)).toEqual({ error: { kind: 'backup', message }, core: [], plugins: [], backup: null })
   else {
     expect(errors).toEqual([`[nextskin] ${message}`])
     expect(output).toEqual([])
@@ -178,7 +184,13 @@ test.each([false, true])('官方插件迁移失败只回显插件和迁移名，
   up.mockRejectedValue(new Error('postgres://user:private@db/site'))
   expect(await run(json ? ['--json'] : [], read)).toBe(1)
   const message = '插件 test-migrate 迁移 002 执行失败'
-  if (json) expect(output).toEqual([JSON.stringify({ error: { kind: 'migration', message } })])
+  if (json)
+    expect(JSON.parse(output[0]!)).toEqual({
+      error: { kind: 'migration', message },
+      core: [],
+      plugins: [],
+      backup: expect.any(String) as unknown,
+    })
   else expect(errors).toContain(`[nextskin] ${message}`)
   expect(errors.join('')).not.toContain('private')
   await expect(vi.mocked(openCore).mock.results[0]!.value).rejects.toBeInstanceOf(OfficialPluginMigrationError)
@@ -189,7 +201,9 @@ test.each([false, true])('其他异常不回显原文，json=%s', async (json) =
   expect(await run(json ? ['--json'] : [], read)).toBe(1)
   const message = '执行迁移失败；请检查数据库配置、连接和权限。'
   expect(json ? output : errors).toEqual([
-    json ? JSON.stringify({ error: { kind: 'migration', message } }) : `[nextskin] ${message}`,
+    json
+      ? JSON.stringify({ error: { kind: 'migration', message }, core: [], plugins: [], backup: null })
+      : `[nextskin] ${message}`,
   ])
   expect(console.log).toBe(savedLog)
   expect(console.info).toBe(savedInfo)
@@ -225,3 +239,19 @@ test.each([['--help'], ['-h'], ['--unknown'], ['extra'], ['--json', '--unknown']
     expect(read).not.toHaveBeenCalled()
   },
 )
+
+test('核心已提交而官方插件迁移失败时，JSON 保留核心迁移和原始备份', async () => {
+  await seed(true)
+  up.mockRejectedValue(new Error('plugin migration failed'))
+  expect(await run(['--json'], read)).toBe(1)
+  const report = JSON.parse(output[0]!) as {
+    core: string[]
+    backup: string
+    plugins: unknown[]
+    error: { kind: string }
+  }
+  expect(report).toMatchObject({ core: [last], plugins: [], error: { kind: 'migration' } })
+  expect((await readFile(report.backup)).length).toBeGreaterThan(0)
+  expect(await migrateToLatest(db, coreMigrations)).toEqual([])
+  expect(output).toHaveLength(1)
+})

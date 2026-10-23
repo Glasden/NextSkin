@@ -19,6 +19,20 @@ async function exists(path: string): Promise<boolean> {
     throw error
   }
 }
+/** 旧启动器不能放进 releases 运行；启动和离线升级必须共用同一个历史版本来源。 */
+export async function readLegacyVersion(home: string): Promise<string | null> {
+  if (await readCurrent(home)) return null
+  if (!(await exists(join(home, 'server/VERSION'))) || !(await exists(join(home, 'cli')))) return null
+  const version = (await readFile(join(home, 'server/VERSION'), 'utf8')).trim()
+  requireVersion(version)
+  return version
+}
+export async function removeLegacy(home: string, log: (line: string) => void = console.error): Promise<void> {
+  for (const name of ['server', 'cli'])
+    await rm(join(home, name), { recursive: true, force: true }).catch(() =>
+      log(`[nextskin] 旧布局的 ${name} 暂时无法删除，请稍后清理`),
+    )
+}
 export interface SelectionOptions {
   home: string
   bundled: string
@@ -91,23 +105,23 @@ export async function selectVersion(options: SelectionOptions): Promise<string> 
       if (failedSwitch) throw new ManagerError(failedSwitch)
       return (await readCurrent(home))?.current ?? pointer.current
     }
-    const legacy = (await exists(join(home, 'server/VERSION'))) && (await exists(join(home, 'cli')))
-    if (legacy) {
-      const from = (await readFile(join(home, 'server/VERSION'), 'utf8')).trim()
-      requireVersion(from)
+    const from = await readLegacyVersion(home)
+    if (from) {
       try {
-        await manager.prepareLocal(bundled, { from, legacy: true })
+        const preflight = await manager.prepareLocal(bundled, { from, legacy: true })
+        if (preflight.tier === 'external-backup')
+          throw new ConfigError(
+            `从旧布局换过来：${preflight.dialect} 有数据库迁移，要先自己备份；备份以后在服务停着时运行 node nextskin.mjs update --backup-confirmed，再启动。不升级就照 ADR-0040 手工回退，解压旧版本的 ZIP`,
+          )
         const result = await manager.apply(bundled)
         if (result.result !== 'success') throw new ManagerError(result.reason ?? '旧布局升级失败')
       } catch (error) {
+        if (error instanceof ConfigError) throw error
         throw new ConfigError(
           `${error instanceof ManagerError ? error.message : '旧布局升级失败'}；请照 ADR-0040 手工回退，解压旧版本的 ZIP`,
         )
       }
-      for (const name of ['server', 'cli'])
-        await rm(join(home, name), { recursive: true, force: true }).catch(() =>
-          log(`旧布局的 ${name} 暂时无法删除，请稍后清理`),
-        )
+      await removeLegacy(home, options.log)
       return bundled
     }
     await write(initialCurrent(bundled))

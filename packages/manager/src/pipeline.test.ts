@@ -6,7 +6,7 @@ import { createManager } from './pipeline.ts'
 import { LauncherSupervisor, runCommand } from './process.ts'
 import { fixture, events, releaseZip, signedManifest, zipResponse, requestUrl, contains } from './fixtures.ts'
 import { readCurrent, writeCurrent } from './state.ts'
-import { parsePreflight } from './preflight.ts'
+import { parsePreflight, parseMigration } from './preflight.ts'
 import type { Dialect } from './types.ts'
 
 const disposers: (() => Promise<unknown>)[] = []
@@ -397,7 +397,7 @@ it('外部库已迁移而第一次写指针失败时，仍启动新程序', asyn
   expect((await readCurrent(f.home))?.current).toBe('1.1.0')
 })
 
-it('迁移退出 0 却缺少报告时不能冒险拿旧程序打开已经改变的 SQLite 库', async () => {
+it('迁移退出 0 却缺少报告且 SQLite 已改变、没有还原点时保留新程序', async () => {
   const f = await setup('sqlite', true)
   const manager = await createManager({
     home: f.home,
@@ -409,9 +409,13 @@ it('迁移退出 0 却缺少报告时不能冒险拿旧程序打开已经改变�
     },
   })
   await manager.prepareLocal('1.1.0')
-  expect(await manager.apply('1.1.0')).toMatchObject({ result: 'failed', reason: contains('备份不存在') })
-  expect(f.supervisor.running).toBe(false)
-  expect((await events(f.home)).some((e) => e.command === 'start')).toBe(false)
+  expect(await manager.apply('1.1.0')).toMatchObject({
+    result: 'failed',
+    migrations: true,
+    reason: contains('数据库已经部分迁移'),
+  })
+  expect((await readCurrent(f.home))?.current).toBe('1.1.0')
+  expect((await events(f.home)).some((e) => e.command === 'start' && e.version === '1.0.0')).toBe(false)
 })
 
 it('archive 下载持续更新 operation.progress，离开下载步骤后清除', async () => {
@@ -573,4 +577,158 @@ it('apply 和 rollback 同样保留数据归属配置错误的退出码 78', asy
   await expect(manager.rollback({ confirmed: true })).rejects.toMatchObject({ exitCode: 78 })
   expect(manager.status().operation).toBeNull()
   expect((await events(f.home)).some((event) => ['migrate', 'start'].includes(event.command))).toBe(false)
+})
+
+describe('部分迁移的失败恢复', () => {
+  it('SQLite 核心提交、插件失败后恢复报告里的备份，再启动旧版', async () => {
+    const f = await setup('sqlite', true)
+    f.behavior['1.1.0'] = { pending: true, pluginPending: true, migrateFail: true, migratePartial: true }
+    await f.configure()
+    await f.supervisor.start('1.0.0', true)
+    await f.manager.prepareLocal('1.1.0')
+    const result = await f.manager.apply('1.1.0')
+    expect(result).toMatchObject({
+      result: 'rolled-back',
+      migrations: true,
+      backup: join(f.home, 'data/backup-1.1.0.sqlite'),
+    })
+    expect(await readFile(join(f.home, 'data/db.sqlite'), 'utf8')).toBe('original')
+    expect((await readCurrent(f.home))?.current).toBe('1.0.0')
+    expect(f.supervisor.running).toBe(true)
+    expect((await events(f.home)).filter((e) => e.command === 'start').map((e) => e.version)).toEqual([
+      '1.0.0',
+      '1.0.0',
+    ])
+    expect(JSON.parse((await readFile(join(f.home, 'releases/update-log.jsonl'), 'utf8')).trim())).toEqual(result)
+  })
+  it.each(['postgres', 'mysql', 'mariadb'] as const)('%s 核心提交、插件失败后保留新指针和新程序', async (dialect) => {
+    const f = await setup(dialect, true)
+    f.behavior['1.1.0'] = { dialect, pending: true, pluginPending: true, migrateFail: true, migratePartial: true }
+    await f.configure()
+    await f.manager.prepareLocal('1.1.0')
+    expect(await f.manager.apply('1.1.0', { backupConfirmed: true })).toMatchObject({
+      result: 'failed',
+      migrations: true,
+      backup: null,
+      reason: contains('数据库已经部分迁移，新版本保留，需要管理员用升级前的备份恢复'),
+    })
+    expect((await readCurrent(f.home))?.current).toBe('1.1.0')
+    await vi.waitFor(async () =>
+      expect((await events(f.home)).some((e) => e.command === 'start' && e.version === '1.1.0')).toBe(true),
+    )
+    expect((await events(f.home)).some((e) => e.command === 'start' && e.version === '1.0.0')).toBe(false)
+  })
+  it('报告没有已提交迁移时，在数据锁内用 doctor 的待执行项判断变化', async () => {
+    const f = await setup('postgres', true)
+    f.behavior['1.1.0'] = {
+      dialect: 'postgres',
+      pending: true,
+      pluginPending: true,
+      migrateFail: true,
+      migratePartial: true,
+      omitMigrationReport: true,
+    }
+    await f.configure()
+    const { acquireLock } = await import('./lock.ts')
+    let migrated = false
+    let checked = false
+    const manager = await createManager({
+      home: f.home,
+      bundled: '1.0.0',
+      supervisor: f.supervisor,
+      command: async (version, name, timeout, signal) => {
+        if (name === 'doctor' && migrated) {
+          const lock = await acquireLock(join(f.home, 'data/nextskin.lock'))
+          lock?.release()
+          expect(lock).toBeNull()
+          checked = true
+        }
+        const report = await runCommand(f.home, version, name, { timeout, signal })
+        if (name === 'migrate') migrated = true
+        return report
+      },
+    })
+    await manager.prepareLocal('1.1.0')
+    expect(await manager.apply('1.1.0', { backupConfirmed: true })).toMatchObject({
+      result: 'failed',
+      migrations: true,
+    })
+    expect(checked).toBe(true)
+    expect((await readCurrent(f.home))?.current).toBe('1.1.0')
+    expect((await events(f.home)).some((e) => e.command === 'start' && e.version === '1.0.0')).toBe(false)
+  })
+  it('迁移崩溃没有报告且 doctor 显示未变，恢复旧程序', async () => {
+    const f = await setup('postgres', true)
+    f.behavior['1.1.0'] = { dialect: 'postgres', pending: true, migrateCrash: true }
+    await f.configure()
+    await f.manager.prepareLocal('1.1.0')
+    expect(await f.manager.apply('1.1.0', { backupConfirmed: true })).toMatchObject({
+      result: 'rolled-back',
+      migrations: false,
+      backup: null,
+    })
+    expect((await readCurrent(f.home))?.current).toBe('1.0.0')
+    expect(f.supervisor.running).toBe(true)
+  })
+  it('doctor 也失败时恢复旧程序并明确状态不确定，日志保守标记 migrations', async () => {
+    const f = await setup('postgres', true)
+    f.behavior['1.1.0'] = { dialect: 'postgres', pending: true, migrateFail: true, doctorFailAfterMigration: true }
+    await f.configure()
+    await f.manager.prepareLocal('1.1.0')
+    expect(await f.manager.apply('1.1.0', { backupConfirmed: true })).toMatchObject({
+      result: 'rolled-back',
+      migrations: true,
+      reason: contains('无法确认数据库是否已经部分迁移'),
+    })
+  })
+})
+
+it('停站拿锁后外部库出现新迁移而没有确认备份，不执行 migrate', async () => {
+  const f = await setup('postgres')
+  let doctors = 0
+  const manager = await createManager({
+    home: f.home,
+    bundled: '1.0.0',
+    supervisor: f.supervisor,
+    command: async (version, name, timeout, signal) => {
+      if (name === 'doctor' && ++doctors === 3) {
+        f.behavior['1.1.0'] = { dialect: 'postgres', pending: true }
+        await f.configure()
+      }
+      return runCommand(f.home, version, name, { timeout, signal })
+    },
+  })
+  await manager.prepareLocal('1.1.0')
+  expect(await manager.apply('1.1.0')).toMatchObject({
+    result: 'rolled-back',
+    reason: contains('停站期间有了新的数据库迁移，先备份，再重新准备并确认'),
+  })
+  expect(doctors).toBe(3)
+  expect((await events(f.home)).some((e) => e.command === 'migrate')).toBe(false)
+  expect((await readCurrent(f.home))?.current).toBe('1.0.0')
+  expect(f.supervisor.running).toBe(true)
+})
+
+it('失败报告校验已提交列表；缺失或损坏的列表按空处理', () => {
+  for (const fields of [
+    { core: ['001'], plugins: [{ plugin: 'p', migrations: ['001'] }] },
+    { core: 1, plugins: [{ plugin: 'p', migrations: 1 }] },
+    {},
+  ]) {
+    let caught: unknown
+    try {
+      parseMigration({
+        code: 1,
+        stdout: JSON.stringify({ error: { kind: 'migration', message: '失败' }, ...fields }),
+        stderr: '',
+      })
+    } catch (error) {
+      caught = error
+    }
+    expect(caught).toMatchObject({
+      core: Array.isArray(fields.core) ? fields.core : [],
+      plugins: Array.isArray(fields.core) ? fields.plugins : [],
+      backup: null,
+    })
+  }
 })

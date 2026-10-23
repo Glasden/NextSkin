@@ -20,6 +20,10 @@ export interface Behavior {
   exitAfter?: number
   ignoreShutdown?: boolean
   migrateFail?: boolean
+  migratePartial?: boolean
+  omitMigrationReport?: boolean
+  migrateCrash?: boolean
+  doctorFailAfterMigration?: boolean
   migrateKind?: string
   migrateMessage?: string
   noBackup?: boolean
@@ -43,12 +47,13 @@ const command = process.argv[2]
 appendFileSync(join(home, 'events.jsonl'), JSON.stringify({command,version,managed:process.env.NEXTSKIN_MANAGED,manager:process.env.NEXTSKIN_MANAGER})+'\\n')
 const dialect = cfg.dialect || 'sqlite'
 const content = existsSync(sqliteFile) ? readFileSync(sqliteFile, 'utf8') : ''
-const pendingCore = !!cfg.pending && content !== 'db:'+version
+const pendingCore = !!cfg.pending && content !== 'db:'+version && content !== 'core:'+version
 const pendingPlugin = !!cfg.pluginPending && content !== 'db:'+version
 const pending = pendingCore || pendingPlugin
 if (command === 'doctor') {
   if (cfg.doctorDelay) await new Promise(r => setTimeout(r,cfg.doctorDelay))
-  const results = ['node','envFile','secret','config','dataDirectory','database','release','pluginHost','service'].map(id=>({id,item:id,status:id==='service' ? 'fail' : id===cfg.fail ? 'fail' : 'pass',message:id===cfg.fail ? '测试预检失败' : '测试检查'}))
+  const failedDoctor = cfg.doctorFailAfterMigration && readFileSync(join(home,'events.jsonl'),'utf8').includes('"command":"migrate"') ? 'database' : cfg.fail
+  const results = ['node','envFile','secret','config','dataDirectory','database','release','pluginHost','service'].map(id=>({id,item:id,status:id==='service' ? 'fail' : id===failedDoctor ? 'fail' : 'pass',message:id===failedDoctor ? '测试预检失败' : '测试检查'}))
   const database = { dialect, pendingCore: pendingCore?['core-1']:[],pendingPlugins:pendingPlugin?[{plugin:'official',migrations:['plugin-1']}]:[],unknownCore:cfg.unknown?['future']:[],incompatiblePlugins:cfg.incompatible?[{id:'test',api:'99.0'}]:[],sqliteFile:dialect==='sqlite'?sqliteFile:null }
   console.log(JSON.stringify(cfg.incomplete?{results}:{version,dataDirectory,results,database}))
   process.exitCode=1
@@ -58,9 +63,11 @@ if (command === 'doctor') {
     backup=join(dataDirectory,'backup-'+version+'.sqlite')
     copyFileSync(sqliteFile,backup)
   }
+  if (cfg.migrateCrash) process.exit(1)
   if (cfg.migrateFail) {
-    if (dialect==='mysql' || dialect==='mariadb') writeFileSync(sqliteFile,'partial')
-    console.log(JSON.stringify({error:{kind:cfg.migrateKind||'migration',message:cfg.migrateMessage||'测试迁移失败'}}))
+    if (cfg.migratePartial) writeFileSync(sqliteFile,'core:'+version)
+    else if (dialect==='mysql' || dialect==='mariadb') writeFileSync(sqliteFile,'partial')
+    console.log(JSON.stringify({error:{kind:cfg.migrateKind||'migration',message:cfg.migrateMessage||'测试迁移失败'},...(cfg.migratePartial && !cfg.omitMigrationReport ? {core:pendingCore?['core-1']:[],plugins:[],backup} : {})}))
     process.exitCode=1
   } else {
     if(pending) writeFileSync(sqliteFile,'db:'+version)

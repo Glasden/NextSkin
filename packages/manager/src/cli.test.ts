@@ -1,6 +1,6 @@
 import type { execFileSync } from 'node:child_process'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { readFile, writeFile, type chown } from 'node:fs/promises'
+import { access, mkdir, readFile, rm, writeFile, type chown } from 'node:fs/promises'
 import { join } from 'node:path'
 import { MANIFEST_URL } from '@nextskin/updates'
 import { runManagementCommand } from './cli.ts'
@@ -285,4 +285,52 @@ it('离线 update 和 rollback 的数据归属错误退出 78', async () => {
   expect(await runManagementCommand(f.home, '1.1.0', ['rollback', '--yes'], options)).toBe(78)
   expect(f.error.mock.calls.flat().join('\n')).toContain('或者设 NEXTSKIN_RUN_AS=<用户>')
   expect((await events(f.home)).some((event) => ['migrate', 'start'].includes(event.command))).toBe(false)
+})
+
+it('旧布局外部库先拒绝未确认备份，再用已解压版本离线升级并删除旧目录', async () => {
+  const f = await setup()
+  await rm(join(f.home, 'releases/current.json'))
+  await mkdir(join(f.home, 'server'))
+  await mkdir(join(f.home, 'cli'))
+  await writeFile(join(f.home, 'server/VERSION'), '0.9.0')
+  f.behavior['1.1.0'] = { dialect: 'postgres', pending: true }
+  await f.configure()
+  expect(await f.run(['update', '--yes'], '1.1.0')).toBe(1)
+  expect(f.error).toHaveBeenCalledWith(expect.stringContaining('--backup-confirmed'))
+  expect(await readCurrent(f.home)).toBeNull()
+  await access(join(f.home, 'server/VERSION'))
+  await access(join(f.home, 'cli'))
+  expect((await events(f.home)).some((e) => e.command === 'migrate')).toBe(false)
+  expect(await f.run(['update', '--backup-confirmed', '--yes'], '1.1.0')).toBe(0)
+  expect(await readCurrent(f.home)).toMatchObject({ current: '1.1.0', previous: null })
+  await expect(access(join(f.home, 'server'))).rejects.toMatchObject({ code: 'ENOENT' })
+  await expect(access(join(f.home, 'cli'))).rejects.toMatchObject({ code: 'ENOENT' })
+  expect(JSON.parse((await readFile(join(f.home, 'releases/update-log.jsonl'), 'utf8')).trim())).toMatchObject({
+    kind: 'legacy',
+    from: '0.9.0',
+    result: 'success',
+  })
+  expect(f.fetcher).not.toHaveBeenCalled()
+  expect((await events(f.home)).some((e) => e.command === 'start')).toBe(false)
+})
+
+it('旧布局不能直接指定其他版本，必须先用自带版本', async () => {
+  const f = await setup()
+  await rm(join(f.home, 'releases/current.json'))
+  await mkdir(join(f.home, 'server'))
+  await mkdir(join(f.home, 'cli'))
+  await writeFile(join(f.home, 'server/VERSION'), '0.9.0')
+  expect(await f.run(['update', '--to', '1.2.0', '--yes'], '1.1.0')).toBe(1)
+  expect(f.error).toHaveBeenCalledWith(expect.stringContaining('先换到已解压'))
+  expect(f.fetcher).not.toHaveBeenCalled()
+  expect(await events(f.home)).toEqual([])
+})
+
+it('有指针的手动解压默认选 bundled，不读清单', async () => {
+  const f = await setup()
+  f.behavior['1.1.0'] = { dialect: 'postgres', pending: true }
+  await f.configure()
+  expect(await f.run(['update', '--backup-confirmed', '--yes'], '1.1.0')).toBe(0)
+  expect(await readCurrent(f.home)).toMatchObject({ current: '1.1.0', previous: '1.0.0' })
+  expect(f.fetcher).not.toHaveBeenCalled()
 })

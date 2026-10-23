@@ -58,10 +58,10 @@ async function prepareAndSupervise(
       env,
       stopOn,
       onReady: stopOn
-        ? () => {
+        ? (pid) => {
             if (!process.connected) return
             try {
-              process.send?.({ nextskin: 'ready', version: context.version, host, port }, () => {
+              process.send?.({ nextskin: 'ready', version: context.version, host, port, pid }, () => {
                 /* 父进程可能正随着发送退出。 */
               })
             } catch {
