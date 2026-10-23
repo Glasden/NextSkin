@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
-import { expect, fn, screen, userEvent } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor } from 'storybook/test'
 import { Tabs } from './tabs.tsx'
 
 const onValueChange = fn()
@@ -160,6 +160,8 @@ export const Collapse: Story = {
     await expect(onValueChange).toHaveBeenLastCalledWith('mail')
     await expect(canvas.getByRole('tabpanel')).toHaveTextContent('邮件服务器')
     await expect(select).toHaveTextContent('邮件')
+    // 弹层退场后焦点才回到选择框，等它回来再移走，否则截图时有没有焦点环看时机
+    await waitFor(() => expect(select).toHaveFocus())
     ;(document.activeElement as HTMLElement | null)?.blur()
   },
 }
