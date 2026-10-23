@@ -58,6 +58,7 @@ export function SetPasswordDialog({
   launcherTokens,
 }: SetPasswordDialogProps) {
   const t = useTranslations('admin.userDetail.security')
+  const common = useTranslations('common')
   const format = useFormatter()
   const toast = useToast()
   const [password, setPassword] = useState('')
@@ -154,10 +155,15 @@ export function SetPasswordDialog({
           </Checkbox>
           {changeEmail && (
             <>
-              <Field label={t('newEmail')} name="newEmail" description={t('newEmailHint')}>
+              <Field
+                label={t('newEmail')}
+                name="newEmail"
+                description={t('newEmailHint')}
+                formatError={common('emailFormat')}
+              >
                 <Input type="email" maxLength={255} required autoComplete="off" />
               </Field>
-              <Field label={t('newEmailRepeat')} name="newEmailRepeat">
+              <Field label={t('newEmailRepeat')} name="newEmailRepeat" formatError={common('emailFormat')}>
                 <Input type="email" maxLength={255} required autoComplete="off" />
               </Field>
             </>

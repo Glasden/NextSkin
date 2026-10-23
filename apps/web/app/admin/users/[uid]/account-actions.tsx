@@ -47,6 +47,7 @@ export function EmailDialog({
   requireVerification: boolean
 }) {
   const t = useTranslations('admin.userDetail.account')
+  const common = useTranslations('common')
   const [verified, setVerified] = useState<'verified' | 'unverified' | undefined>(undefined)
   return (
     <ActionDialog
@@ -71,7 +72,7 @@ export function EmailDialog({
       }}
     >
       <p className="text-sm text-text">{t('emailCurrent', { email: user.email })}</p>
-      <Field label={t('newEmailLabel')} name="email">
+      <Field label={t('newEmailLabel')} name="email" formatError={common('emailFormat')}>
         <Input type="email" maxLength={255} required autoComplete="off" />
       </Field>
       {!mailConfigured && (

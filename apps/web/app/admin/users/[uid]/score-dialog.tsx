@@ -14,6 +14,7 @@ const MAX_SCORE = 2147483647
  */
 export function ScoreDialog({ uid, nickname, score }: { uid: number; nickname: string; score: number }) {
   const t = useTranslations('admin.userDetail.score')
+  const common = useTranslations('common')
   const format = useFormatter()
   const [delta, setDelta] = useState('')
   const parsed = /^[+-]?\d{1,10}$/.test(delta.trim()) ? Number(delta.trim()) : null
@@ -40,6 +41,7 @@ export function ScoreDialog({ uid, nickname, score }: { uid: number; nickname: s
       <Field
         label={t('delta')}
         name="delta"
+        formatError={common('integerFormat')}
         description={
           result === null
             ? t('current', { score: format.number(score) })
