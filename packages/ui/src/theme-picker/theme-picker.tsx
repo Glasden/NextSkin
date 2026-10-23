@@ -28,12 +28,12 @@ export interface ThemePickerProps<Value extends string> {
   'aria-label'?: string
 }
 
-// 悬停时抬起：向左上挪 2px，露出 4px 的硬边阴影，同 TextureCard
+// 悬停时抬起：向左上挪 2px，露出 4px 的硬边阴影；静止时的阴影和选中的边框粗细随主题的结构，同 TextureCard
 const optionClass = cx(
   'group/radio relative flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface text-left',
-  'transition-[translate,box-shadow] duration-fast ease-step motion-reduce:transition-none',
+  'shadow-(--card-shadow) transition-[translate,box-shadow] duration-fast ease-step motion-reduce:transition-none',
   'hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-pixel-lg',
-  'data-checked:border-accent data-checked:outline-2 data-checked:-outline-offset-2 data-checked:outline-accent',
+  'data-checked:border-accent data-checked:outline-selected data-checked:-outline-offset-(--outline-width-selected) data-checked:outline-accent',
   'data-disabled:cursor-not-allowed data-disabled:hover:translate-0 data-disabled:hover:shadow-none',
   focusRing,
 )

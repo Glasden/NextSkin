@@ -33,7 +33,7 @@ const sizes = {
 
 // 底色放进 --button-bg，悬停时统一混入 12% 的 text：亮色下变深、暗色下变亮
 const variants = {
-  primary: '[--button-bg:var(--color-accent)] border-transparent text-accent-fg',
+  primary: '[--button-bg:var(--color-accent-fill)] border-transparent text-accent-fill-fg',
   secondary: '[--button-bg:var(--color-surface)] border-border-strong text-text',
   danger: '[--button-bg:var(--color-danger)] border-transparent text-danger-fg',
 }

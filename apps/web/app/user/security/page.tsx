@@ -1,5 +1,5 @@
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '@nextskin/domain'
-import { Alert, Badge } from '@nextskin/ui'
+import { Alert, Badge, Panel } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import { Gamepad } from 'pixelarticons/react/Gamepad.js'
@@ -204,11 +204,13 @@ export default async function SecurityPage({ searchParams }: PageProps<'/user/se
 /** 页首的保护状态，一项一格 */
 function OverviewItem({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
   return (
-    <li className="flex items-center gap-3 rounded-md border border-border bg-surface p-4 text-text">
-      <span className="shrink-0 text-text-muted">{icon}</span>
-      <span className="min-w-0 flex-1 text-base font-medium">{label}</span>
-      {children}
-    </li>
+    <Panel as="li" padding="md">
+      <div className="flex items-center gap-3 text-text">
+        <span className="shrink-0 text-text-muted">{icon}</span>
+        <span className="min-w-0 flex-1 text-base font-medium">{label}</span>
+        {children}
+      </div>
+    </Panel>
   )
 }
 
@@ -234,10 +236,10 @@ function Section({
         </h2>
         {badge}
       </div>
-      <div className="flex flex-col gap-4 rounded-md border border-border bg-surface p-6">
+      <Panel gap={4}>
         <p className="max-w-prose text-sm text-pretty text-text-muted">{description}</p>
         {children}
-      </div>
+      </Panel>
     </section>
   )
 }

@@ -1,5 +1,5 @@
 import { JOIN_SCOPE, READ_SCOPE, SELECT_SCOPE, type SessionUser } from '@nextskin/domain'
-import { Alert } from '@nextskin/ui'
+import { Alert, Panel } from '@nextskin/ui'
 import { getTranslations } from 'next-intl/server'
 import { AvatarSquare } from 'pixelarticons/react/AvatarSquare.js'
 import { Close } from 'pixelarticons/react/Close.js'
@@ -42,21 +42,23 @@ export function ClientCard({
   readonly children: ReactNode
 }) {
   return (
-    <div className="-mt-2 flex flex-col overflow-hidden rounded-md border border-border bg-surface">
-      <div className="flex items-center gap-3 p-4">
-        <span className="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-sunken text-text-muted">
-          <Icon aria-hidden />
-        </span>
-        <div className="flex min-w-0 flex-col">
-          {/* 应用名是创建者填的，用正文字体（DESIGN.md §4）。完整显示、可以在任意位置折行：截断以后，
+    <div className="-mt-2">
+      <Panel padding="none" clip>
+        <div className="flex items-center gap-3 p-4">
+          <span className="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-sunken text-text-muted">
+            <Icon aria-hidden />
+          </span>
+          <div className="flex min-w-0 flex-col">
+            {/* 应用名是创建者填的，用正文字体（DESIGN.md §4）。完整显示、可以在任意位置折行：截断以后，
               "某某启动器"后面接一串字的名字看起来就是正版；名字和昵称再长也不撑宽页面 */}
-          <span className="text-lg font-medium wrap-anywhere text-text">{name}</span>
-          <span className="text-sm text-pretty wrap-anywhere text-text-muted">{byline}</span>
+            <span className="text-lg font-medium wrap-anywhere text-text">{name}</span>
+            <span className="text-sm text-pretty wrap-anywhere text-text-muted">{byline}</span>
+          </div>
         </div>
-      </div>
-      <dl className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 border-t border-border bg-surface-sunken px-4 py-3">
-        {children}
-      </dl>
+        <dl className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 border-t border-border bg-surface-sunken px-4 py-3">
+          {children}
+        </dl>
+      </Panel>
     </div>
   )
 }

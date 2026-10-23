@@ -1,7 +1,7 @@
 'use client'
 
 import type { AdminPlayer, AdminTextureForOwner, AdminUserLookup, UserRole } from '@nextskin/domain'
-import { Alert, Badge, Button, Field, Input, Menu, MenuItem, PlayerHead } from '@nextskin/ui'
+import { Alert, Badge, Button, Field, Input, Menu, MenuItem, Panel, PlayerHead } from '@nextskin/ui'
 import { useFormatter, useTranslations } from 'next-intl'
 import { Forward } from 'pixelarticons/react/Forward.js'
 import { Image } from 'pixelarticons/react/Image.js'
@@ -271,19 +271,21 @@ function RecipientCard({ user }: { user: AdminUserLookup }) {
   const admin = useTranslations('admin')
   const role: UserRole = user.role
   return (
-    <div className="flex items-center gap-3 rounded-md border border-border bg-surface-sunken p-3">
-      <PlayerHead src={user.avatar ? headSrc(user.avatar.hash) : undefined} size={48} alt="" />
-      <span className="flex min-w-0 flex-col gap-1">
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="min-w-0 font-medium break-all text-text">{user.nickname}</span>
-          <Badge tone={roleTones[role]}>{admin(`roles.${role}`)}</Badge>
+    <Panel tone="sunken" padding="sm">
+      <div className="flex items-center gap-3">
+        <PlayerHead src={user.avatar ? headSrc(user.avatar.hash) : undefined} size={48} alt="" />
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 font-medium break-all text-text">{user.nickname}</span>
+            <Badge tone={roleTones[role]}>{admin(`roles.${role}`)}</Badge>
+          </span>
+          <span className="text-sm break-all text-text-muted">
+            UID <span className="font-mono">{user.uid}</span>
+            {user.email !== null && <> · {user.email}</>}
+          </span>
         </span>
-        <span className="text-sm break-all text-text-muted">
-          UID <span className="font-mono">{user.uid}</span>
-          {user.email !== null && <> · {user.email}</>}
-        </span>
-      </span>
-    </div>
+      </div>
+    </Panel>
   )
 }
 

@@ -27,18 +27,18 @@ function ThemePreview({ theme, mode }: { theme: string; mode: 'light' | 'dark' }
         <span className="ml-auto size-3 rounded-sm border border-border-strong bg-surface-sunken" />
       </span>
       <span className="flex min-h-0 flex-1 gap-1.5 p-1.5">
-        {/* 卡片：标题、说明和成功色的徽标 */}
-        <span className="flex min-w-0 flex-1 flex-col gap-1 rounded-sm border border-border bg-surface p-1.5">
+        {/* 卡片：标题、说明和成功色的徽标。圆角、边框粗细和静止时的阴影跟着这套主题的结构（ADR-0058） */}
+        <span className="flex min-w-0 flex-1 flex-col gap-1 rounded-sm border border-border bg-surface p-1.5 shadow-(--card-shadow)">
           <span className="flex items-center gap-1">
             <span className="h-1.5 w-8 bg-text" />
             <span className="h-2.5 w-4 border border-success" />
           </span>
           <span className="h-1 w-full max-w-12 bg-text-muted" />
           <span className="h-1 w-3/4 max-w-9 bg-text-muted" />
-          {/* 按钮：主要按钮带硬边阴影，旁边是危险操作 */}
+          {/* 按钮：主要按钮是强调色的色块，带硬边阴影，旁边是危险操作 */}
           <span className="mt-auto flex items-center gap-1">
-            <span className="flex h-3.5 w-9 items-center justify-center bg-accent shadow-[1px_1px_0_0_var(--color-shadow)]">
-              <span className="h-0.5 w-4 bg-accent-fg" />
+            <span className="flex h-3.5 w-9 items-center justify-center bg-accent-fill shadow-[1px_1px_0_0_var(--color-shadow)]">
+              <span className="h-0.5 w-4 bg-accent-fill-fg" />
             </span>
             <span className="flex h-3.5 w-6 items-center justify-center bg-danger">
               <span className="h-0.5 w-2.5 bg-danger-fg" />
@@ -64,9 +64,9 @@ export function ThemePreviews({ theme }: { theme: string }) {
   )
 }
 
-// 选中：再画一圈向内的 2px 描边，和 1px 的边框叠成 2px 的强调色边，布局不跳动。名字前面的方框打勾，不只靠颜色区分
-// （DESIGN.md §2.1）。勾不放在左上角：那里是小样的标志
-const selectedClass = 'border-accent outline-2 -outline-offset-2 outline-accent'
+// 选中：向内再画一圈描边，叠成常规边框两倍粗的强调色边，布局不跳动，同 TextureCard。名字前面的方框打勾，
+// 不只靠颜色区分（DESIGN.md §2.1）。勾不放在左上角：那里是小样的标志
+const selectedClass = 'border-accent outline-selected -outline-offset-(--outline-width-selected) outline-accent'
 
 // 方框和 PlayerPicker 的一样：24px，勾是 24px 网格的图标，和方框的外沿对齐。ThemePicker 也用
 export const boxClass = 'relative size-6 shrink-0 rounded-sm border-2'
@@ -104,7 +104,7 @@ export function ThemeCard({
   return (
     <article
       className={cx(
-        'relative flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface',
+        'relative flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface shadow-(--card-shadow)',
         selected && selectedClass,
       )}
     >

@@ -1,5 +1,5 @@
 import type { NotificationView } from '@nextskin/domain'
-import { EmptyState, Link, Markdown, NotificationItem, Pagination } from '@nextskin/ui'
+import { EmptyState, Link, Markdown, NotificationItem, Pagination, Panel } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -55,10 +55,7 @@ export default async function NotificationsPage({
       <NotificationTabs params={params} unread={unread}>
         {items.length > 0 ? (
           <div className="flex flex-col gap-6">
-            <ul
-              aria-label={t('listLabel')}
-              className="flex flex-col divide-y divide-border rounded-md border border-border bg-surface"
-            >
+            <Panel as="ul" aria-label={t('listLabel')} padding="none" divided>
               {items.map((item) => (
                 <li key={item.id}>
                   <NotificationItem
@@ -73,7 +70,7 @@ export default async function NotificationsPage({
                   </NotificationItem>
                 </li>
               ))}
-            </ul>
+            </Panel>
             <Pagination
               page={params.page}
               pageCount={pageCount}

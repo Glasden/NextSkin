@@ -1,6 +1,6 @@
 'use client'
 
-import { Alert, Button, Field, Form, Input, SkinFigure, Stage } from '@nextskin/ui'
+import { Alert, Button, Field, Form, Input, Panel, SkinFigure, Stage } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -35,7 +35,7 @@ export function SetupCodeForm() {
 
   return (
     <div className="flex items-start gap-8">
-      <div className="flex min-w-0 flex-1 flex-col gap-6 rounded-md border border-border bg-surface p-6">
+      <Panel grow gap={6}>
         <div className="flex flex-col gap-2 text-sm text-text">
           <p>{t('where')}</p>
           <pre className="overflow-x-auto rounded-sm bg-surface-sunken px-3 py-2 font-mono text-sm text-text">
@@ -54,7 +54,7 @@ export function SetupCodeForm() {
             </Button>
           </div>
         </Form>
-      </div>
+      </Panel>
       <div className="hidden h-80 w-64 shrink-0 md:block">
         <Stage grid>
           <SkinFigure {...defaultSkin} scale={4} alt={t('illustration')} raiseOnHover loading="eager" />

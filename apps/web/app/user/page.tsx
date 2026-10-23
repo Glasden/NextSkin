@@ -1,5 +1,5 @@
 import type { OwnedPlayer, ScoreEntry } from '@nextskin/domain'
-import { Alert, cx, FigurePlaceholder, Link, Markdown, NameTag, SkinFigure, Stage } from '@nextskin/ui'
+import { Alert, cx, FigurePlaceholder, Link, Markdown, NameTag, Panel, SkinFigure, Stage } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -79,8 +79,9 @@ export default async function DashboardPage() {
           <h2 id="score-heading" className="font-pixel text-pixel-1 text-text">
             {t('score')}
           </h2>
-          <div className="flex flex-1 flex-col justify-between gap-6 rounded-md border border-border bg-surface p-6">
-            <div className="flex flex-col gap-2">
+          {/* 签到按钮压在底部，和左边的角色展台底边对齐 */}
+          <Panel grow gap={6}>
+            <div className="flex flex-1 flex-col gap-2">
               <p className="font-pixel text-pixel-3 text-text tabular-nums">{format.number(overview.score)}</p>
               <p className="text-sm text-text-muted">{t('scoreUsage', { cost: settings['score.perPlayer'] })}</p>
             </div>
@@ -92,7 +93,7 @@ export default async function DashboardPage() {
                   : t('checkInHint', { same: String(min === max), min, max })}
               </p>
             </div>
-          </div>
+          </Panel>
         </section>
       </div>
       {/* 管理员在后台写的公告（ADR-0028），空的时候不显示 */}
@@ -101,9 +102,9 @@ export default async function DashboardPage() {
           <h2 id="announcement-heading" className="font-pixel text-pixel-1 text-text">
             {t('announcement')}
           </h2>
-          <div className="rounded-md border border-border bg-surface p-6">
+          <Panel>
             <Markdown>{settings['site.announcement']}</Markdown>
-          </div>
+          </Panel>
         </section>
       )}
       {/* 外置登录的快速配置（BS 的 ygg_show_config_section），总是显示（ADR-0030） */}
@@ -111,7 +112,7 @@ export default async function DashboardPage() {
         <h2 id="launcher-heading" className="font-pixel text-pixel-1 text-text">
           {t('launcher.title')}
         </h2>
-        <div className="flex flex-col gap-6 rounded-md border border-border bg-surface p-6">
+        <Panel gap={6}>
           <div className="flex flex-col gap-3">
             <p className="max-w-prose text-sm text-pretty text-text-muted">{t('launcher.description')}</p>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -143,14 +144,14 @@ export default async function DashboardPage() {
               </li>
             ))}
           </ol>
-        </div>
+        </Panel>
       </section>
       <section aria-labelledby="history-heading" className="flex flex-col gap-3">
         <h2 id="history-heading" className="font-pixel text-pixel-1 text-text">
           {t('history')}
         </h2>
         {history.length ? (
-          <ol className="divide-y divide-border rounded-md border border-border bg-surface">
+          <Panel as="ol" padding="none" divided>
             {history.map((entry) => (
               <HistoryRow
                 key={entry.id}
@@ -161,9 +162,9 @@ export default async function DashboardPage() {
                 balance={t('balance', { balance: format.number(entry.balance) })}
               />
             ))}
-          </ol>
+          </Panel>
         ) : (
-          <p className="rounded-md border border-dashed border-border-strong px-4 py-6 text-sm text-text-muted">
+          <p className="rounded-sm border border-dashed border-border-strong px-4 py-6 text-sm text-text-muted">
             {t('noHistory')}
           </p>
         )}

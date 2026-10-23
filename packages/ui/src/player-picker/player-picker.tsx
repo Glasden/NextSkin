@@ -34,8 +34,9 @@ const optionClass = cx(
   'group/radio flex min-w-0 items-center gap-3 rounded-md border border-border bg-surface px-3 py-2.5 text-left',
   'transition-[translate,box-shadow] duration-fast ease-step motion-reduce:transition-none',
   'hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-pixel',
-  // 选中：向内再画一圈 2px 的描边，前面的方框填强调色、打勾，不只靠颜色区分（DESIGN.md §2.1）
-  'data-checked:border-accent data-checked:outline-2 data-checked:-outline-offset-2 data-checked:outline-accent',
+  // 选中：向内再画一圈描边（常规边框的两倍粗），前面的方框填强调色、打勾，不只靠颜色区分（DESIGN.md §2.1）。
+  // 静止时不带阴影，理由同 TexturePicker
+  'data-checked:border-accent data-checked:outline-selected data-checked:-outline-offset-(--outline-width-selected) data-checked:outline-accent',
   'data-disabled:cursor-not-allowed data-disabled:hover:translate-0 data-disabled:hover:shadow-none',
   focusRing,
 )

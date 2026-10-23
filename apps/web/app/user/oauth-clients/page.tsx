@@ -1,5 +1,5 @@
 import type { OAuthClientView } from '@nextskin/domain'
-import { Alert, Badge, EmptyState } from '@nextskin/ui'
+import { Alert, Badge, EmptyState, Panel } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
@@ -128,7 +128,7 @@ async function ClientItem({ client, locked }: { client: OAuthClientView; locked:
     client.deviceCode && t('flows.deviceCode'),
   ].filter((flow): flow is string => Boolean(flow))
   return (
-    <li className="flex flex-col overflow-hidden rounded-md border border-border bg-surface">
+    <Panel as="li" padding="none" clip>
       <div className="flex items-start gap-3 p-4">
         <span className="grid size-10 shrink-0 place-items-center rounded-sm bg-surface-sunken text-text-muted">
           <Icon aria-hidden />
@@ -192,6 +192,6 @@ async function ClientItem({ client, locked }: { client: OAuthClientView; locked:
           locked={locked}
         />
       </div>
-    </li>
+    </Panel>
   )
 }

@@ -1,4 +1,4 @@
-import { Alert, Markdown } from '@nextskin/ui'
+import { Alert, Markdown, Panel } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
@@ -50,9 +50,11 @@ export default async function UploadPage() {
           <h2 id="content-policy-heading" className="font-pixel text-pixel-1 text-text">
             {t('contentPolicy')}
           </h2>
-          <div className="rounded-md border border-border bg-surface p-4 text-sm sm:p-6">
-            <Markdown>{settings['texture.contentPolicy']}</Markdown>
-          </div>
+          <Panel padding="responsive">
+            <div className="text-sm">
+              <Markdown>{settings['texture.contentPolicy']}</Markdown>
+            </div>
+          </Panel>
         </section>
       )}
       <UploadForm

@@ -109,15 +109,15 @@ ADR-0057 落地以后，插件能用数据声明配色主题，SDK 是 `1.0.0-rc
 theme.css 加上结构变量，名字在实现时定，下面是打算的样子：
 - `--border-width-base: 1px`，并让 `--default-border-width` 指向它：`border`、`border-b`、`divide-y` 都跟着变；
 - 选中框的粗细是 `--border-width-base` 的两倍，组件里的 `outline-2 -outline-offset-2` 改成读它；
-- 卡片静止时的阴影 `--card-shadow: none`。它不放进 `--shadow-*`：Tailwind 会把那里的值内联进工具类，主题改不了；组件写 `shadow-(--card-shadow)`（`packages/ui` 里允许任意值类）。
+- 卡片静止时的阴影 `--card-shadow`，没有阴影时是透明的零阴影 `0 0 #0000`，不写 `none`：它会被放进 `box-shadow` 的逗号列表，`none` 让整条声明失效，同一元素上的 ring 跟着消失。它不放进 `--shadow-*`：Tailwind 会把那里的值内联进工具类，主题改不了；组件写 `shadow-(--card-shadow)`（`packages/ui` 里允许任意值类）。
 - 圆角沿用 `--radius-sm`、`--radius-md`。
 
 `themeCss` 在 `[data-theme='<id>']` 那一块里写出全部结构变量（结构不分亮暗，暗色那一块不用重复）。钻石青的默认值也要写：小样嵌在别的主题的页面里时，不能从页面继承结构，和 ADR-0057 写出锁住的颜色是同一个原因。每套主题的 CSS 多大约 100 字节。
 
 ### 组件和页面
 
-- **新组件 Panel**：页面上的面板，`rounded-md`、常规边框、`surface` 底，`cards: 'raised'` 时静止带阴影。页面里手拼的面板都换成它；嵌在面板里的框（`bg`、`surface-sunken` 底，虚线的空状态）用它的另一个变体，不带静止阴影。迁移以后 lint 在 `packages/ui` 以外禁止 `rounded-md`，页面不能再手拼面板，否则高对比下会漏掉阴影。配 story 和截图基线，DESIGN.md 组件清单补一行。
-- **静止阴影**：Panel、TextureCard、PlayerCard、ThemeCard，以及 TexturePicker、ThemePicker、PlayerPicker 的选项。
+- **新组件 Panel**：页面上的面板，`rounded-md`、常规边框、`surface` 底，`cards: 'raised'` 时静止带阴影。页面里手拼的面板都换成它；嵌在面板里的框（只有边框、`bg` 或 `surface-sunken` 底）用它的另几种底色，不带静止阴影。虚线的空状态不是面板，统一用 `rounded-sm` 的虚线框（原来五处里只有一处是 `rounded-md`）。迁移以后 lint 在 `packages/ui` 以外禁止 `rounded-md`，页面不能再手拼面板，否则高对比下会漏掉阴影。配 story 和截图基线，DESIGN.md 组件清单补一行。
+- **静止阴影**：Panel、TextureCard、PlayerCard、ThemeCard、ThemePicker 的选项，以及 Table 的外框。TexturePicker、PlayerPicker 的选项不带：它们悬停只露 2px 阴影，静止就带 4px，悬停反倒像按下去。
 - **选中框**：TextureCard、TexturePicker、ThemeCard、ThemePicker、PlayerPicker 改读选中框的变量。
 - **Tabs** 的指示条按边框变量对齐，不再写死 `-bottom-px`。
 - **色块**：上面列出的几处改用 `accent-fill`、`accent-fill-fg`。
@@ -157,7 +157,7 @@ ui: {
 - plugin host：`structure` 的校验。
 - lint：禁止 `rounded-md` 的规则。
 - 插件 `color-themes`：三套都通过完整检查。
-- e2e：启用高对比、用户选它以后，面板的 `border-top-width` 是 2px、圆角是 0、`box-shadow` 不是 `none`，主要按钮的底色是 `#d4ff1e`，亮色下链接是黑色、暗色下是荧光色；关掉以后回落照旧。
+- e2e：启用高对比、用户选它以后，面板的 `border-top-width` 是 2px、圆角是 0、带上 4px 的硬边阴影，主要按钮的底色是 `#d4ff1e`，亮色下链接是黑色、暗色下是荧光色；关掉以后回落照旧。
 - 截图：每个 story 多一张结构全开的；Panel、ThemeCard 的新基线。
 
 不加迁移，领域层的数据库测试不变。

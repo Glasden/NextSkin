@@ -15,10 +15,10 @@ export const LOGO_MARK = [
 
 export const LOGO_MARK_SIZE = LOGO_MARK.length
 
-/** 每种格子用的颜色 token */
+/** 每种格子用的颜色 token。前脸是强调色的色块（ADR-0058）：高对比的亮色下表面上的强调色是黑色，标志仍是荧光色 */
 export const LOGO_MARK_COLORS = {
-  a: 'accent',
-  f: 'accent-fg',
+  a: 'accent-fill',
+  f: 'accent-fill-fg',
   m: 'text-muted',
   s: 'border-strong',
 } as const

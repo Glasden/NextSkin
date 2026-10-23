@@ -38,7 +38,8 @@ export function Table<Key extends string>({ label, columns, rows, empty }: Table
       aria-label={label}
       // 可滚动的区域要能聚焦，键盘用户才滚得动
       tabIndex={0}
-      className={cx('overflow-x-auto rounded-md border border-border bg-surface', focusRing)}
+      // 和 Panel 一样，主题让卡片静止带阴影时表格的外框也带（ADR-0058）
+      className={cx('overflow-x-auto rounded-md border border-border bg-surface shadow-(--card-shadow)', focusRing)}
     >
       <table className="w-full border-collapse text-left text-sm text-text">
         <caption className="sr-only">{label}</caption>

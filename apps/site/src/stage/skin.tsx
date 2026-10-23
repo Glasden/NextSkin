@@ -81,8 +81,8 @@ export function RawTexture({ scale }: { scale: number }) {
 }
 
 const fills: Record<LogoMarkColor, string> = {
-  accent: 'fill-accent',
-  'accent-fg': 'fill-accent-fg',
+  'accent-fill': 'fill-accent-fill',
+  'accent-fill-fg': 'fill-accent-fill-fg',
   'text-muted': 'fill-text-muted',
   'border-strong': 'fill-border-strong',
 }

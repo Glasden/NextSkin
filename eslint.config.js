@@ -62,6 +62,11 @@ export default defineConfig(
     rules: { 'nextskin/no-raw-color': 'off', 'nextskin/no-arbitrary-value': 'off' },
   },
   {
+    // 面板和卡片在 packages/ui 里定义；宣传站的画面是从介绍视频分叉的仿制界面，不用 Panel（ADR-0055）
+    files: ['packages/ui/**', 'apps/site/**'],
+    rules: { 'nextskin/no-hand-rolled-panel': 'off' },
+  },
+  {
     // 邮件客户端不支持 CSS 变量，颜色只能写成具体的值；取值和 theme.css 一致由 packages/email 的 tokens.test.ts 守护
     files: ['packages/email/**'],
     rules: { 'nextskin/no-raw-color': 'off' },

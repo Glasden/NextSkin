@@ -1,4 +1,4 @@
-import { Badge, Link, ThemeCard } from '@nextskin/ui'
+import { Badge, Link, Panel, ThemeCard } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -66,7 +66,7 @@ export default async function AdminThemesPage() {
             </h2>
             <p className="max-w-3xl text-sm text-pretty text-text-muted">{t('invalid.description')}</p>
           </header>
-          <ul className="divide-y divide-border rounded-md border border-border bg-surface">
+          <Panel as="ul" padding="none" divided>
             {view.invalid.map((theme) => {
               const { name, source } = label(theme)
               return (
@@ -96,7 +96,7 @@ export default async function AdminThemesPage() {
                 </li>
               )
             })}
-          </ul>
+          </Panel>
         </section>
       )}
 
@@ -108,14 +108,14 @@ export default async function AdminThemesPage() {
             </h2>
             <p className="max-w-3xl text-sm text-pretty text-text-muted">{t('missing.description')}</p>
           </header>
-          <ul className="divide-y divide-border rounded-md border border-border bg-surface">
+          <Panel as="ul" padding="none" divided>
             {view.missing.map((id) => (
               <li key={id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
                 <code className="font-mono text-sm break-all text-text">{id}</code>
                 <ThemeActions id={id} name={id} enabled isDefault={false} missing />
               </li>
             ))}
-          </ul>
+          </Panel>
         </section>
       )}
     </div>

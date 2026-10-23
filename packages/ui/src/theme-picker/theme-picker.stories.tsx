@@ -2,7 +2,7 @@ import { DIAMOND } from '@nextskin/theme'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, fn, userEvent } from 'storybook/test'
-import { cobalt, magenta, previewCss } from '../theme-card/fixtures.ts'
+import { cobalt, highContrast, magenta, previewCss } from '../theme-card/fixtures.ts'
 import { ThemePicker } from './theme-picker.tsx'
 
 const meta = {
@@ -45,6 +45,7 @@ export const Default: Story = {
             { value: DIAMOND, theme: DIAMOND, name: '钻石青', description: '内置' },
             { value: cobalt, theme: cobalt, name: '钴蓝', description: '更多配色' },
             { value: magenta, theme: magenta, name: '洋红', description: '更多配色' },
+            { value: highContrast, theme: highContrast, name: '高对比', description: '更多配色' },
           ]}
         />
       </div>

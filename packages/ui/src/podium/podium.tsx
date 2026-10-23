@@ -68,7 +68,7 @@ export function Podium({ title, headingLevel: Heading = 'h2', period, places, va
                   'flex w-full flex-col items-center gap-1 pt-3 font-pixel tabular-nums',
                   steps[rank].height,
                   rank === 1
-                    ? 'bg-accent text-accent-fg'
+                    ? 'bg-accent-fill text-accent-fill-fg'
                     : 'border border-b-0 border-border-strong bg-surface text-text',
                 )}
               >

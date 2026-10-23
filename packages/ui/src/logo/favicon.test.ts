@@ -27,7 +27,7 @@ it('ICO 里的 16px 图标每格 2 像素，前脸是亮色的强调色，透明
   const context = canvas.getContext('2d')!
   context.drawImage(bitmap, 0, 0)
   const pixels = context.getImageData(0, 0, 16, 16).data
-  const accent = parseTheme(themeCss).colors.find((color) => color.name === 'accent')!.light
+  const accent = parseTheme(themeCss).colors.find((color) => color.name === 'accent-fill')!.light
   const hex = (x: number, y: number) => {
     const i = (y * 16 + x) * 4
     return pixels[i + 3] === 0

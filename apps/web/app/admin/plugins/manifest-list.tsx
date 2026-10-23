@@ -1,5 +1,5 @@
 import type { PluginDetail } from '@nextskin/domain'
-import { Badge, Link } from '@nextskin/ui'
+import { Badge, Link, Panel } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import NextLink from 'next/link'
 import type { ReactNode } from 'react'
@@ -83,114 +83,116 @@ export function ManifestList({
   )
   return (
     <div className="@container">
-      <dl className="divide-y divide-border rounded-md border border-border bg-surface px-4 @xl:px-6">
-        <ManifestRow
-          label={t('manifest.capabilities')}
-          none={t('manifest.none')}
-          items={manifest.capabilities.map((capability) => {
-            const key = capabilityKey(capability)
-            return (
-              <span key={capability} className="inline-flex flex-wrap items-center gap-2">
-                {key ? t(key) : capability}
-                {highRisk.includes(capability) && <Badge tone="danger">{t('manifest.highRisk')}</Badge>}
-                {isNew(added?.capabilities, capability)}
+      <Panel padding="none">
+        <dl className="divide-y divide-border px-4 @xl:px-6">
+          <ManifestRow
+            label={t('manifest.capabilities')}
+            none={t('manifest.none')}
+            items={manifest.capabilities.map((capability) => {
+              const key = capabilityKey(capability)
+              return (
+                <span key={capability} className="inline-flex flex-wrap items-center gap-2">
+                  {key ? t(key) : capability}
+                  {highRisk.includes(capability) && <Badge tone="danger">{t('manifest.highRisk')}</Badge>}
+                  {isNew(added?.capabilities, capability)}
+                </span>
+              )
+            })}
+          />
+          <ManifestRow
+            label={t('manifest.network')}
+            none={t('manifest.none')}
+            items={manifest.network.map((host) => (
+              <span key={host} className="inline-flex flex-wrap items-center gap-2">
+                {code(host)}
+                {isNew(added?.network, host)}
               </span>
-            )
-          })}
-        />
-        <ManifestRow
-          label={t('manifest.network')}
-          none={t('manifest.none')}
-          items={manifest.network.map((host) => (
-            <span key={host} className="inline-flex flex-wrap items-center gap-2">
-              {code(host)}
-              {isNew(added?.network, host)}
-            </span>
-          ))}
-        />
-        <ManifestRow label={t('manifest.events')} none={t('manifest.none')} items={manifest.events.map(code)} />
-        <ManifestRow
-          label={t('manifest.interceptors')}
-          none={t('manifest.none')}
-          items={manifest.interceptors.map(({ name }) => (
-            <span key={name}>
-              {name === 'user.register'
-                ? t('interceptors.user.register')
-                : name === 'yggdrasil.issueToken'
-                  ? t('interceptors.yggdrasil.issueToken')
-                  : name === 'user.action'
-                    ? t('interceptors.user.action')
-                    : name}
-            </span>
-          ))}
-        />
-        <ManifestRow
-          label={t('manifest.providers')}
-          none={t('manifest.none')}
-          stacked
-          items={(['passwordHasher', 'login'] as const).flatMap((kind) =>
-            manifest.providers[kind].map((provider) => (
-              <span key={`${kind}:${provider.id}`} className="inline-flex flex-wrap items-center gap-2">
-                {t('manifest.providerItem', { kind: t(`providers.${kind}`), label: translate(provider.label) })}
-                {highRisk.includes(`provider.${kind}`) && <Badge tone="danger">{t('manifest.highRisk')}</Badge>}
+            ))}
+          />
+          <ManifestRow label={t('manifest.events')} none={t('manifest.none')} items={manifest.events.map(code)} />
+          <ManifestRow
+            label={t('manifest.interceptors')}
+            none={t('manifest.none')}
+            items={manifest.interceptors.map(({ name }) => (
+              <span key={name}>
+                {name === 'user.register'
+                  ? t('interceptors.user.register')
+                  : name === 'yggdrasil.issueToken'
+                    ? t('interceptors.yggdrasil.issueToken')
+                    : name === 'user.action'
+                      ? t('interceptors.user.action')
+                      : name}
               </span>
-            )),
-          )}
-        />
-        <ManifestRow
-          label={t('manifest.formFields')}
-          none={t('manifest.none')}
-          items={(manifest.ui.formFields ?? []).map(({ field, fromQuery }) => (
-            <span key={field.name} className="inline-flex flex-wrap items-baseline gap-2">
-              {translate(field.label)}
-              {fromQuery && <span className="text-xs text-text-muted">{t('manifest.fromQuery')}</span>}
-            </span>
-          ))}
-        />
-        <ManifestRow
-          label={t('manifest.routes')}
-          none={t('manifest.none')}
-          stacked
-          items={manifest.routes.map((route) => (
-            <span key={`${route.method} ${route.path}`} className="inline-flex items-baseline gap-2">
-              {code(`${route.method} /plugins/${manifest.id}${route.path === '/' ? '' : route.path}`)}
-              <span className="text-xs text-text-muted">{t('manifest.routeAuth', { auth: route.auth })}</span>
-            </span>
-          ))}
-        />
-        <ManifestRow label={t('manifest.tables')} none={t('manifest.none')} items={manifest.tables.map(code)} />
-        <ManifestRow
-          label={t('manifest.jobs')}
-          none={t('manifest.none')}
-          items={manifest.jobs.map(({ name }) => code(name))}
-        />
-        <ManifestRow
-          label={t('manifest.cron')}
-          none={t('manifest.none')}
-          items={manifest.cron.map(({ schedule, job }) => code(`${schedule} → ${job}`))}
-        />
-        <ManifestRow
-          label={t('manifest.pages')}
-          none={t('manifest.none')}
-          items={Object.entries(manifest.ui.pages ?? {}).map(([key, page]) => (
-            <span key={key}>{translate(page.title)}</span>
-          ))}
-        />
-        <ManifestRow
-          label={t('manifest.themes')}
-          none={t('manifest.none')}
-          items={[
-            ...themes.map(({ name, label }) => <span key={name}>{translate(label)}</span>),
-            ...(themesLink && themes.length
-              ? [
-                  <Link key="link" render={<NextLink href="/admin/themes" />}>
-                    {t('manifest.themesLink')}
-                  </Link>,
-                ]
-              : []),
-          ]}
-        />
-      </dl>
+            ))}
+          />
+          <ManifestRow
+            label={t('manifest.providers')}
+            none={t('manifest.none')}
+            stacked
+            items={(['passwordHasher', 'login'] as const).flatMap((kind) =>
+              manifest.providers[kind].map((provider) => (
+                <span key={`${kind}:${provider.id}`} className="inline-flex flex-wrap items-center gap-2">
+                  {t('manifest.providerItem', { kind: t(`providers.${kind}`), label: translate(provider.label) })}
+                  {highRisk.includes(`provider.${kind}`) && <Badge tone="danger">{t('manifest.highRisk')}</Badge>}
+                </span>
+              )),
+            )}
+          />
+          <ManifestRow
+            label={t('manifest.formFields')}
+            none={t('manifest.none')}
+            items={(manifest.ui.formFields ?? []).map(({ field, fromQuery }) => (
+              <span key={field.name} className="inline-flex flex-wrap items-baseline gap-2">
+                {translate(field.label)}
+                {fromQuery && <span className="text-xs text-text-muted">{t('manifest.fromQuery')}</span>}
+              </span>
+            ))}
+          />
+          <ManifestRow
+            label={t('manifest.routes')}
+            none={t('manifest.none')}
+            stacked
+            items={manifest.routes.map((route) => (
+              <span key={`${route.method} ${route.path}`} className="inline-flex items-baseline gap-2">
+                {code(`${route.method} /plugins/${manifest.id}${route.path === '/' ? '' : route.path}`)}
+                <span className="text-xs text-text-muted">{t('manifest.routeAuth', { auth: route.auth })}</span>
+              </span>
+            ))}
+          />
+          <ManifestRow label={t('manifest.tables')} none={t('manifest.none')} items={manifest.tables.map(code)} />
+          <ManifestRow
+            label={t('manifest.jobs')}
+            none={t('manifest.none')}
+            items={manifest.jobs.map(({ name }) => code(name))}
+          />
+          <ManifestRow
+            label={t('manifest.cron')}
+            none={t('manifest.none')}
+            items={manifest.cron.map(({ schedule, job }) => code(`${schedule} → ${job}`))}
+          />
+          <ManifestRow
+            label={t('manifest.pages')}
+            none={t('manifest.none')}
+            items={Object.entries(manifest.ui.pages ?? {}).map(([key, page]) => (
+              <span key={key}>{translate(page.title)}</span>
+            ))}
+          />
+          <ManifestRow
+            label={t('manifest.themes')}
+            none={t('manifest.none')}
+            items={[
+              ...themes.map(({ name, label }) => <span key={name}>{translate(label)}</span>),
+              ...(themesLink && themes.length
+                ? [
+                    <Link key="link" render={<NextLink href="/admin/themes" />}>
+                      {t('manifest.themesLink')}
+                    </Link>,
+                  ]
+                : []),
+            ]}
+          />
+        </dl>
+      </Panel>
     </div>
   )
 }

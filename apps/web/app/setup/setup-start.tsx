@@ -1,6 +1,6 @@
 'use client'
 
-import { Alert, Button, Field, Form, Input } from '@nextskin/ui'
+import { Alert, Button, Field, Form, Input, Panel } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { Database } from 'pixelarticons/react/Database.js'
@@ -81,7 +81,7 @@ function PathCard({
   onSelect: () => void
 }) {
   return (
-    <div className="flex flex-col gap-4 rounded-md border border-border bg-surface p-6">
+    <Panel gap={4}>
       <span className="flex size-12 items-center justify-center rounded-sm bg-stage text-text">
         <Icon aria-hidden />
       </span>
@@ -97,7 +97,7 @@ function PathCard({
       <div>
         <Button onClick={onSelect}>{action}</Button>
       </div>
-    </div>
+    </Panel>
   )
 }
 
@@ -137,49 +137,51 @@ function NewSiteForm({
   }
 
   return (
-    <div className="max-w-2xl rounded-md border border-border bg-surface p-6">
-      <Form errors={errors} onFormSubmit={(values) => void submit(values)}>
-        {error && <Alert tone="danger">{error}</Alert>}
-        <fieldset className="flex flex-col gap-4">
-          <legend className="mb-4 font-pixel text-pixel-1 text-text-muted">{t('site')}</legend>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={t('siteName')} name="siteName">
-              <Input defaultValue={siteName} required maxLength={64} />
+    <div className="max-w-2xl">
+      <Panel>
+        <Form errors={errors} onFormSubmit={(values) => void submit(values)}>
+          {error && <Alert tone="danger">{error}</Alert>}
+          <fieldset className="flex flex-col gap-4">
+            <legend className="mb-4 font-pixel text-pixel-1 text-text-muted">{t('site')}</legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={t('siteName')} name="siteName">
+                <Input defaultValue={siteName} required maxLength={64} />
+              </Field>
+              <Field label={t('siteUrl')} name="siteUrl" description={t('siteUrlHint')}>
+                <Input type="url" defaultValue={siteUrl} required />
+              </Field>
+            </div>
+          </fieldset>
+          <fieldset className="flex flex-col gap-4">
+            <legend className="mb-4 font-pixel text-pixel-1 text-text-muted">{t('admin')}</legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={t('email')} name="email">
+                <Input type="email" autoComplete="email" required />
+              </Field>
+              <Field label={t('nickname')} name="nickname">
+                <Input autoComplete="nickname" required maxLength={255} />
+              </Field>
+            </div>
+            <Field label={t('password')} name="password" description={t('passwordHint', password)}>
+              <Input
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={password.min}
+                maxLength={password.max}
+              />
             </Field>
-            <Field label={t('siteUrl')} name="siteUrl" description={t('siteUrlHint')}>
-              <Input type="url" defaultValue={siteUrl} required />
-            </Field>
+          </fieldset>
+          <div className="flex flex-wrap gap-3">
+            <Button type="button" onClick={onBack}>
+              {t('back')}
+            </Button>
+            <Button type="submit" variant="primary" loading={pending}>
+              {t('submit')}
+            </Button>
           </div>
-        </fieldset>
-        <fieldset className="flex flex-col gap-4">
-          <legend className="mb-4 font-pixel text-pixel-1 text-text-muted">{t('admin')}</legend>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={t('email')} name="email">
-              <Input type="email" autoComplete="email" required />
-            </Field>
-            <Field label={t('nickname')} name="nickname">
-              <Input autoComplete="nickname" required maxLength={255} />
-            </Field>
-          </div>
-          <Field label={t('password')} name="password" description={t('passwordHint', password)}>
-            <Input
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={password.min}
-              maxLength={password.max}
-            />
-          </Field>
-        </fieldset>
-        <div className="flex flex-wrap gap-3">
-          <Button type="button" onClick={onBack}>
-            {t('back')}
-          </Button>
-          <Button type="submit" variant="primary" loading={pending}>
-            {t('submit')}
-          </Button>
-        </div>
-      </Form>
+        </Form>
+      </Panel>
     </div>
   )
 }

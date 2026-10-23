@@ -1,5 +1,5 @@
 import type { Podium as PodiumData } from '@nextskin/domain'
-import { ButtonLink, EmptyState, Link, Podium, SkinFigure, ToastProvider } from '@nextskin/ui'
+import { ButtonLink, EmptyState, Link, Panel, Podium, SkinFigure, ToastProvider } from '@nextskin/ui'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { Image } from 'pixelarticons/react/Image.js'
@@ -142,7 +142,7 @@ export default async function HomePage() {
               </div>
               <ol className="grid gap-4 lg:grid-cols-3">
                 {STEPS.map((step, index) => (
-                  <li key={step} className="flex flex-col gap-3 rounded-md border border-border bg-bg p-6">
+                  <Panel as="li" key={step} tone="bg" gap={3}>
                     <span aria-hidden className="font-pixel text-pixel-3 text-text-muted tabular-nums">
                       {index + 1}
                     </span>
@@ -167,7 +167,7 @@ export default async function HomePage() {
                         <Link render={<NextLink href="/user/closet" />}>{t('launcher.steps.wear.closet')}</Link>
                       )}
                     </div>
-                  </li>
+                  </Panel>
                 ))}
               </ol>
             </div>
