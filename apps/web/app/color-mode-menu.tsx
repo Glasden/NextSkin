@@ -30,7 +30,7 @@ function setColorMode(mode: ColorMode) {
     mode === 'system'
       ? `${COLOR_MODE_COOKIE}=; Max-Age=0${attributes}`
       : `${COLOR_MODE_COOKIE}=${mode}; Max-Age=${ONE_YEAR}${attributes}`
-  // data-theme 由根布局的内联脚本收到这个事件后重设（lib/color-mode.ts）
+  // data-mode 由根布局的内联脚本收到这个事件后重设（lib/color-mode.ts）
   dispatchEvent(new Event(COLOR_MODE_CHANGE))
 }
 

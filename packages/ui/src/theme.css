@@ -124,11 +124,11 @@
   initial-value: 0;
 }
 
-@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+@custom-variant dark (&:where([data-mode='dark'], [data-mode='dark'] *));
 
-/* 亮暗模式由 <html> 上的 data-theme 决定（DESIGN.md §10）；color-scheme 让滚动条、输入框这些浏览器自己画的部分也跟着变 */
+/* 亮暗模式由 <html> 上的 data-mode 决定（DESIGN.md §10）；color-scheme 让滚动条、输入框这些浏览器自己画的部分也跟着变 */
 @layer base {
-  [data-theme='dark'] {
+  [data-mode='dark'] {
     color-scheme: dark;
     --color-bg: #0e1013;
     --color-surface: #16191d;

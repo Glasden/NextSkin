@@ -53,9 +53,9 @@ describe('parseTheme', () => {
   --ease-step: steps(4, end);
   /* 不属于上一行 */
 }
-@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+@custom-variant dark (&:where([data-mode='dark'], [data-mode='dark'] *));
 @layer base {
-  [data-theme='dark'] {
+  [data-mode='dark'] {
     --color-bg: #000000;
     --color-outside: #00ff00;
   }
@@ -89,7 +89,7 @@ it('生成两张表，合并行高、转义竖线，末尾没有换行', () => {
   --text-sm--line-height: 20px;
   --font-sans: 'A|B', sans-serif; /* 字体 */
 }
-[data-theme="dark"] {
+[data-mode="dark"] {
   --color-bg: #000000;
 }`)
   theme.colors.push({ name: 'text', light: '#123456', dark: undefined, note: '正文' })
