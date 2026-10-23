@@ -201,7 +201,9 @@
     "notification_recipients_length": "Specify {min}–{max} recipients.",
     "notification_recipient_unknown": "Recipient “{value}” was not found.",
     "theme_not_found": "This theme doesn't exist or isn't enabled.",
-    "theme_default_disabled": "This is the site's default theme and can't be turned off. Make another theme the default first."
+    "theme_default_disabled": "This is the site's default theme and can't be turned off. Make another theme the default first.",
+    "updates_disabled": "Update checks are disabled. Enable them in advanced settings first.",
+    "updates_unavailable": "Update checks are unavailable when running from source."
   },
   "score": {
     "reasons": {
@@ -1980,6 +1982,12 @@
             "label": "Notification retention days",
             "help": "Notifications are deleted this many days after they were sent, read or not. Set to 0 to keep them forever."
           }
+        },
+        "updates": {
+          "check": {
+            "label": "Check for updates",
+            "help": "Read the release manifest from dl.nextskin.org once a day. No site information is sent."
+          }
         }
       }
     },
@@ -3293,6 +3301,12 @@
             "playerTransferredOut": "Transferred your player {name} to another user",
             "playerTransferredIn": "Transferred the player {name} to you"
           }
+        }
+      },
+      "update": {
+        "available": {
+          "title": "NextSkin {version} is available",
+          "body": "View the release notes on the updates page in the admin panel."
         }
       }
     }

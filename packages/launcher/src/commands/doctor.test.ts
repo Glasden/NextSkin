@@ -7,6 +7,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { coreMigrations } from '@nextskin/db'
 import { removeTestDirectory } from '@nextskin/db/testing'
 import { HostStartError } from '@nextskin/domain'
+import { PLUGIN_API_VERSION } from '@nextskin/plugin-host'
 import { afterEach, expect, test, vi } from 'vitest'
 import type { LauncherContext } from '../context.ts'
 import { acquireDataLock } from '../lock.ts'
@@ -108,6 +109,7 @@ test('发行目录缺少 server.js 时失败，源码模式无需版本标记或
   expect(checked.message).toContain('缺少 server/')
   await rm(join(ctx.root, 'server/VERSION'))
   expect(await checkRelease({ ...ctx, source: true })).toEqual({
+    id: 'release',
     item: '发行目录',
     status: 'pass',
     message: '源码模式',
@@ -311,9 +313,9 @@ for (const pendingCore of [0, 2]) {
   test(`待迁移包括启用的官方插件，忽略停用和安装插件，核心待迁移=${pendingCore}`, async () => {
     const ctx = await context()
     const { file, db, pendingCore: pending } = migrationDatabase(ctx, pendingCore)
-    db.exec(`CREATE TABLE plugins (id TEXT PRIMARY KEY, is_enabled INTEGER);
+    db.exec(`CREATE TABLE plugins (id TEXT PRIMARY KEY, is_enabled INTEGER, package_hash TEXT);
       CREATE TABLE plugin_migrations (plugin_id TEXT, name TEXT);
-      INSERT INTO plugins VALUES ('test-doctor', 1), ('disabled', 0), ('installed', 1);
+      INSERT INTO plugins VALUES ('test-doctor', 1, NULL), ('disabled', 0, NULL), ('installed', 1, NULL);
       INSERT INTO plugin_migrations VALUES ('test-doctor', '001'), ('installed', '001');`)
     db.close()
     const before = await readFile(file)
@@ -331,17 +333,31 @@ for (const pendingCore of [0, 2]) {
       version: ctx.version,
       root: ctx.root,
       home: ctx.root,
+      dataDirectory: join(ctx.root, 'data'),
       results: expect.any(Array) as unknown,
       database: {
         dialect: 'sqlite',
+        sqliteFile: file,
         empty: false,
         pendingCore: pending,
         unknownCore: [],
         pendingPlugins: [{ plugin: 'test-doctor', migrations: ['002'] }],
+        incompatiblePlugins: [],
       },
     })
     expect(report.results.find((row: { item: string }) => row.item === '数据库')).toMatchObject({ status: 'warning' })
-    for (const row of report.results) expect(Object.keys(row).sort()).toEqual(['item', 'message', 'status'])
+    for (const row of report.results) expect(Object.keys(row).sort()).toEqual(['id', 'item', 'message', 'status'])
+    expect(report.results.map((row: { id: string }) => row.id)).toEqual([
+      'node',
+      'envFile',
+      'secret',
+      'config',
+      'dataDirectory',
+      'database',
+      'release',
+      'pluginHost',
+      'service',
+    ])
     expect(await readFile(file)).toEqual(before)
   })
 }
@@ -351,12 +367,35 @@ test('缺少插件表或插件迁移表时仍可检查早期数据库', async ()
   db.close()
   expect((await checkDatabase({ dialect: 'sqlite', file })).database?.pendingPlugins).toEqual([])
   const partial = new DatabaseSync(file)
-  partial.exec(`CREATE TABLE plugins (id TEXT PRIMARY KEY, is_enabled INTEGER);
-    INSERT INTO plugins VALUES ('test-doctor', 1);`)
+  partial.exec(`CREATE TABLE plugins (id TEXT PRIMARY KEY, is_enabled INTEGER, package_hash TEXT);
+    INSERT INTO plugins VALUES ('test-doctor', 1, NULL);`)
   partial.close()
   expect((await checkDatabase({ dialect: 'sqlite', file })).database?.pendingPlugins).toEqual([
     { plugin: 'test-doctor', migrations: ['001', '002'] },
   ])
+})
+
+test('列出本机解开的包里声明的插件 API 和这个版本不合的已安装插件，读不到的不下结论', async () => {
+  const ctx = await context()
+  const { file, db } = migrationDatabase(ctx)
+  const hash = (char: string) => char.repeat(64)
+  db.exec(`CREATE TABLE plugins (id TEXT PRIMARY KEY, is_enabled INTEGER, package_hash TEXT);
+    INSERT INTO plugins VALUES ('old-api', 0, '${hash('a')}'), ('current', 1, '${hash('b')}'),
+      ('not-unpacked', 1, '${hash('c')}'), ('../escape', 1, '${hash('d')}');`)
+  db.close()
+  const plugins = join(ctx.root, 'plugins')
+  for (const [id, char, api] of [
+    ['old-api', 'a', '^0.0.1'],
+    ['current', 'b', `^${PLUGIN_API_VERSION}`],
+  ] as const) {
+    await mkdir(join(plugins, id, hash(char)), { recursive: true })
+    await writeFile(join(plugins, id, hash(char), 'manifest.json'), JSON.stringify({ id, api }))
+  }
+  const checked = await checkDatabase({ dialect: 'sqlite', file }, undefined, plugins)
+  expect(checked.database?.incompatiblePlugins).toEqual([{ id: 'old-api', api: '^0.0.1' }])
+  expect(checked.status).toBe('warning')
+  expect(checked.message).toContain('1 个已安装的插件声明的插件 API 和这个版本不合，启用不了：old-api')
+  expect((await checkDatabase({ dialect: 'sqlite', file })).database?.incompatiblePlugins).toEqual([])
 })
 
 test.each(['missing', 'empty'] as const)('JSON 中的 %s 数据库标为 empty，不创建数据', async (state) => {
@@ -374,7 +413,15 @@ test.each(['missing', 'empty'] as const)('JSON 中的 %s 数据库标为 empty�
     version: ctx.version,
     root: ctx.root,
     home,
-    database: { dialect: 'sqlite', empty: true, pendingCore: [], unknownCore: [], pendingPlugins: [] },
+    database: {
+      dialect: 'sqlite',
+      sqliteFile: file,
+      empty: true,
+      pendingCore: [],
+      unknownCore: [],
+      pendingPlugins: [],
+      incompatiblePlugins: [],
+    },
   })
   expect(await readdir(home)).toEqual(before)
 })

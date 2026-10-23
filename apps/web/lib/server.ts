@@ -48,7 +48,14 @@ async function open(): Promise<Server> {
   // 工作目录是 apps/web（next dev）或 standalone 产物里的 apps/web（server.js 会切过去），上两级是根目录。
   // 产物里运行打好包的 host，它由 next.config.ts 的 outputFileTracingIncludes 带进去
   const pluginHost = pluginHostEntry({ root: resolve(process.cwd(), '../..'), bundled: production })
-  const opened = await openCore(config, { officialPlugins, pluginHost })
+  const version = await releaseVersion()
+  const opened = await openCore(config, {
+    officialPlugins,
+    pluginHost,
+    ...(version
+      ? { release: { version, deployment: process.env.NEXTSKIN_DEPLOYMENT === 'docker' ? 'docker' : 'bundle' } }
+      : {}),
+  })
   const { core } = opened
   try {
     const importer = await createImportService({
@@ -72,7 +79,7 @@ async function open(): Promise<Server> {
       },
       onImported: () => core.setup.removeCode(),
     })
-    return { core, importer, app: createApp({ core, importer, version: await releaseVersion() }) }
+    return { core, importer, app: createApp({ core, importer, version }) }
   } catch (error) {
     await opened.close()
     throw error

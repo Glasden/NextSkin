@@ -21,6 +21,8 @@ COPY nextskin.mjs package.json README.md .env.example /app/
 COPY cli /app/cli
 COPY server /app/server
 
+# Docker 只检测更新，后台按镜像部署显示提示（ADR-0061）。
+ENV NEXTSKIN_DEPLOYMENT=docker
 ENV NEXTSKIN_DATA_DIR=/data NEXTSKIN_HOST=0.0.0.0
 WORKDIR /app
 USER node

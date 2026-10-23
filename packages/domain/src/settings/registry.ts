@@ -1,5 +1,6 @@
 import { locales } from '@nextskin/i18n'
 import { z } from 'zod'
+import { initialUpdateState, updateStateSchema } from '../updates/state.ts'
 import { generateSigningKey, parseSigningKey } from '../yggdrasil/signing-key.ts'
 import { isTrustedProxy } from '../network/client-ip.ts'
 
@@ -236,6 +237,9 @@ export const coreSettingsRegistry = {
   'audit.retentionDays': { schema: z.int().min(0).max(3650), default: 0, section: 'advanced', secret: false },
   // 通知的保留天数，已读、未读都清理；0 表示不清理（ADR-0052）。
   'notifications.retentionDays': { schema: z.int().min(0).max(3650), default: 365, section: 'advanced', secret: false },
+  // 每天读一次 dl.nextskin.org 的版本清单（ADR-0061）；检查的结果存在 updates.state，只由 updates/service.ts 写
+  'updates.check': { schema: z.boolean(), default: true, section: 'advanced', secret: false },
+  'updates.state': { schema: updateStateSchema, default: initialUpdateState, section: null, secret: false },
   // 站点默认的配色主题和启用的主题，只由后台的主题页改（ADR-0057，themes/service.ts）
   'theme.default': { schema: z.string().max(128), default: 'diamond', section: null, secret: false },
   'theme.enabled': {

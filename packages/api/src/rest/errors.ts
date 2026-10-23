@@ -15,6 +15,8 @@ import type { AppEnv } from '../env.ts'
 
 type ErrorCode = keyof Messages['errors']
 const statuses = {
+  updates_disabled: 409,
+  updates_unavailable: 409,
   theme_not_found: 404,
   theme_default_disabled: 409,
   plugin_theme_invalid: 400,

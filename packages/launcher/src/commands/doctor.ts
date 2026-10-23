@@ -1,13 +1,13 @@
 /** 只检查环境，不打开核心、不生成配置、不创建数据目录或执行迁移（ADR-0039）。 */
 import { constants } from 'node:fs'
-import { access, mkdtemp, rm, stat, statfs, writeFile } from 'node:fs/promises'
+import { access, mkdtemp, readFile, rm, stat, statfs, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { parseArgs } from 'node:util'
 import { coreMigrations, createDatabase, type CoreDatabase, type DatabaseConfig } from '@nextskin/db'
 import { HostStartError, hostNetworkRestricted, probePluginHost } from '@nextskin/domain'
 import { officialPlugins } from '@nextskin/official-plugins'
-import { buildManifest } from '@nextskin/plugin-host'
+import { buildManifest, PLUGIN_API_VERSION, PLUGIN_ID, satisfies } from '@nextskin/plugin-host'
 import { coreConfigFromEnv, type CoreConfig } from '@nextskin/domain/config'
 import { ConfigError, currentUser, envFilePath, listenAddress, mergeEnv, readEnvFile } from '../config.ts'
 import { instanceDirectory, type LauncherContext } from '../context.ts'
@@ -15,8 +15,23 @@ import { acquireDataLock } from '../lock.ts'
 import { launcherPluginHost } from '../plugin-host.ts'
 import { assertRelease } from '../release.ts'
 
+/** 每一项的稳定标识，`--json` 里给升级的预检用（ADR-0061）；item 是给人看的名称，会改 */
+const ids = {
+  Node: 'node',
+  配置文件: 'envFile',
+  配置文件权限: 'envFilePermissions',
+  密钥: 'secret',
+  其余配置: 'config',
+  数据目录: 'dataDirectory',
+  数据库: 'database',
+  发行目录: 'release',
+  'plugin host': 'pluginHost',
+  服务: 'service',
+} as const
+
 export interface CheckResult {
-  item: string
+  id: (typeof ids)[keyof typeof ids]
+  item: keyof typeof ids
   /** skip：前面的配置有错，这一项没法检查；那个错误已经单独算作失败 */
   status: 'pass' | 'warning' | 'fail' | 'skip'
   message: string
@@ -24,8 +39,8 @@ export interface CheckResult {
   timedOut?: boolean
 }
 
-function result(item: string, status: CheckResult['status'], message: string): CheckResult {
-  return { item, status, message }
+function result(item: CheckResult['item'], status: CheckResult['status'], message: string): CheckResult {
+  return { id: ids[item], item, status, message }
 }
 
 export function checkNode(): CheckResult {
@@ -145,32 +160,44 @@ export async function checkDataDirectory(directory: string): Promise<CheckResult
 
 interface DatabaseInspection {
   dialect: DatabaseConfig['dialect']
+  /** SQLite 的库文件：升级失败时管理进程用备份换回它（ADR-0061）。别的方言不给连接信息 */
+  sqliteFile: string | null
   empty: boolean
   pendingCore: string[]
   unknownCore: string[]
   pendingPlugins: { plugin: string; migrations: string[] }[]
+  /** 已安装的插件里，声明的插件 API 和这个版本不合的：升级到这个版本后它们启用不了 */
+  incompatiblePlugins: { id: string; api: string }[]
+}
+
+interface PluginRow {
+  id: string
+  is_enabled: number
+  package_hash: string | null
 }
 
 type DatabaseCheck = CheckResult & { database: DatabaseInspection | null }
 
 function inspectMigrations(
-  dialect: DatabaseConfig['dialect'],
+  config: DatabaseConfig,
   names?: string[],
-  plugins: { id: string }[] = [],
+  plugins: PluginRow[] = [],
   executedPlugins: { plugin_id: string; name: string }[] = [],
 ): DatabaseInspection {
   const database: DatabaseInspection = {
-    dialect,
+    dialect: config.dialect,
+    sqliteFile: config.dialect === 'sqlite' ? resolve(config.file) : null,
     empty: names === undefined,
     pendingCore: [],
     unknownCore: [],
     pendingPlugins: [],
+    incompatiblePlugins: [],
   }
   if (!names) return database
   const executed = new Set(names)
   database.pendingCore = Object.keys(coreMigrations).filter((name) => !executed.has(name))
   database.unknownCore = names.filter((name) => !Object.hasOwn(coreMigrations, name)).sort()
-  const enabled = new Set(plugins.map((plugin) => plugin.id))
+  const enabled = new Set(plugins.filter((plugin) => Number(plugin.is_enabled) === 1).map((plugin) => plugin.id))
   for (const plugin of officialPlugins) {
     const manifest = buildManifest(plugin.definition, plugin.package)
     if (!enabled.has(manifest.id)) continue
@@ -180,6 +207,30 @@ function inspectMigrations(
   }
   database.pendingPlugins.sort((a, b) => a.plugin.localeCompare(b.plugin))
   return database
+}
+
+/**
+ * 读本机解开的插件包里的 manifest.json（`data/plugins/<id>/<sha256>/`，plugins/packages.ts）。
+ * 没解开或读不了的不下结论：启动时会重新解开、校验，那时不兼容的照样启用不了
+ */
+async function incompatiblePlugins(
+  rows: PluginRow[],
+  pluginDirectory: string,
+): Promise<DatabaseInspection['incompatiblePlugins']> {
+  const found: DatabaseInspection['incompatiblePlugins'] = []
+  for (const row of rows) {
+    if (!row.package_hash || !/^[0-9a-f]{64}$/.test(row.package_hash) || !PLUGIN_ID.test(row.id)) continue
+    try {
+      const manifest = JSON.parse(
+        await readFile(join(pluginDirectory, row.id, row.package_hash, 'manifest.json'), 'utf8'),
+      ) as { api?: unknown }
+      if (typeof manifest.api === 'string' && !satisfies(PLUGIN_API_VERSION, manifest.api))
+        found.push({ id: row.id, api: manifest.api })
+    } catch {
+      continue
+    }
+  }
+  return found.sort((a, b) => a.id.localeCompare(b.id))
 }
 
 function migrationStatus(database: DatabaseInspection): { status: CheckResult['status']; message: string } {
@@ -201,12 +252,26 @@ function migrationStatus(database: DatabaseInspection): { status: CheckResult['s
     : { status: 'pass', message: `全部 ${Object.keys(coreMigrations).length} 个迁移已执行` }
 }
 
-export async function checkDatabase(config: DatabaseConfig, timeoutMs = 10_000): Promise<DatabaseCheck> {
+export async function checkDatabase(
+  config: DatabaseConfig,
+  timeoutMs = 10_000,
+  pluginDirectory?: string,
+): Promise<DatabaseCheck> {
   let location: string = config.dialect
   let timer: NodeJS.Timeout | undefined
-  const checked = (database: DatabaseInspection, emptyMessage = '空库，还没执行过迁移'): DatabaseCheck => {
+  const checked = async (
+    database: DatabaseInspection,
+    plugins: PluginRow[] = [],
+    emptyMessage = '空库，还没执行过迁移',
+  ): Promise<DatabaseCheck> => {
+    if (pluginDirectory) database.incompatiblePlugins = await incompatiblePlugins(plugins, pluginDirectory)
     const migration = database.empty ? { status: 'pass' as const, message: emptyMessage } : migrationStatus(database)
-    return { ...result('数据库', migration.status, `${location}；${migration.message}`), database }
+    const incompatible = database.incompatiblePlugins
+    const status = incompatible.length && migration.status === 'pass' ? 'warning' : migration.status
+    const message = incompatible.length
+      ? `${migration.message}；${incompatible.length} 个已安装的插件声明的插件 API 和这个版本不合，启用不了：${incompatible.map((plugin) => plugin.id).join('、')}`
+      : migration.message
+    return { ...result('数据库', status, `${location}；${message}`), database }
   }
   try {
     if (config.dialect === 'sqlite') {
@@ -215,7 +280,7 @@ export async function checkDatabase(config: DatabaseConfig, timeoutMs = 10_000):
         await stat(config.file)
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-        return checked(inspectMigrations(config.dialect), '还没有数据库文件，第一次 start 时创建')
+        return checked(inspectMigrations(config), [], '还没有数据库文件，第一次 start 时创建')
       }
       const db = new DatabaseSync(config.file, { readOnly: true })
       try {
@@ -224,21 +289,22 @@ export async function checkDatabase(config: DatabaseConfig, timeoutMs = 10_000):
             (row) => row.name,
           ),
         )
-        if (!tables.has('nextskin_migration')) return checked(inspectMigrations(config.dialect))
+        if (!tables.has('nextskin_migration')) return await checked(inspectMigrations(config))
         const rows = db.prepare('SELECT name FROM nextskin_migration').all() as { name: string }[]
         const plugins = tables.has('plugins')
-          ? (db.prepare('SELECT id FROM plugins WHERE is_enabled = 1').all() as { id: string }[])
+          ? (db.prepare('SELECT id, is_enabled, package_hash FROM plugins').all() as unknown as PluginRow[])
           : []
         const executed = tables.has('plugin_migrations')
           ? (db.prepare('SELECT plugin_id, name FROM plugin_migrations').all() as { plugin_id: string; name: string }[])
           : []
-        return checked(
+        return await checked(
           inspectMigrations(
-            config.dialect,
+            config,
             rows.map((row) => row.name),
             plugins,
             executed,
           ),
+          plugins,
         )
       } finally {
         db.close()
@@ -250,21 +316,22 @@ export async function checkDatabase(config: DatabaseConfig, timeoutMs = 10_000):
       const db = createDatabase<CoreDatabase & { nextskin_migration: { name: string } }>(config)
       try {
         const tables = new Set((await db.introspection.getTables()).map((table) => table.name))
-        if (!tables.has('nextskin_migration')) return checked(inspectMigrations(config.dialect))
+        if (!tables.has('nextskin_migration')) return await checked(inspectMigrations(config))
         const rows = await db.selectFrom('nextskin_migration').select('name').execute()
-        const plugins = tables.has('plugins')
-          ? await db.selectFrom('plugins').select('id').where('is_enabled', '=', 1).execute()
+        const plugins: PluginRow[] = tables.has('plugins')
+          ? await db.selectFrom('plugins').select(['id', 'is_enabled', 'package_hash']).execute()
           : []
         const executed = tables.has('plugin_migrations')
           ? await db.selectFrom('plugin_migrations').select(['plugin_id', 'name']).execute()
           : []
-        return checked(
+        return await checked(
           inspectMigrations(
-            config.dialect,
+            config,
             rows.map((row) => row.name),
             plugins,
             executed,
           ),
+          plugins,
         )
       } finally {
         await db.destroy()
@@ -399,7 +466,7 @@ export async function run(
       console.log(
         `NextSkin ${context.version} 环境自检，根目录 ${context.root}${resolve(home) === resolve(context.root) ? '' : `，实例目录 ${home}`}`,
       )
-    const skipped = (item: string) => result(item, 'skip', '配置有错，没有检查')
+    const skipped = (item: CheckResult['item']) => result(item, 'skip', '配置有错，没有检查')
     const results = [checkNode()]
     let database: DatabaseInspection | null = null
     const file = await checkEnvFile(context, env)
@@ -408,7 +475,7 @@ export async function run(
     results.push(parsed.result)
     if (parsed.config) {
       results.push(await checkDataDirectory(parsed.config.dataDirectory))
-      const inspected = await checkDatabase(parsed.config.database)
+      const inspected = await checkDatabase(parsed.config.database, undefined, parsed.config.pluginDirectory)
       database = inspected.database
       results.push(inspected)
     } else {
@@ -430,7 +497,8 @@ export async function run(
           version: context.version,
           root: context.root,
           home,
-          results: results.map(({ item, status, message }) => ({ item, status, message })),
+          dataDirectory: parsed.config?.dataDirectory ?? null,
+          results: results.map(({ id, item, status, message }) => ({ id, item, status, message })),
           database,
         }),
       )

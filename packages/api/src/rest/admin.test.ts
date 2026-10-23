@@ -62,7 +62,7 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(47)
+  expect(routes).toHaveLength(49)
   for (const route of routes) {
     const path = route.path
       .slice('/api'.length)
