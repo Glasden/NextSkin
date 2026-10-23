@@ -3,8 +3,11 @@ import { constants } from 'node:fs'
 import { access, mkdtemp, rm, stat, statfs, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { coreMigrations, createDatabase, type DatabaseConfig } from '@nextskin/db'
+import { parseArgs } from 'node:util'
+import { coreMigrations, createDatabase, type CoreDatabase, type DatabaseConfig } from '@nextskin/db'
 import { HostStartError, hostNetworkRestricted, probePluginHost } from '@nextskin/domain'
+import { officialPlugins } from '@nextskin/official-plugins'
+import { buildManifest } from '@nextskin/plugin-host'
 import { coreConfigFromEnv, type CoreConfig } from '@nextskin/domain/config'
 import { ConfigError, currentUser, envFilePath, listenAddress, mergeEnv, readEnvFile } from '../config.ts'
 import { instanceDirectory, type LauncherContext } from '../context.ts'
@@ -140,24 +143,71 @@ export async function checkDataDirectory(directory: string): Promise<CheckResult
   }
 }
 
-function migrationStatus(names: string[]): { status: CheckResult['status']; message: string } {
-  const known = Object.keys(coreMigrations)
-  const unknown = names.filter((name) => !Object.hasOwn(coreMigrations, name)).sort()
+interface DatabaseInspection {
+  dialect: DatabaseConfig['dialect']
+  empty: boolean
+  pendingCore: string[]
+  unknownCore: string[]
+  pendingPlugins: { plugin: string; migrations: string[] }[]
+}
+
+type DatabaseCheck = CheckResult & { database: DatabaseInspection | null }
+
+function inspectMigrations(
+  dialect: DatabaseConfig['dialect'],
+  names?: string[],
+  plugins: { id: string }[] = [],
+  executedPlugins: { plugin_id: string; name: string }[] = [],
+): DatabaseInspection {
+  const database: DatabaseInspection = {
+    dialect,
+    empty: names === undefined,
+    pendingCore: [],
+    unknownCore: [],
+    pendingPlugins: [],
+  }
+  if (!names) return database
+  const executed = new Set(names)
+  database.pendingCore = Object.keys(coreMigrations).filter((name) => !executed.has(name))
+  database.unknownCore = names.filter((name) => !Object.hasOwn(coreMigrations, name)).sort()
+  const enabled = new Set(plugins.map((plugin) => plugin.id))
+  for (const plugin of officialPlugins) {
+    const manifest = buildManifest(plugin.definition, plugin.package)
+    if (!enabled.has(manifest.id)) continue
+    const done = new Set(executedPlugins.filter((row) => row.plugin_id === manifest.id).map((row) => row.name))
+    const migrations = manifest.migrations.filter((name) => !done.has(name))
+    if (migrations.length) database.pendingPlugins.push({ plugin: manifest.id, migrations })
+  }
+  database.pendingPlugins.sort((a, b) => a.plugin.localeCompare(b.plugin))
+  return database
+}
+
+function migrationStatus(database: DatabaseInspection): { status: CheckResult['status']; message: string } {
+  const unknown = database.unknownCore
   if (unknown.length)
     return {
       status: 'fail',
       message: `有 ${unknown.length} 个程序不认识的迁移，最大的是 ${unknown.at(-1)}；库比程序新，这个版本打不开它，请换回更新的版本`,
     }
-  const executed = new Set(names)
-  const pending = known.filter((name) => !executed.has(name)).length
+  const pending = database.pendingCore.length
+  const plugins = database.pendingPlugins.reduce((total, item) => total + item.migrations.length, 0)
+  if (plugins)
+    return {
+      status: 'warning',
+      message: `有 ${pending} 个核心迁移、${plugins} 个官方插件的迁移没执行，start 或 migrate 时执行`,
+    }
   return pending
     ? { status: 'warning', message: `有 ${pending} 个迁移没执行，start 或 migrate 时执行` }
-    : { status: 'pass', message: `全部 ${known.length} 个迁移已执行` }
+    : { status: 'pass', message: `全部 ${Object.keys(coreMigrations).length} 个迁移已执行` }
 }
 
-export async function checkDatabase(config: DatabaseConfig, timeoutMs = 10_000): Promise<CheckResult> {
+export async function checkDatabase(config: DatabaseConfig, timeoutMs = 10_000): Promise<DatabaseCheck> {
   let location: string = config.dialect
   let timer: NodeJS.Timeout | undefined
+  const checked = (database: DatabaseInspection, emptyMessage = '空库，还没执行过迁移'): DatabaseCheck => {
+    const migration = database.empty ? { status: 'pass' as const, message: emptyMessage } : migrationStatus(database)
+    return { ...result('数据库', migration.status, `${location}；${migration.message}`), database }
+  }
   try {
     if (config.dialect === 'sqlite') {
       location = `SQLite ${config.file}`
@@ -165,32 +215,57 @@ export async function checkDatabase(config: DatabaseConfig, timeoutMs = 10_000):
         await stat(config.file)
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-        return result('数据库', 'pass', `${location}；还没有数据库文件，第一次 start 时创建`)
+        return checked(inspectMigrations(config.dialect), '还没有数据库文件，第一次 start 时创建')
       }
       const db = new DatabaseSync(config.file, { readOnly: true })
       try {
-        const table = db
-          .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'nextskin_migration'")
-          .get()
-        if (!table) return result('数据库', 'pass', `${location}；空库，还没执行过迁移`)
+        const tables = new Set(
+          (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
+            (row) => row.name,
+          ),
+        )
+        if (!tables.has('nextskin_migration')) return checked(inspectMigrations(config.dialect))
         const rows = db.prepare('SELECT name FROM nextskin_migration').all() as { name: string }[]
-        const migration = migrationStatus(rows.map((row) => row.name))
-        return result('数据库', migration.status, `${location}；${migration.message}`)
+        const plugins = tables.has('plugins')
+          ? (db.prepare('SELECT id FROM plugins WHERE is_enabled = 1').all() as { id: string }[])
+          : []
+        const executed = tables.has('plugin_migrations')
+          ? (db.prepare('SELECT plugin_id, name FROM plugin_migrations').all() as { plugin_id: string; name: string }[])
+          : []
+        return checked(
+          inspectMigrations(
+            config.dialect,
+            rows.map((row) => row.name),
+            plugins,
+            executed,
+          ),
+        )
       } finally {
         db.close()
       }
     }
     const url = new URL(config.url)
     location = `${config.dialect === 'mysql' ? 'MySQL' : 'PostgreSQL'} ${url.hostname}:${url.port || (config.dialect === 'mysql' ? '3306' : '5432')} / ${url.pathname.slice(1)}`
-    const inspect = async (): Promise<CheckResult> => {
-      const db = createDatabase<{ nextskin_migration: { name: string } }>(config)
+    const inspect = async (): Promise<DatabaseCheck> => {
+      const db = createDatabase<CoreDatabase & { nextskin_migration: { name: string } }>(config)
       try {
-        const tables = await db.introspection.getTables()
-        if (!tables.some((table) => table.name === 'nextskin_migration'))
-          return result('数据库', 'pass', `${location}；空库，还没执行过迁移`)
+        const tables = new Set((await db.introspection.getTables()).map((table) => table.name))
+        if (!tables.has('nextskin_migration')) return checked(inspectMigrations(config.dialect))
         const rows = await db.selectFrom('nextskin_migration').select('name').execute()
-        const migration = migrationStatus(rows.map((row) => row.name))
-        return result('数据库', migration.status, `${location}；${migration.message}`)
+        const plugins = tables.has('plugins')
+          ? await db.selectFrom('plugins').select('id').where('is_enabled', '=', 1).execute()
+          : []
+        const executed = tables.has('plugin_migrations')
+          ? await db.selectFrom('plugin_migrations').select(['plugin_id', 'name']).execute()
+          : []
+        return checked(
+          inspectMigrations(
+            config.dialect,
+            rows.map((row) => row.name),
+            plugins,
+            executed,
+          ),
+        )
       } finally {
         await db.destroy()
       }
@@ -200,12 +275,13 @@ export async function checkDatabase(config: DatabaseConfig, timeoutMs = 10_000):
     inspection.catch(() => undefined)
     return await Promise.race([
       inspection,
-      new Promise<CheckResult>((resolve) => {
+      new Promise<DatabaseCheck>((resolve) => {
         timer = setTimeout(
           () =>
             resolve({
               ...result('数据库', 'fail', `${location}；检查超时，请检查连接和数据库是否可用`),
               timedOut: true,
+              database: null,
             }),
           timeoutMs,
         )
@@ -215,7 +291,10 @@ export async function checkDatabase(config: DatabaseConfig, timeoutMs = 10_000):
     const code = (error as { code?: unknown } | null)?.code
     // 只允许驱动的错误代码，不回显 message（它可能含用户名、密码和连接串）。
     const detail = typeof code === 'string' && /^[A-Z0-9_]{1,64}$/.test(code) ? `（${code}）` : ''
-    return result('数据库', 'fail', `${location}；检查失败${detail}，请检查连接、权限和数据库是否可用`)
+    return {
+      ...result('数据库', 'fail', `${location}；检查失败${detail}，请检查连接、权限和数据库是否可用`),
+      database: null,
+    }
   } finally {
     clearTimeout(timer)
   }
@@ -293,42 +372,78 @@ export async function run(
   context: LauncherContext,
   options: { env?: NodeJS.ProcessEnv; probeHost?: typeof probePluginHost } = {},
 ): Promise<number> {
-  if (argv.length) {
-    console.log('用法：nextskin doctor')
-    return argv.length === 1 && (argv[0] === '--help' || argv[0] === '-h') ? 0 : 1
+  const usage = '用法：nextskin doctor [--json]'
+  let json: boolean
+  try {
+    const { values } = parseArgs({
+      args: argv,
+      options: { json: { type: 'boolean' }, help: { type: 'boolean', short: 'h' } },
+      strict: true,
+      allowPositionals: false,
+    })
+    if (values.help) {
+      console.log(usage)
+      return 0
+    }
+    json = values.json ?? false
+  } catch {
+    console.log(usage)
+    return 1
   }
-  const env = options.env ?? process.env
-  const home = instanceDirectory(context)
-  console.log(
-    `NextSkin ${context.version} 环境自检，根目录 ${context.root}${resolve(home) === resolve(context.root) ? '' : `，实例目录 ${home}`}`,
-  )
-  const skipped = (item: string) => result(item, 'skip', '配置有错，没有检查')
-  const results = [checkNode()]
-  const file = await checkEnvFile(context, env)
-  results.push(...file.results, checkSecret(context, file.env, env, file.pendingSecret))
-  const parsed = file.readable ? checkConfig(context, file.env) : { result: skipped('其余配置') }
-  results.push(parsed.result)
-  if (parsed.config) {
-    results.push(await checkDataDirectory(parsed.config.dataDirectory), await checkDatabase(parsed.config.database))
-  } else {
-    results.push(skipped('数据目录'), skipped('数据库'))
+  const { log, info } = console
+  if (json) console.log = console.info = (...args) => console.error(...args)
+  try {
+    const env = options.env ?? process.env
+    const home = instanceDirectory(context)
+    if (!json)
+      console.log(
+        `NextSkin ${context.version} 环境自检，根目录 ${context.root}${resolve(home) === resolve(context.root) ? '' : `，实例目录 ${home}`}`,
+      )
+    const skipped = (item: string) => result(item, 'skip', '配置有错，没有检查')
+    const results = [checkNode()]
+    let database: DatabaseInspection | null = null
+    const file = await checkEnvFile(context, env)
+    results.push(...file.results, checkSecret(context, file.env, env, file.pendingSecret))
+    const parsed = file.readable ? checkConfig(context, file.env) : { result: skipped('其余配置') }
+    results.push(parsed.result)
+    if (parsed.config) {
+      results.push(await checkDataDirectory(parsed.config.dataDirectory))
+      const inspected = await checkDatabase(parsed.config.database)
+      database = inspected.database
+      results.push(inspected)
+    } else {
+      results.push(skipped('数据目录'), skipped('数据库'))
+    }
+    results.push(await checkRelease(context), await checkPluginHost(context, options.probeHost))
+    results.push(
+      parsed.config && parsed.host !== undefined && parsed.port !== undefined
+        ? await checkService(parsed.config.dataDirectory, parsed.host, parsed.port)
+        : skipped('服务'),
+    )
+    const labels = { pass: '通过', warning: '警告', fail: '失败', skip: '跳过' }
+    if (!json) for (const row of results) console.log(`[${labels[row.status]}] ${row.item}：${row.message}`)
+    const warnings = results.filter((row) => row.status === 'warning').length
+    const failures = results.filter((row) => row.status === 'fail').length
+    if (json)
+      log(
+        JSON.stringify({
+          version: context.version,
+          root: context.root,
+          home,
+          results: results.map(({ item, status, message }) => ({ item, status, message })),
+          database,
+        }),
+      )
+    else console.log(warnings || failures ? `${warnings} 项警告，${failures} 项失败` : '全部通过')
+    const code = failures ? 1 : 0
+    if (results.some((row) => row.timedOut)) {
+      // Promise.race 不能中止驱动握手；等输出刷完后显式退出，不让超时连接的句柄挂住 doctor。
+      await new Promise<void>((resolve) => process.stdout.write('', () => resolve()))
+      process.exit(code)
+    }
+    return code
+  } finally {
+    console.log = log
+    console.info = info
   }
-  results.push(await checkRelease(context), await checkPluginHost(context, options.probeHost))
-  results.push(
-    parsed.config && parsed.host !== undefined && parsed.port !== undefined
-      ? await checkService(parsed.config.dataDirectory, parsed.host, parsed.port)
-      : skipped('服务'),
-  )
-  const labels = { pass: '通过', warning: '警告', fail: '失败', skip: '跳过' }
-  for (const row of results) console.log(`[${labels[row.status]}] ${row.item}：${row.message}`)
-  const warnings = results.filter((row) => row.status === 'warning').length
-  const failures = results.filter((row) => row.status === 'fail').length
-  console.log(warnings || failures ? `${warnings} 项警告，${failures} 项失败` : '全部通过')
-  const code = failures ? 1 : 0
-  if (results.some((row) => row.timedOut)) {
-    // Promise.race 不能中止驱动握手；等输出刷完后显式退出，不让超时连接的句柄挂住 doctor。
-    await new Promise<void>((resolve) => process.stdout.write('', () => resolve()))
-    process.exit(code)
-  }
-  return code
 }

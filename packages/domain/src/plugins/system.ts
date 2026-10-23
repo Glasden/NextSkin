@@ -62,7 +62,7 @@ import { sendPluginNotification } from '../notifications/plugin.ts'
 import { adjustPluginScore } from '../score/plugin.ts'
 import { notificationSendInput, scoreAdjustInput } from './core-writes.ts'
 import { createPluginCoreData } from './core-data.ts'
-import { PluginCallRejected, PluginInvocationError } from './errors.ts'
+import { OfficialPluginMigrationError, PluginCallRejected, PluginInvocationError } from './errors.ts'
 import { pluginFetch } from './fetch.ts'
 import {
   generationKey,
@@ -1382,7 +1382,7 @@ export function createPluginSystem(options: {
                     .where('id', '=', id)
                     .execute()
                     .catch(() => {})
-                  throw new Error(message, { cause })
+                  throw new OfficialPluginMigrationError(message, { cause })
                 },
               })
               if (migrations.length) executed.push({ plugin: id, migrations })

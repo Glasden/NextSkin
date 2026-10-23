@@ -20,3 +20,8 @@ export class PluginInvocationError extends Error {
     this.reason = reason
   }
 }
+
+/** 官方插件的迁移失败；文案只含插件和迁移名，可以安全地交给命令行。 */
+export class OfficialPluginMigrationError extends Error {
+  override name = 'OfficialPluginMigrationError'
+}
