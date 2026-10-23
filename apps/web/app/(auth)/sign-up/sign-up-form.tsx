@@ -9,6 +9,7 @@ import { CAPTCHA_HEADER, useCaptcha, type CaptchaConfig } from '../../../lib/cap
 import { goToNext } from '../../../lib/navigation'
 import { playerNameInputProps, type PlayerNameRules } from '../../../lib/player-name'
 import { initialFieldValue, PluginField, type PluginFieldValue } from '../../_plugins/plugin-field'
+import { PasswordStrengthMeter } from '../password-strength-meter'
 import type { PluginFieldText } from '../../_plugins/types'
 
 /** "完成注册"页（ADR-0034）：第三方给的身份暂存在服务端，表单不填密码 */
@@ -57,6 +58,7 @@ export function SignUpForm({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [passwordValue, setPasswordValue] = useState('')
   const [extra, setExtra] = useState<Record<string, PluginFieldValue>>(() =>
     Object.fromEntries(
       pluginFields.map(({ pluginId, field }) => {
@@ -129,7 +131,10 @@ export function SignUpForm({
             required
             minLength={password.min}
             maxLength={password.max}
+            value={passwordValue}
+            onValueChange={setPasswordValue}
           />
+          <PasswordStrengthMeter password={passwordValue} />
         </Field>
       )}
       {playerName ? (

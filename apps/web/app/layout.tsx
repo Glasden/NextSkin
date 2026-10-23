@@ -1,4 +1,4 @@
-import { CspProvider } from '@nextskin/ui'
+import { CspProvider, RequiredMessageProvider } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
@@ -45,11 +45,12 @@ export async function generateMetadata(): Promise<Metadata> {
 // 配色主题（ADR-0057）：data-theme 写在 <html> 上，不是钻石青时输出这一套的 CSS（样式不受 CSP 约束，不用 nonce）。
 // 导入期间不查会话，用站点默认（同 i18n/request.ts）
 export default async function RootLayout({ children }: { readonly children: ReactNode }) {
-  const [locale, cookieStore, headerList, { core, importer }] = await Promise.all([
+  const [locale, cookieStore, headerList, { core, importer }, t] = await Promise.all([
     getLocale(),
     cookies(),
     headers(),
     getServer(),
+    getTranslations('common'),
   ])
   const nonce = headerList.get(NONCE_HEADER) ?? undefined
   const user = importer.maintenance() ? null : await getSessionUser()
@@ -64,9 +65,12 @@ export default async function RootLayout({ children }: { readonly children: Reac
       <body className="min-h-dvh bg-bg font-sans text-text">
         <CspProvider nonce={nonce}>
           <NextIntlClientProvider>
-            <ColorModeProvider value={parseColorMode(cookieStore.get(COLOR_MODE_COOKIE)?.value)}>
-              {children}
-            </ColorModeProvider>
+            {/* 控件没填就提交时的提示跟随站点语言，不用浏览器给的消息（它跟随浏览器语言） */}
+            <RequiredMessageProvider message={t('required')}>
+              <ColorModeProvider value={parseColorMode(cookieStore.get(COLOR_MODE_COOKIE)?.value)}>
+                {children}
+              </ColorModeProvider>
+            </RequiredMessageProvider>
           </NextIntlClientProvider>
         </CspProvider>
       </body>

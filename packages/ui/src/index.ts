@@ -43,9 +43,11 @@ export { PlayerCard, type PlayerCardProps } from './player-card/player-card.tsx'
 export { PlayerHead, type PlayerHeadProps } from './player-head/player-head.tsx'
 export { PlayerPicker, type PlayerPickerOption, type PlayerPickerProps } from './player-picker/player-picker.tsx'
 export { Podium, type PodiumPlace, type PodiumProps } from './podium/podium.tsx'
+export { PasswordMeter, type PasswordMeterProps } from './password-meter/password-meter.tsx'
 export { Popover, type PopoverProps } from './popover/popover.tsx'
 export { ProgressBar, type ProgressBarProps } from './progress-bar/progress-bar.tsx'
 export { QrCode, type QrCodeProps } from './qr-code/qr-code.tsx'
+export { RequiredMessageProvider, type RequiredMessageProviderProps } from './field/required-message.tsx'
 export { SaveBar, type SaveBarProps } from './save-bar/save-bar.tsx'
 export {
   SegmentedControl,
