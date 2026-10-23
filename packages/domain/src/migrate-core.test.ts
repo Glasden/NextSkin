@@ -46,11 +46,13 @@ async function executed(): Promise<string[]> {
 test('已有核心迁移时先备份再升级，备份中的迁移记录停在升级之前', async () => {
   await migrateToLatest(db, previous)
   const info = vi.spyOn(console, 'info').mockImplementation(() => {})
-  expect(await migrateCore(db, config)).toEqual([last])
+  const onBackup = vi.fn()
+  expect(await migrateCore(db, config, { onBackup })).toEqual([last])
   const files = await readdir(config.backupDirectory)
   expect(files).toHaveLength(1)
   expect(files[0]).toMatch(new RegExp(`^nextskin-\\d{8}T\\d{6}Z-${last}\\.sqlite$`))
   const file = join(config.backupDirectory, files[0]!)
+  expect(onBackup).toHaveBeenCalledExactlyOnceWith(file)
   const backup = new DatabaseSync(file, { readOnly: true })
   try {
     expect(backup.prepare('select name from nextskin_migration order by name').all()).toEqual(
@@ -111,7 +113,9 @@ test('迁移本身失败后重新打开数据库，仍沿用同一份备份', as
     `[nextskin] 有 1 个迁移要执行，沿用本进程为这批迁移做的备份 ${join(config.backupDirectory, files[0]!)}；核心打不开期间手工改过库的话，请重启服务，会重新备份`,
   )
   migration.mockRestore()
-  expect(await migrateCore(db, config)).toEqual([last])
+  const onBackup = vi.fn()
+  expect(await migrateCore(db, config, { onBackup })).toEqual([last])
+  expect(onBackup).toHaveBeenCalledExactlyOnceWith(join(config.backupDirectory, files[0]!))
   expect(await readdir(config.backupDirectory)).toEqual(files)
 })
 

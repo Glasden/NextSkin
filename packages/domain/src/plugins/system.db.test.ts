@@ -1565,3 +1565,34 @@ test('卸载后的清理任务按 1000 个通知分批删除，永久键和其�
     { plugin_key: 'once' },
   ])
 })
+
+test('启动迁移使用领域层注入的时钟，重复调用只报告本次实际执行的迁移', async () => {
+  const date = new Date('2026-10-23T12:34:56Z')
+  const up = vi.fn(async () => {})
+  await env.boot([official('a', definePlugin({ capabilities: ['storage.tables'], migrations: { '001': { up } } }))], {
+    now: () => date,
+  })
+  const timestamp = toIsoTimestamp(date)
+  await env.db
+    .insertInto('plugins')
+    .values({
+      id: 'a',
+      version: '1.0.0',
+      is_enabled: 1,
+      capabilities: '[]',
+      installed_at: timestamp,
+      updated_at: timestamp,
+    })
+    .execute()
+  const beforeUpgrade = vi.fn(async () => {})
+  expect(await env.core.plugins.migrateEnabledOfficial({ beforeUpgrade })).toEqual([
+    { plugin: 'a', migrations: ['001'] },
+  ])
+  expect(beforeUpgrade).toHaveBeenCalledExactlyOnceWith([{ plugin: 'a', migrations: ['001'] }])
+  expect(
+    await env.db.selectFrom('plugin_migrations').select(['name', 'executed_at']).where('plugin_id', '=', 'a').execute(),
+  ).toEqual([{ name: '001', executed_at: timestamp }])
+  expect(await env.core.plugins.migrateEnabledOfficial({ beforeUpgrade })).toEqual([])
+  expect(up).toHaveBeenCalledOnce()
+  expect(beforeUpgrade).toHaveBeenCalledOnce()
+})

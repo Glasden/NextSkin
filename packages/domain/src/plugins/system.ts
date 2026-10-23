@@ -15,6 +15,7 @@
 import type { UserRole } from '@nextskin/db'
 import type { ExtractedPluginManifest as PluginManifest } from '@nextskin/plugin-host'
 import { randomUUID } from 'node:crypto'
+import { setTimeout as delay } from 'node:timers/promises'
 import {
   ExclusiveLockBusyError,
   withExclusiveLock,
@@ -825,7 +826,7 @@ export function createPluginSystem(options: {
           },
           (error: unknown) => {
             const name = error instanceof Error ? error.name : ''
-            throw new PluginInvocationError(
+            const failure = new PluginInvocationError(
               id,
               name === 'PluginSettingsInvalidError'
                 ? 'settings_invalid'
@@ -837,6 +838,8 @@ export function createPluginSystem(options: {
                     : 'error',
               name === 'PluginTimeoutError' ? `插件在 ${opts.timeoutMs} ms 内没有完成` : errorMessage(error),
             )
+            failure.cause = error
+            throw failure
           },
         ),
         deadline,
@@ -845,7 +848,9 @@ export function createPluginSystem(options: {
     } catch (error) {
       outcome = error instanceof PluginInvocationError ? error.reason : 'error'
       if (error instanceof PluginInvocationError) throw error
-      throw new PluginInvocationError(id, 'error', errorMessage(error))
+      const failure = new PluginInvocationError(id, 'error', errorMessage(error))
+      failure.cause = error
+      throw failure
     } finally {
       clearTimeout(timer)
       invocations.delete(invocationId)
@@ -931,23 +936,37 @@ export function createPluginSystem(options: {
     error instanceof PluginInvocationError && error.reason === 'unavailable' ? new JobDeferredError() : error
 
   /** 跑还没跑过的迁移：DDL 只能在这里执行（ADR-0010）。安装插件的迁移在准备切换过去的那一代里跑 */
-  async function runMigrations(plugin: KnownPlugin, timestamp: () => IsoTimestamp): Promise<void> {
+  async function runMigrations(
+    plugin: KnownPlugin,
+    timestamp: () => IsoTimestamp,
+    options: {
+      beforeUpgrade?(pending: string[]): Promise<void>
+      onFailure?(name: string, error: unknown): Promise<never>
+    } = {},
+  ): Promise<string[]> {
     const id = plugin.manifest.id
     const done = new Set(
       (await db.selectFrom('plugin_migrations').select('name').where('plugin_id', '=', id).execute()).map(
         (row) => row.name,
       ),
     )
-    for (const name of plugin.manifest.migrations) {
-      if (done.has(name)) continue
-      // 迁移时插件还没启用，能力按 manifest 申请的给：迁移只能访问它自己的表
-      await invoke(
-        { known: plugin, granted: new Set(plugin.manifest.capabilities) },
-        { kind: 'migrate', name },
-        { timeoutMs: MIGRATION_TIMEOUT_MS, allowDdl: true },
-      )
-      await db.insertInto('plugin_migrations').values({ plugin_id: id, name, executed_at: timestamp() }).execute()
+    const pending = plugin.manifest.migrations.filter((name) => !done.has(name))
+    for (const [index, name] of pending.entries()) {
+      await options.beforeUpgrade?.(pending.slice(index))
+      try {
+        // 迁移时能力按 manifest 申请的给：迁移只能访问它自己的表
+        await invoke(
+          { known: plugin, granted: new Set(plugin.manifest.capabilities) },
+          { kind: 'migrate', name },
+          { timeoutMs: MIGRATION_TIMEOUT_MS, allowDdl: true },
+        )
+        await db.insertInto('plugin_migrations').values({ plugin_id: id, name, executed_at: timestamp() }).execute()
+      } catch (error) {
+        if (options.onFailure) await options.onFailure(name, error)
+        throw error
+      }
     }
+    return pending
   }
 
   /** 新一代起不来：插件加载失败、实际的定义和 manifest 对不上。原因交给管理员 */
@@ -1318,6 +1337,66 @@ export function createPluginSystem(options: {
   }
 
   return {
+    /** 官方插件随核心升级；先完成迁移才能登记它的新代码，锁内重新读取以免重复执行。 */
+    async migrateEnabledOfficial(
+      migrationOptions: {
+        beforeUpgrade?(pending: { plugin: string; migrations: string[] }[]): Promise<void>
+      } = {},
+    ): Promise<{ plugin: string; migrations: string[] }[]> {
+      const rows = await db.selectFrom('plugins').select('id').where('is_enabled', '=', 1).orderBy('id').execute()
+      const pending: { plugin: string; migrations: string[] }[] = []
+      for (const { id } of rows) {
+        if (!officialIds.has(id)) continue
+        const plugin = known.get(id)!
+        const done = new Set(
+          (await db.selectFrom('plugin_migrations').select('name').where('plugin_id', '=', id).execute()).map(
+            (row) => row.name,
+          ),
+        )
+        const migrations = plugin.manifest.migrations.filter((name) => !done.has(name))
+        if (migrations.length) pending.push({ plugin: id, migrations })
+      }
+      const executed: { plugin: string; migrations: string[] }[] = []
+      const timestamp = () => toIsoTimestamp(now())
+      for (const [index, item] of pending.entries()) {
+        const { plugin: id } = item
+        for (let attempt = 0; ; attempt++) {
+          try {
+            await withLock(id, async () => {
+              const row = await db.selectFrom('plugins').select('is_enabled').where('id', '=', id).executeTakeFirst()
+              if (row?.is_enabled !== 1) return
+              const migrations = await runMigrations(known.get(id)!, timestamp, {
+                beforeUpgrade: async (names) => {
+                  // 逐条提交后待执行清单会缩短；重试这些剩余迁移时仍要能找到最初的备份。
+                  item.migrations = names
+                  await migrationOptions.beforeUpgrade?.(pending.slice(index))
+                },
+                onFailure: async (name, cause) => {
+                  const message = `插件 ${id} 迁移 ${name} 执行失败`
+                  await db
+                    .updateTable('plugins')
+                    .set({
+                      last_error: [...`migration_failed: ${message}`].slice(0, 500).join(''),
+                      updated_at: timestamp(),
+                    })
+                    .where('id', '=', id)
+                    .execute()
+                    .catch(() => {})
+                  throw new Error(message, { cause })
+                },
+              })
+              if (migrations.length) executed.push({ plugin: id, migrations })
+            })
+            break
+          } catch (error) {
+            if (!(error instanceof DomainError) || error.code !== 'plugin_busy' || attempt >= 6) throw error
+            // 服务和命令行可能同时打开核心；让持锁者先完成，随后在锁内重读迁移记录。
+            await delay(500)
+          }
+        }
+      }
+      return executed
+    },
     /** 启动时先切到表里的启用集合，再开始轮询；执行器在这之后才启动，插件的任务不会被漏认领 */
     async start(): Promise<void> {
       if (running) return
@@ -1368,7 +1447,11 @@ export function createPluginSystem(options: {
         let result: T
         try {
           const target = installedKnown(local, () => candidate)
-          result = await fn({ migrate: (timestamp) => runMigrations(target, timestamp) })
+          result = await fn({
+            migrate: async (timestamp) => {
+              await runMigrations(target, timestamp)
+            },
+          })
         } catch (error) {
           dispose(candidate, 'kill')
           throw error
