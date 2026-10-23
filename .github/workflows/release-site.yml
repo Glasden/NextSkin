@@ -100,6 +100,86 @@ jobs:
             dist/SHA256SUMS
           if-no-files-found: error
 
+  # 防止“新站能启动，但覆盖旧发行包后迁移、版本指针或旧目录清理失败”仍被发布（ADR-0061）。
+  upgrade-smoke:
+    needs: [verify, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      # 和 packages/db/compose.yaml 的 test:db 保持一致。
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: nextskin-test
+          POSTGRES_DB: nextskin_upgrade
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nextskin_upgrade"
+          --health-interval 2s --health-timeout 5s --health-retries 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site-release
+      - name: 下载上一个正式版（首次发布跳过）
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases \
+            --limit 1000 --json tagName,isDraft,isPrerelease > "$RUNNER_TEMP/releases.json"
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs'
+          import { join } from 'node:path'
+          import { compareVersions, releaseVersionPattern } from './packages/updates/src/versions.ts'
+          const releases = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'releases.json'), 'utf8'))
+          const previous = releases
+            .filter((release) => !release.isDraft && !release.isPrerelease)
+            .map((release) => ({ tag: release.tagName, version: release.tagName.replace(/^v/, '') }))
+            .filter((release) => releaseVersionPattern.test(release.version) && compareVersions(release.version, process.env.VERSION) < 0)
+            .sort((a, b) => compareVersions(b.version, a.version))[0]
+          if (previous) appendFileSync(process.env.GITHUB_OUTPUT, `tag=${previous.tag}\n`)
+          else console.log('没有比本次版本小的已发布正式版；首次发布跳过升级冒烟')
+          NODE
+          tag=$(sed -n 's/^tag=//p' "$GITHUB_OUTPUT")
+          if [ -n "$tag" ]; then
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern 'nextskin-*.zip' --dir "$RUNNER_TEMP/previous"
+          fi
+      - name: 从上一个正式版升级（SQLite）
+        if: steps.previous.outputs.tag != ''
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          old=("$RUNNER_TEMP/previous/"nextskin-*.zip)
+          test "${#old[@]}" -eq 1
+          node packages/manager/scripts/upgrade-smoke.ts --from "${old[0]}" \
+            --to "nextskin-$VERSION.zip" --work "$RUNNER_TEMP/upgrade-sqlite" --port 3190
+      - name: 从上一个正式版升级（PostgreSQL）
+        if: steps.previous.outputs.tag != ''
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          old=("$RUNNER_TEMP/previous/"nextskin-*.zip)
+          test "${#old[@]}" -eq 1
+          # 不把连接串放进步骤的 env 展示；先遮盖，再作为脚本参数传入（不变量 11）。
+          database_url=$(node --input-type=module -e "
+            const url = new URL('postgres://127.0.0.1:5432/nextskin_upgrade')
+            url.username = 'postgres'
+            url.password = 'nextskin-test'
+            process.stdout.write(url.href)
+          ")
+          echo "::add-mask::$database_url"
+          node packages/manager/scripts/upgrade-smoke.ts --from "${old[0]}" \
+            --to "nextskin-$VERSION.zip" --work "$RUNNER_TEMP/upgrade-postgres" --port 3191 \
+            --database-url "$database_url"
+
   windows-smoke:
     needs: build
     runs-on: windows-2025
@@ -154,7 +234,7 @@ jobs:
           }
 
   publish:
-    needs: [verify, build, windows-smoke]
+    needs: [verify, build, windows-smoke, upgrade-smoke]
     runs-on: ubuntu-24.04
     # arm64 的镜像里 apt-get 在 QEMU 下运行
     timeout-minutes: 30
