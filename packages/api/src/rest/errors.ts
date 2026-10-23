@@ -248,18 +248,19 @@ export function createErrorResponse(
     const settings = (typeof databaseFree === 'function' ? databaseFree() : databaseFree)
       ? { 'site.locale': 'zh-CN' as const }
       : await core.settings.read(['site.locale']).catch(() => ({ 'site.locale': 'zh-CN' as const }))
-    const translate = createTranslator(
-      resolveLocale({
-        cookie: getCookie(c, LOCALE_COOKIE),
-        acceptLanguage: c.req.header('accept-language'),
-        siteDefault: settings['site.locale'],
-      }),
-    )
+    const locale = resolveLocale({
+      cookie: getCookie(c, LOCALE_COOKIE),
+      acceptLanguage: c.req.header('accept-language'),
+      siteDefault: settings['site.locale'],
+    })
+    const translate = createTranslator(locale)
     const messageKey: `errors.${ResponseCode}` | `admin.errors.${AdminErrorCode}` =
       ADMIN_PATH.test(c.req.path) && isAdminErrorCode(code) ? `admin.errors.${code}` : `errors.${code}`
     const error = {
       code,
+      // 管理进程的说明更具体，但只有中文；别的语言用自己的文案
       message:
+        locale === 'zh-CN' &&
         ADMIN_UPDATES_PATH.test(c.req.path) &&
         updateCodes.has(code) &&
         typeof params?.message === 'string' &&

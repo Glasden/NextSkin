@@ -179,15 +179,19 @@ test.each(Object.entries(errorStatuses))('%s 返回 HTTP %s 和双语兜底', as
     })
   }
 })
-test('管理进程的具体 message 优先于兜底文案，空消息仍可兜底', async () => {
+test('中文界面优先显示管理进程的具体说明，空消息和别的语言用兜底文案', async () => {
   const { request, updates } = setup()
   updates.prepare.mockRejectedValue(new DomainError('update_preflight_failed', { message: '目标版本有不兼容插件' }))
-  const response = await request('POST', '/prepare', 'en', 'http://example.test', { version: '0.5.0' })
+  const response = await request('POST', '/prepare', 'zh-CN', 'http://example.test', { version: '0.5.0' })
   expect(await response.json()).toEqual({ error: { code: 'update_preflight_failed', message: '目标版本有不兼容插件' } })
+  const english = await request('POST', '/prepare', 'en', 'http://example.test', { version: '0.5.0' })
+  expect(await english.json()).toEqual({
+    error: { code: 'update_preflight_failed', message: createTranslator('en')('errors.update_preflight_failed') },
+  })
   updates.prepare.mockRejectedValue(new DomainError('update_internal', { message: '' }))
-  const fallback = await request('POST', '/prepare', 'en', 'http://example.test', { version: '0.5.0' })
+  const fallback = await request('POST', '/prepare', 'zh-CN', 'http://example.test', { version: '0.5.0' })
   expect(await fallback.json()).toEqual({
-    error: { code: 'update_internal', message: createTranslator('en')('errors.update_internal') },
+    error: { code: 'update_internal', message: createTranslator('zh-CN')('errors.update_internal') },
   })
 })
 test.each(['invalid_request', 'update_invalid_request'] as const)(
@@ -195,13 +199,15 @@ test.each(['invalid_request', 'update_invalid_request'] as const)(
   async (code) => {
     const { request, updates } = setup()
     updates.prepare.mockRejectedValue(new DomainError(code, { message: '管理进程的具体原因' }))
-    const response = await request('POST', '/prepare', 'en', 'http://example.test', { version: '0.5.0' })
+    const response = await request('POST', '/prepare', 'zh-CN', 'http://example.test', { version: '0.5.0' })
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({
       error: {
         code,
         message:
-          code === 'update_invalid_request' ? '管理进程的具体原因' : createTranslator('en')('errors.invalid_request'),
+          code === 'update_invalid_request'
+            ? '管理进程的具体原因'
+            : createTranslator('zh-CN')('errors.invalid_request'),
       },
     })
   },
