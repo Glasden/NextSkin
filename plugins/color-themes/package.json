@@ -1,0 +1,28 @@
+{
+  "name": "@nextskin/plugin-color-themes",
+  "version": "1.0.0",
+  "private": true,
+  "description": "更多配色：钴蓝、洋红两套配色主题（官方插件，ADR-0057 的参考插件）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./official": "./src/official.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "nextskin": {
+    "id": "color-themes"
+  },
+  "dependencies": {
+    "@nextskin/plugin-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@nextskin/plugin-host": "workspace:*",
+    "@nextskin/theme": "workspace:*",
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

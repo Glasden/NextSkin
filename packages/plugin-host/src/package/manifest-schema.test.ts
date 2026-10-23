@@ -3,6 +3,7 @@ import { definePlugin } from '@nextskin/plugin-sdk'
 import invitation from '../../../../plugins/invitation-codes/src/official.ts'
 import cdn from '../../../../plugins/cdn-refresh/src/official.ts'
 import share from '../../../../plugins/share-registration-link/src/official.ts'
+import colorThemes from '../../../../plugins/color-themes/src/official.ts'
 import { buildManifest } from '../manifest.ts'
 import { parsePluginManifest } from './manifest-schema.ts'
 import { PluginPackageError } from './error.ts'
@@ -56,6 +57,7 @@ test('官方插件的清单都能通过严格校验', () => {
     buildManifest(invitation.definition, invitation.package),
     buildManifest(cdn.definition, cdn.package),
     buildManifest(share.definition, share.package),
+    buildManifest(colorThemes.definition, colorThemes.package),
   ]
   for (const manifest of manifests) {
     const complete = { ...manifest, entry: { server: 'server.mjs' }, integrity: { 'server.mjs': 'a'.repeat(64) } }
