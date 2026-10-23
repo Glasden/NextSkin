@@ -251,3 +251,83 @@ test.each(['text', 'textarea', 'number', 'select', 'password', 'boolean'])(
     expect(() => describe({ form: 'auth.register', field, unknown: true })).toThrow('formFields')
   },
 )
+
+const widget = {
+  name: 'summary',
+  slot: 'user.dashboard',
+  title: 'widget.title',
+  view: { kind: 'stats', source: '/stats?scope=mine' },
+} as const
+const widgetPages = {
+  home: { area: 'user', title: 'page.home', view: { kind: 'markdown', source: '/' } },
+  admin: { area: 'admin', title: 'page.admin', view: { kind: 'stats', source: '/stats' } },
+} as const
+
+test('两个插槽各允许两个挂件，保留权限、链接和两种视图', () => {
+  const widgets = [
+    { ...widget, permission: 'manage' as const, link: { page: 'home', label: 'widget.manage' } },
+    { ...widget, name: 'a'.repeat(64), view: { kind: 'markdown' as const, source: '/' as const } },
+    {
+      ...widget,
+      name: 'admin',
+      slot: 'admin.dashboard' as const,
+      permission: 'manage' as const,
+      link: { page: 'admin', label: 'widget.manage' },
+    },
+    {
+      ...widget,
+      name: 'admin-help',
+      slot: 'admin.dashboard' as const,
+      view: { kind: 'markdown' as const, source: '/' as const },
+    },
+  ]
+  const ui = { pages: widgetPages, widgets }
+  expect(
+    describePlugin(definePlugin({ capabilities: [], permissions: { manage: 'permission.manage' }, ui })).ui,
+  ).toEqual(ui)
+})
+
+test.each(
+  [
+    null,
+    {},
+    [null],
+    [1],
+    [{ ...widget, extra: true }],
+    ...[undefined, null, 1, '', 'Bad', 'a_b', '1a', 'a'.repeat(65), 'a\n'].map((name) => [{ ...widget, name }]),
+    [widget, widget],
+    [widget, { ...widget, slot: 'admin.dashboard' }],
+    ...[undefined, null, 1, 'user.dashbord', 'admin', 'toString'].map((slot) => [{ ...widget, slot }]),
+    ...[undefined, null, 1].map((title) => [{ ...widget, title }]),
+    ...[undefined, null, {}, { kind: 'table', source: '/', columns: [] }, { kind: 'form', fields: [] }].map((view) => [
+      { ...widget, view },
+    ]),
+    [{ ...widget, view: { ...widget.view, extra: true } }],
+    ...[undefined, null, 1, 'relative', '/../api', '/./x', '/a//b', '/a\\b', '/a#x', '/%2e%2e/api', '/a/%2F/b'].map(
+      (source) => [{ ...widget, view: { ...widget.view, source } }],
+    ),
+    ...['missing', null, 1].map((permission) => [{ ...widget, permission }]),
+    ...[
+      null,
+      {},
+      { page: 'missing', label: 'x' },
+      { page: 'toString', label: 'x' },
+      { page: 'admin', label: 'x' },
+      { page: 'home' },
+      { page: 'home', label: 1 },
+      { page: 'home', label: 'x', extra: true },
+    ].map((link) => [{ ...widget, link }]),
+    [{ ...widget, slot: 'admin.dashboard', link: { page: 'home', label: 'x' } }],
+    ...['user.dashboard', 'admin.dashboard'].map((slot) =>
+      Array.from({ length: 3 }, (_, i) => ({ ...widget, name: `summary-${i}`, slot })),
+    ),
+  ].map((widgets) => ({ widgets })),
+)('拒绝不合法的挂件声明：%j', ({ widgets }) => {
+  expect(() =>
+    describePlugin({
+      capabilities: [],
+      permissions: { manage: 'permission.manage' },
+      ui: { pages: widgetPages, widgets },
+    } as unknown as AnyPluginDefinition),
+  ).toThrow(/挂件|widgets/)
+})

@@ -20,7 +20,7 @@ import { z } from 'zod'
 import { eventNames } from './events.ts'
 import { isValidVersion, parseVersion } from './package/semver.ts'
 import { settingProperties } from './settings.ts'
-import { pluginFieldSchema, pluginPathSchema } from './ui-schema.ts'
+import { MAX_WIDGETS_PER_SLOT, pluginFieldSchema, pluginPathSchema, widgetSlots } from './ui-schema.ts'
 
 /**
  * 核心实现的插件 API 版本，就是同一个提交里 SDK 的版本号（ADR-0035）。manifest 的 `api` 范围必须包含它
@@ -324,7 +324,8 @@ export function describePlugin(definition: AnyPluginDefinition): PluginContribut
 
 export function validateUi(ui: PluginContributions['ui'], permissions: ReadonlySet<string>) {
   for (const key of Object.keys(ui))
-    if (key !== 'nav' && key !== 'pages' && key !== 'formFields' && key !== 'themes') fail(`ui 里没有 ${key} 这一项`)
+    if (key !== 'nav' && key !== 'pages' && key !== 'formFields' && key !== 'themes' && key !== 'widgets')
+      fail(`ui 里没有 ${key} 这一项`)
   if (ui.themes !== undefined) {
     const error = pluginThemesError(ui.themes)
     if (error) fail(`ui.themes：${error}`)
@@ -333,8 +334,8 @@ export function validateUi(ui: PluginContributions['ui'], permissions: ReadonlyS
     const result = pluginFieldSchema.safeParse(field)
     if (!result.success) fail('UI 字段的类型、选项或属性不匹配')
   }
-  const checkPath = (path: unknown) => {
-    if (!pluginPathSchema.safeParse(path).success) fail('UI 路径不能有 .、..、空段、反斜杠或 #')
+  const checkPath = (path: unknown, what = 'UI') => {
+    if (!pluginPathSchema.safeParse(path).success) fail(`${what} 路径不能有 .、..、空段、反斜杠或 #`)
   }
   const checkAction = (action: { route: string; form?: readonly unknown[] }) => {
     checkPath(action.route)
@@ -359,6 +360,46 @@ export function validateUi(ui: PluginContributions['ui'], permissions: ReadonlyS
       if (view.kind === 'table') {
         for (const action of [...(view.toolbar ?? []), ...(view.rowActions ?? [])]) checkAction(action)
       }
+    }
+  }
+  if (ui.widgets !== undefined && !Array.isArray(ui.widgets)) fail('ui.widgets 必须是数组')
+  const widgetNames = new Set<string>()
+  const slotCounts = new Map<string, number>()
+  for (const item of ui.widgets ?? []) {
+    const widget = record(item, '挂件')
+    const name = widget.name
+    if (typeof name !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/.test(name))
+      fail(`挂件名 ${JSON.stringify(name)} 只能用小写字母、数字和连字符，最多 64 个字符`)
+    if (widgetNames.has(name)) fail(`挂件 ${name} 的名字重复`)
+    widgetNames.add(name)
+    for (const key of Object.keys(widget))
+      if (!['name', 'slot', 'title', 'permission', 'link', 'view'].includes(key))
+        fail(`挂件 ${name} 里没有 ${key} 这一项`)
+    if (typeof widget.slot !== 'string' || !Object.hasOwn(widgetSlots, widget.slot))
+      fail(`挂件 ${name} 的 slot 只能是 ${Object.keys(widgetSlots).join('、')}`)
+    const slot = widget.slot as keyof typeof widgetSlots
+    const count = (slotCounts.get(slot) ?? 0) + 1
+    if (count > MAX_WIDGETS_PER_SLOT) fail(`挂件 ${name} 所在的插槽 ${slot} 最多放 ${MAX_WIDGETS_PER_SLOT} 个挂件`)
+    slotCounts.set(slot, count)
+    if (typeof widget.title !== 'string') fail(`挂件 ${name} 的 title 必须是文案键`)
+    if (
+      widget.permission !== undefined &&
+      (typeof widget.permission !== 'string' || !permissions.has(widget.permission))
+    )
+      fail(`挂件 ${name} 要求的权限没有在 permissions 里声明`)
+    const view = record(widget.view, `挂件 ${name} 的 view`)
+    if (view.kind !== 'stats' && view.kind !== 'markdown') fail(`挂件 ${name} 的视图只能是 stats、markdown`)
+    for (const key of Object.keys(view))
+      if (key !== 'kind' && key !== 'source') fail(`挂件 ${name} 的 view 里没有 ${key} 这一项`)
+    checkPath(view.source, `挂件 ${name}`)
+    if (widget.link !== undefined) {
+      const link = record(widget.link, `挂件 ${name} 的 link`)
+      for (const key of Object.keys(link))
+        if (key !== 'page' && key !== 'label') fail(`挂件 ${name} 的 link 里没有 ${key} 这一项`)
+      if (typeof link.page !== 'string' || !Object.hasOwn(pages, link.page))
+        fail(`挂件 ${name} 链接的页面 ${String(link.page)} 不存在`)
+      if (pages[link.page]!.area !== widgetSlots[slot]) fail(`挂件 ${name} 的插槽和链接页面的 area 不一致`)
+      if (typeof link.label !== 'string') fail(`挂件 ${name} 的 link.label 必须是文案键`)
     }
   }
   for (const item of ui.nav ?? []) {

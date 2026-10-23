@@ -61,7 +61,7 @@ export default definePlugin({
 | [拦截器](docs/interceptors.md) | `user.register`、`yggdrasil.issueToken`、`user.action`、事务内外的上下文 |
 | [Provider](docs/providers.md) | `passwordHasher`、`login` |
 | [路由](docs/routes.md) | `/plugins/{id}/` 下的 HTTP 路由 |
-| [界面](docs/ui.md) | 导航、页面、注册表单字段 |
+| [界面](docs/ui.md) | 导航、页面、首页上的挂件、注册表单字段、配色主题 |
 | [设置](docs/settings.md) | 用 zod 写设置项、机密项 |
 | [任务和定时任务](docs/jobs.md) | 后台任务、重试和死信、cron |
 | [插件表](docs/tables.md) | 自有表、迁移、支持的查询、四种数据库的坑 |

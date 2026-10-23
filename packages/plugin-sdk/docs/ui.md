@@ -1,6 +1,6 @@
 # 界面
 
-第一版只有声明式 UI：你描述导航、表格、表单、统计或 Markdown，核心负责渲染。不能提交运行时 React 组件、浏览器脚本或往核心页面注入 HTML。
+第一版只有声明式 UI：你描述导航、表格、表单、统计或 Markdown，核心负责渲染。不能提交运行时 React 组件、浏览器脚本或往核心页面注入 HTML；要在核心的页面上露面，用首页上的[挂件](#挂件)。
 
 ## 导航和页面
 
@@ -98,6 +98,49 @@ table 的 toolbar 放工具栏动作，rowActions 放每行动作。Action 有 l
 route 可以写 `/codes/:code`，用当前行的 code 替换；占位符匹配 `:([A-Za-z][A-Za-z0-9_]*)`。值必须是字符串或有限数字，不能是 `.`、`..`；缺失、布尔、对象、NaN 等会让操作失败并提示，不会默默转空串。值经过 encodeURIComponent。工具栏没有当前行，不能使用缺少值的占位符。
 
 source、load、submit.route、Action.route 都相对于 `/plugins/{id}`，必须以 `/` 开头，可带查询参数。除根 `/` 外，不能有空段、末尾斜杠、独立的 `.`/`..` 段、反斜杠、`#`；百分号解码后的路径段同样检查，解码后的斜杠也不允许。文件名中的点（如 `/report.json`）可以用。构建校验路径，浏览器和服务端拼 URL 后还要检查同源且留在本插件前缀下。
+
+## 挂件
+
+`ui.widgets` 往核心的首页上放一块统计或 Markdown：`user.dashboard` 是用户中心首页（公告下面），`admin.dashboard` 是后台概览（站点的几个数字下面）。适合放用户一进来就该看到的东西，比如分享链接、还没完成的绑定；完整的功能还是放在插件自己的页面。
+
+```ts
+ui: {
+  pages: { links: { area: 'user', title: 'page.links', view: { kind: 'table', source: '/codes', columns } } },
+  widgets: [
+    {
+      name: 'share',
+      slot: 'user.dashboard',
+      title: 'widget.title',
+      link: { page: 'links', label: 'widget.manage' },
+      view: { kind: 'markdown', source: '/widget' },
+    },
+  ],
+}
+```
+
+| 字段 | 说明 |
+|---|---|
+| name | 匹配 `^[a-z][a-z0-9-]{0,63}$`，同一插件内不重复 |
+| slot | `user.dashboard` 或 `admin.dashboard` |
+| title | 标题的文案键，必填；挂件总有标题 |
+| permission | 可选，本插件声明过的权限名；有值时只有拥有它的人看得到（第一版就是管理员和超级管理员） |
+| link | 可选，`{ page, label }`：标题右边链到本插件的一个页面，页面的 area 要和插槽一致（`user.dashboard` 对 user，`admin.dashboard` 对 admin）；看的人没有权限看那个页面时不显示链接 |
+| view | 只能是 stats 或 markdown，数据源的写法同上面的“四种视图的数据” |
+
+一个插件在一个插槽里最多放 2 个挂件。同一插槽里，各插件的挂件按插件 id 排，同一插件按声明的顺序；大屏两列、窄屏一列。不需要能力。
+
+谁看得到：`user.dashboard` 的挂件给登录了、没被封禁的用户；`admin.dashboard` 的只给管理员和超级管理员。和页面一样，这只决定显示不显示，数据源路由的 auth 和 permission 要另外声明。
+
+数据源和页面的一样，在服务端调用，但有几处不同：
+
+- **限时 3 秒**，超时按失败处理。首页和挂件一起渲染，挂件慢了整页都慢。要访问外部服务的，先用[任务](./jobs.md)把结果存进插件表或 KV，挂件的路由只读本地。
+- **返回 204 时整个挂件不显示**，标题也不显示，用来按条件出现，比如只提醒还没绑定的用户。
+- 其他状态码、出错、超时、形状不对时，标题照常显示，正文换成“没能加载”。
+- 每次打开首页调用一次，没有缓存；按用户限流的路由会被刷新计数，给挂件的路由不要设太紧的限流。
+- 统计最多显示前 4 项；Markdown 的 `#` 从三级标题开始（挂件的标题是二级），代码块同样带复制按钮。
+- 数据源拿不到别的上下文：当前用户在路由的 `scope.actor` 里。
+
+完整例子见 [share-registration-link](https://github.com/Glasden/NextSkin/tree/main/plugins/share-registration-link)（用户中心首页的 Markdown）和 [invitation-codes](https://github.com/Glasden/NextSkin/tree/main/plugins/invitation-codes)（后台概览的统计）。
 
 ## 注册表单字段
 

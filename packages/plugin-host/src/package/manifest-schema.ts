@@ -1,10 +1,10 @@
-import { capabilities, interceptorPolicies, type PluginManifest } from '@nextskin/plugin-sdk'
+import { capabilities, interceptorPolicies, type PluginManifest, type SlotName } from '@nextskin/plugin-sdk'
 import { MAX_THEME_NAME_LENGTH, THEME_NAME, themeColorNames, themeStructureOptions } from '@nextskin/theme'
 import { z } from 'zod'
 import { eventNames } from '../events.ts'
 import { KEY, MAX_BODY_BYTES, MAX_LOGIN_ID_LENGTH, OBJECT_NAME, PLUGIN_ID, ROUTE_KEY, validateUi } from '../manifest.ts'
 import { settingProperties } from '../settings.ts'
-import { pluginFieldSchema, pluginPathSchema } from '../ui-schema.ts'
+import { pluginFieldSchema, pluginPathSchema, widgetSlots } from '../ui-schema.ts'
 import { PluginPackageError } from './error.ts'
 import { isValidRange, isValidVersion } from './semver.ts'
 
@@ -27,6 +27,8 @@ const action = z.strictObject({
   confirm: z.string().optional(),
   form: z.array(field).optional(),
 })
+const statsView = z.strictObject({ kind: z.literal('stats'), source: path })
+const markdownView = z.strictObject({ kind: z.literal('markdown'), source: path })
 const view = z.discriminatedUnion('kind', [
   z.strictObject({
     kind: z.literal('table'),
@@ -50,10 +52,22 @@ const view = z.discriminatedUnion('kind', [
     load: path.optional(),
     submit: z.strictObject({ route: path, method: z.enum(['POST', 'PUT', 'PATCH']), label: z.string() }),
   }),
-  z.strictObject({ kind: z.literal('stats'), source: path }),
-  z.strictObject({ kind: z.literal('markdown'), source: path }),
+  statsView,
+  markdownView,
 ])
 const ui = z.strictObject({
+  widgets: z
+    .array(
+      z.strictObject({
+        name: matching(/^[a-z][a-z0-9-]{0,63}$/),
+        slot: z.enum(Object.keys(widgetSlots) as SlotName[]),
+        title: z.string(),
+        permission: z.string().optional(),
+        link: z.strictObject({ page: z.string(), label: z.string() }).optional(),
+        view: z.discriminatedUnion('kind', [statsView, markdownView]),
+      }),
+    )
+    .optional(),
   themes: z
     .array(
       z.strictObject({

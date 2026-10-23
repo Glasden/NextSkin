@@ -190,6 +190,34 @@ export interface ThemeContribution {
   }
 }
 
+/**
+ * 挂件能放的位置：`user.dashboard` 是用户中心首页，`admin.dashboard` 是后台概览。
+ * 新增插槽是次版本，删除或改名是大版本；以后的运行时组件也放进这些插槽（ADR-0059）
+ */
+export type SlotName = 'user.dashboard' | 'admin.dashboard'
+
+/**
+ * 挂件能用的视图：统计和 Markdown，形状和页面的视图相同。
+ * 数据源限时 3 秒，返回 204 时整个挂件不显示；统计最多显示前 4 项
+ */
+export type WidgetView = Extract<View, { readonly kind: 'stats' | 'markdown' }>
+
+/**
+ * 放进插槽的挂件：核心在服务端调用 view 的数据源，渲染成带标题的一块。
+ * 一个插件在一个插槽里最多放 2 个，按声明的顺序排在一起
+ */
+export interface WidgetContribution<P> {
+  /** `[a-z][a-z0-9-]{0,63}`，同一插件内不重复 */
+  readonly name: string
+  readonly slot: SlotName
+  readonly title: MessageKey
+  /** 有值时只有拥有该插件权限的人看得到；数据源路由的权限要另外声明 */
+  readonly permission?: NoInfer<keyof P & string>
+  /** 标题右边的链接：page 是 pages 中的键，area 要和插槽一致（`user.dashboard` 对 `user`） */
+  readonly link?: { readonly page: string; readonly label: MessageKey }
+  readonly view: WidgetView
+}
+
 export interface UiContributions<P> {
   readonly nav?: readonly {
     readonly area: 'user' | 'admin'
@@ -212,6 +240,8 @@ export interface UiContributions<P> {
     >
   >
   readonly formFields?: readonly FormFieldContribution[]
+  /** 用户中心首页、后台概览上的挂件（ADR-0059） */
+  readonly widgets?: readonly WidgetContribution<P>[]
   /** 配色主题：新带来的主题默认不启用，由超级管理员在后台的主题页启用（ADR-0057） */
   readonly themes?: readonly ThemeContribution[]
 }

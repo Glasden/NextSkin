@@ -750,3 +750,76 @@ definePlugin({
     },
   },
 })
+
+// 挂件只支持两个首页插槽、统计和 Markdown；权限仍来自本插件的声明。
+definePlugin({
+  capabilities: [],
+  permissions: { manage: 'permission.manage' },
+  ui: {
+    pages: {
+      links: { area: 'user', title: 'page.links', view: { kind: 'markdown', source: '/links' } },
+      codes: { area: 'admin', title: 'page.codes', permission: 'manage', view: { kind: 'stats', source: '/stats' } },
+    },
+    widgets: [
+      {
+        name: 'links',
+        slot: 'user.dashboard',
+        title: 'widget.links',
+        link: { page: 'links', label: 'widget.manage' },
+        view: { kind: 'markdown', source: '/widget' },
+      },
+      {
+        name: 'codes',
+        slot: 'admin.dashboard',
+        title: 'widget.codes',
+        permission: 'manage',
+        link: { page: 'codes', label: 'widget.manage' },
+        view: { kind: 'stats', source: '/stats' },
+      },
+    ],
+  },
+})
+definePlugin({
+  capabilities: [],
+  ui: {
+    widgets: [
+      {
+        name: 'typo',
+        title: 'widget.title',
+        view: { kind: 'stats', source: '/' },
+        // @ts-expect-error 插槽名必须属于 SlotName
+        slot: 'user.dashbord',
+      },
+    ],
+  },
+})
+definePlugin({
+  capabilities: [],
+  ui: {
+    widgets: [
+      {
+        name: 'table',
+        slot: 'user.dashboard',
+        title: 'widget.title',
+        // @ts-expect-error 挂件不能放表格
+        view: { kind: 'table', source: '/', columns: [] },
+      },
+    ],
+  },
+})
+definePlugin({
+  capabilities: [],
+  permissions: { manage: 'permission.manage' },
+  ui: {
+    widgets: [
+      {
+        name: 'permission',
+        slot: 'admin.dashboard',
+        title: 'widget.title',
+        view: { kind: 'stats', source: '/' },
+        // @ts-expect-error 权限必须在本插件里声明
+        permission: 'missing',
+      },
+    ],
+  },
+})
