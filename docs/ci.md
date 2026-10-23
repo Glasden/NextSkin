@@ -14,7 +14,7 @@ PR 要等 CI 全部通过才会合并（什么改动走 PR 见 ADR-0047）。这
 | `build + e2e` | `pnpm e2e`，再跑 `packages/launcher/docker/smoke.sh` | 镜像冒烟要 Docker | 先构建（含构建涉及的每个包的类型检查），从 `dist/nextskin` 经启动器起服务跑 Playwright；再用发行目录构建镜像冒烟 |
 | `test:visual` | `pnpm test:visual` | Docker | 每个 story 拍亮色、暗色、亮色加结构全开三张截图，和 `packages/ui/visual/__screenshots__` 的基线比较 |
 | `test:pack` | `pnpm test:pack` | 联网 | 在仓库外安装打出来的 SDK 和构建命令，构建一个插件 |
-| `changeset` | `pnpm changeset status` | | `packages/plugin-sdk/src` 有改动就必须附 changeset |
+| `changeset` | `pnpm changeset status` | | `packages/plugin-sdk/src`、`packages/plugin-cli/src` 有改动（测试文件也算）就必须附 changeset |
 
 - 只改了 `*.md`、`docs/**`、`spikes/**` 的 PR 和推送不触发 CI。
 - 同一个 PR 推了新提交，还在跑的旧运行会被取消。
@@ -75,7 +75,7 @@ pnpm exec prettier --write <报出来的文件>
 ### 插件 SDK
 
 - **API 报告**：改了 `packages/plugin-sdk/src` 之后跑 `pnpm --filter @nextskin/plugin-sdk api:update`，把 `packages/plugin-sdk/etc/plugin-sdk.api.md` 一起提交。只改注释也要跑：报告里带着 `.d.ts` 的行号。单跑 `pnpm --filter @nextskin/plugin-sdk test` 读的是上次构建的 `dist`，本地可能误报通过，以 `pnpm check` 为准。
-- **changeset**：`Some packages have been changed but no changesets were found`。`src` 有改动就跑 `pnpm changeset` 写一份；不需要发版的改动用 `pnpm changeset --empty`。公开 API 的改动还要过 `packages/plugin-sdk/type-tests`，见该包的 AGENTS.md。
+- **changeset**：`Some packages have been changed but no changesets were found`。`src` 有改动就跑 `pnpm changeset` 写一份；只改了 `src` 里的测试这类不需要发版的改动，用 `pnpm changeset --empty`。公开 API 的改动还要过 `packages/plugin-sdk/type-tests`，见该包的 AGENTS.md。
 - **test:pack**：npm 包里只能有白名单里的文件。`packages/plugin-sdk/docs/` 整个随包发布，里面只放平铺的 `.md`；建了子目录（比如草稿目录）test:pack 就会失败，草稿放到包外。
 
 ### 截图回归
