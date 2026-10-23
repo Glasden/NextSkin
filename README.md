@@ -19,7 +19,7 @@
 - **部署简单**：一个 zip，有 Node 24 就能运行，没有原生依赖、不需要 Redis。默认 SQLite，也支持 MySQL / MariaDB、PostgreSQL；另有 Docker 镜像。
 - **插件**：安装的插件跑在独立进程里，用到什么能力先声明。插件 SDK 发布在 npm（[`@nextskin/plugin-sdk`](packages/plugin-sdk)）；第三方登录、邀请码等官方插件随发行包分发。
 
-还在 0.x，各部分做到哪一步见 [`docs/PROGRESS.md`](docs/PROGRESS.md)。
+还在 0.x，各版本的变化见 [Releases](https://github.com/Glasden/NextSkin/releases)，还没做完的部分见 [`docs/PROGRESS.md`](docs/PROGRESS.md)。
 
 ## 部署
 
@@ -60,7 +60,7 @@ pnpm dev
 | [`docs/adr/`](docs/adr/README.md) | 架构决策记录 |
 | [`docs/schema.md`](docs/schema.md) | 核心表设计 |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | 视觉与界面规范 |
-| [`docs/PROGRESS.md`](docs/PROGRESS.md) | 进度 |
+| [`docs/PROGRESS.md`](docs/PROGRESS.md) | 还没做完的部分 |
 
 ## 许可证
 
