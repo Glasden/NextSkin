@@ -11,6 +11,7 @@ import { apiError, formErrors, postJson } from '../../../lib/api-client'
  */
 export function EmailForm({ mailConfigured }: { mailConfigured: boolean }) {
   const t = useTranslations('user.profile.email')
+  const common = useTranslations('common')
   const router = useRouter()
   const toast = useToast()
   const [pending, setPending] = useState(false)
@@ -53,7 +54,7 @@ export function EmailForm({ mailConfigured }: { mailConfigured: boolean }) {
       <Form key={generation} errors={errors} onFormSubmit={(values) => void submit(values)}>
         {error && <Alert tone="danger">{error}</Alert>}
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('new')} name="email">
+          <Field label={t('new')} name="email" formatError={common('emailFormat')}>
             <Input type="email" autoComplete="email" maxLength={255} required />
           </Field>
           <Field label={t('password')} name="password">
