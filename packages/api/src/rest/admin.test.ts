@@ -62,7 +62,7 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(46)
+  expect(routes).toHaveLength(47)
   for (const route of routes) {
     const path = route.path
       .slice('/api'.length)
@@ -88,35 +88,37 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
     const image = new FormData()
     image.set('file', new Blob([new Uint8Array([1])]), 'logo.png')
     const body =
-      route.path === '/api/admin/notifications' && route.method === 'POST'
-        ? { audience: 'all', title: '通知', body: '' }
-        : route.path.startsWith('/api/admin/plugin-packages')
-          ? upload
-          : route.path === '/api/admin/site-images'
-            ? image
-            : route.path === '/api/admin/failed-jobs/retry'
-              ? { through: 7 }
-              : route.path.endsWith('/settings')
-                ? { values: {} }
-                : route.path.endsWith('/email')
-                  ? { email: 'new@example.test' }
-                  : route.path.endsWith('/password')
-                    ? { password: 'new-password-123' }
-                    : route.path.endsWith('/score')
-                      ? { delta: 1 }
-                      : route.path.endsWith('/transfer')
-                        ? { uid: 8 }
-                        : route.path.endsWith('/closet') && route.method === 'POST'
-                          ? { tid: 7 }
-                          : route.path.startsWith('/api/admin/textures/') && route.method === 'PATCH'
-                            ? { name: 'Skin' }
-                            : route.path.startsWith('/api/admin/players/') && route.method === 'PATCH'
-                              ? { name: 'Steve' }
-                              : route.method === 'POST'
-                                ? { action: 'dismiss' }
-                                : route.method === 'PATCH'
-                                  ? { role: 'banned' }
-                                  : undefined
+      route.path === '/api/admin/themes'
+        ? { default: 'diamond' }
+        : route.path === '/api/admin/notifications' && route.method === 'POST'
+          ? { audience: 'all', title: '通知', body: '' }
+          : route.path.startsWith('/api/admin/plugin-packages')
+            ? upload
+            : route.path === '/api/admin/site-images'
+              ? image
+              : route.path === '/api/admin/failed-jobs/retry'
+                ? { through: 7 }
+                : route.path.endsWith('/settings')
+                  ? { values: {} }
+                  : route.path.endsWith('/email')
+                    ? { email: 'new@example.test' }
+                    : route.path.endsWith('/password')
+                      ? { password: 'new-password-123' }
+                      : route.path.endsWith('/score')
+                        ? { delta: 1 }
+                        : route.path.endsWith('/transfer')
+                          ? { uid: 8 }
+                          : route.path.endsWith('/closet') && route.method === 'POST'
+                            ? { tid: 7 }
+                            : route.path.startsWith('/api/admin/textures/') && route.method === 'PATCH'
+                              ? { name: 'Skin' }
+                              : route.path.startsWith('/api/admin/players/') && route.method === 'PATCH'
+                                ? { name: 'Steve' }
+                                : route.method === 'POST'
+                                  ? { action: 'dismiss' }
+                                  : route.method === 'PATCH'
+                                    ? { role: 'banned' }
+                                    : undefined
     for (const loggedIn of [true, false]) {
       authenticated = loggedIn
       const response = await request(route.method, path + query, body)
@@ -424,4 +426,34 @@ test('后台测试验证码：未配置、缺令牌和三种核对结果；使�
     expect(check).toHaveBeenLastCalledWith({ token: 'token', ip: '198.51.100.9' })
   }
   expect(await env.db().selectFrom('audit_logs').selectAll().execute()).toEqual([])
+})
+
+test('PATCH /admin/themes 设默认、开关和错误状态；审计使用连接对端 IP', async () => {
+  await env.db().updateTable('users').set({ role: 'superadmin' }).where('id', '=', env.actor.uid).execute()
+  const { request } = setup()
+  const response = await request('PATCH', '/admin/themes', { default: 'diamond' })
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({ default: 'diamond', enabled: ['diamond'] })
+  expect((await request('PATCH', '/admin/themes', { disable: 'diamond' })).status).toBe(409)
+  expect((await request('PATCH', '/admin/themes', { enable: 'missing' })).status).toBe(404)
+  const update = vi
+    .spyOn(env.core.themes, 'update')
+    .mockResolvedValue({ default: 'diamond', enabled: ['diamond', 'palette/one'] })
+  expect(
+    (await request('PATCH', '/admin/themes', { enable: 'palette/one' }, { 'x-forwarded-for': '198.51.100.99' })).status,
+  ).toBe(200)
+  expect(update).toHaveBeenCalledExactlyOnceWith({ uid: env.actor.uid, ip: '192.0.2.10' }, { enable: 'palette/one' })
+})
+
+test.each([
+  {},
+  { default: 'diamond', enable: 'diamond' },
+  { disable: 'diamond', extra: true },
+  { enable: 1 },
+  { default: 'a'.repeat(129) },
+])('PATCH /admin/themes 只接受单项严格请求 %j', async (body) => {
+  const { request } = setup()
+  const update = vi.spyOn(env.core.themes, 'update')
+  expect((await request('PATCH', '/admin/themes', body)).status).toBe(400)
+  expect(update).not.toHaveBeenCalled()
 })

@@ -206,7 +206,7 @@ test('卸载安装的插件和重启 host 都写审计', async () => {
     {
       action: 'plugin.uninstall',
       ip: '192.0.2.10',
-      details: { plugin: 'probe', version: '1.0.0', wasEnabled: false, bindings: 0 },
+      details: { plugin: 'probe', version: '1.0.0', wasEnabled: false, bindings: 0, themeUsers: 0 },
     },
   ])
 })

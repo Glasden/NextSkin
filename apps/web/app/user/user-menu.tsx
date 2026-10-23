@@ -8,7 +8,7 @@ import { Logout } from 'pixelarticons/react/Logout.js'
 import { Tools } from 'pixelarticons/react/Tools.js'
 import { useState } from 'react'
 import { postJson } from '../../lib/api-client'
-import { userNavItems } from './user-nav'
+import { visibleUserNavItems } from './user-nav'
 
 function useSignOut() {
   const t = useTranslations('user.menu')
@@ -25,13 +25,13 @@ function useSignOut() {
   }
 }
 
-/** 页头右上角的用户菜单：用户中心的各个分区、管理后台（有后台权限时）和退出登录 */
-export function UserMenu({ nickname, admin }: { nickname: string; admin: boolean }) {
+/** 页头右上角的用户菜单：用户中心的各个分区、管理后台（有后台权限时）和退出登录。themes 同 UserNav */
+export function UserMenu({ nickname, admin, themes }: { nickname: string; admin: boolean; themes: boolean }) {
   const t = useTranslations('user')
   const signOut = useSignOut()
   return (
     <Menu label={nickname} align="end">
-      {userNavItems.map(({ href, icon: Icon, label }) => (
+      {visibleUserNavItems(themes).map(({ href, icon: Icon, label }) => (
         <MenuLinkItem key={href} render={<NextLink href={href} />} icon={<Icon />}>
           {t(`nav.${label}`)}
         </MenuLinkItem>

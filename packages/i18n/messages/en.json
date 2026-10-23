@@ -158,6 +158,7 @@
     "plugin_busy": "This plugin is being changed by another operation (install, upgrade, enable, uninstall or the cleanup after an uninstall), or someone just changed it. Refresh the page to see its current state, then try again.",
     "plugin_required_by": "{plugin}, which is enabled, depends on this plugin ({range}). Disable {plugin} first, or use a package whose version is in that range.",
     "plugin_official": "Official plugins can't be uninstalled, only disabled.",
+    "plugin_theme_invalid": "The plugin theme {theme} failed the check: in {mode, select, light {light} other {dark}} mode, {pair} {check, select, contrast {have a contrast ratio of only {actual}, below {minimum}} distance {are only {actual} apart in OKLab, below {minimum}} other {have their lightness the wrong way round}} ({values}). Contact the plugin author.",
     "dead_letter_not_found": "This failed job could not be found. It may already have been retried or deleted.",
     "dead_letter_not_retryable": "This job can't be retried: putting it back in the queue would only fail again (for example, the link in the email was removed). You can only delete it.",
     "external_login_not_found": "This sign-in method does not exist or has been turned off.",
@@ -198,7 +199,9 @@
     "notification_title_length": "The title must contain {min}–{max} characters.",
     "notification_body_length": "The body cannot exceed {max} characters.",
     "notification_recipients_length": "Specify {min}–{max} recipients.",
-    "notification_recipient_unknown": "Recipient “{value}” was not found."
+    "notification_recipient_unknown": "Recipient “{value}” was not found.",
+    "theme_not_found": "This theme doesn't exist or isn't enabled.",
+    "theme_default_disabled": "This is the site's default theme and can't be turned off. Make another theme the default first."
   },
   "score": {
     "reasons": {
@@ -348,6 +351,7 @@
       "notifications": "Notifications",
       "players": "Players",
       "profile": "Profile",
+      "theme": "Theme",
       "security": "Sign-in & security",
       "closet": "Closet",
       "reports": "My reports",
@@ -546,6 +550,20 @@
         "passwordRequired": "Deleting your account requires your password. This account has no password yet, so set one first."
       },
       "setPassword": "Set a password"
+    },
+    "theme": {
+      "title": "Theme",
+      "description": "Choose a color theme. Your theme is saved to your account and follows you across devices; light and dark mode are remembered per device.",
+      "colorMode": "Light and dark mode",
+      "colorModeHint": "Applies to this device only. Same setting as the menu in the top right corner.",
+      "themes": "Colors",
+      "followDefault": "Use site default",
+      "followDefaultDescription": "Currently {name}",
+      "builtin": "Built-in",
+      "stale": "The theme you chose has been turned off. You are now using the site default.",
+      "saved": "Switched to {name}",
+      "savedDefault": "Now using the site default",
+      "saveFailed": "Couldn't change the theme. Please try again later."
     },
     "security": {
       "title": "Sign-in & security",
@@ -906,7 +924,8 @@
       "label": "Color mode",
       "system": "System",
       "light": "Light",
-      "dark": "Dark"
+      "dark": "Dark",
+      "theme": "Theme…"
     },
     "maintenance": {
       "label": "Maintenance notice",
@@ -1193,6 +1212,7 @@
       "players": "Players",
       "audit": "Audit log",
       "settings": "Settings",
+      "themes": "Themes",
       "migration": "Migration",
       "plugins": "Plugins",
       "failedJobs": "Failed jobs",
@@ -1963,6 +1983,30 @@
         }
       }
     },
+    "themes": {
+      "title": "Themes",
+      "description": "The color themes users can choose from in their user center. Guests and users who haven't chosen one see the site default. Themes from plugins start out turned off: check that they suit your site before turning them on.",
+      "builtin": "Built-in",
+      "default": "Default",
+      "enable": "Enabled",
+      "setDefault": "Make default",
+      "defaultHint": "The site default can't be turned off. Make another theme the default first.",
+      "enabled": "Turned on {name}",
+      "disabled": "Turned off {name}",
+      "defaultChanged": "Site default is now {name}",
+      "failed": "Couldn't save. Please try again later.",
+      "noPlugins": "Only the built-in Diamond theme is available. Enable a plugin that provides themes (such as the official \"More colors\") and its themes will show up here.",
+      "pluginsLink": "Go to plugins",
+      "invalid": {
+        "title": "Themes that failed the check",
+        "description": "These themes have colors without enough contrast or that are too similar to tell apart, so they can't be turned on. Update the plugin once its author has fixed them."
+      },
+      "issue": "In {mode, select, light {light} other {dark}} mode, {first} and {second} {check, select, contrast {have a contrast ratio of only {actual}, below {minimum}} distance {are only {actual} apart in OKLab, below {minimum}} other {have their lightness the wrong way round}} ({values})",
+      "missing": {
+        "title": "Themes currently unavailable",
+        "description": "These themes are turned on, but the plugin providing them is disabled or its new version no longer has them. Users who chose them see the site default for now, and get their choice back once the plugin does."
+      }
+    },
     "migration": {
       "title": "Migration",
       "description": "Import from Blessing Skin 6: the final sync before switching over, or importing old data into a site created with New site. Every run imports everything from the old database again and replaces this site's data.",
@@ -2080,6 +2124,8 @@
         "jobs": "Background jobs",
         "cron": "Scheduled jobs",
         "pages": "Pages it adds",
+        "themes": "Color themes",
+        "themesLink": "Turn on in Themes",
         "formFields": "Fields it adds to the sign-up form",
         "fromQuery": "Can be prefilled from a link",
         "none": "None",
@@ -3238,6 +3284,11 @@
           }
         }
       }
+    }
+  },
+  "themes": {
+    "builtin": {
+      "diamond": "Diamond"
     }
   }
 }

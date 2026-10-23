@@ -99,6 +99,31 @@ const updateSettings = createRoute({
     ...errors,
   },
 })
+const updateThemes = createRoute({
+  method: 'patch',
+  path: '/admin/themes',
+  request: {
+    body: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: z.union([
+            z.object({ default: z.string().max(128) }).strict(),
+            z.object({ enable: z.string().max(128) }).strict(),
+            z.object({ disable: z.string().max(128) }).strict(),
+          ]),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: '主题设置已更新',
+      content: { 'application/json': { schema: z.object({ default: z.string(), enabled: z.array(z.string()) }) } },
+    },
+    ...errors,
+  },
+})
 const generateSetting = createRoute({
   method: 'post',
   path: '/admin/settings/{key}/generate',
@@ -161,6 +186,12 @@ export function registerAdmin(app: OpenAPIHono<AppEnv>, core: Core) {
         { uid: c.get('user')!.uid, ip: await clientIp(c, core) },
         c.req.valid('json').values,
       ),
+      200,
+    ),
+  )
+  app.openapi(updateThemes, async (c) =>
+    c.json(
+      await core.themes.update({ uid: c.get('user')!.uid, ip: await clientIp(c, core) }, c.req.valid('json')),
       200,
     ),
   )

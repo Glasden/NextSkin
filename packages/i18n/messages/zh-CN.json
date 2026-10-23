@@ -158,6 +158,7 @@
     "plugin_busy": "这个插件正在被另一个操作改动（安装、升级、启用、卸载或卸载后的清理），或者刚被别人改过。刷新页面看看现在的状态再试。",
     "plugin_required_by": "已经启用的 {plugin} 依赖这个插件（{range}）。先停用 {plugin}，或者换一个版本在这个范围里的包。",
     "plugin_official": "官方插件不能卸载，只能停用。",
+    "plugin_theme_invalid": "插件的主题 {theme} 没通过检查：{mode, select, light {亮色} other {暗色}}下 {pair} {check, select, contrast {的对比度只有 {actual}，至少要 {minimum}} distance {在 OKLab 里只差 {actual}，至少要 {minimum}} other {的明暗方向反了}}（{values}）。请联系插件作者。",
     "dead_letter_not_found": "找不到这个失败的任务，可能已经重试过或删掉了。",
     "dead_letter_not_retryable": "这个任务不能重试：放回队列也只会再失败（比如邮件里的链接已经去掉了），只能删除。",
     "external_login_not_found": "没有这种登录方式，或者它已经停用了。",
@@ -198,7 +199,9 @@
     "notification_title_length": "标题需要 {min}–{max} 个字。",
     "notification_body_length": "正文不能超过 {max} 个字。",
     "notification_recipients_length": "请填写 {min}–{max} 个收件人。",
-    "notification_recipient_unknown": "找不到收件人「{value}」。"
+    "notification_recipient_unknown": "找不到收件人「{value}」。",
+    "theme_not_found": "这套主题不存在或没有启用。",
+    "theme_default_disabled": "这是站点的默认主题，不能关掉。先把别的主题设为默认。"
   },
   "score": {
     "reasons": {
@@ -348,6 +351,7 @@
       "notifications": "通知",
       "players": "角色",
       "profile": "个人资料",
+      "theme": "主题",
       "security": "登录与安全",
       "closet": "衣柜",
       "reports": "我的举报",
@@ -546,6 +550,20 @@
         "passwordRequired": "删除账号要核对密码。这个账号还没有密码，请先设置密码。"
       },
       "setPassword": "去设置密码"
+    },
+    "theme": {
+      "title": "主题",
+      "description": "换一套配色。主题存在账号里，换了设备也一样；亮暗模式按设备记。",
+      "colorMode": "亮暗模式",
+      "colorModeHint": "只对这台设备生效，和页头右上角的菜单是同一个设置。",
+      "themes": "配色",
+      "followDefault": "跟随站点默认",
+      "followDefaultDescription": "现在是{name}",
+      "builtin": "内置",
+      "stale": "你选的主题已停用，现在跟随站点默认。",
+      "saved": "已换成{name}",
+      "savedDefault": "现在跟随站点默认",
+      "saveFailed": "没能换主题，请稍后重试。"
     },
     "security": {
       "title": "登录与安全",
@@ -906,7 +924,8 @@
       "label": "亮暗模式",
       "system": "跟随系统",
       "light": "亮色",
-      "dark": "暗色"
+      "dark": "暗色",
+      "theme": "主题…"
     },
     "maintenance": {
       "label": "维护提示",
@@ -1193,6 +1212,7 @@
       "players": "角色",
       "audit": "审计日志",
       "settings": "设置",
+      "themes": "主题",
       "migration": "数据迁移",
       "plugins": "插件",
       "failedJobs": "失败任务",
@@ -1963,6 +1983,30 @@
         }
       }
     },
+    "themes": {
+      "title": "主题",
+      "description": "用户能在用户中心挑的配色。没登录的访客和没挑过的用户看站点默认的那套。插件带来的主题默认不启用，看过和站点相配再开。",
+      "builtin": "内置",
+      "default": "默认",
+      "enable": "启用",
+      "setDefault": "设为默认",
+      "defaultHint": "站点默认的主题不能关，先把别的主题设为默认。",
+      "enabled": "已启用{name}",
+      "disabled": "已停用{name}",
+      "defaultChanged": "站点默认改成了{name}",
+      "failed": "没能保存，请稍后重试。",
+      "noPlugins": "只有内置的钻石青。启用提供主题的插件（例如官方的“更多配色”）以后，它的主题会列在这里。",
+      "pluginsLink": "去插件页",
+      "invalid": {
+        "title": "没有通过检查的主题",
+        "description": "这些主题有颜色的对比度不够或者分不清，不能启用。等插件作者修好再升级插件。"
+      },
+      "issue": "{mode, select, light {亮色} other {暗色}}下 {first} 和 {second} {check, select, contrast {的对比度只有 {actual}，至少要 {minimum}} distance {在 OKLab 里只差 {actual}，至少要 {minimum}} other {的明暗方向反了}}（{values}）",
+      "missing": {
+        "title": "暂时用不上的主题",
+        "description": "这些主题是启用的，但提供它们的插件停用了，或者新版本里没有这一套。选了它们的用户现在跟随站点默认，插件恢复以后照旧。"
+      }
+    },
     "migration": {
       "title": "数据迁移",
       "description": "从 Blessing Skin 6 导入：切换前的最终同步，或者用“新站”建好的站点后来要导入旧数据。每次运行都从旧库重新导入全部数据，整库替换。",
@@ -2080,6 +2124,8 @@
         "jobs": "后台任务",
         "cron": "定时任务",
         "pages": "加的页面",
+        "themes": "配色主题",
+        "themesLink": "去主题页启用",
         "formFields": "在注册表单上加的字段",
         "fromQuery": "可以从链接预填",
         "none": "无",
@@ -3238,6 +3284,11 @@
           }
         }
       }
+    }
+  },
+  "themes": {
+    "builtin": {
+      "diamond": "钻石青"
     }
   }
 }

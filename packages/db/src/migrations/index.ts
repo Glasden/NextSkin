@@ -56,6 +56,8 @@ import * as addScoreTransactionsPluginColumns from './0045_add_score_transaction
 
 import * as createNotifications from './0046_create_notifications.ts'
 
+import * as addUsersTheme from './0047_add_users_theme.ts'
+
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
   '0002_create_texture_files': createTextureFiles,
@@ -103,4 +105,5 @@ export const coreMigrations: Record<string, Migration> = {
   '0044_add_users_oauth_version': addUsersOauthVersion,
   '0045_add_score_transactions_plugin_columns': addScoreTransactionsPluginColumns,
   '0046_create_notifications': createNotifications,
+  '0047_add_users_theme': addUsersTheme,
 }

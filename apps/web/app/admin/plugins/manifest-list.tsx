@@ -1,6 +1,7 @@
 import type { PluginDetail } from '@nextskin/domain'
-import { Badge } from '@nextskin/ui'
+import { Badge, Link } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
+import NextLink from 'next/link'
 import type { ReactNode } from 'react'
 
 // 插件详情页（服务端）和上传插件的确认框（客户端）共用：不写 'use client'，也不碰服务端的东西
@@ -55,19 +56,23 @@ function ManifestRow({
 
 /**
  * 插件会做什么（manifest，ADR-0033）。`translate` 取插件自己的文案（表单字段、页面标题）；
- * `added` 是升级时新版本多要的能力和外部地址，标上“新增”
+ * `added` 是升级时新版本多要的能力和外部地址，标上“新增”。
+ * `themesLink`：配色主题后面链到后台的主题页（插件带来的主题默认不启用，ADR-0057）；上传的确认框里还没装上，不链
  */
 export function ManifestList({
   manifest,
   highRisk,
   translate,
   added,
+  themesLink = false,
 }: {
   manifest: PluginDetail['manifest']
   highRisk: readonly string[]
   translate: (key: string) => string
   added?: { capabilities: readonly string[]; network: readonly string[] }
+  themesLink?: boolean
 }) {
+  const themes = manifest.ui.themes ?? []
   const t = useTranslations('admin.plugins')
   const isNew = (list: readonly string[] | undefined, item: string) =>
     list?.includes(item) && <Badge tone="warning">{t('upload.added')}</Badge>
@@ -170,6 +175,20 @@ export function ManifestList({
           items={Object.entries(manifest.ui.pages ?? {}).map(([key, page]) => (
             <span key={key}>{translate(page.title)}</span>
           ))}
+        />
+        <ManifestRow
+          label={t('manifest.themes')}
+          none={t('manifest.none')}
+          items={[
+            ...themes.map(({ name, label }) => <span key={name}>{translate(label)}</span>),
+            ...(themesLink && themes.length
+              ? [
+                  <Link key="link" render={<NextLink href="/admin/themes" />}>
+                    {t('manifest.themesLink')}
+                  </Link>,
+                ]
+              : []),
+          ]}
         />
       </dl>
     </div>

@@ -2,6 +2,7 @@ import { ToastProvider } from '@nextskin/ui'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
 import { pluginNavItems } from '../../lib/plugins'
+import { getServer } from '../../lib/server'
 import { getSessionUser } from '../../lib/session'
 import { SiteFooter } from '../site-footer'
 import { SiteHeader } from '../site-header'
@@ -15,9 +16,10 @@ import { UserNav } from './user-nav'
 export default async function UserLayout({ children }: { readonly children: ReactNode }) {
   const [user, t, common] = await Promise.all([getSessionUser(), getTranslations('user'), getTranslations('common')])
   if (!user) return children
-  const pluginItems = await pluginNavItems('user', user)
+  const { core } = await getServer()
+  const [pluginItems, themes] = await Promise.all([pluginNavItems('user', user), core.themes.selectableCount()])
   const banned = user.role === 'banned'
-  const nav = <UserNav pluginItems={pluginItems} />
+  const nav = <UserNav pluginItems={pluginItems} themes={themes > 1} />
   return (
     <ToastProvider label={common('notifications')} closeLabel={common('close')}>
       <div className="flex min-h-dvh flex-col">

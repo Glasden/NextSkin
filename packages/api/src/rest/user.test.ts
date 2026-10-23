@@ -54,7 +54,13 @@ function setup(rateLimiter?: RateLimiter) {
     confirmEmailChange: vi.fn().mockResolvedValue({ email: 'new@example.test' }),
     deleteAccount: vi.fn().mockResolvedValue(undefined),
   }
-  const core = { settings: { read }, auth: { getSessionUser, clearSessionCookies }, users: methods } as unknown as Core
+  const setTheme = vi.fn().mockResolvedValue({ theme: 'diamond' })
+  const core = {
+    themes: { setTheme },
+    settings: { read },
+    auth: { getSessionUser, clearSessionCookies },
+    users: methods,
+  } as unknown as Core
   const app = rateLimiter
     ? new Hono<AppEnv>()
         .use('*', async (c, next) => {
@@ -69,7 +75,7 @@ function setup(rateLimiter?: RateLimiter) {
       headers: { origin: 'http://example.test', 'content-type': 'application/json', ...headers },
       body: JSON.stringify(body),
     })
-  return { app, request, methods, getSessionUser, clearSessionCookies }
+  return { app, request, methods, getSessionUser, clearSessionCookies, setTheme }
 }
 
 test.each(endpoints)('%s %s 返回约定响应，只接受会话 uid', async (method, path, body, status, fn, expected) => {
@@ -245,4 +251,34 @@ test('同一 uid 四个并发请求，恰好三个进入用例、一个 429', as
   }
   expect((await Promise.all(requests)).map((r) => r.status).sort()).toEqual([202, 202, 202, 429])
   expect(methods.changeEmail).toHaveBeenCalledTimes(3)
+})
+
+test.each(['diamond', null])('PUT /user/theme 用会话 uid 保存 %j', async (theme) => {
+  const { request, setTheme } = setup()
+  setTheme.mockResolvedValue({ theme })
+  const response = await request('PUT', '/api/user/theme', { theme, uid: 999 })
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({ theme })
+  expect(setTheme).toHaveBeenCalledExactlyOnceWith({ uid: 42 }, theme)
+})
+test('PUT /user/theme 未登录返回 401', async () => {
+  const { request, setTheme, getSessionUser } = setup()
+  getSessionUser.mockResolvedValue(null)
+  expect((await request('PUT', '/api/user/theme', { theme: null })).status).toBe(401)
+  expect(setTheme).not.toHaveBeenCalled()
+})
+test.each([{}, { theme: 1 }, { theme: 'a'.repeat(129) }])('PUT /user/theme 拒绝非法请求 %j', async (body) => {
+  const { request, setTheme } = setup()
+  expect((await request('PUT', '/api/user/theme', body)).status).toBe(400)
+  expect(setTheme).not.toHaveBeenCalled()
+})
+test.each([
+  ['theme_not_found', 404],
+  ['user_banned', 403],
+] as const)('PUT /user/theme 映射 %s', async (code, status) => {
+  const { request, setTheme } = setup()
+  setTheme.mockRejectedValue(new DomainError(code))
+  const response = await request('PUT', '/api/user/theme', { theme: 'gone' })
+  expect(response.status).toBe(status)
+  expect(await response.json()).toMatchObject({ error: { code } })
 })

@@ -285,7 +285,7 @@ export default async function AdminPluginPage({ params }: { params: Promise<{ id
       </Section>
 
       <Section title={t('manifest.title')}>
-        <ManifestList manifest={detail.manifest} highRisk={detail.highRisk} translate={translate} />
+        <ManifestList manifest={detail.manifest} highRisk={detail.highRisk} translate={translate} themesLink />
       </Section>
 
       {!detail.official && (

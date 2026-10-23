@@ -1,12 +1,5 @@
 import { isDeepStrictEqual } from 'node:util'
-import {
-  insertOrIgnore,
-  toIsoTimestamp,
-  transactionWithRetry,
-  upsert,
-  type CoreDatabase,
-  type IsoTimestamp,
-} from '@nextskin/db'
+import { toIsoTimestamp, transactionWithRetry, upsert, type CoreDatabase } from '@nextskin/db'
 import type { Actor } from '@nextskin/plugin-sdk'
 import type { Kysely, Transaction } from 'kysely'
 import { can, type CorePermission } from '../access/permissions.ts'
@@ -14,7 +7,8 @@ import { audit } from '../audit/write.ts'
 import { DomainError } from '../errors.ts'
 import type { CaptchaInput, CaptchaService } from '../captcha/service.ts'
 import type { MailService } from '../mail/service.ts'
-import { decodeSettingValue, encodeSettingValue } from '../settings/codec.ts'
+import { encodeSettingValue } from '../settings/codec.ts'
+import { deleteSetting, lockSetting, storedValue } from '../settings/write.ts'
 import { settingControl, settingJsonSchema, type SettingControl } from '../settings/form.ts'
 import {
   coreSettingsNamespace,
@@ -43,16 +37,6 @@ function visibleKey(key: string): key is CoreSettingKey {
   return Object.hasOwn(coreSettingsRegistry, key) && coreSettingsRegistry[key as CoreSettingKey].section !== null
 }
 
-/** 后台读取坏值时用默认值兜底，仍保留 unreadable，让管理员能修复存储。 */
-function storedValue(key: CoreSettingKey, stored: string | undefined, secretKey: string) {
-  const fallback = coreSettingsRegistry[key].schema.parse(coreSettingsRegistry[key].default)
-  try {
-    return { value: stored === undefined ? fallback : decodeSettingValue(key, stored, secretKey), unreadable: false }
-  } catch {
-    return { value: fallback, unreadable: true }
-  }
-}
-
 export function createAdminSettings(options: {
   db: Kysely<CoreDatabase>
   settings: ReturnType<typeof createSettingQueries>
@@ -74,44 +58,6 @@ export function createAdminSettings(options: {
     options
   const keys = Object.keys(coreSettingsRegistry) as CoreSettingKey[]
   const imageKeys = new Set(keys.filter((key) => settingControl(settingJsonSchema(key))?.kind === 'image'))
-
-  function deleteSetting(tx: Transaction<CoreDatabase>, key: CoreSettingKey) {
-    return tx.deleteFrom('settings').where('namespace', '=', coreSettingsNamespace).where('key', '=', key).execute()
-  }
-
-  /**
-   * 读改前的值之前先锁住这一行，两个人同时保存同一项时排队，审计里的旧值才是真的旧值。
-   * 还没有这一行（值等于默认值）时插一行默认值占位：并发的另一笔插入会在这里等对方提交。
-   * 占位的行最后要么被新值覆盖，要么删掉，表里仍然只存和默认值不同的项
-   */
-  async function lockSetting(tx: Transaction<CoreDatabase>, key: CoreSettingKey, timestamp: IsoTimestamp) {
-    const definition = coreSettingsRegistry[key]
-    const placeholder = await insertOrIgnore(
-      tx,
-      'settings',
-      {
-        namespace: coreSettingsNamespace,
-        key,
-        value: encodeSettingValue(key, definition.schema.parse(definition.default), { secretKey }),
-        updated_at: timestamp,
-      },
-      ['namespace', 'key'],
-    )
-    await tx
-      .updateTable('settings')
-      .set((eb) => ({ value: eb.ref('value') }))
-      .where('namespace', '=', coreSettingsNamespace)
-      .where('key', '=', key)
-      .execute()
-    if (placeholder) return { stored: undefined, placeholder }
-    const row = await tx
-      .selectFrom('settings')
-      .select('value')
-      .where('namespace', '=', coreSettingsNamespace)
-      .where('key', '=', key)
-      .executeTakeFirst()
-    return { stored: row?.value, placeholder }
-  }
 
   async function update(actor: AdminActor | null, values: Record<string, unknown>, generated = false) {
     // 站点图片的值要指向存储里已经有的图（ADR-0042"上传和保存"）。在事务之外核对：以后的共享存储是网络请求
@@ -144,7 +90,7 @@ export function createAdminSettings(options: {
       for (const [key, value] of parsed) {
         const definition = coreSettingsRegistry[key]
         const timestamp = toIsoTimestamp(now())
-        const { stored, placeholder } = await lockSetting(tx, key, timestamp)
+        const { stored, placeholder } = await lockSetting(tx, key, timestamp, secretKey)
         const before = storedValue(key, stored, secretKey)
         if (!before.unreadable && isDeepStrictEqual(before.value, value)) {
           if (placeholder) await deleteSetting(tx, key)
