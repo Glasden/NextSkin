@@ -2,7 +2,7 @@
   "name": "@nextskin/plugin-color-themes",
   "version": "1.0.0",
   "private": true,
-  "description": "更多配色：钴蓝、洋红两套配色主题（官方插件，ADR-0057 的参考插件）",
+  "description": "更多配色：钴蓝、洋红、高对比三套配色主题（官方插件，ADR-0057、ADR-0058 的参考插件）",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
