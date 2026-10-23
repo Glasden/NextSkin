@@ -11,6 +11,7 @@ import {
   Input,
   Markdown,
   NotificationItem,
+  Panel,
   Select,
   Textarea,
   useToast,
@@ -113,7 +114,7 @@ export function NotificationComposer({ to }: { to: number | null }) {
 
       <div className="flex min-w-0 flex-col gap-2">
         <h3 className="text-sm font-medium text-text">{t('preview')}</h3>
-        <div className="rounded-md border border-border bg-surface">
+        <Panel padding="none">
           <NotificationItem
             title={title.trim() || t('previewUntitled')}
             time={t('previewTime')}
@@ -122,7 +123,7 @@ export function NotificationComposer({ to }: { to: number | null }) {
           >
             {body.trim() ? <Markdown>{body}</Markdown> : undefined}
           </NotificationItem>
-        </div>
+        </Panel>
       </div>
 
       <Dialog

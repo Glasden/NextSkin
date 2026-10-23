@@ -1,5 +1,5 @@
 import { can } from '@nextskin/domain'
-import { Alert, Badge, Link, PlayerHead, SkinViewer } from '@nextskin/ui'
+import { Alert, Badge, Link, Panel, PlayerHead, SkinViewer } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -118,28 +118,30 @@ export default async function TexturePage({ params }: { params: Promise<{ tid: s
             {texture.othersPrivate && <Alert tone="info">{t('detail.othersPrivate')}</Alert>}
           </header>
 
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-md border border-border bg-surface p-4">
-            <div className="flex flex-col gap-1">
-              <dt className="text-sm text-text-muted">{t('detail.likes')}</dt>
-              <dd className="font-pixel text-pixel-2 text-text tabular-nums">{texture.likes}</dd>
-            </div>
-            <div className="flex flex-col gap-1">
-              <dt className="text-sm text-text-muted">{t('detail.size')}</dt>
-              <dd className="font-pixel text-pixel-2 text-text tabular-nums">
-                {texture.width}×{texture.height}
-              </dd>
-            </div>
-            <div className="flex flex-col gap-1">
-              <dt className="text-sm text-text-muted">{t('detail.fileSize')}</dt>
-              <dd className="text-sm text-text tabular-nums">
-                {t('detail.kilobytes', { size: Math.ceil(texture.sizeBytes / 1024) })}
-              </dd>
-            </div>
-            <div className="flex flex-col gap-1">
-              <dt className="text-sm text-text-muted">{t('detail.uploadedAt')}</dt>
-              <dd className="text-sm text-text">{uploaded}</dd>
-            </div>
-          </dl>
+          <Panel padding="md">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div className="flex flex-col gap-1">
+                <dt className="text-sm text-text-muted">{t('detail.likes')}</dt>
+                <dd className="font-pixel text-pixel-2 text-text tabular-nums">{texture.likes}</dd>
+              </div>
+              <div className="flex flex-col gap-1">
+                <dt className="text-sm text-text-muted">{t('detail.size')}</dt>
+                <dd className="font-pixel text-pixel-2 text-text tabular-nums">
+                  {texture.width}×{texture.height}
+                </dd>
+              </div>
+              <div className="flex flex-col gap-1">
+                <dt className="text-sm text-text-muted">{t('detail.fileSize')}</dt>
+                <dd className="text-sm text-text tabular-nums">
+                  {t('detail.kilobytes', { size: Math.ceil(texture.sizeBytes / 1024) })}
+                </dd>
+              </div>
+              <div className="flex flex-col gap-1">
+                <dt className="text-sm text-text-muted">{t('detail.uploadedAt')}</dt>
+                <dd className="text-sm text-text">{uploaded}</dd>
+              </div>
+            </dl>
+          </Panel>
 
           {viewer ? (
             <TextureViewerActions

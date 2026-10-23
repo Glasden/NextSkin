@@ -1,6 +1,6 @@
 'use client'
 
-import { Alert, Button, Dialog, DialogClose } from '@nextskin/ui'
+import { Alert, Button, Dialog, DialogClose, Panel } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { apiError, sendJson } from '../../../lib/api-client'
@@ -21,28 +21,30 @@ export function TestCaptcha({ config }: { config: CaptchaConfig | null }) {
   const [pending, setPending] = useState(false)
 
   return (
-    <section className="flex flex-col gap-4 rounded-md border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-      <p className="text-sm text-pretty text-text-muted">{config ? t('hint') : t('notConfigured')}</p>
-      <div className="shrink-0">
-        <Dialog
-          open={open}
-          onOpenChange={setOpen}
-          trigger={<Button disabled={!config}>{t('button')}</Button>}
-          title={t('title')}
-          description={t('description')}
-          actions={
-            <>
-              <DialogClose>{t('close')}</DialogClose>
-              <Button variant="primary" type="submit" form="captcha-test" loading={pending}>
-                {t('verify')}
-              </Button>
-            </>
-          }
-        >
-          {config && <CaptchaTestForm config={config} pending={pending} onPendingChange={setPending} />}
-        </Dialog>
+    <Panel as="section" padding="responsive">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-pretty text-text-muted">{config ? t('hint') : t('notConfigured')}</p>
+        <div className="shrink-0">
+          <Dialog
+            open={open}
+            onOpenChange={setOpen}
+            trigger={<Button disabled={!config}>{t('button')}</Button>}
+            title={t('title')}
+            description={t('description')}
+            actions={
+              <>
+                <DialogClose>{t('close')}</DialogClose>
+                <Button variant="primary" type="submit" form="captcha-test" loading={pending}>
+                  {t('verify')}
+                </Button>
+              </>
+            }
+          >
+            {config && <CaptchaTestForm config={config} pending={pending} onPendingChange={setPending} />}
+          </Dialog>
+        </div>
       </div>
-    </section>
+    </Panel>
   )
 }
 

@@ -1,5 +1,5 @@
 import { externalCallbackPath, type PluginSummary } from '@nextskin/domain'
-import { Alert, Badge, cx, Link, Table } from '@nextskin/ui'
+import { Alert, Badge, cx, Link, Panel, Table } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -182,7 +182,7 @@ export default async function AdminPluginPage({ params }: { params: Promise<{ id
         <Section title={t('logins.title')} description={t('logins.description')}>
           <div className="flex max-w-3xl flex-col gap-3">
             {!secureSite(siteUrl) && <Alert tone="warning">{t('logins.notHttps')}</Alert>}
-            <ul className="flex flex-col divide-y divide-border rounded-md border border-border bg-surface">
+            <Panel as="ul" padding="none" divided>
               {detail.logins.map((login) => (
                 <li key={login.providerId} className="flex flex-col gap-2 px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -195,7 +195,7 @@ export default async function AdminPluginPage({ params }: { params: Promise<{ id
                   </code>
                 </li>
               ))}
-            </ul>
+            </Panel>
           </div>
         </Section>
       )}
@@ -205,10 +205,10 @@ export default async function AdminPluginPage({ params }: { params: Promise<{ id
           <div className="flex flex-col gap-4">
             <dl className="grid max-w-3xl grid-cols-2 gap-4">
               {(['added', 'deducted'] as const).map((kind) => (
-                <div key={kind} className="flex flex-col gap-1 rounded-md border border-border bg-surface p-4">
+                <Panel key={kind} padding="md" gap={1}>
                   <dt className="text-sm text-text-muted">{t(`score.${kind}`)}</dt>
                   <dd className="font-pixel text-pixel-2 text-text tabular-nums">{format.number(score[kind])}</dd>
-                </div>
+                </Panel>
               ))}
             </dl>
             <div className="flex flex-col gap-2">

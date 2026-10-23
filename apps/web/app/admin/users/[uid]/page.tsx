@@ -7,7 +7,18 @@ import {
   type AdminUserDetail,
 } from '@nextskin/domain'
 import { matchLocale } from '@nextskin/i18n'
-import { Alert, Badge, cx, FigurePlaceholder, Link, Pagination, PlayerHead, SkinFigure, Table } from '@nextskin/ui'
+import {
+  Alert,
+  Badge,
+  cx,
+  FigurePlaceholder,
+  Link,
+  Pagination,
+  Panel,
+  PlayerHead,
+  SkinFigure,
+  Table,
+} from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -593,10 +604,10 @@ function Section({
         </h2>
         {badge}
       </div>
-      <div className="flex flex-col gap-4 rounded-md border border-border bg-surface p-6">
+      <Panel gap={4}>
         {description && <p className="max-w-prose text-sm text-pretty text-text-muted">{description}</p>}
         {children}
-      </div>
+      </Panel>
     </section>
   )
 }

@@ -1,5 +1,5 @@
 import { can } from '@nextskin/domain'
-import { Alert, Link } from '@nextskin/ui'
+import { Alert, Link, Panel } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -80,12 +80,12 @@ export default async function AdminOverviewPage() {
       <section aria-label={t('stats')}>
         <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {stats.map((stat) => (
-            <div key={stat.label} className="flex flex-col gap-1 rounded-md border border-border bg-surface p-4">
+            <Panel key={stat.label} padding="md" gap={1}>
               <dt className="text-sm text-text-muted">
                 {stat.href ? <Link render={<NextLink href={stat.href} />}>{stat.label}</Link> : stat.label}
               </dt>
               <dd className="font-pixel text-pixel-2 text-text tabular-nums">{format.number(stat.value)}</dd>
-            </div>
+            </Panel>
           ))}
         </dl>
       </section>

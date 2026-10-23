@@ -1,5 +1,5 @@
 import { matchLocale } from '@nextskin/i18n'
-import { Badge, Link, PlayerHead } from '@nextskin/ui'
+import { Badge, Link, Panel, PlayerHead } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -48,7 +48,7 @@ export default async function ProfilePage() {
         <h2 id="summary-heading" className="font-pixel text-pixel-1 text-text">
           {t('summary.title')}
         </h2>
-        <div className="flex flex-col gap-6 rounded-md border border-border bg-surface p-6">
+        <Panel gap={6}>
           <div className="flex min-w-0 items-center gap-4">
             <PlayerHead src={avatar ? headSrc(avatar.hash) : undefined} size={48} alt={t('summary.avatarAlt')} />
             <div className="flex min-w-0 items-center gap-3">
@@ -92,7 +92,7 @@ export default async function ProfilePage() {
               </span>
             </Fact>
           </dl>
-        </div>
+        </Panel>
       </section>
 
       <Section id="basics" title={t('basics.title')} description={t('basics.description')}>
@@ -178,10 +178,10 @@ function Section({
       <h2 id={`${id}-heading`} className="font-pixel text-pixel-1 text-text">
         {title}
       </h2>
-      <div className="flex flex-col gap-4 rounded-md border border-border bg-surface p-6">
+      <Panel gap={4}>
         <p className="max-w-prose text-sm text-pretty text-text-muted">{description}</p>
         {children}
-      </div>
+      </Panel>
     </section>
   )
 }

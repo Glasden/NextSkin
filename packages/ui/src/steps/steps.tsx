@@ -27,7 +27,7 @@ type StepState = 'complete' | 'current' | 'upcoming'
 
 const boxes: Record<StepState, string> = {
   complete: 'border-border-strong bg-surface text-text',
-  current: 'border-transparent bg-accent text-accent-fg shadow-pixel',
+  current: 'border-transparent bg-accent-fill text-accent-fill-fg shadow-pixel',
   upcoming: 'border-border bg-surface text-text-muted',
 }
 

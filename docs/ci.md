@@ -12,7 +12,7 @@ PR 要等 CI 全部通过才会合并（什么改动走 PR 见 ADR-0047）。这
 | `test (Node 24)` | `pnpm turbo run test` | Node 24 | engines 的下限，只跑测试 |
 | `test:db` | `pnpm test:db` | Docker | `*.db.test.ts` 在 SQLite、MySQL、MariaDB、PostgreSQL 上各跑一遍 |
 | `build + e2e` | `pnpm e2e`，再跑 `packages/launcher/docker/smoke.sh` | 镜像冒烟要 Docker | 先构建（含构建涉及的每个包的类型检查），从 `dist/nextskin` 经启动器起服务跑 Playwright；再用发行目录构建镜像冒烟 |
-| `test:visual` | `pnpm test:visual` | Docker | 每个 story 拍亮暗两张截图，和 `packages/ui/visual/__screenshots__` 的基线比较 |
+| `test:visual` | `pnpm test:visual` | Docker | 每个 story 拍亮色、暗色、亮色加结构全开三张截图，和 `packages/ui/visual/__screenshots__` 的基线比较 |
 | `test:pack` | `pnpm test:pack` | 联网 | 在仓库外安装打出来的 SDK 和构建命令，构建一个插件 |
 | `changeset` | `pnpm changeset status` | | `packages/plugin-sdk/src` 有改动就必须附 changeset |
 

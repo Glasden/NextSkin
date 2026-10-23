@@ -6,6 +6,7 @@ import noDialectSpecificSql from './rules/no-dialect-specific-sql.ts'
 import noDirectScoreWrite from './rules/no-direct-score-write.ts'
 import noRawColor from './rules/no-raw-color.ts'
 import noArbitraryValue from './rules/no-arbitrary-value.ts'
+import noHandRolledPanel from './rules/no-hand-rolled-panel.ts'
 import noUseServer from './rules/no-use-server.ts'
 import noModulepreload from './rules/no-modulepreload.ts'
 import noScriptWithoutNonce from './rules/no-script-without-nonce.ts'
@@ -20,6 +21,7 @@ const plugin = {
     'no-direct-score-write': noDirectScoreWrite,
     'no-raw-color': noRawColor,
     'no-arbitrary-value': noArbitraryValue,
+    'no-hand-rolled-panel': noHandRolledPanel,
     'no-use-server': noUseServer,
     'no-modulepreload': noModulepreload,
     'no-script-without-nonce': noScriptWithoutNonce,

@@ -32,8 +32,9 @@ const optionClass = cx(
   'group/raise relative flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface text-left',
   'transition-[translate,box-shadow] duration-fast ease-step motion-reduce:transition-none',
   'hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-pixel',
-  // 选中：和 TextureCard 一样，向内再画一圈 2px 的描边，加左上角的勾选角标
-  'data-checked:border-accent data-checked:outline-2 data-checked:-outline-offset-2 data-checked:outline-accent',
+  // 选中：和 TextureCard 一样，向内再画一圈描边（常规边框的两倍粗），加左上角的勾选角标。
+  // 静止时不带阴影：迷你卡片悬停只露 2px 阴影，主题让卡片静止就带 4px 阴影时，悬停反倒像按下去
+  'data-checked:border-accent data-checked:outline-selected data-checked:-outline-offset-(--outline-width-selected) data-checked:outline-accent',
   'data-disabled:cursor-not-allowed data-disabled:hover:translate-0 data-disabled:hover:shadow-none',
   focusRing,
 )

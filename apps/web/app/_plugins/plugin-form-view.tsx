@@ -1,6 +1,6 @@
 'use client'
 
-import { Alert, Button, Form, useToast } from '@nextskin/ui'
+import { Alert, Button, Form, Panel, useToast } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -54,23 +54,25 @@ export function PluginFormView({
 
   return (
     <Form aria-label={label} onFormSubmit={() => void send()}>
-      <div className="flex flex-col gap-5 rounded-md border border-border bg-surface px-4 py-5 sm:px-6">
-        {failure && <Alert tone="danger">{failure}</Alert>}
-        {fields.map((field) => (
-          <PluginField
-            key={field.name}
-            field={field}
-            name={field.name}
-            value={values[field.name] ?? ''}
-            onChange={(value) => setValues((current) => ({ ...current, [field.name]: value }))}
-          />
-        ))}
-        <div>
-          <Button type="submit" variant="primary" loading={pending}>
-            {submit.label}
-          </Button>
+      <Panel padding="none">
+        <div className="flex flex-col gap-5 px-4 py-5 sm:px-6">
+          {failure && <Alert tone="danger">{failure}</Alert>}
+          {fields.map((field) => (
+            <PluginField
+              key={field.name}
+              field={field}
+              name={field.name}
+              value={values[field.name] ?? ''}
+              onChange={(value) => setValues((current) => ({ ...current, [field.name]: value }))}
+            />
+          ))}
+          <div>
+            <Button type="submit" variant="primary" loading={pending}>
+              {submit.label}
+            </Button>
+          </div>
         </div>
-      </div>
+      </Panel>
     </Form>
   )
 }

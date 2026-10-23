@@ -6,7 +6,7 @@ import type {
   PluginView,
   SessionUser,
 } from '@nextskin/domain'
-import { Alert, Badge, Button, Input, Link, Markdown, Pagination, PlayerHead, Table } from '@nextskin/ui'
+import { Alert, Badge, Button, Input, Link, Markdown, Pagination, Panel, PlayerHead, Table } from '@nextskin/ui'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import type { ReactNode } from 'react'
@@ -110,12 +110,12 @@ export async function PluginPageView({
       body = items ? (
         <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {items.map((item) => (
-            <div key={item.label} className="flex flex-col gap-1 rounded-md border border-border bg-surface p-4">
+            <Panel key={item.label} padding="md" gap={1}>
               <dt className="text-sm text-text-muted">{translate(item.label)}</dt>
               <dd className="font-pixel text-pixel-2 text-text tabular-nums">
                 {typeof item.value === 'number' ? format.number(item.value) : item.value}
               </dd>
-            </div>
+            </Panel>
           ))}
         </dl>
       ) : null
@@ -125,14 +125,16 @@ export async function PluginPageView({
       const response = await getPluginRoute(user, pluginId, view.source)
       body =
         response && response.status === 200 ? (
-          <div className="max-w-3xl rounded-md border border-border bg-surface p-4 sm:p-6">
-            {/* 插件页上的代码块多半是要用户复制走的东西，例如发给机器人的一条命令 */}
-            <Markdown
-              headingLevel={1}
-              copy={{ label: t('copyCode'), done: t('codeCopied'), failed: t('copyCodeFailed') }}
-            >
-              {response.text}
-            </Markdown>
+          <div className="max-w-3xl">
+            <Panel padding="responsive">
+              {/* 插件页上的代码块多半是要用户复制走的东西，例如发给机器人的一条命令 */}
+              <Markdown
+                headingLevel={1}
+                copy={{ label: t('copyCode'), done: t('codeCopied'), failed: t('copyCodeFailed') }}
+              >
+                {response.text}
+              </Markdown>
+            </Panel>
           </div>
         ) : null
       break

@@ -14,6 +14,7 @@ import {
   Input,
   LogoMark,
   Markdown,
+  Panel,
   SaveBar,
   Select,
   Textarea,
@@ -159,7 +160,7 @@ export function SettingsForm({
 
   return (
     <Form aria-label={label} onFormSubmit={() => void save()}>
-      <div className="rounded-md border border-border bg-surface">
+      <Panel padding="none">
         <div className="divide-y divide-border">
           {items.map((item) => (
             <div key={item.key} className="flex flex-col gap-3 px-4 py-5 sm:px-6">
@@ -187,7 +188,7 @@ export function SettingsForm({
             {t('save')}
           </Button>
         </SaveBar>
-      </div>
+      </Panel>
     </Form>
   )
 }
@@ -391,17 +392,14 @@ function MarkdownSetting({
         </Button>
       </div>
       {preview && (
-        <section
-          aria-label={t('previewLabel', { label: text.label })}
-          className="rounded-md border border-border bg-bg p-4"
-        >
+        <Panel as="section" aria-label={t('previewLabel', { label: text.label })} tone="bg" padding="md">
           {value.trim() ? (
             // 设置页只有 h1，预览里的 `#` 从 h2 开始
             <Markdown headingLevel={1}>{value}</Markdown>
           ) : (
             <p className="text-sm text-text-muted">{t('empty')}</p>
           )}
-        </section>
+        </Panel>
       )}
     </div>
   )

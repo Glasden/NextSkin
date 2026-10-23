@@ -1,6 +1,6 @@
 'use client'
 
-import { Alert, Button, Dialog, DialogClose, Link, useToast } from '@nextskin/ui'
+import { Alert, Button, Dialog, DialogClose, Link, Panel, useToast } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import NextLink from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -42,7 +42,7 @@ export function TextureAdminActions({
 }) {
   const t = useTranslations('skinlib.admin')
   return (
-    <section className="flex flex-col gap-3 rounded-md border border-border p-4">
+    <Panel as="section" tone="inset" padding="md" gap={3}>
       <div className="flex flex-col gap-1">
         <h2 className="font-pixel text-pixel-1 text-text-muted">{t('title')}</h2>
         <p className="text-sm text-text-muted">{t('description')}</p>
@@ -62,7 +62,7 @@ export function TextureAdminActions({
         )}
         <DeleteDialog texture={texture} impact={impact} refund={refund} />
       </div>
-    </section>
+    </Panel>
   )
 }
 

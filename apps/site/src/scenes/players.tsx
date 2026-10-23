@@ -267,7 +267,7 @@ export const players: Page = {
     en: 'Everything players expect',
     body: [
       '皮肤库、3D 预览、衣柜、本周收藏最多的领奖台、外置登录（authlib-injector，以及 Yggdrasil Connect 的设备码登录）、两步验证和通行密钥、GitHub / Microsoft / Google / LittleSkin 第三方登录、签到积分。',
-      '界面有亮色和暗色两种模式，默认跟随系统。配色是钻石青；钴蓝、洋红和高对比三套也已经定稿，每套都有亮暗两种，留给以后的主题切换。',
+      '界面有亮色和暗色两种模式，默认跟随系统。默认配色是钻石青；官方插件“更多配色”另带钴蓝、洋红和高对比三套（高对比还换上直角、粗边框和带阴影的卡片），站长启用以后用户自己挑，每套都有亮暗两种。',
     ],
   },
 }

@@ -53,8 +53,13 @@
 
 /*
  * 第 7 页依次换上的三套备选主题，取值见 DESIGN.md 附录（钴蓝、洋红只换强调色，focus 等于 accent）。
- * 只在这个页面上演示，主站还没有主题切换（DESIGN.md §2.3），所以不进 theme.css
+ * 主站的这三套由官方插件“更多配色”声明、核心生成 CSS（ADR-0057）；宣传站是静态页，取值抄在这里，不进 theme.css
  */
+/* 标志的前脸是强调色的色块 accent-fill（ADR-0058），演示的几套都跟着自己的强调色 */
+[data-palette] {
+  --color-accent-fill: var(--color-accent);
+  --color-accent-fill-fg: var(--color-accent-fg);
+}
 [data-palette='cobalt'] {
   --color-accent: #2a52e5;
   --color-accent-fg: #ffffff;
@@ -79,21 +84,23 @@
   --color-accent-subtle: #3b2936;
   --color-focus: #ff7ab8;
 }
-/* 高对比还改了结构：直角（圆角变量清零）；边框和阴影由组件按主题名加粗 */
+/* 高对比还改了结构：直角（圆角变量清零）；边框和阴影由组件按主题名加粗。
+   亮色下荧光色只当色块，表面上的强调色是黑色；展台和棋盘格锁住，用钻石青的（ADR-0058） */
 [data-palette='contrast'] {
   --color-bg: #ffffff;
   --color-surface: #ffffff;
   --color-surface-raised: #ffffff;
   --color-surface-sunken: #f0f0f0;
-  --color-stage: #ececec;
   --color-border: #bdbdbd;
   --color-border-strong: #000000;
   --color-text: #000000;
   --color-text-muted: #4a4a4a;
   --color-text-inverse: #ffffff;
-  --color-accent: #d4ff1e;
-  --color-accent-fg: #000000;
+  --color-accent: #000000;
+  --color-accent-fg: #ffffff;
   --color-accent-subtle: #f0ffb0;
+  --color-accent-fill: #d4ff1e;
+  --color-accent-fill-fg: #000000;
   --color-success: #00813a;
   --color-success-fg: #ffffff;
   --color-warning: #a85600;
@@ -102,8 +109,6 @@
   --color-danger-fg: #ffffff;
   --color-focus: #0040ff;
   --color-shadow: #000000;
-  --color-checker-a: #ffffff;
-  --color-checker-b: #e6e6e6;
   --radius-sm: 0;
   --radius-md: 0;
 }
@@ -112,7 +117,6 @@
   --color-surface: #0b0b0b;
   --color-surface-raised: #161616;
   --color-surface-sunken: #050505;
-  --color-stage: #222222;
   --color-border: #3d3d3d;
   --color-border-strong: #ffffff;
   --color-text: #ffffff;
@@ -121,6 +125,8 @@
   --color-accent: #d4ff1e;
   --color-accent-fg: #000000;
   --color-accent-subtle: #37410f;
+  --color-accent-fill: var(--color-accent);
+  --color-accent-fill-fg: var(--color-accent-fg);
   --color-success: #3ddc84;
   --color-success-fg: #000000;
   --color-warning: #ffb020;
@@ -129,8 +135,6 @@
   --color-danger-fg: #000000;
   --color-focus: #d4ff1e;
   --color-shadow: #e6e6e6;
-  --color-checker-a: #222222;
-  --color-checker-b: #0b0b0b;
 }
 
 @layer base {

@@ -19,7 +19,7 @@ export interface PlayerCardProps {
  */
 export function PlayerCard({ name, headingLevel: Heading = 'h2', figure, children, actions }: PlayerCardProps) {
   return (
-    <article className="group/raise flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface">
+    <article className="group/raise flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface shadow-(--card-shadow)">
       <div className="grid h-44 place-items-center border-b border-border bg-stage">{figure}</div>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <Heading className="truncate text-xl font-medium text-text">{name}</Heading>

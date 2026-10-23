@@ -1,7 +1,7 @@
 'use client'
 
 import type { BlockingIssue, ImportReport, UuidSource } from '@nextskin/importer'
-import { Alert, Badge, Select, Table, Tabs } from '@nextskin/ui'
+import { Alert, Badge, Panel, Select, Table, Tabs } from '@nextskin/ui'
 import { useFormatter, useTranslations } from 'next-intl'
 import { useState, type ReactNode } from 'react'
 
@@ -84,14 +84,14 @@ export function ReportView({
           <Alert tone="danger" title={t('blocking.title', { count: report.blocking.total })}>
             {t('blocking.hint')}
           </Alert>
-          <ol className="flex flex-col divide-y divide-border rounded-md border border-border bg-surface">
+          <Panel as="ol" padding="none" divided>
             {report.blocking.items.map((issue, index) => (
               <li key={index} className="flex flex-col gap-3 p-4 text-sm text-text">
                 <IssueText issue={issue} />
                 {issue.code === 'uuid_ambiguous' && choices && <UuidChoice issue={issue} choices={choices} />}
               </li>
             ))}
-          </ol>
+          </Panel>
           <Truncated shown={report.blocking.items.length} total={report.blocking.total} />
         </section>
       )}
@@ -188,10 +188,10 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-md border border-border bg-surface p-3">
+    <Panel padding="sm" gap={1}>
       <dt className="text-sm text-text-muted">{label}</dt>
       <dd className="font-pixel text-pixel-2 text-text tabular-nums">{value}</dd>
-    </div>
+    </Panel>
   )
 }
 

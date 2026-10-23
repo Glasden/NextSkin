@@ -1,5 +1,5 @@
 import type { OwnReport } from '@nextskin/domain'
-import { Badge, EmptyState, FigurePlaceholder, Link, Pagination, SkinFigure } from '@nextskin/ui'
+import { Badge, EmptyState, FigurePlaceholder, Link, Pagination, Panel, SkinFigure } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -120,40 +120,42 @@ function ReportRow({
 }) {
   const texture = report.texture
   return (
-    <li className="flex gap-4 rounded-md border border-border bg-surface p-4">
-      {/* 迷你展台：×3 的正面（DESIGN.md §5） */}
-      <div className="grid h-28 w-20 shrink-0 place-items-center rounded-sm bg-stage">
-        {texture ? (
-          <SkinFigure
-            src={figureSrc(texture.hash, texture.type)}
-            type={texture.type}
-            textureScale={texture.scale}
-            scale={3}
-            view="front"
-            alt={labels.figure}
-          />
-        ) : (
-          <FigurePlaceholder scale={3} view="front" label={labels.figure} />
-        )}
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+    <Panel as="li" padding="md">
+      <div className="flex gap-4">
+        {/* 迷你展台：×3 的正面（DESIGN.md §5） */}
+        <div className="grid h-28 w-20 shrink-0 place-items-center rounded-sm bg-stage">
           {texture ? (
-            <span className="min-w-0 truncate text-base font-medium">
-              <Link render={<NextLink href={`/skinlib/${texture.tid}`} />}>{texture.name}</Link>
-            </span>
+            <SkinFigure
+              src={figureSrc(texture.hash, texture.type)}
+              type={texture.type}
+              textureScale={texture.scale}
+              scale={3}
+              view="front"
+              alt={labels.figure}
+            />
           ) : (
-            <span className="text-base text-text-muted">{labels.textureGone}</span>
+            <FigurePlaceholder scale={3} view="front" label={labels.figure} />
           )}
-          <Badge tone={statusTones[report.status]}>{labels.status}</Badge>
         </div>
-        <p className="text-sm break-words whitespace-pre-line text-text">{report.reason}</p>
-        <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-text-muted">
-          <span>{labels.submitted}</span>
-          {labels.resolved && <span>{labels.resolved}</span>}
-          {labels.paid && <span>{labels.paid}</span>}
-        </p>
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {texture ? (
+              <span className="min-w-0 truncate text-base font-medium">
+                <Link render={<NextLink href={`/skinlib/${texture.tid}`} />}>{texture.name}</Link>
+              </span>
+            ) : (
+              <span className="text-base text-text-muted">{labels.textureGone}</span>
+            )}
+            <Badge tone={statusTones[report.status]}>{labels.status}</Badge>
+          </div>
+          <p className="text-sm break-words whitespace-pre-line text-text">{report.reason}</p>
+          <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-text-muted">
+            <span>{labels.submitted}</span>
+            {labels.resolved && <span>{labels.resolved}</span>}
+            {labels.paid && <span>{labels.paid}</span>}
+          </p>
+        </div>
       </div>
-    </li>
+    </Panel>
   )
 }

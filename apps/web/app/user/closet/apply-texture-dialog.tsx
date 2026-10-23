@@ -1,6 +1,6 @@
 'use client'
 
-import { Alert, Badge, Button, Dialog, DialogClose, Link, PlayerHead, useToast } from '@nextskin/ui'
+import { Alert, Badge, Button, Dialog, DialogClose, Link, Panel, PlayerHead, useToast } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import NextLink from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -65,7 +65,7 @@ export function ApplyTextureDialog({ open, onOpenChange, texture, players, locke
       {error && <Alert tone="danger">{error}</Alert>}
       {locked && <Alert tone="warning">{t('verifyFirst')}</Alert>}
       {players.length ? (
-        <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
+        <Panel as="ul" tone="inset" padding="none" divided>
           {players.map((player) => {
             const current = player[slot] === texture.tid
             return (
@@ -92,7 +92,7 @@ export function ApplyTextureDialog({ open, onOpenChange, texture, players, locke
               </li>
             )
           })}
-        </ul>
+        </Panel>
       ) : (
         <div className="flex flex-col items-start gap-2">
           <p className="text-sm text-text">{t('noPlayers')}</p>

@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, useToast } from '@nextskin/ui'
+import { Button, Panel, useToast } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { apiError, sendJson } from '../../../lib/api-client'
@@ -21,13 +21,15 @@ export function TestMail({ email }: { email: string }) {
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-md border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-      <p className="text-sm text-pretty text-text-muted">{t('hint', { email })}</p>
-      <div className="shrink-0">
-        <Button variant="secondary" loading={pending} onClick={() => void send()}>
-          {t('button')}
-        </Button>
+    <Panel as="section" padding="responsive">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-pretty text-text-muted">{t('hint', { email })}</p>
+        <div className="shrink-0">
+          <Button variant="secondary" loading={pending} onClick={() => void send()}>
+            {t('button')}
+          </Button>
+        </div>
       </div>
-    </section>
+    </Panel>
   )
 }

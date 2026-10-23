@@ -93,10 +93,11 @@ export function Tabs<Value extends string>({
               {item.count !== undefined && <span className="text-text-muted tabular-nums">{item.count}</span>}
             </BaseTabs.Tab>
           ))}
+          {/* 指示条压住列表的底边：往下挪一个常规边框的粗细，边框随主题的结构变粗时跟着挪（ADR-0058） */}
           <BaseTabs.Indicator
             renderBeforeHydration
             className={cx(
-              'absolute -bottom-px left-0 h-1 w-(--active-tab-width) translate-x-(--active-tab-left) bg-accent',
+              'absolute -bottom-(--border-width-base) left-0 h-1 w-(--active-tab-width) translate-x-(--active-tab-left) bg-accent',
               'transition-[translate,width] duration-slow ease-step motion-reduce:transition-none',
             )}
           />

@@ -1,7 +1,7 @@
 'use client'
 
 import type { ImportRunState, ImportStage } from '@nextskin/importer'
-import { Alert, Button, ProgressBar, Steps } from '@nextskin/ui'
+import { Alert, Button, Panel, ProgressBar, Steps } from '@nextskin/ui'
 import { useFormatter, useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 import { apiError, getJson, postJson } from '../../lib/api-client'
@@ -120,7 +120,7 @@ export function RunMonitor({
       )}
       {cancelError && <Alert tone="danger">{cancelError}</Alert>}
 
-      <div className="rounded-md border border-border bg-surface p-4 sm:p-6">
+      <Panel padding="responsive">
         <Steps
           label={t('stagesLabel')}
           orientation="vertical"
@@ -150,7 +150,7 @@ export function RunMonitor({
               ) : undefined,
           }))}
         />
-      </div>
+      </Panel>
     </section>
   )
 }

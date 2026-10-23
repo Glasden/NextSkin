@@ -29,15 +29,17 @@ const lift = cx(
   'transition-[translate,box-shadow] duration-fast ease-step motion-reduce:transition-none',
   'group-hover/card:-translate-x-0.5 group-hover/card:-translate-y-0.5',
 )
-// 链接自己也带 group/raise：键盘聚焦它时皮肤抬手（SkinFigure 看的是 group/raise 上的 focus-visible）
+// 链接自己也带 group/raise：键盘聚焦它时皮肤抬手（SkinFigure 看的是 group/raise 上的 focus-visible）。
+// 静止时的阴影随主题的结构（ADR-0058），钻石青没有
 const cardClass = cx(
   'group/raise flex h-full min-w-0 flex-col overflow-hidden rounded-md border border-border bg-surface',
-  'group-hover/card:shadow-pixel-lg',
+  'shadow-(--card-shadow) group-hover/card:shadow-pixel-lg',
   lift,
   focusRing,
 )
-// 选中：再画一圈向内的 2px 描边，和 1px 的边框叠成 2px 的强调色边，布局不跳动。键盘聚焦时让位给焦点框
-const selectedClass = 'border-accent outline-2 -outline-offset-2 outline-accent'
+// 选中：向内再画一圈描边，盖住边框，叠成常规边框两倍粗的强调色边（2px，粗边框的主题是 4px），布局不跳动。
+// 键盘聚焦时让位给焦点框
+const selectedClass = 'border-accent outline-selected -outline-offset-(--outline-width-selected) outline-accent'
 
 /**
  * 皮肤库、衣柜里的一件材质：上面是展台，下面是名字和信息，整张卡片是去详情页的链接。

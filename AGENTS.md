@@ -38,7 +38,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 | `pnpm design:sync` | 改了 `packages/ui/src/theme.css` 或标志的图形之后，重新生成 `docs/DESIGN.md` §3 的 token 表、`packages/theme` 里钻石青的取值和 `apps/web/public` 里的默认站点图标（不同步时 ui 的测试会失败） |
 | `pnpm font:sync` | 重新生成像素字体的分片（DESIGN.md §4），需要联网；只在换字体版本或改切片规则时运行 |
 | `pnpm e2e` | Playwright 端到端测试：从 `dist/nextskin` 经启动器启动服务、用打包后的命令行设定身份；也经过 Next standalone 回放全部契约用例 |
-| `pnpm test:visual` | 组件截图回归：给每个 story 拍亮暗两张截图，和基线比较（需要 Docker，浏览器跑在容器里）。外观改动是有意的，就加 `-- --update-snapshots` 更新基线，并检查新截图 |
+| `pnpm test:visual` | 组件截图回归：给每个 story 拍亮色、暗色和亮色加结构全开（ADR-0058）三张截图，和基线比较（需要 Docker，浏览器跑在容器里）。外观改动是有意的，就加 `-- --update-snapshots` 更新基线，并检查新截图 |
 | `pnpm test:pack` | 打包冒烟测试：在仓库外用 npm 安装 `pnpm pack` 出来的 SDK 和构建命令，类型检查、构建一个插件（要联网，不进 `pnpm check`，ADR-0035） |
 | `pnpm release` | 发布插件 SDK 和构建命令：先跑 `test:pack`，再 `changeset publish`。平时由 `.github/workflows/release.yml` 运行，版本号先在本地用 `pnpm changeset version` 改好（ADR-0035） |
 | `pnpm format` | Prettier 格式化 |
