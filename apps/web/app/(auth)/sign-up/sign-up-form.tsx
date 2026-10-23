@@ -9,6 +9,7 @@ import { CAPTCHA_HEADER, useCaptcha, type CaptchaConfig } from '../../../lib/cap
 import { goToNext } from '../../../lib/navigation'
 import { playerNameInputProps, type PlayerNameRules } from '../../../lib/player-name'
 import { initialFieldValue, PluginField, type PluginFieldValue } from '../../_plugins/plugin-field'
+import { PasswordStrengthMeter } from '../password-strength-meter'
 import type { PluginFieldText } from '../../_plugins/types'
 
 /** "完成注册"页（ADR-0034）：第三方给的身份暂存在服务端，表单不填密码 */
@@ -51,6 +52,13 @@ export function SignUpForm({
   captcha: captchaConfig = null,
 }: SignUpFormProps) {
   const t = useTranslations('auth')
+  // 强度指示要判断密码里有没有包含自己的登录名、角色名和邮箱，所以把它们的当前值记下来
+  // （输入框本身仍是非受控的，这里只是镜像一份）
+  const [accountNames, setAccountNames] = useState({
+    email: external?.email ?? '',
+    playerName: external?.playerName ?? '',
+    nickname: external?.nickname ?? '',
+  })
   const errorText = useTranslations('errors')
   const common = useTranslations('common')
   const captcha = useCaptcha(captchaConfig)
@@ -58,6 +66,7 @@ export function SignUpForm({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [passwordValue, setPasswordValue] = useState('')
   const [extra, setExtra] = useState<Record<string, PluginFieldValue>>(() =>
     Object.fromEntries(
       pluginFields.map(({ pluginId, field }) => {
@@ -120,7 +129,13 @@ export function SignUpForm({
     <Form errors={errors} onFormSubmit={(values) => void submit(values)}>
       {error && <Alert tone="danger">{error}</Alert>}
       <Field label={t('email')} name="email" description={emailHint()} formatError={common('emailFormat')}>
-        <Input type="email" autoComplete="email" required defaultValue={external?.email ?? undefined} />
+        <Input
+          type="email"
+          autoComplete="email"
+          required
+          defaultValue={external?.email ?? undefined}
+          onValueChange={(value) => setAccountNames((names) => ({ ...names, email: value }))}
+        />
       </Field>
       {!external && (
         <Field label={t('password')} name="password" description={t('signUp.passwordHint', password)}>
@@ -130,6 +145,12 @@ export function SignUpForm({
             required
             minLength={password.min}
             maxLength={password.max}
+            value={passwordValue}
+            onValueChange={setPasswordValue}
+          />
+          <PasswordStrengthMeter
+            password={passwordValue}
+            context={{ usernames: [accountNames.email, accountNames.playerName, accountNames.nickname] }}
           />
         </Field>
       )}
@@ -139,11 +160,18 @@ export function SignUpForm({
             {...playerNameInputProps(playerName)}
             autoComplete="username"
             defaultValue={external?.playerName ?? undefined}
+            onValueChange={(value) => setAccountNames((names) => ({ ...names, playerName: value }))}
           />
         </Field>
       ) : (
         <Field label={t('signUp.nickname')} name="nickname" description={t('signUp.nicknameHint')}>
-          <Input autoComplete="nickname" required maxLength={255} defaultValue={external?.nickname ?? undefined} />
+          <Input
+            autoComplete="nickname"
+            required
+            maxLength={255}
+            defaultValue={external?.nickname ?? undefined}
+            onValueChange={(value) => setAccountNames((names) => ({ ...names, nickname: value }))}
+          />
         </Field>
       )}
       {pluginFields.map(({ pluginId, field }) => {

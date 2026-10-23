@@ -256,6 +256,13 @@
     "illustration": "{name} 的皮肤",
     "email": "邮箱",
     "password": "密码",
+    "passwordStrength": {
+      "label": "密码强度：{level}",
+      "weak": "弱",
+      "fair": "一般",
+      "strong": "强",
+      "veryStrong": "很强"
+    },
     "backToSignIn": "返回登录",
     "signIn": {
       "title": "登录",
