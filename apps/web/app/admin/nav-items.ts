@@ -3,6 +3,7 @@ import { Chart } from 'pixelarticons/react/Chart.js'
 import { Code } from 'pixelarticons/react/Code.js'
 import { ColorsSwatch } from 'pixelarticons/react/ColorsSwatch.js'
 import { Database } from 'pixelarticons/react/Database.js'
+import { Download } from 'pixelarticons/react/Download.js'
 import { Flag } from 'pixelarticons/react/Flag.js'
 import { Gamepad } from 'pixelarticons/react/Gamepad.js'
 import { Notebook } from 'pixelarticons/react/Notebook.js'
@@ -30,6 +31,7 @@ export const adminNavItems = [
   { href: '/admin/plugins', icon: Plug, label: 'plugins', permission: 'plugins.manage' },
   { href: '/admin/failed-jobs', icon: WarningDiamond, label: 'failedJobs', permission: 'jobs.manage' },
   { href: '/admin/migration', icon: Database, label: 'migration', permission: 'import.manage' },
+  { href: '/admin/updates', icon: Download, label: 'updates', permission: 'updates.manage' },
 ] as const
 
 export type AdminNavHref = (typeof adminNavItems)[number]['href']

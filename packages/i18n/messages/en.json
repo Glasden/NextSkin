@@ -1219,7 +1219,8 @@
       "plugins": "Plugins",
       "failedJobs": "Failed jobs",
       "oauthClients": "OAuth apps",
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "updates": "Updates"
     },
     "roles": {
       "banned": "Banned",
@@ -1246,6 +1247,8 @@
       "pendingAction": "Handle reports",
       "failedJobsAlert": "{count, plural, one {# background job has} other {# background jobs have}} failed and will not run again on their own.",
       "failedJobsAction": "Take a look",
+      "updateAlert": "NextSkin {version} is out.",
+      "updateAction": "See update",
       "recentAudit": "Latest admin actions",
       "allAudit": "View all",
       "noAudit": "No admin actions yet.",
@@ -2247,6 +2250,54 @@
           "createdAt": "Time"
         }
       }
+    },
+    "updates": {
+      "title": "Updates",
+      "description": "Whether a new version is out, and how to upgrade this site. Checked once a day by reading a signed release list from dl.nextskin.org; nothing about the site is sent.",
+      "current": "Current version",
+      "deployments": {
+        "bundle": "Release bundle",
+        "docker": "Docker image",
+        "source": "From source"
+      },
+      "checkedAt": "Last checked {time}",
+      "neverChecked": "Not checked yet",
+      "check": "Check now",
+      "checked": "Checked",
+      "latest": "New version",
+      "releasedAt": "Released {date}",
+      "notes": "Release notes",
+      "upToDate": "Up to date",
+      "upToDateHint": "When a new stable release is out, it shows up here and in your notifications.",
+      "unknown": "No check yet",
+      "unknownHint": "Click “Check now”, or wait for the daily check.",
+      "nodeTooOld": "This version needs Node {required} or newer; the server runs {current}. Upgrade Node first.",
+      "disabledTitle": "Update checks are off",
+      "disabled": "The release list is not read, and new versions are not announced.",
+      "enable": "Turn it on in advanced settings",
+      "failureTitle": "The last check failed",
+      "failures": {
+        "network": "At {time}, dl.nextskin.org could not be reached. Check the network or proxy.",
+        "http": "At {time}, dl.nextskin.org answered HTTP {status}.",
+        "invalid": "At {time}, the release list was malformed or its signatures did not verify, so it was ignored.",
+        "too_large": "At {time}, the release list was too large, so it was ignored."
+      },
+      "failureHint": "What you see below is from the last successful check.",
+      "how": "How to upgrade",
+      "sourceTitle": "Updates are not checked when running from source",
+      "source": "Pull the new code in the repository and rebuild. Use the release bundle or the image for production.",
+      "dockerSteps": {
+        "backup": "Back up the data volume first. SQLite is backed up into the data directory before migrations run; back up MySQL or PostgreSQL yourself.",
+        "pull": "Pull the new image and recreate the container:",
+        "after": "You cannot simply switch back to the old image afterwards: if there were migrations, the old version cannot open the migrated database, so restore the backup first."
+      },
+      "bundleSteps": {
+        "download": "Download the new version's ZIP from GitHub Releases and verify it with SHA256SUMS on the same page.",
+        "stop": "Stop the service and back up. SQLite is backed up into the data directory before migrations run; back up MySQL or PostgreSQL yourself.",
+        "unzip": "Unzip over the current directory (.env and data/ stay as they are), then start as usual.",
+        "guide": "Step-by-step guide"
+      },
+      "privacy": "Checking only reads one public file, and versions with bad signatures are dropped. To keep the site off the internet, turn checks off in advanced settings."
     },
     "failedJobs": {
       "title": "Failed jobs",

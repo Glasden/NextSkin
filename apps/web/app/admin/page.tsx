@@ -19,16 +19,17 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * 后台的概览：站点的几个数字、待处理的举报、最近 10 条管理操作（ADR-0027）。超级管理员还会看到没完成的配置（ADR-0028）
- * 和失败的核心任务（ADR-0051）。插件的挂件放在数字下面（ADR-0059）
+ * 后台的概览：站点的几个数字、待处理的举报、最近 10 条管理操作（ADR-0027）。超级管理员还会看到没完成的配置（ADR-0028）、
+ * 失败的核心任务（ADR-0051）和新版本（ADR-0061）。插件的挂件放在数字下面（ADR-0059）
  */
 export default async function AdminOverviewPage() {
   const user = await requireAdmin('/admin')
   const { core } = await getServer()
   const canConfigure = can(user.role, 'settings.manage')
-  const [overview, checks, t, format, widgets] = await Promise.all([
+  const [overview, checks, updates, t, format, widgets] = await Promise.all([
     core.admin.overview(user.uid),
     canConfigure ? core.admin.configChecks() : { missing: [] },
+    can(user.role, 'updates.manage') ? core.updates.status({ uid: user.uid, ip: null }) : null,
     getTranslations('admin.overview'),
     getFormatter(),
     pluginWidgets('admin.dashboard', user),
@@ -75,6 +76,15 @@ export default async function AdminOverviewPage() {
           <span className="flex flex-wrap items-baseline gap-x-3">
             {t('failedJobsAlert', { count: overview.failedJobs })}
             <Link render={<NextLink href="/admin/failed-jobs" />}>{t('failedJobsAction')}</Link>
+          </span>
+        </Alert>
+      )}
+
+      {updates?.latest && (
+        <Alert>
+          <span className="flex flex-wrap items-baseline gap-x-3">
+            {t('updateAlert', { version: updates.latest.version })}
+            <Link render={<NextLink href="/admin/updates" />}>{t('updateAction')}</Link>
           </span>
         </Alert>
       )}
