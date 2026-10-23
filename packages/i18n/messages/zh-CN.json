@@ -3,6 +3,7 @@
     "close": "关闭",
     "notifications": "通知",
     "cancel": "取消",
+    "required": "请填写这一项。",
     "sentences": "{first}{second}"
   },
   "mail": {

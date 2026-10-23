@@ -1,5 +1,8 @@
+'use client'
+
 import { Field as BaseField } from '@base-ui/react/field'
 import type { ReactNode } from 'react'
+import { useRequiredMessage } from './required-message.tsx'
 
 export interface FieldProps {
   label: ReactNode
@@ -7,7 +10,7 @@ export interface FieldProps {
   description?: ReactNode
   /**
    * 错误信息，写“发生了什么，加上怎么办”（DESIGN.md §8）。不传时，放在 Form 里的 Field 显示 Form 的 errors 里
-   * 同名字段的错误，或者浏览器约束校验（required、type="email"……）的提示
+   * 同名字段的错误；没填就提交（required）和其他浏览器约束校验（type="email"……）的提示也显示在这里
    */
   error?: ReactNode
   disabled?: boolean
@@ -25,6 +28,10 @@ const errorClass = 'text-sm text-danger'
 
 /** 包裹表单控件，统一标签、说明和错误信息的位置，并把它们和控件关联起来（aria-describedby） */
 export function Field({ label, description, error, disabled, name, nativeLabel = true, children }: FieldProps) {
+  // 没填时的提示由 RequiredMessageProvider 统一给，调用点不用管；没有 Provider 时用浏览器给的消息
+  const requiredMessage = useRequiredMessage()
+  // 不能传 children（哪怕是 undefined），否则不显示 Form 和浏览器给的错误信息
+  const browserError = <BaseField.Error className={errorClass} />
   return (
     <BaseField.Root
       name={name}
@@ -46,9 +53,22 @@ export function Field({ label, description, error, disabled, name, nativeLabel =
         <BaseField.Error match className={errorClass}>
           {error}
         </BaseField.Error>
+      ) : requiredMessage ? (
+        // 只在浏览器判定“没填”（valueMissing）时换成站点文案。不是必填的控件不会出现 valueMissing，
+        // 自然不受影响；type="email" 的格式错等其他约束也照旧用浏览器的消息
+        <BaseField.Validity>
+          {({ validity }) =>
+            validity.valueMissing ? (
+              <BaseField.Error match="valueMissing" className={errorClass}>
+                {requiredMessage}
+              </BaseField.Error>
+            ) : (
+              browserError
+            )
+          }
+        </BaseField.Validity>
       ) : (
-        // 不能传 children（哪怕是 undefined），否则不显示 Form 和浏览器给的错误信息
-        <BaseField.Error className={errorClass} />
+        browserError
       )}
     </BaseField.Root>
   )

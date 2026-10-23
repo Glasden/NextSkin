@@ -47,6 +47,7 @@ export { PasswordMeter, type PasswordMeterProps } from './password-meter/passwor
 export { Popover, type PopoverProps } from './popover/popover.tsx'
 export { ProgressBar, type ProgressBarProps } from './progress-bar/progress-bar.tsx'
 export { QrCode, type QrCodeProps } from './qr-code/qr-code.tsx'
+export { RequiredMessageProvider, type RequiredMessageProviderProps } from './field/required-message.tsx'
 export { SaveBar, type SaveBarProps } from './save-bar/save-bar.tsx'
 export {
   SegmentedControl,

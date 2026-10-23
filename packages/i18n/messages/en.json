@@ -3,6 +3,7 @@
     "close": "Close",
     "notifications": "Notifications",
     "cancel": "Cancel",
+    "required": "This field is required.",
     "sentences": "{first} {second}"
   },
   "mail": {
