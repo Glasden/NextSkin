@@ -7,8 +7,10 @@
 
 运行 `node nextskin.mjs help` 查看命令，`node nextskin.mjs doctor` 检查运行环境。
 
-升级：停服务，备份 `data/` 和 `.env`，删掉 `server/` 和 `cli/`，解压新包覆盖，再启动。
-升级后不能回到旧版本。SQLite 站点执行迁移之前会自动把库备份到 `data/backups/`（留最近 3 份）；MySQL、PostgreSQL 请先自己备份。
-回退：停服务，换回旧版本的程序，把备份复制成 `data/nextskin.sqlite`，并删掉旁边的 `nextskin.sqlite-wal`、`nextskin.sqlite-shm`。
+程序按版本放在 `releases/<版本>/` 里，`releases/current.json` 指向在用的版本。
+
+升级：在后台的“更新”页一键升级，或者运行 `node nextskin.mjs update`。也可以手动：停服务，备份 `data/` 和 `.env`，把新的 ZIP 覆盖解压到这个目录，再启动。
+新版本没起来时会自动换回旧版本；SQLite 站点执行迁移之前会自动把库备份到 `data/backups/`。MySQL、PostgreSQL 有迁移时请先自己备份，升级前要确认。
+回滚：在“更新”页，或者运行 `node nextskin.mjs rollback`，回到上一个版本。
 
 [部署文档（宝塔、1Panel、Docker、systemd、Windows）](https://github.com/Glasden/NextSkin/tree/main/docs/deploy)

@@ -712,6 +712,9 @@ importers:
         specifier: workspace:*
         version: link:../plugin-host
     devDependencies:
+      '@nextskin/manager':
+        specifier: workspace:*
+        version: link:../manager
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2

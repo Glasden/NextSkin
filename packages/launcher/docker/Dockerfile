@@ -16,13 +16,16 @@ RUN apt-get update \
   && chown node:node /data
 
 # 逐项复制发行目录，不复制整个上下文：本地运行过的发行目录里可能有 .env 和 data/。
+# 管理进程本地运行过时 releases/ 里还有指针、锁和日志，删掉，镜像里只按 manager/VERSION 选版本（ADR-0061）。
 # /app 属主是 root，运行时只读；密钥只从环境变量 NEXTSKIN_SECRET 给，没给时启动器生成不了 .env，以 78 退出
 COPY nextskin.mjs package.json README.md .env.example /app/
-COPY cli /app/cli
-COPY server /app/server
+COPY manager /app/manager
+COPY releases /app/releases
+RUN rm -rf /app/releases/current.json /app/releases/.staging /app/releases/manager.lock /app/releases/update-log.jsonl
 
-# Docker 只检测更新，后台按镜像部署显示提示（ADR-0061）。
-ENV NEXTSKIN_DEPLOYMENT=docker
+# 镜像不可变，不做一键升级：入口不起管理进程，直接在本进程里运行这个版本的启动器，进程模型同 ADR-0039；
+# 后台按镜像部署显示升级的办法（ADR-0061）
+ENV NEXTSKIN_MANAGER=off NEXTSKIN_DEPLOYMENT=docker
 ENV NEXTSKIN_DATA_DIR=/data NEXTSKIN_HOST=0.0.0.0
 WORKDIR /app
 USER node

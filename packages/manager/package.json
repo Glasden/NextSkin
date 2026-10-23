@@ -1,0 +1,20 @@
+{
+  "name": "@nextskin/manager",
+  "version": "0.0.0",
+  "private": true,
+  "description": "管理进程：选版本启动和监管启动器、检查更新、下载校验解压、升级和回滚（ADR-0061）。不加载领域层、不连数据库、不读 .env，由启动器的构建脚本打进发行目录的 manager/",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nextskin/updates": "workspace:*",
+    "fflate": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

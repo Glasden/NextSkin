@@ -19,6 +19,7 @@
     "@nextskin/plugin-host": "workspace:*"
   },
   "devDependencies": {
+    "@nextskin/manager": "workspace:*",
     "@types/node": "catalog:",
     "rolldown": "catalog:",
     "vitest": "catalog:"
