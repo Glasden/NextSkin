@@ -105,6 +105,10 @@ nextskin/                 实例目录，环境变量 NEXTSKIN_HOME
   - `cancel`：只在准备阶段有效。
 - **不接受路径和地址**，版本必须在签过名的清单里。不能换到比 `previous` 更旧的版本：核心被攻破时，最多能触发安装官方签过名的新版本，不能被装回有已知漏洞的旧版本。
 - 核心一侧是新的领域用例：只有超级管理员能调，每次 `prepare`、`apply`、`rollback` 写审计日志，记下操作者、目标版本和是否确认了备份（ADR-0027）。
+- 落地补充：
+  - 协议是一次连接一个请求、一行 JSON，`prepare`、`apply`、`rollback` 校验完就回 `accepted`，在后台执行，进度从 `status` 读；`apply`、`rollback` 等响应写完、连接关上才开始停站。`check` 没有做成控制请求：核心自己每天检查，命令行的 `update --check` 在本进程里读清单。格式见 `packages/manager/README.md` 和核心的 `packages/domain/src/updates/manager-client.ts`。
+  - socket 的路径超过 100 字节时改放 `os.tmpdir()/nextskin-<hash>.sock`。Windows 的命名管道 Node 设不了访问控制，只靠令牌。
+  - 管理进程的错误码在核心里加 `update_` 前缀再交给前端，免得 `busy`、`internal` 这类名字占掉全局的错误文案；后台优先显示管理进程给的那句说明。
 
 ### 更新检测
 
@@ -187,9 +191,11 @@ nextskin/                 实例目录，环境变量 NEXTSKIN_HOME
 
 - ZIP 的顶层照旧是 `nextskin/`（ADR-0040），内容就是上面的布局，**不带 `current.json`**。覆盖解压照旧就是升级，面板里的启动命令（`npm start` 或 `node nextskin.mjs start`）不用改。
 - 管理进程的版本号就是打包时同一个 ZIP 里那个版本的版本号。启动时发现自己的版本不同于 `current.json` 里的 `bundled`，就当作一次手动升级：从第 5 步开始走同一条流水线（不下载），失败时同样回到 `current`。一键升级在第 11 步就把 `bundled` 记成新版本，下次启动不会误判。
+  - 落地补充：MySQL、PostgreSQL 有迁移时，启动不替管理员确认备份：照旧运行 `current`，日志说明要先备份、再到后台确认或运行 `update --backup-confirmed`；准备好的结果留着，后台确认后直接切换。
 - **从旧布局换过来**：第一次启动时根目录里有 `server/`、`cli/`，没有 `current.json`。这一次没有 `previous`；新版本通过健康检查后删掉 `server/`、`cli/`。
   - 要回到旧布局的版本，照 ADR-0040 的手工回退解压旧版本的 ZIP：旧的启动器在根目录里运行，按自己的目录找 `server/`、`.env`、`data/`，不理会 `releases/`。
   - 旧版本没有这份约定，不能放进 `releases/` 由管理进程启动。
+  - 落地补充：从旧布局换过来失败时以 78 退出，不让面板和 systemd 反复重启、每次重跑预检和迁移；旧程序还在，按上面手工回退。
 
 ### 管理进程自己的更新
 
@@ -219,6 +225,11 @@ nextskin/                 实例目录，环境变量 NEXTSKIN_HOME
 - **能分离的部署**（systemd、MCSManager）：管理进程以单独的用户运行，`nextskin.mjs`、`manager/`、`releases/` 归它，服务用户只读；`.env` 和 `data/` 归服务用户。管理进程拉起启动器时降到服务用户（`spawn` 的 `uid`、`gid`），令牌文件只有管理用户能读。核心只能经控制通道发白名单里的请求。
 - **不能分离的部署**（宝塔、1Panel、Windows）：服务用户本来就能写程序目录。部署文档写明这是便利和隔离的取舍。
 - **不想要一键升级的**：让程序目录对运行用户只读，或者设 `NEXTSKIN_MANAGER=off`。管理进程发现写不了 `releases/` 时只检测，更新页说明原因。
+- 落地补充：
+  - 降权要 CAP_SETUID，所以"单独的用户"就是 root：环境变量 `NEXTSKIN_RUN_AS=<服务用户>` 打开分离，用 `id -u`、`id -g` 解析（走 NSS）。启动器、预检的 `doctor` 和 `migrate` 都降到这个用户，去掉 `HOME`、`USER`、`LOGNAME`。
+  - socket 是 `root:<服务用户的组>`、`0660`，核心连得上、别的用户连不上；令牌文件仍只有 root 能读，核心只从环境变量拿令牌。管理进程自己写进数据目录的文件（新建的数据锁、SQLite 回滚换回的库）改归服务用户；分离时数据锁用内存 journal，不留 root 的 `-journal`。
+  - 服务停着时命令行自己执行的 `update`、`rollback`，以 root 运行而没设这个变量、数据目录又属于别的用户时拒绝（78）：root 跑的迁移会在数据目录里留下服务读写不了的文件。常驻的管理进程不查：没有降权时它拉起的服务和迁移是同一个用户。
+  - 在容器里以 root 实测过降权、socket 和令牌的归属与访问；systemd 单元本身没有实测。
 
 ### 命令行
 
@@ -226,12 +237,14 @@ nextskin/                 实例目录，环境变量 NEXTSKIN_HOME
   - `update [--check] [--to <版本>] [--yes] [--backup-confirmed]`：服务运行时经控制通道交给管理进程；服务停着时命令自己执行同一条流水线（拿管理进程的锁和数据锁），最后不启动服务。
   - `rollback [--yes]`、`update status`、`releases`（列出版本目录和指针）。
 - 其余命令由入口转给当前版本的命令行，带上 `NEXTSKIN_HOME`。部署文档的命令表不变。
+- 落地补充：服务停着时的 `update`、`rollback` 迁移、改指针，不启动服务，也就不做健康检查（新版本有问题要等下次启动才知道），部署文档写明了。不是终端时要 `--yes`。
 
 ### 发布流程
 
 - 发布任务在批准后生成并签名这个版本的条目和 `SHA256SUMS`，附在草稿 Release 上。草稿发布时，和加镜像标签的工作流一样，另一个工作流把 ZIP 和签好的条目上传到 R2、重新生成 `v1.json`。它用的 Cloudflare 令牌只有这个桶的写权限，和私钥不在同一个 environment。预发布不进清单。
   - 落地补充：工作流是 `release-dl.yml`。上传用只能读写这个桶的 R2 S3 凭据，放在单独的 environment `dl`；Worker 用 `docs` environment 的令牌部署，同文档站。清单每次从所有正式版 Release 附带的 `release-entry.json` 整个重建，R2 上缺的 ZIP 顺手补传，所以失败了重跑一次就行。
 - e2e 加升级用例：从上一个正式版的 ZIP 经管理进程升到这次构建的版本，SQLite 和 PostgreSQL 各一遍；注入"健康检查不过"和"迁移失败"，核对回滚。
+  - 落地补充：分成三处。从上一个正式版覆盖解压升级（真的迁移、真的健康检查）是发布工作流里的冒烟（`packages/manager/scripts/upgrade-smoke.ts`），SQLite 和 PostgreSQL 各一遍（PostgreSQL 有迁移时照部署文档停着服务运行 `update --backup-confirmed`，再启动），要下载上一个正式版，不进 CI。e2e 里另起一个经管理进程运行的实例，核对控制通道从核心到管理进程走得通；其余六个服务设 `NEXTSKIN_MANAGER=off`，共用一个发行目录也不会抢管理进程的锁，也不在要打包的目录里留下 `current.json`。"健康检查不过""迁移失败"和各档的回滚由 `packages/manager` 的测试用假的版本启动器注入，没有签名清单就做不了的一键升级全程也在那里测。
 - 发布说明照旧要写有没有迁移（ADR-0040）；后台显示的迁移情况以预检的结果为准。
 
 ### 落地

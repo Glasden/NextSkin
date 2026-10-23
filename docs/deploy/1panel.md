@@ -36,4 +36,9 @@
 docker exec <容器名> node /app/nextskin.mjs doctor
 ```
 
-升级：在面板里停止运行环境，在代码目录里按 README 的"升级"替换程序文件，再启动。
+## 升级（一键升级未实测）
+
+- 后台"更新"页能一键升级：代码目录挂进容器、可写，启动命令是 `exec node nextskin.mjs start`，管理进程是 PID 1，升级时容器不重建。
+- Node 版本由运行环境的镜像决定。新版本提高了 Node 的下限时预检会拦下：先在面板里把运行环境换成新的 Node 版本（会重建容器，代码目录不受影响），再升级。
+- 手动升级：在面板里停止运行环境 → 备份 → 把新的 ZIP 覆盖解压到代码目录 → 启动。
+- 命令行的 `update`、`rollback` 也在容器里执行：`docker exec <容器名> node /app/nextskin.mjs update status`。

@@ -18,7 +18,9 @@
 ## 发布和文档
 
 - **发布的后续**（ADR-0040）：ZIP 和镜像加构建来源证明（`actions/attest-build-provenance`）；GHCR 的镜像在真实环境里运行一次（发布工作流冒烟的是 runner 上本地构建的 amd64 镜像）；部署文档里标了"未实测"的条目（宝塔和 1Panel 的反向代理、Windows 的 Ctrl+C 和 NSSM、Docker 里导入）在真实环境里核对；国内的下载渠道看反馈再定。
-- **更新检测和一键升级**（ADR-0061，`feat/updates`）：切片二（启动器和命令行一侧）做完了，其余在做。
+- **更新检测和一键升级**（ADR-0061）：
+  - 第一次带它发布之前：建 R2 桶 `nextskin-releases` 和不开代理的 `dl` 记录，建 environment `dl`（R2 凭据），把签名私钥放进 environment `release`；发布后核对 `dl.nextskin.org/releases/v1.json`。
+  - 实测一键升级和回滚：宝塔（停止、重启时三层进程）、1Panel、Windows 控制台和 NSSM（Ctrl+C 的停止顺序、命名管道、杀毒软件占着文件）、MCSManager、systemd 单元的权限分离；量一下管理进程常驻的内存。实测完改部署文档里的"未实测"。
   - 版本条目里还没有"是否含安全修复"：条目在批准发布任务时签名，那时发布说明还没写。要做的话，在打标签前给发布工作流一个输入（例如标签注释里的一行），签进条目。
 - **文档站的后续**（ADR-0054）：`edge` 的 IP 在国内网络上实测；`docs/deploy` 的面板、systemd、Windows 步骤迁进文档站；玩家指南补截图；SDK 1.0 之后的版本快照。
 
