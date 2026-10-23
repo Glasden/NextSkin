@@ -17,9 +17,24 @@ pnpm --filter @nextskin/docs build    # 输出到 apps/docs/dist
 | --- | --- | --- |
 | 服主指南、玩家指南、本地开发、插件总览 | `src/content/docs/` | 在这里改 |
 | 插件 API 参考 | `src/content/docs/plugins/reference/` | 由 `packages/plugin-sdk/docs` 生成，不进仓库，改源文件 |
+| 插件 API 参考里的插槽一览 | `src/content/docs/plugins/reference/slots.mdx` | 由插槽的登记表和下面的截图生成，不进仓库 |
+| 插槽一览的截图和清单 | `src/assets/slots/` | `pnpm docs:screenshots` 生成，提交进仓库 |
 | 版本和提交号 | `src/data/versions.json` | 生成，不进仓库 |
 
 插件 API 参考的侧栏顺序、单篇的版本徽章写在 `scripts/sync.ts` 的 `order`、`changedIn` 里。
+
+## 插槽一览的截图
+
+插件 API 参考里的"插槽一览"给每个插槽配了截图：黑框圈出插槽，序号对应页面上的表格（ADR-0060）。
+
+```bash
+pnpm docs:screenshots   # 在仓库根目录运行
+```
+
+- 先跑 `pnpm build` 组装发行目录（turbo 会带上），再从发行目录起一个临时站点：契约用例的固定数据、一条公告，`screenshots/demo-plugin` 这个演示插件在每个插槽里放两个挂件。浏览器跑在组件截图同一个 Docker 镜像里。
+- 每个页面截桌面端（1280 宽）和手机（390 宽）两张，写进 `src/assets/slots/`，连同清单 `slots.json`。不做像素比较，看过图再提交。
+- 插槽的登记表（`packages/plugin-host/src/slots.ts`）和清单对不上时，`scripts/sync.ts` 会失败，`pnpm check` 和文档站的构建都过不了。新增插槽时，演示插件也要往新插槽里放挂件。
+- 插槽所在的页面改版了，检查拦不住。发正式版之前看一眼，变了就重新生成。
 
 网站上的文档对应最新的正式版：main 上改了的内容，要等下一次发版才上线。
 

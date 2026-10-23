@@ -35,6 +35,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 | `pnpm test:db` | 在 SQLite / MySQL / MariaDB / PostgreSQL 四种数据库上跑 `*.db.test.ts`（需要 Docker，测试库容器跑完后保留；`pnpm test` 只用 SQLite 跑） |
 | `pnpm test:contract` | 协议契约测试：回放从真实 BS v6 录制的用例，不需要 Docker，`pnpm check` 也会跑。录制见 `tests/contract/README.md` |
 | `pnpm storybook` | 组件工作台 |
+| `pnpm docs:screenshots` | 改了插槽的登记表（`packages/plugin-host/src/slots.ts`）或插槽所在的页面之后，重新生成文档站"插槽一览"的截图和清单（`apps/docs/src/assets/slots`，ADR-0060）。依赖 `pnpm build` 的发行目录和 Docker；登记表和清单对不上时文档站的 sync 会失败 |
 | `pnpm design:sync` | 改了 `packages/ui/src/theme.css` 或标志的图形之后，重新生成 `docs/DESIGN.md` §3 的 token 表、`packages/theme` 里钻石青的取值和 `apps/web/public` 里的默认站点图标（不同步时 ui 的测试会失败） |
 | `pnpm font:sync` | 重新生成像素字体的分片（DESIGN.md §4），需要联网；只在换字体版本或改切片规则时运行 |
 | `pnpm e2e` | Playwright 端到端测试：从 `dist/nextskin` 经启动器启动服务、用打包后的命令行设定身份；也经过 Next standalone 回放全部契约用例 |

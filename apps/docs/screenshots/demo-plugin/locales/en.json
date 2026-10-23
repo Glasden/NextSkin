@@ -1,0 +1,13 @@
+{
+  "widget": {
+    "stats": "A plugin's stats widget",
+    "markdown": "A plugin's Markdown widget"
+  },
+  "stats": {
+    "first": "A number",
+    "second": "Another number",
+    "third": "A status",
+    "done": "Done"
+  },
+  "note": "A plugin put this Markdown here: reminders, **emphasis** and [links](https://docs.nextskin.org/) all work.\n\nWhat a site actually shows depends on the plugins it has installed."
+}

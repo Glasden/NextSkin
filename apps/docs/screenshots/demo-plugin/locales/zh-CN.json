@@ -1,0 +1,13 @@
+{
+  "widget": {
+    "stats": "插件的统计挂件",
+    "markdown": "插件的 Markdown 挂件"
+  },
+  "stats": {
+    "first": "示例数字",
+    "second": "另一个数字",
+    "third": "示例状态",
+    "done": "已完成"
+  },
+  "note": "这里是插件放的一段 Markdown：提醒、**强调**、[链接](https://docs.nextskin.org/)都可以写。\n\n站点上实际显示什么，取决于装了哪些插件。"
+}

@@ -12,14 +12,21 @@
     "typegen": "node scripts/sync.ts && astro sync",
     "lint": "eslint --max-warnings 0 .",
     "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "screenshots": "playwright test"
   },
   "dependencies": {
     "@astrojs/starlight": "0.42.6",
+    "@nextskin/i18n": "workspace:*",
+    "@nextskin/plugin-host": "workspace:*",
     "@nextskin/ui": "workspace:*",
     "astro": "catalog:"
   },
   "devDependencies": {
+    "@nextskin/db": "workspace:*",
+    "@nextskin/domain": "workspace:*",
+    "@nextskin/plugin-sdk": "workspace:*",
+    "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "wrangler": "catalog:"
   }
