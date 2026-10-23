@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 import metadata from '../package.json' with { type: 'json' }
 import { ConfigError, readConfig } from './config.ts'
 import type { LauncherContext } from './context.ts'
@@ -11,6 +12,7 @@ async function main(): Promise<number> {
   const { version } = metadata
   const context: LauncherContext = {
     root,
+    ...(process.env.NEXTSKIN_HOME !== undefined ? { home: resolve(process.cwd(), process.env.NEXTSKIN_HOME) } : {}),
     // 源码里 pnpm 在仓库根目录运行脚本，INIT_CWD 才是敲命令的目录；发行目录里它只可能是从外层 npm 脚本继承来的
     cwd: (source && process.env.INIT_CWD) || process.cwd(),
     source,

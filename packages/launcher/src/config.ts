@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { parseEnv } from 'node:util'
 import { coreConfigFromEnv } from '@nextskin/domain/config'
-import type { CommandContext, LauncherContext } from './context.ts'
+import { instanceDirectory, type CommandContext, type LauncherContext } from './context.ts'
 
 export class ConfigError extends Error {}
 
@@ -13,7 +13,7 @@ export function currentUser(): string {
 }
 
 export function envFilePath(context: LauncherContext, env: NodeJS.ProcessEnv): string {
-  return resolve(context.root, env.NEXTSKIN_ENV_FILE ?? '.env')
+  return resolve(instanceDirectory(context), env.NEXTSKIN_ENV_FILE ?? '.env')
 }
 
 /** 不存在和读不了要分开：只有前者可以在首次启动时生成。 */
@@ -70,13 +70,13 @@ export async function readConfig(
     throw new ConfigError('NEXTSKIN_SECRET 至少要有 32 个字符；请使用随机字符串')
   let config
   try {
-    config = coreConfigFromEnv(env, { cwd: context.root, production })
+    config = coreConfigFromEnv(env, { cwd: instanceDirectory(context), production })
   } catch (error) {
     // 共享解析器只返回固定的诊断，不含变量的原值。
     throw new ConfigError((error as Error).message)
   }
   const { host, port } = listenAddress(env)
-  const childEnv = {
+  const childEnv: NodeJS.ProcessEnv = {
     ...env,
     NODE_ENV: 'production',
     // 核心进程据此打开和启动器之间的控制通道（apps/web/lib/launcher-channel.ts）
@@ -88,5 +88,6 @@ export async function readConfig(
     NEXTSKIN_DATABASE_URL:
       config.database.dialect === 'sqlite' ? `sqlite:${config.database.file}` : config.database.url,
   }
+  delete childEnv.NEXTSKIN_MANAGED
   return { ...context, production, config, env: childEnv, host, port }
 }

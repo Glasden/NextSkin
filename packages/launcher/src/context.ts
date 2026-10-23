@@ -2,10 +2,15 @@ import type { CoreConfig } from '@nextskin/domain/config'
 
 export interface LauncherContext {
   root: string
+  home?: string
   cwd: string
   source: boolean
   production: boolean
   version: string
+}
+
+export function instanceDirectory(context: LauncherContext): string {
+  return context.home ?? context.root
 }
 
 export interface CommandContext extends LauncherContext {

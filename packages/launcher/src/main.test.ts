@@ -1,14 +1,17 @@
 import { execFile } from 'node:child_process'
-import { readFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join, relative } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
+import { removeTestDirectory } from '@nextskin/db/testing'
 import { expect, test, vi } from 'vitest'
 import metadata from '../package.json' with { type: 'json' }
 import { run as disable2fa } from './commands/disable-2fa.ts'
 import { run as disableCaptcha } from './commands/disable-captcha.ts'
 import { run as maintenance } from './commands/maintenance.ts'
-import { run as doctor } from './commands/doctor.ts'
+import { checkConfig, run as doctor } from './commands/doctor.ts'
 import { run as importBlessingSkin } from './commands/import.ts'
 import { run as setPassword } from './commands/set-password.ts'
 import { run as setRole } from './commands/set-role.ts'
@@ -92,6 +95,29 @@ test('读不了配置是配置错误，退出 78', async () => {
   expect(result.output).toContain('读不了配置文件')
 })
 
+test.each([false, true])(
+  'NEXTSKIN_HOME 从进程环境读取，相对路径按进程工作目录解析（相对：%s）',
+  async (relativeHome) => {
+    const home = await mkdtemp(join(tmpdir(), 'launcher-home-'))
+    try {
+      const file = join(home, 'config-directory')
+      await mkdir(file)
+      const result = await runWith(
+        {
+          NEXTSKIN_HOME: relativeHome ? relative(process.cwd(), home) : home,
+          NEXTSKIN_ENV_FILE: 'config-directory',
+          INIT_CWD: join(home, 'elsewhere'),
+        },
+        'migrate',
+      )
+      expect(result.code).toBe(78)
+      expect(result.output).toContain(`读不了配置文件 ${file}`)
+    } finally {
+      await removeTestDirectory(home)
+    }
+  },
+)
+
 test('源码模式 start 是配置错误，退出 78', async () => {
   const result = await run('start')
   expect(result.code).toBe(78)
@@ -119,6 +145,36 @@ test('doctor 先处理帮助和参数，不读取配置', async () => {
   }
   expect(await capture(() => doctor(['extra'], context, options))).toEqual({ code: 1, output: '用法：nextskin doctor' })
 })
+
+test.each(['unset', 'same', 'different'] as const)(
+  'doctor 按实例目录解析配置，仅目录不同时输出实例目录：%s',
+  async (state) => {
+    const root = await mkdtemp(join(tmpdir(), 'launcher-doctor-'))
+    try {
+      const context: LauncherContext = {
+        root: root + '/',
+        cwd: root,
+        source: false,
+        production: true,
+        version: '0.0.0',
+        ...(state !== 'unset' ? { home: state === 'same' ? root : join(root, 'instance') } : {}),
+      }
+      const home = context.home ?? root
+      const parsed = checkConfig(context, {
+        NEXTSKIN_DATA_DIR: 'storage',
+        NEXTSKIN_DATABASE_URL: 'sqlite:db/site.sqlite',
+      })
+      expect(parsed.config?.dataDirectory).toBe(join(home, 'storage'))
+      expect(parsed.config?.database).toEqual({ dialect: 'sqlite', file: join(home, 'db/site.sqlite') })
+      const result = await capture(() => doctor([], context, { env: { NEXTSKIN_ENV_FILE: root } }))
+      expect(result.output.split('\n')[0]).toBe(
+        `NextSkin 0.0.0 环境自检，根目录 ${context.root}${state === 'different' ? `，实例目录 ${home}` : ''}`,
+      )
+    } finally {
+      await removeTestDirectory(root)
+    }
+  },
+)
 
 test('maintenance 命令已登记，错误参数给出专用用法', async () => {
   expect(await run('maintenance', 'invalid')).toEqual({ code: 1, output: '用法：nextskin maintenance [on|off]\n' })

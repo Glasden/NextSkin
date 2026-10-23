@@ -10,6 +10,8 @@ export interface SupervisorOptions {
   stableTime?: number
   shutdownTimeout?: number
   log?: (message: string) => void
+  onReady?: () => void
+  stopOn?: (stop: () => void) => () => void
 }
 
 /** 启动器当作"停止"的信号：Windows 上关闭控制台是 SIGHUP。 */
@@ -31,6 +33,7 @@ export function supervise(options: SupervisorOptions): Promise<number> {
     let readyAt: number | undefined
     let restart: NodeJS.Timeout | undefined
     let deadline: NodeJS.Timeout | undefined
+    let disposeStop: (() => void) | undefined = undefined
     const signals = stopSignals
     const finish = () => {
       if (finished) return
@@ -38,6 +41,7 @@ export function supervise(options: SupervisorOptions): Promise<number> {
       clearTimeout(restart)
       clearTimeout(deadline)
       for (const signal of signals) process.off(signal, stop)
+      disposeStop?.()
       resolve(0)
     }
     const force = () => {
@@ -86,6 +90,7 @@ export function supervise(options: SupervisorOptions): Promise<number> {
           return
         readyAt = Date.now()
         log('核心已启动')
+        options.onReady?.()
       })
       // spawn 失败也会发 close；统一在 close 重启，避免一次失败排两个定时器。
       current.on('error', () => log('无法启动核心进程'))
@@ -99,6 +104,9 @@ export function supervise(options: SupervisorOptions): Promise<number> {
       })
     }
     for (const signal of signals) process.on(signal, stop)
-    launch()
+    disposeStop = options.stopOn?.(() => stop('SIGTERM'))
+    // 注册时就可能发现父进程已经退出；此时不能再拉起核心，也要收回刚注册的监听器。
+    if (finished) disposeStop?.()
+    else launch()
   })
 }

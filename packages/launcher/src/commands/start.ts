@@ -13,15 +13,21 @@ export async function run(_argv: string[], context: LauncherContext): Promise<nu
     console.error('[nextskin] Node 24、25 的 plugin host 拦不住插件直接连网，建议使用 Node 26。')
   // 拉起核心之前就接住停止信号，交给 supervise 时才放开：作为容器的 PID 1 时（1Panel 里用 exec 启动），
   // 没有处理函数的 SIGTERM 会被忽略，等锁的时候停不下来，锁一放开还会照样拉起核心
-  const stop = listenForStop()
+  const managed = process.env.NEXTSKIN_MANAGED === '1' && typeof process.send === 'function'
+  const stopOn = managed ? listenForManagedStop : undefined
+  const stop = listenForStop(stopOn)
   try {
-    return await prepareAndSupervise(context, stop)
+    return await prepareAndSupervise(context, stop, stopOn)
   } finally {
     stop.dispose()
   }
 }
 
-async function prepareAndSupervise(context: LauncherContext, stop: StopListener): Promise<number> {
+async function prepareAndSupervise(
+  context: LauncherContext,
+  stop: StopListener,
+  stopOn?: (stop: () => void) => () => void,
+): Promise<number> {
   await assertRelease(context)
   const { config, env, host, port } = await readConfig(context)
   const serverJs = join(context.root, 'server/apps/web/server.js')
@@ -47,7 +53,23 @@ async function prepareAndSupervise(context: LauncherContext, stop: StopListener)
     `[nextskin] NextSkin ${context.version}，Node ${process.versions.node}，数据目录 ${config.dataDirectory}，数据库 ${config.database.dialect}，监听 ${host}:${port}`,
   )
   try {
-    return await supervise({ serverJs, env })
+    return await supervise({
+      serverJs,
+      env,
+      stopOn,
+      onReady: stopOn
+        ? () => {
+            if (!process.connected) return
+            try {
+              process.send?.({ nextskin: 'ready', version: context.version, host, port }, () => {
+                /* 父进程可能正随着发送退出。 */
+              })
+            } catch {
+              /* 通道已经关闭时，由 disconnect 触发停止。 */
+            }
+          }
+        : undefined,
+    })
   } finally {
     lock.release()
   }
@@ -85,7 +107,21 @@ export interface StopListener {
   dispose(): void
 }
 
-export function listenForStop(): StopListener {
+function listenForManagedStop(stop: () => void): () => void {
+  const onMessage = (message: unknown) => {
+    if (message && typeof message === 'object' && 'nextskin' in message && message.nextskin === 'shutdown') stop()
+  }
+  process.on('message', onMessage)
+  process.on('disconnect', stop)
+  process.channel?.unref()
+  if (!process.connected) stop()
+  return () => {
+    process.off('message', onMessage)
+    process.off('disconnect', stop)
+  }
+}
+
+export function listenForStop(stopOn?: (stop: () => void) => () => void): StopListener {
   let requested = false
   let wake = () => {}
   const onSignal = () => {
@@ -93,6 +129,7 @@ export function listenForStop(): StopListener {
     wake()
   }
   for (const signal of stopSignals) process.on(signal, onSignal)
+  const disposeStop = stopOn?.(onSignal)
   return {
     get requested() {
       return requested
@@ -108,6 +145,7 @@ export function listenForStop(): StopListener {
       }),
     dispose() {
       for (const signal of stopSignals) process.off(signal, onSignal)
+      disposeStop?.()
     },
   }
 }
