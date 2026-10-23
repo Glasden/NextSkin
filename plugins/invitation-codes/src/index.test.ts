@@ -14,7 +14,23 @@ test('manifest 能从定义里提取出来', () => {
     interceptors: [{ name: 'user.register', priority: 100 }],
     permissions: { manage: 'permission.manage' },
   })
+  expect(manifest.ui.widgets).toEqual([
+    {
+      name: 'codes',
+      slot: 'admin.dashboard',
+      title: 'page.codes',
+      permission: 'manage',
+      link: { page: 'codes', label: 'widget.manage' },
+      view: { kind: 'stats', source: '/stats' },
+    },
+  ])
+  expect(manifest.routes.find(({ path }) => path === '/stats')).toMatchObject({
+    auth: 'user',
+    permission: 'manage',
+    rateLimit: null,
+  })
   expect(manifest.routes.map((route) => `${route.method} ${route.path} ${route.permission}`)).toEqual([
+    'GET /stats manage',
     'GET /codes manage',
     'POST /codes manage',
     'DELETE /codes/:code manage',
@@ -29,6 +45,7 @@ test('界面上用到的文案键两种语言都有', () => {
       ?.map((m) => m.split('":"')[1]!.slice(0, -1)) ?? [],
   )
   keys.add('error.invalidCode')
+  for (const key of ['stats.available', 'stats.used', 'stats.expired']) keys.add(key)
   for (const messages of Object.values(plugin.messages))
     for (const key of keys) {
       const value = key

@@ -42,5 +42,18 @@
       "label": "Rewards per sharer",
       "help": "After this many, sign-ups through the sharer's links still succeed but neither side gets score. 0 means no limit."
     }
+  },
+  "widget": {
+    "title": "Share sign-up",
+    "manage": "Manage links",
+    "both": "Each new user who signs up through your link earns you {sharer} points, and they get {sharee} points too.",
+    "sharer": "Each new user who signs up through your link earns you {sharer} points.",
+    "sharee": "New users who sign up through your link get {sharee} extra points.",
+    "left": "You can earn {left, plural, one {# more reward} other {# more rewards}}.",
+    "capped": "You've reached the limit of {max} rewards. Sign-ups through your link still work, but neither of you earns points.",
+    "latest": "Your newest link:",
+    "registrations": "{count, plural, one {# person has} other {# people have}} signed up through your links.",
+    "noRegistrations": "No one has signed up through your links yet.",
+    "none": "You don't have a link yet. Generate one on the Share sign-up page."
   }
 }

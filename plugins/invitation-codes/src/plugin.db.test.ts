@@ -181,3 +181,37 @@ test('停用后注册不再要邀请码', async () => {
   await expect(register()).resolves.toHaveProperty('uid')
   await core.plugins.admin.enable(admin, 'invitation-codes')
 })
+
+test('挂件统计：可用、已使用、已过期，只有管理员可读', async () => {
+  const stats = async () => json(await core.plugins.route(request('GET', '/stats', admin)))
+  const before = (await stats()).body as { items: { label: string; value: number }[] }
+  const existing = await database.db
+    .withTables<{ [TABLE]: { code: string } }>()
+    .selectFrom(TABLE)
+    .select('code')
+    .execute()
+  const codes = (await generate(4)).filter((code) => !existing.some((row) => row.code === code))
+  await register(codes[0])
+  await core.jobs.drain()
+  const db = database.db.withTables<{ [TABLE]: { code: string; expires_at: string | null } }>()
+  // 用过的码即使已经过期，也只计入已使用；一个可用码有有效期，另一个永久有效。
+  await db
+    .updateTable(TABLE)
+    .set({ expires_at: new Date().toISOString() })
+    .where('code', 'in', codes.slice(0, 2))
+    .execute()
+  await db.updateTable(TABLE).set({ expires_at: '2100-01-01T00:00:00.000Z' }).where('code', '=', codes[2]!).execute()
+  expect(await stats()).toEqual({
+    status: 200,
+    body: {
+      items: [
+        { label: 'stats.available', value: before.items[0]!.value + 2 },
+        { label: 'stats.used', value: before.items[1]!.value + 1 },
+        { label: 'stats.expired', value: before.items[2]!.value + 1 },
+      ],
+    },
+  })
+  const user = await createUser('user')
+  await expect(core.plugins.route(request('GET', '/stats', user))).rejects.toMatchObject({ code: 'permission_denied' })
+  await expect(core.plugins.route(request('GET', '/stats', null))).rejects.toMatchObject({ code: 'unauthenticated' })
+})

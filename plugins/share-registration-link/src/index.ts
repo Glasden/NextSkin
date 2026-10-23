@@ -115,6 +115,15 @@ export default definePlugin({
       },
     },
     nav: [{ area: 'user', page: 'links', label: 'page.links', icon: 'link' }],
+    widgets: [
+      {
+        name: 'share',
+        slot: 'user.dashboard',
+        title: 'widget.title',
+        link: { page: 'links', label: 'widget.manage' },
+        view: { kind: 'markdown', source: '/widget' },
+      },
+    ],
   },
 
   on: {
@@ -136,6 +145,56 @@ export default definePlugin({
   },
 
   routes: {
+    'GET /widget': {
+      auth: 'user',
+      async handler({ request, scope, ctx }) {
+        const { sharerScore, shareeScore, maxRewardsPerSharer } = ctx.settings
+        if (sharerScore === 0 && shareeScore === 0) return new Response(null, { status: 204 })
+        const paragraphs = [
+          ctx.t(
+            sharerScore > 0 && shareeScore > 0 ? 'widget.both' : sharerScore > 0 ? 'widget.sharer' : 'widget.sharee',
+            { sharer: sharerScore, sharee: shareeScore },
+            scope.locale,
+          ),
+        ]
+        if (maxRewardsPerSharer > 0) {
+          const { total } = await ctx.db
+            .selectFrom('rewards')
+            .select((eb) => eb.fn.countAll().as('total'))
+            .where('sharer_uid', '=', scope.actor.uid)
+            .where('slot', 'is not', null)
+            .executeTakeFirstOrThrow()
+          const left = maxRewardsPerSharer - Number(total)
+          paragraphs.push(
+            ctx.t(left > 0 ? 'widget.left' : 'widget.capped', { left, max: maxRewardsPerSharer }, scope.locale),
+          )
+        }
+        const latest = await ctx.db
+          .selectFrom('codes')
+          .select('code')
+          .where('uid', '=', scope.actor.uid)
+          .orderBy('created_at', 'desc')
+          .orderBy('code')
+          .limit(1)
+          .executeTakeFirst()
+        if (latest) {
+          const site = ctx.site.url || new URL(request.url).origin
+          paragraphs.push(
+            `${ctx.t('widget.latest', undefined, scope.locale)}\n\`\`\`\n${registerLink(site, ctx.plugin.id, latest.code)}\n\`\`\``,
+          )
+          const { total } = await ctx.db
+            .selectFrom('rewards')
+            .select((eb) => eb.fn.countAll().as('total'))
+            .where('sharer_uid', '=', scope.actor.uid)
+            .executeTakeFirstOrThrow()
+          const count = Number(total)
+          paragraphs.push(ctx.t(count ? 'widget.registrations' : 'widget.noRegistrations', { count }, scope.locale))
+        } else {
+          paragraphs.push(ctx.t('widget.none', undefined, scope.locale))
+        }
+        return new Response(paragraphs.join('\n\n'), { headers: { 'content-type': 'text/markdown; charset=utf-8' } })
+      },
+    },
     'GET /codes': {
       auth: 'user',
       async handler({ request, scope, ctx }) {

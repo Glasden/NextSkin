@@ -13,10 +13,21 @@ test('manifest 能从定义里提取出来，注册字段声明了 fromQuery', (
     events: ['user.registered', 'user.deleted'],
     interceptors: [],
   })
+  expect(manifest.ui.widgets).toEqual([
+    {
+      name: 'share',
+      slot: 'user.dashboard',
+      title: 'widget.title',
+      link: { page: 'links', label: 'widget.manage' },
+      view: { kind: 'markdown', source: '/widget' },
+    },
+  ])
+  expect(manifest.routes.find(({ path }) => path === '/widget')).toMatchObject({ auth: 'user', rateLimit: null })
   expect(manifest.ui.formFields?.map(({ form, fromQuery, field }) => ({ form, fromQuery, name: field.name }))).toEqual([
     { form: 'auth.register', fromQuery: true, name: 'code' },
   ])
   expect(manifest.routes.map((route) => `${route.method} ${route.path} ${route.auth}`)).toEqual([
+    'GET /widget user',
     'GET /codes user',
     'POST /codes user',
     'DELETE /codes/:code user',
