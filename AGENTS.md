@@ -16,10 +16,11 @@
 ## 系统结构
 
 ```
-nextskin 启动器（进程监管 + 命令行，ADR-0039）
- └─ 核心进程：Next.js（只做页面）+ Hono（协议端点 / REST / 插件路由）+ 领域层 + 后台任务
-     ├─ Kysely → SQLite（默认）| MySQL/MariaDB | PostgreSQL
-     └─ plugin host 进程：核心拉起，运行安装插件，通过 RPC 调用核心，没有数据库凭据
+nextskin 管理进程（选版本、升级、回滚，ADR-0061；镜像里关掉）
+ └─ releases/<版本> 的启动器（进程监管 + 命令行，ADR-0039）
+     └─ 核心进程：Next.js（只做页面）+ Hono（协议端点 / REST / 插件路由）+ 领域层 + 后台任务
+         ├─ Kysely → SQLite（默认）| MySQL/MariaDB | PostgreSQL
+         └─ plugin host 进程：核心拉起，运行安装插件，通过 RPC 调用核心，没有数据库凭据
 ```
 
 ## 命令
@@ -86,6 +87,7 @@ nextskin 启动器（进程监管 + 命令行，ADR-0039）
 | `packages/plugin-cli` | `nextskin-plugin build`：把插件打成插件包（manifest、单文件的服务端代码、文案），插件作者和测试共用。和 SDK 一起发布到 npm，版本号相同；发布的是连同 plugin-host、SDK、zod 打成的单文件（ADR-0035） |
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |
 | `packages/launcher` | 启动器 `nextskin`（ADR-0039）：`start` 监管核心进程，其余命令在进程内打开核心；打包脚本组装发行目录 `dist/nextskin/` |
+| `packages/manager` | 管理进程（ADR-0061）：发行目录根上的 `nextskin.mjs` 和 `manager/`，按 `releases/current.json` 选版本启动和监管启动器，准备、切换、回滚版本，控制通道和 `update`、`rollback`、`releases` 命令；不加载领域层、不读 `.env` |
 | `packages/official-plugins` | 随发行包分发的官方插件清单，核心和命令行共用 |
 | `packages/importer` | 从 BS v6 只读导入（ADR-0031）：导入引擎、命令行和网页导入服务（`apps/web` 创建、注入 Hono），迁移指南在 `MIGRATION.md`，该目录有自己的 AGENTS.md |
 | `packages/oauth-client` | 几个 OAuth 官方插件共用的代码（拼授权地址、换令牌、读 ID 令牌），不发布，打进各插件的单文件；第三方插件不能依赖它（ADR-0034） |

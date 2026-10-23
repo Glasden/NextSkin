@@ -80,8 +80,10 @@ jobs:
           import { readdirSync } from 'node:fs'
           import assert from 'node:assert/strict'
           assert.deepEqual(readdirSync('dist/nextskin').sort(), [
-            'nextskin.mjs', 'cli', 'server', 'package.json', '.env.example', 'README.md',
+            'nextskin.mjs', 'manager', 'releases', 'package.json', '.env.example', 'README.md',
           ].sort(), '发行目录顶层含有未预期的文件或缺少发行文件')
+          // 只有这个版本的程序，不带指针（ADR-0061"手动解压"）
+          assert.deepEqual(readdirSync('dist/nextskin/releases'), [process.env.VERSION], 'releases/ 里只能有这个版本')
           NODE
           # apps/web/package.json 用 catalog 声明 next，读取它安装后的实际版本。
           echo "next-version=$(node -p "require('./apps/web/node_modules/next/package.json').version")" >> "$GITHUB_OUTPUT"
