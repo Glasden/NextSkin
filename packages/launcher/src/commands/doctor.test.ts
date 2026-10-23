@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { coreMigrations } from '@nextskin/db'
+import { removeTestDirectory } from '@nextskin/db/testing'
 import { HostStartError } from '@nextskin/domain'
 import { afterEach, expect, test, vi } from 'vitest'
 import type { LauncherContext } from '../context.ts'
@@ -27,7 +28,7 @@ const probeHost = vi.fn(async () => {})
 afterEach(async () => {
   vi.restoreAllMocks()
   probeHost.mockClear()
-  for (const path of directories.splice(0)) await rm(path, { recursive: true, force: true })
+  for (const path of directories.splice(0)) await removeTestDirectory(path)
 })
 async function context(): Promise<LauncherContext> {
   const root = await mkdtemp(join(tmpdir(), 'launcher-doctor-'))

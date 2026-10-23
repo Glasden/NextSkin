@@ -1,9 +1,10 @@
 import { fork, type ChildProcess } from 'node:child_process'
 import { once } from 'node:events'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { removeTestDirectory } from '@nextskin/db/testing'
 import { afterEach, expect, test } from 'vitest'
 
 const cleanups: (() => Promise<void>)[] = []
@@ -28,7 +29,7 @@ async function run(plan: object[]) {
       child.kill('SIGTERM')
       await exit
     }
-    await rm(dir, { recursive: true, force: true })
+    await removeTestDirectory(dir)
   })
   return { child, messages, state }
 }

@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -34,6 +34,11 @@ type Messages = { [key: string]: string | Messages }
 
 const repository = fileURLToPath(new URL('../../../', import.meta.url))
 const packages = new Map<string, string>()
+const directories: string[] = []
+test.afterAll(() => {
+  for (const directory of directories)
+    rmSync(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+})
 
 /** 上传安装时插件的 id 前面加 `host-`：官方插件的 id 不能被上传的插件占用 */
 const pluginId = (id: string, host: boolean) => (host ? `host-${id}` : id)
@@ -41,6 +46,7 @@ const pluginId = (id: string, host: boolean) => (host ? `host-${id}` : id)
 /** 和插件作者一样用 nextskin-plugin build 打包仓库里的插件；只换 package.json 里的 id，可以另给版本号 */
 function build(source: string, id: string, version?: string): string {
   const dir = mkdtempSync(join(tmpdir(), `nextskin-e2e-${id}-`))
+  directories.push(dir)
   const from = join(repository, 'plugins', source)
   cpSync(join(from, 'src'), join(dir, 'src'), { recursive: true })
   cpSync(join(from, 'locales'), join(dir, 'locales'), { recursive: true })

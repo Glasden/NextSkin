@@ -17,7 +17,9 @@
     // e2e 从发行目录启动，覆盖启动器和打包后的命令行（ADR-0039）
     "@nextskin/web#e2e": {
       "dependsOn": ["build", "@nextskin/launcher#build"],
-      "cache": false
+      "cache": false,
+      // 换端口、指定数据目录（playwright.config.ts）
+      "passThroughEnv": ["NEXTSKIN_E2E_*"]
     },
     // Next 的 next-env.d.ts 和 .next/types 不进仓库，由 typegen 生成；类型检查和带类型的 lint 都读它们。
     // 只在这里生成一次：两个任务并行跑时，lint 可能读到还没生成或正在重写的文件

@@ -1,6 +1,7 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { removeTestDirectory } from '@nextskin/db/testing'
 import { afterEach, expect, test, vi } from 'vitest'
 import { ConfigError } from '../config.ts'
 import type { LauncherContext } from '../context.ts'
@@ -20,7 +21,7 @@ afterEach(async () => {
   vi.unstubAllEnvs()
   // 有的用例改了 acquireDataLock 的返回值：恢复成 vi.mock 里的实现
   vi.resetAllMocks()
-  for (const directory of directories.splice(0)) await rm(directory, { recursive: true, force: true })
+  for (const directory of directories.splice(0)) await removeTestDirectory(directory)
 })
 
 test.each(['same', 'different', 'missing'] as const)('start 检查发行目录版本：%s', async (state) => {

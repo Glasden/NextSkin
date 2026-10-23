@@ -34,7 +34,7 @@ PR 要等 CI 全部通过才会合并（什么改动走 PR 见 ADR-0047）。这
 - `pnpm check` 在第一个失败的任务处停下。想一次看到全部失败，加 `--continue`。
 - 机器同时在干别的（编译、开游戏）时，`pnpm check` 会大面积超时（`Hook timed out`、子进程被杀）。用 `pnpm check --continue --concurrency=1` 重跑，还挂的才是真问题。
 - 本地没有 Docker 就跑不了 `test:db`、`test:visual`，推上去看 CI 的结果。失败了按下面的小节修，不要改测试或基线去迁就当前的输出。
-- Windows 上本地才有、与改动无关的失败：`packages/domain` 的 `textures/storage.test.ts` 要建符号链接，账号没有这个权限（没开开发者模式）时报 `EPERM`；e2e 要监听 3100–3105 端口，被代理客户端等程序的连接占着时报 `listen EACCES`。
+- Windows 上：`packages/domain` 的 `textures/storage.test.ts` 有几个用例要建符号链接，账号没有这个权限（没开开发者模式）时自动跳过。e2e 默认监听 3100–3105，Windows 的动态端口范围可能覆盖到这里，被代理客户端、游戏这类程序的连接占着时报 `listen EACCES`，见下面"e2e"一节换端口。
 
 ## 看失败的日志
 
@@ -90,11 +90,13 @@ pnpm exec prettier --write <报出来的文件>
 - 用例按界面文案找元素，比如后台保存设置后断言"已保存 3 项设置"。改共用的表单组件（`Field`、`Form`）、表单校验或文案，会牵动所有表单页的用例。
 - 断言超时先看失败用例的 `error-context.md` 和截图，确认页面实际停在哪里、接口返回了什么。多半是行为变了，不要先加等待时间。
 - 只重跑一个文件：`pnpm build` 之后 `pnpm --filter @nextskin/web exec playwright test e2e/admin.spec.ts`。用例跑的是 `dist/nextskin`，改了代码要重新构建。
+- 六个服务依次监听 3100–3105。端口被占（`listen EACCES`、`EADDRINUSE`）时设 `NEXTSKIN_E2E_PORT=<基准端口>` 换一组连续的端口。Windows 上要避开动态端口范围（`netsh int ipv4 show dynamicport tcp`）。
+- 每次运行在系统临时目录建的数据目录，结束时自动删除。要保留现场，自己设 `NEXTSKIN_E2E_DATA_DIR` 这类环境变量指定目录（见 `playwright.config.ts`），指定的目录不删。
 - 用 `--repeat-each` 复现偶发时，注册账号的用例同一个 IP 超过注册名额会返回 403，看起来像大面积失败，和改动无关。
 
 ### 数据库测试
 
-- `pnpm test:db` 里 `packages/db` 一失败，`packages/domain` 就不跑了；加 `--continue` 看全部结果。
+- `pnpm test:db` 带着 `--continue`：`packages/db` 失败时 `packages/domain` 照样跑完，一次看到全部失败。
 - 只重跑一种库：在 `packages/domain` 里 `pnpm exec vitest run --config vitest.db.config.ts --project db:postgres <文件>`（项目名是 `db:sqlite`、`db:mysql`、`db:mariadb`、`db:postgres`，容器要先由 `pnpm test:db` 起好）。
 - PostgreSQL 的字符串排序跟区域设置走，只差大小写的字符串排出来和另外三种库不同。测试里比较列表时在 JS 里排序，不要依赖 `ORDER BY`。
 - 加了新迁移，断言"最新迁移是某一号"的旧测试会失败。这类测试只迁移到它关心的那一号为止。

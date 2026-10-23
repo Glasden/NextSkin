@@ -1,7 +1,8 @@
 import { mkdtemp, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { removeTestDirectory } from '@nextskin/db/testing'
-import { afterAll, afterEach, beforeAll, expect, test, vi } from 'vitest'
+import { afterAll, afterEach, expect, test, vi } from 'vitest'
 import { createLocalTextureStorage } from './storage.ts'
 
 const listing = vi.hoisted(() => ({ afterRead: undefined as (() => Promise<void>) | undefined }))
@@ -22,13 +23,28 @@ afterEach(() => {
   listing.afterRead = undefined
 })
 
-let directory: string
-beforeAll(async () => {
-  directory = await mkdtemp('/tmp/nextskin-storage-')
-})
+const directory = await mkdtemp(join(tmpdir(), 'nextskin-storage-'))
 afterAll(async () => {
-  if (directory) await removeTestDirectory(directory)
+  await removeTestDirectory(directory)
 })
+
+// Windows 未开启开发者模式的账号可能没有文件符号链接权限，只在 EPERM 时跳过相关用例。
+const supportsSymlinks = await (async () => {
+  const fs = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+  const target = join(directory, 'symlink-target')
+  const link = join(directory, 'symlink-probe')
+  await fs.writeFile(target, 'probe')
+  try {
+    await fs.symlink(target, link, 'file')
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EPERM') return false
+    throw error
+  } finally {
+    await fs.rm(link, { force: true })
+    await fs.rm(target, { force: true })
+  }
+})()
 
 test('按 hash 返回原始字节，缺文件返回 null', async () => {
   const hash = 'a'.repeat(64)
@@ -104,7 +120,7 @@ test('清理先前认领的临时文件不影响新的认领', async () => {
   expect(new Uint8Array((await storage.read(hash))!)).toEqual(Uint8Array.of(9))
 })
 
-test('列出对象只含小写 hash 普通文件，按键排序且严格按游标分页', async () => {
+test.skipIf(!supportsSymlinks)('列出对象只含小写 hash 普通文件，按键排序且严格按游标分页', async () => {
   const { mkdir, symlink, utimes } = await import('node:fs/promises')
   const path = join(directory, 'listing')
   await mkdir(path)
@@ -123,7 +139,7 @@ test('列出对象只含小写 hash 普通文件，按键排序且严格按游�
   expect(await storage.list({ after: 'c'.repeat(64), limit: 2 })).toEqual([])
 })
 
-test('列出临时文件跳过非法名字、目录和符号链接；缺目录返回空，异常不泄露路径', async () => {
+test.skipIf(!supportsSymlinks)('列出临时文件跳过非法名字、目录和符号链接；缺目录返回空，异常不泄露路径', async () => {
   const { mkdir, symlink } = await import('node:fs/promises')
   const storage = createLocalTextureStorage(join(directory, 'missing'))
   expect(await storage.list({ after: null, limit: 1000 })).toEqual([])
@@ -144,22 +160,25 @@ test('列出临时文件跳过非法名字、目录和符号链接；缺目录�
   await expect(createLocalTextureStorage('\0').listTemp()).rejects.toThrow('列出材质文件失败')
 })
 
-test.each(['list', 'listTemp'] as const)('目录读出之后被替换的符号链接不会被 %s 跟随', async (method) => {
-  const { mkdir, rm, symlink } = await import('node:fs/promises')
-  const path = join(directory, `link-race-${method}`)
-  const parent = method === 'list' ? path : join(path, '.tmp')
-  await mkdir(parent, { recursive: true })
-  const key = 'a'.repeat(64)
-  const claimId = '00000000-0000-4000-8000-000000000000'
-  const entry = join(parent, method === 'list' ? key : `${key}.${claimId}`)
-  const target = join(path, 'link-target')
-  await writeFile(entry, 'original')
-  await writeFile(target, 'target')
-  listing.afterRead = async () => {
-    await rm(entry)
-    await symlink(target, entry)
-  }
-  const storage = createLocalTextureStorage(path)
-  if (method === 'list') await expect(storage.list({ after: null, limit: 1000 })).rejects.toThrow('材质文件失败')
-  else expect(await storage.listTemp()).toEqual([])
-})
+test.skipIf(!supportsSymlinks).each(['list', 'listTemp'] as const)(
+  '目录读出之后被替换的符号链接不会被 %s 跟随',
+  async (method) => {
+    const { mkdir, rm, symlink } = await import('node:fs/promises')
+    const path = join(directory, `link-race-${method}`)
+    const parent = method === 'list' ? path : join(path, '.tmp')
+    await mkdir(parent, { recursive: true })
+    const key = 'a'.repeat(64)
+    const claimId = '00000000-0000-4000-8000-000000000000'
+    const entry = join(parent, method === 'list' ? key : `${key}.${claimId}`)
+    const target = join(path, 'link-target')
+    await writeFile(entry, 'original')
+    await writeFile(target, 'target')
+    listing.afterRead = async () => {
+      await rm(entry)
+      await symlink(target, entry)
+    }
+    const storage = createLocalTextureStorage(path)
+    if (method === 'list') await expect(storage.list({ after: null, limit: 1000 })).rejects.toThrow('材质文件失败')
+    else expect(await storage.listTemp()).toEqual([])
+  },
+)

@@ -1,13 +1,14 @@
-import { chmod, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { removeTestDirectory } from '@nextskin/db/testing'
 import { afterEach, expect, test } from 'vitest'
 import { ConfigError, readConfig } from './config.ts'
 import type { LauncherContext } from './context.ts'
 
 const directories: string[] = []
 afterEach(async () => {
-  for (const path of directories.splice(0)) await rm(path, { recursive: true, force: true })
+  for (const path of directories.splice(0)) await removeTestDirectory(path)
 })
 async function context(): Promise<LauncherContext> {
   const root = await mkdtemp(join(tmpdir(), 'launcher-config-'))

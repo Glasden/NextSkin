@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { expect, test } from './fixtures'
+import { port } from './ports'
 
 // 协议响应本身由 e2e/contract.spec.ts 回放契约用例守护；这里只测 Next 这一层的行为。
 
@@ -23,7 +24,7 @@ test('元数据的 implementationVersion 是发行目录的版本号（server/VE
 test('页面带 X-Authlib-Injector-API-Location，启动器填首页地址就能找到 API', async ({ request }) => {
   const res = await request.get('/')
   expect(res.status()).toBe(200)
-  expect(res.headers()['x-authlib-injector-api-location']).toBe('http://localhost:3100/api/yggdrasil')
+  expect(res.headers()['x-authlib-injector-api-location']).toBe(`http://localhost:${port}/api/yggdrasil`)
 })
 
 test.describe('X-Authlib-Injector-API-Location 每个响应恰好一个', () => {
@@ -45,7 +46,7 @@ test.describe('X-Authlib-Injector-API-Location 每个响应恰好一个', () => 
       const values = res
         .headersArray()
         .filter((header) => header.name.toLowerCase() === 'x-authlib-injector-api-location')
-      expect(values.map((header) => header.value)).toEqual(['http://localhost:3100/api/yggdrasil'])
+      expect(values.map((header) => header.value)).toEqual([`http://localhost:${port}/api/yggdrasil`])
     })
   }
 })

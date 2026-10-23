@@ -37,6 +37,8 @@ test-results/
 playwright-report/
 # Playwright MCP 的快照和控制台日志，写在仓库根目录
 .playwright-mcp/
+# Claude Code 建的 worktree 在仓库目录里：写进这里，主工作区的 Prettier 才不会去检查它们
+.claude/worktrees/
 
 # 开发环境的数据目录（SQLite 和材质）
 apps/web/data/

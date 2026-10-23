@@ -1,6 +1,7 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { removeTestDirectory } from '@nextskin/db/testing'
 import { expect, test, vi } from 'vitest'
 import { readConfig } from '../config.ts'
 import { acquireDataLock } from '../lock.ts'
@@ -28,6 +29,6 @@ test('服务持锁时拒绝导入、--help 照常显示，命令正常或参数�
     held?.release()
     error.mockRestore()
     log.mockRestore()
-    await rm(root, { recursive: true, force: true })
+    await removeTestDirectory(root)
   }
 })

@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { createTranslator } from '@nextskin/i18n'
 import type { Page } from '@playwright/test'
 import { expect, test } from './fixtures'
+import { setupNewPort, setupImportPort } from './ports'
 import { OLD_SITE, OLD_SITE_PASSWORD } from '../../../packages/importer/src/testing/old-site.ts'
 
 // 安装向导的两条路（ADR-0031）：新站，和从 BS 导入。两个服务都是未初始化的站点（playwright.config.ts），
@@ -29,12 +30,18 @@ async function enterCode(page: Page, dataDirectory: string) {
 
 test.describe('新站', () => {
   const dataDirectory = process.env.NEXTSKIN_E2E_SETUP_NEW_DATA_DIR!
-  test.use({ baseURL: 'http://localhost:3102' })
+  test.use({ baseURL: `http://localhost:${setupNewPort}` })
 
   test('输入安装码，创建第一个超级管理员，直接进后台；之后 /setup 是 404，安装码文件被删除', async ({ page }) => {
     // 没有安装码的 Cookie，接口一律拒绝
     const denied = await page.request.post('/api/setup/site', {
-      data: { siteName: 'x', siteUrl: 'http://localhost:3102', email: 'a@example.test', nickname: 'a', password: 'x' },
+      data: {
+        siteName: 'x',
+        siteUrl: `http://localhost:${setupNewPort}`,
+        email: 'a@example.test',
+        nickname: 'a',
+        password: 'x',
+      },
     })
     expect(denied.status()).toBe(401)
     // 安装之前不开放注册：先注册的人会让向导关闭，站点就没有超级管理员了
@@ -67,7 +74,7 @@ test.describe('新站', () => {
 test.describe('从 BS 导入', () => {
   const dataDirectory = process.env.NEXTSKIN_E2E_SETUP_IMPORT_DATA_DIR!
   const oldSite = process.env.NEXTSKIN_E2E_OLD_SITE_DIR!
-  test.use({ baseURL: 'http://localhost:3103' })
+  test.use({ baseURL: `http://localhost:${setupImportPort}` })
 
   test('试跑发现 UUID 冲突，选好之后重新试跑、导入，用旧站的账号登录，UUID 是选的那个', async ({ page }) => {
     test.setTimeout(120_000)
@@ -98,7 +105,7 @@ test.describe('从 BS 导入', () => {
       timeout: 60_000,
     })
     await page.getByRole('button', { name: t('import.wizard.dryRun.next') }).click()
-    await expect(page.getByLabel(t('import.wizard.confirm.siteUrl'))).toHaveValue('http://localhost:3103')
+    await expect(page.getByLabel(t('import.wizard.confirm.siteUrl'))).toHaveValue(`http://localhost:${setupImportPort}`)
     await page.getByRole('button', { name: t('import.wizard.confirm.start') }).click()
     await expect(page.getByRole('heading', { name: t('import.result.importSucceeded') })).toBeVisible({
       timeout: 60_000,

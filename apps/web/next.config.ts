@@ -42,6 +42,8 @@ const config: NextConfig = {
   },
   // 不让 next dev 在项目目录生成 AGENTS.md
   agentRules: false,
+  // next dev 只放行 localhost 来源的开发资源请求：用 127.0.0.1 打开页面时客户端脚本和 HMR 被挡，页面不水合
+  allowedDevOrigins: ['127.0.0.1'],
   // 不把 /api/yggdrasil/ 308 跳转到不带斜杠的地址：authlib-injector 请求元数据时带斜杠，BS 直接返回 200，
   // 而旧版 Java 的 HttpURLConnection 不跟随 308。Hono 用 strict: false 匹配带斜杠的路径
   skipTrailingSlashRedirect: true,

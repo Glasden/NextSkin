@@ -75,7 +75,7 @@ test('遍历依赖、可选依赖和 peer，跳过未安装的可选项和开发
     await json(join(second, '@test', 'second'), { dependencies: { '@nextskin/other': '*' } })
     expect(() => pluginHostEntry({ root, bundled: false })).toThrow('不允许读取工作区依赖 @nextskin/other')
   } finally {
-    await rm(root, { recursive: true, force: true })
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
   }
 })
 
@@ -164,6 +164,6 @@ test('host 加载插件前清空环境，包括 Windows 可能补入的变量；
     })
     expect(result).toMatchObject({ type: 'ready', plugins: [{ id: 'probe', ok: true }] })
   } finally {
-    await rm(dir, { recursive: true, force: true })
+    await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
   }
 })

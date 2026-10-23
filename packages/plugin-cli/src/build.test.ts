@@ -79,7 +79,7 @@ test.each([
       await exec(process.execPath, ['--input-type=module', '--eval', script], { timeout: 20_000 })
       expect(await readFile(out)).toEqual(bytes)
     } finally {
-      await rm(temp, { recursive: true, force: true })
+      await rm(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
     }
   },
   30_000,
@@ -120,7 +120,7 @@ test('默认目录、默认输出、内联动态导入和打包普通依赖', as
       stderr: expect.stringContaining('其他依赖要打包进 server.mjs') as unknown,
     })
   } finally {
-    await rm(temp, { recursive: true, force: true })
+    await rm(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
   }
 }, 30_000)
 
@@ -153,14 +153,19 @@ test('构建自检拒绝原始文案总量超过 1 MiB 的插件', async () => {
     `
     await exec(process.execPath, ['--input-type=module', '--eval', script], { timeout: 20_000 })
   } finally {
-    await rm(temp, { recursive: true, force: true })
+    await rm(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
   }
 }, 30_000)
 
 test('manifest 的 api 按插件项目里装的 SDK 算', async () => {
-  const unpacked = unpackPluginPackage(await readFile(await buildIn(await project())))
-  expect(unpacked.manifest.api).toBe(pluginApiRange(sdkPackage.version))
-  expect(unpacked.manifest.api).toBe(pluginApiRange(PLUGIN_API_VERSION))
+  const dir = await project()
+  try {
+    const unpacked = unpackPluginPackage(await readFile(await buildIn(dir)))
+    expect(unpacked.manifest.api).toBe(pluginApiRange(sdkPackage.version))
+    expect(unpacked.manifest.api).toBe(pluginApiRange(PLUGIN_API_VERSION))
+  } finally {
+    await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
+  }
 }, 30_000)
 
 test.each([
@@ -178,7 +183,7 @@ test.each([
         stderr: expect.stringContaining(message) as unknown,
       })
     } finally {
-      await rm(dir, { recursive: true, force: true })
+      await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
     }
   },
   30_000,
@@ -240,7 +245,7 @@ test('构建主题和结构写进 manifest，色值统一为小写', async () =>
       },
     ])
   } finally {
-    await rm(dir, { recursive: true, force: true })
+    await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
   }
 }, 30_000)
 
@@ -260,7 +265,7 @@ test('结构取值错误使构建退出 1，并指出 structure', async () => {
     })
     await expect(readFile(join(dir, 'dist', 'test-1.0.0.tgz'))).rejects.toMatchObject({ code: 'ENOENT' })
   } finally {
-    await rm(dir, { recursive: true, force: true })
+    await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
   }
 }, 30_000)
 
@@ -286,7 +291,7 @@ test('不通过的主题使构建退出 1，逐条报出主题名、模式和检
     })
     await expect(readFile(join(dir, 'dist', 'test-1.0.0.tgz'))).rejects.toMatchObject({ code: 'ENOENT' })
   } finally {
-    await rm(dir, { recursive: true, force: true })
+    await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
   }
 }, 30_000)
 /* eslint-enable nextskin/no-raw-color */
