@@ -93,13 +93,13 @@ location / {
 
 | 命令                                                    | 用途                                                                                       |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `doctor`                                                | 只读检查 Node、密钥、数据目录、数据库和迁移、plugin host、服务在不在运行；有失败时退出码 1 |
+| `doctor`                                                | 只读检查 Node、密钥、数据目录、数据库和迁移（含已启用的官方插件）、plugin host、服务在不在运行；有失败时退出码 1。`--json` 输出机器可读的结果 |
 | `set-role <邮箱> <身份>`                                 | 身份：`banned`、`user`、`admin`、`superadmin`                                              |
 | `set-password <邮箱或 uid>`、`disable-2fa <邮箱或 uid>` | 找回超级管理员（后台改不了超级管理员）                                                     |
 | `disable-captcha`                                       | 验证码配错、自己也登不进去时关掉它                                                         |
 | `maintenance [on\|off]` | 查看或开关手动维护模式：除了管理员，别人只能看到维护页（ADR-0044）。备份、整理数据之前先挂上 |
 | `plugin list`、`plugin install <插件包> [--yes]`、`plugin enable\|disable <id>`、`plugin uninstall <id> [--yes]` | 不用后台管理插件（ADR-0049）：安装或升级先列出插件会做什么，第一次安装、升级多了能力和卸载要确认，脚本里加 `--yes`。启用、升级上传的插件时会临时拉起 plugin host 跑迁移。运行中的服务最多 5 秒后跟上 |
-| `migrate`                                               | 只执行迁移；平时 `start` 会自动执行                                                        |
+| `migrate`                                               | 只执行迁移（核心和已启用的官方插件）；平时 `start` 会自动执行。`--json` 输出执行了哪些、备份在哪里 |
 | `import blessing-skin …`                                | 从 BS v6 导入，服务要停着，见 MIGRATION.md                                                  |
 
 除了 `import`，这些命令都可以在服务运行时执行。
@@ -109,7 +109,7 @@ location / {
 - 迁移是单向的：升级到带迁移的版本之后，旧版本打不开这个库。先读发布说明。
 - 升级：停服务 → 备份 `data/` 和 `.env` → 删掉 `server/`、`cli/` → 解压新包覆盖 → 启动。启动时自动执行迁移。
 - 手工备份 SQLite：先停服务，再拷整个 `data/`。停止后 `nextskin.sqlite-wal` 可能还在，最近的写入在里面，只拷 `nextskin.sqlite` 会丢。
-- SQLite：有要执行的迁移时，迁移之前自动备份到 `data/backups/nextskin-<UTC 时间>-<第一个迁移>.sqlite`，留最近 3 份。备份失败就不迁移、核心不启动，日志说明原因（多半是空间或权限）。MySQL、PostgreSQL 不自动备份，升级前自己备份。
+- SQLite：有要执行的迁移（核心的，或者已启用的官方插件随新版本带来的）时，迁移之前自动备份到 `data/backups/nextskin-<UTC 时间>-<第一个迁移>.sqlite`（只有插件迁移时是 `<插件 id>-<迁移>`），留最近 3 份。备份失败就不迁移、核心不启动，日志说明原因（多半是空间或权限）。MySQL、PostgreSQL 不自动备份，升级前自己备份。
 - 回退（SQLite）：停服务 → 换回旧版本的 `server/`、`cli/`、`nextskin.mjs` → 把备份复制成 `data/nextskin.sqlite` → 删掉 `data/nextskin.sqlite-wal`、`data/nextskin.sqlite-shm`（留着会把新库的页面重放到旧文件上）→ 启动。
 
 ## 检查

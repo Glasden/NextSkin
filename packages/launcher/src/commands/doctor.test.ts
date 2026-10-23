@@ -20,7 +20,28 @@ import {
   checkSecret,
   checkService,
   run,
+  type CheckResult,
 } from './doctor.ts'
+
+vi.mock('@nextskin/official-plugins', () => ({
+  officialPlugins: ['test-doctor', 'disabled'].map((id) => ({
+    package: { name: `@test/${id}`, version: '1.0.0', nextskin: { id } },
+    definition: {
+      capabilities: ['storage.tables'],
+      migrations: { '001': { up: async () => {} }, '002': { up: async () => {} } },
+    },
+    messages: { 'zh-CN': {}, en: {} },
+  })),
+}))
+
+type DoctorReport = {
+  version: string
+  root: string
+  home: string
+  results: CheckResult[]
+  database: Awaited<ReturnType<typeof checkDatabase>>['database']
+}
+const reportFrom = (output: string) => JSON.parse(output) as DoctorReport
 
 const directories: string[] = []
 const secret = 'doctor-test-secret-must-never-appear-in-output'
@@ -41,11 +62,11 @@ async function context(): Promise<LauncherContext> {
   await writeFile(join(root, 'server/VERSION'), '0.0.0\n')
   return { root, cwd: join(root, 'elsewhere'), source: false, production: true, version: '0.0.0' }
 }
-async function diagnose(ctx: LauncherContext, env: NodeJS.ProcessEnv = {}) {
+async function diagnose(ctx: LauncherContext, env: NodeJS.ProcessEnv = {}, argv: string[] = []) {
   const lines: string[] = []
   const log = vi.spyOn(console, 'log').mockImplementation((line: string) => lines.push(line))
   try {
-    const code = await run([], ctx, { env, probeHost })
+    const code = await run(argv, ctx, { env, probeHost })
     return { code, output: lines.join('\n'), lines }
   } finally {
     log.mockRestore()
@@ -249,7 +270,7 @@ test('数据库整体检查有超时，驱动未完成握手也能返回', async
       { dialect: 'mysql', url: `mysql://user:private@127.0.0.1:${port}/db?connectTimeout=0` },
       100,
     )
-    expect(checked).toMatchObject({ status: 'fail', timedOut: true })
+    expect(checked).toMatchObject({ status: 'fail', timedOut: true, database: null })
     expect(checked.message).not.toContain('private')
   } finally {
     for (const socket of sockets) socket.destroy()
@@ -273,5 +294,196 @@ test('plugin host 检查发行完整性，已知错误可回显、意外错误�
     expect(incomplete.status).toBe('fail')
     expect(incomplete.message).toContain('发行目录不完整')
     await writeFile(join(ctx.root, file), '')
+  }
+})
+
+function migrationDatabase(ctx: LauncherContext, pendingCore = 0) {
+  const file = join(ctx.root, 'site.sqlite')
+  const db = new DatabaseSync(file)
+  db.exec('CREATE TABLE nextskin_migration (name TEXT PRIMARY KEY)')
+  const names = Object.keys(coreMigrations).sort()
+  for (const name of names.slice(0, names.length - pendingCore))
+    db.prepare('INSERT INTO nextskin_migration (name) VALUES (?)').run(name)
+  return { file, db, pendingCore: names.slice(names.length - pendingCore) }
+}
+
+for (const pendingCore of [0, 2]) {
+  test(`待迁移包括启用的官方插件，忽略停用和安装插件，核心待迁移=${pendingCore}`, async () => {
+    const ctx = await context()
+    const { file, db, pendingCore: pending } = migrationDatabase(ctx, pendingCore)
+    db.exec(`CREATE TABLE plugins (id TEXT PRIMARY KEY, is_enabled INTEGER);
+      CREATE TABLE plugin_migrations (plugin_id TEXT, name TEXT);
+      INSERT INTO plugins VALUES ('test-doctor', 1), ('disabled', 0), ('installed', 1);
+      INSERT INTO plugin_migrations VALUES ('test-doctor', '001'), ('installed', '001');`)
+    db.close()
+    const before = await readFile(file)
+    const env = { NEXTSKIN_SECRET: secret, NEXTSKIN_DATABASE_URL: `sqlite:${file}` }
+    const human = await diagnose(ctx, env)
+    expect(human.code).toBe(0)
+    expect(human.lines).toContain(
+      `[警告] 数据库：SQLite ${file}；有 ${pendingCore} 个核心迁移、1 个官方插件的迁移没执行，start 或 migrate 时执行`,
+    )
+    const checked = await diagnose(ctx, env, ['--json'])
+    expect(checked.code).toBe(0)
+    expect(checked.lines).toHaveLength(1)
+    const report = reportFrom(checked.output)
+    expect(report).toEqual({
+      version: ctx.version,
+      root: ctx.root,
+      home: ctx.root,
+      results: expect.any(Array) as unknown,
+      database: {
+        dialect: 'sqlite',
+        empty: false,
+        pendingCore: pending,
+        unknownCore: [],
+        pendingPlugins: [{ plugin: 'test-doctor', migrations: ['002'] }],
+      },
+    })
+    expect(report.results.find((row: { item: string }) => row.item === '数据库')).toMatchObject({ status: 'warning' })
+    for (const row of report.results) expect(Object.keys(row).sort()).toEqual(['item', 'message', 'status'])
+    expect(await readFile(file)).toEqual(before)
+  })
+}
+
+test('缺少插件表或插件迁移表时仍可检查早期数据库', async () => {
+  const { file, db } = migrationDatabase(await context())
+  db.close()
+  expect((await checkDatabase({ dialect: 'sqlite', file })).database?.pendingPlugins).toEqual([])
+  const partial = new DatabaseSync(file)
+  partial.exec(`CREATE TABLE plugins (id TEXT PRIMARY KEY, is_enabled INTEGER);
+    INSERT INTO plugins VALUES ('test-doctor', 1);`)
+  partial.close()
+  expect((await checkDatabase({ dialect: 'sqlite', file })).database?.pendingPlugins).toEqual([
+    { plugin: 'test-doctor', migrations: ['001', '002'] },
+  ])
+})
+
+test.each(['missing', 'empty'] as const)('JSON 中的 %s 数据库标为 empty，不创建数据', async (state) => {
+  const ctx = await context()
+  const home = join(ctx.root, 'instance')
+  await mkdir(home)
+  ctx.home = home
+  const file = join(home, 'site.sqlite')
+  if (state === 'empty') new DatabaseSync(file).close()
+  const before = await readdir(home)
+  const checked = await diagnose(ctx, { NEXTSKIN_SECRET: secret, NEXTSKIN_DATABASE_URL: `sqlite:${file}` }, ['--json'])
+  expect(checked.code).toBe(0)
+  expect(checked.lines).toHaveLength(1)
+  expect(reportFrom(checked.output)).toMatchObject({
+    version: ctx.version,
+    root: ctx.root,
+    home,
+    database: { dialect: 'sqlite', empty: true, pendingCore: [], unknownCore: [], pendingPlugins: [] },
+  })
+  expect(await readdir(home)).toEqual(before)
+})
+
+test.each(['config', 'connection', 'sqlite'] as const)(
+  'JSON 在 %s 失败时 database 为 null，输出不含凭据',
+  async (state) => {
+    const ctx = await context()
+    const file = join(ctx.root, 'invalid.sqlite')
+    if (state === 'sqlite') await writeFile(file, 'invalid database')
+    const url =
+      state === 'config'
+        ? 'bad://user:private@db/site'
+        : state === 'connection'
+          ? 'mysql://user:private@127.0.0.1:1/site'
+          : `sqlite:${file}`
+    const checked = await diagnose(ctx, { NEXTSKIN_SECRET: secret, NEXTSKIN_DATABASE_URL: url }, ['--json'])
+    expect(checked.code).toBe(1)
+    expect(checked.lines).toHaveLength(1)
+    expect(reportFrom(checked.output).database).toBeNull()
+    expect(checked.output).not.toContain(secret)
+    expect(checked.output).not.toContain('private')
+  },
+)
+
+test('未知核心迁移在 JSON 中列出并仍算失败', async () => {
+  const ctx = await context()
+  const { file, db } = migrationDatabase(ctx, 1)
+  db.prepare('INSERT INTO nextskin_migration (name) VALUES (?)').run('9999_newest')
+  db.close()
+  const checked = await diagnose(ctx, { NEXTSKIN_SECRET: secret, NEXTSKIN_DATABASE_URL: `sqlite:${file}` }, ['--json'])
+  expect(checked.code).toBe(1)
+  expect(reportFrom(checked.output).database).toMatchObject({
+    empty: false,
+    unknownCore: ['9999_newest'],
+    pendingCore: [Object.keys(coreMigrations).sort().at(-1)],
+  })
+})
+
+test('JSON 模式的检查日志转到 stderr，并恢复 console 方法', async () => {
+  const ctx = await context()
+  const log = console.log
+  const info = console.info
+  const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+  probeHost.mockImplementationOnce(() => {
+    console.log('探测日志')
+    console.info('探测提示')
+    return Promise.resolve()
+  })
+  const checked = await diagnose(ctx, {}, ['--json'])
+  expect(checked.lines).toHaveLength(1)
+  expect(reportFrom(checked.output).results).toEqual(expect.any(Array))
+  expect(error.mock.calls).toEqual([['探测日志'], ['探测提示']])
+  expect(console.log).toBe(log)
+  expect(console.info).toBe(info)
+})
+
+test.each([['--help'], ['-h'], ['--unknown'], ['extra'], ['--json', '--unknown']])(
+  'doctor 参数：%j',
+  async (...argv) => {
+    const checked = await diagnose(await context(), {}, argv)
+    expect(checked.code).toBe(argv[0] === '--help' || argv[0] === '-h' ? 0 : 1)
+    expect(checked.lines).toEqual(['用法：nextskin doctor [--json]'])
+    expect(probeHost).not.toHaveBeenCalled()
+  },
+)
+
+test('数据库检查超时后先输出完整 JSON，再以 1 退出', async () => {
+  const ctx = await context()
+  const sockets = new Set<Socket>()
+  const server = createTcpServer((socket) => {
+    sockets.add(socket)
+  })
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const lines: string[] = []
+  const log = vi.spyOn(console, 'log').mockImplementation((line: string) => {
+    lines.push(line)
+  })
+  const info = console.info
+  const stopped = new Error('模拟退出')
+  const exit = vi.spyOn(process, 'exit').mockImplementation(() => {
+    throw stopped
+  })
+  try {
+    const { port } = server.address() as { port: number }
+    await expect(
+      run(['--json'], ctx, {
+        env: {
+          NEXTSKIN_SECRET: secret,
+          NEXTSKIN_DATABASE_URL: `mysql://user:private@127.0.0.1:${port}/db?connectTimeout=0`,
+        },
+        probeHost,
+      }),
+    ).rejects.toBe(stopped)
+    expect(exit).toHaveBeenCalledExactlyOnceWith(1)
+    expect(lines).toHaveLength(1)
+    const report = reportFrom(lines[0]!)
+    expect(report.database).toBeNull()
+    expect(report.results.find((row) => row.item === '数据库')).toMatchObject({
+      status: 'fail',
+      message: expect.stringContaining('检查超时') as unknown,
+    })
+    expect(lines[0]).not.toContain('timedOut')
+    expect(lines[0]).not.toContain('private')
+    expect(log.mock.invocationCallOrder[0]).toBeLessThan(exit.mock.invocationCallOrder[0]!)
+    expect(console.log).toBe(log)
+    expect(console.info).toBe(info)
+  } finally {
+    for (const socket of sockets) socket.destroy()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
   }
 })

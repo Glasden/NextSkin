@@ -690,6 +690,9 @@ importers:
       '@nextskin/official-plugins':
         specifier: workspace:*
         version: link:../official-plugins
+      '@nextskin/plugin-host':
+        specifier: workspace:*
+        version: link:../plugin-host
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
