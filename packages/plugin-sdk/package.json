@@ -1,6 +1,6 @@
 {
   "name": "@nextskin/plugin-sdk",
-  "version": "1.0.0-rc.4",
+  "version": "1.0.0-rc.5",
   "description": "NextSkin 插件 API：插件定义的类型和辅助函数",
   "keywords": [
     "nextskin",
