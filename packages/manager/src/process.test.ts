@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { spawn } from 'node:child_process'
 import { LauncherSupervisor, healthUrl, stopSignals, runCommand } from './process.ts'
 import { acquireLock, waitForLock } from './lock.ts'
-import { fixture, events } from './fixtures.ts'
+import { fixture, events, healthTimeout } from './fixtures.ts'
 
 const disposers: (() => Promise<unknown>)[] = []
 afterEach(async () => {
@@ -261,7 +261,7 @@ it.skipIf(process.platform === 'win32')('内存 journal 的数据锁仍阻止其
     chown: vi.fn<typeof chown>().mockResolvedValue(undefined),
   }))!
   disposers.push(() => Promise.resolve(lock.release()))
-  const supervisor = new LauncherSupervisor(f.home, { log: vi.fn(), healthInterval: 10, healthTimeout: 1000 })
+  const supervisor = new LauncherSupervisor(f.home, { log: vi.fn(), healthInterval: 10, healthTimeout })
   disposers.push(() => supervisor.shutdown())
   await expect(supervisor.start('1.0.0', true)).rejects.toThrow('78')
   await supervisor.stop()

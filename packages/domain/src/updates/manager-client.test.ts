@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises'
 import { createServer, Socket } from 'node:net'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { afterEach, expect, test, vi } from 'vitest'
 import { createManagerClient, managerErrorCodes, type ManagerStatus, type ManagerParams } from './manager-client.ts'
 
@@ -49,7 +49,8 @@ afterEach(async () => {
 })
 async function server(reply: (socket: Socket, request: unknown) => void) {
   const directory = await mkdtemp(join(tmpdir(), 'nsm-'))
-  const address = join(directory, 's')
+  // Windows 上 net 只能监听命名管道，和管理进程的控制通道一样
+  const address = process.platform === 'win32' ? `\\\\.\\pipe\\${basename(directory)}` : join(directory, 's')
   const sockets = new Set<Socket>()
   const requests: unknown[] = []
   const listener = createServer((socket) => {

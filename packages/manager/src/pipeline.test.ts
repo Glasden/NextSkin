@@ -4,7 +4,16 @@ import { join } from 'node:path'
 import { MANIFEST_URL } from '@nextskin/updates'
 import { createManager } from './pipeline.ts'
 import { LauncherSupervisor, runCommand } from './process.ts'
-import { fixture, events, releaseZip, signedManifest, zipResponse, requestUrl, contains } from './fixtures.ts'
+import {
+  fixture,
+  events,
+  releaseZip,
+  signedManifest,
+  zipResponse,
+  requestUrl,
+  contains,
+  healthTimeout,
+} from './fixtures.ts'
 import { readCurrent, writeCurrent } from './state.ts'
 import { parsePreflight, parseMigration } from './preflight.ts'
 import type { Dialect } from './types.ts'
@@ -21,7 +30,7 @@ async function setup(dialect: Dialect = 'sqlite', pending = false, download = fa
   await f.configure()
   const log = vi.fn()
   const supervisor = new LauncherSupervisor(f.home, {
-    healthTimeout: 1000,
+    healthTimeout,
     healthInterval: 15,
     shutdownTimeout: 100,
     log,
