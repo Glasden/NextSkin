@@ -1,5 +1,19 @@
 # @nextskin/plugin-cli
 
+## 1.0.0-rc.7
+
+### Minor Changes
+
+- b4273a1: 新增 `ui.widgets`：在用户中心首页（`user.dashboard`）和后台概览（`admin.dashboard`）放统计或 Markdown 的挂件，数据源限时 3 秒，返回 204 时不显示；新类型 `SlotName`、`WidgetView`、`WidgetContribution`（ADR-0059）。
+
+## 1.0.0-rc.6
+
+没有单独发布到 npm，随 1.0.0-rc.7 一起发布。
+
+### Minor Changes
+
+- c40e2dd: 主题可以声明 `structure`（圆角、边框、卡片），新增颜色 `accent-fill`、`accent-fill-fg`，没写时跟着 `accent`、`accent-fg`（ADR-0058）。
+
 ## 1.0.0-rc.5
 
 ### Minor Changes
