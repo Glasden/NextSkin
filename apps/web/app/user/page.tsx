@@ -111,7 +111,7 @@ export default async function DashboardPage() {
         </section>
       )}
       {/* 插件的挂件（ADR-0059）：在公告下面、快速配置上面，插件的提醒比快速配置更需要被看到 */}
-      <PluginWidgets widgets={widgets} />
+      <PluginWidgets slot="user.dashboard" widgets={widgets} />
       {/* 外置登录的快速配置（BS 的 ygg_show_config_section），总是显示（ADR-0030） */}
       <section id="launcher" aria-labelledby="launcher-heading" className="flex flex-col gap-3">
         <h2 id="launcher-heading" className="font-pixel text-pixel-1 text-text">

@@ -231,9 +231,10 @@ test('邀请码：启用后注册要填邀请码，每个码只能用一次；�
     await expect(usedRow.getByRole('link', { name: visitorName })).toBeVisible({ timeout: 1000 })
   }).toPass()
 
-  // 后台概览上的挂件：可用、已使用、已过期的个数，标题右边链回邀请码页（ADR-0059）
+  // 后台概览上的挂件：可用、已使用、已过期的个数，标题右边链回邀请码页（ADR-0059）。挂件在插槽的标记里，
+  // 文档站的截图靠这个标记找插槽（ADR-0060）
   await page.goto('/admin')
-  const widget = page.getByRole('region', { name: ic('page.codes') })
+  const widget = page.locator('[data-plugin-slot="admin.dashboard"]').getByRole('region', { name: ic('page.codes') })
   await expect(widget.locator('dl')).toHaveText(`${ic('stats.available')}1${ic('stats.used')}1${ic('stats.expired')}0`)
   await widget.getByRole('link', { name: ic('widget.manage') }).click()
   await expect(page).toHaveURL(`/admin/plugins/${id}/codes`)
@@ -329,9 +330,9 @@ test('分享注册链接：经链接打开的注册页填好了分享码，注�
   await toggle(page, id, name, 'enable')
   restore = () => page.request.post(`/api/admin/plugins/${id}/disable`)
 
-  // 用户中心首页多了插件的挂件（ADR-0059）：写着双方各得几分，还没有链接
+  // 用户中心首页多了插件的挂件（ADR-0059），在插槽的标记里（ADR-0060）：写着双方各得几分，还没有链接
   await page.goto('/user')
-  const widget = page.getByRole('region', { name: sr('widget.title') })
+  const widget = page.locator('[data-plugin-slot="user.dashboard"]').getByRole('region', { name: sr('widget.title') })
   await expect(widget).toContainText(sr('widget.both').replace('{sharer}', '50').replace('{sharee}', '10'))
   await expect(widget).toContainText(sr('widget.none'))
   await expect(widget.getByRole('link', { name: sr('widget.manage') })).toHaveAttribute(

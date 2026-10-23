@@ -120,7 +120,7 @@ export type { OfficialPlugin, PluginFormField, PluginHostStatus, PluginRouteRequ
 export type { PluginSummary, PluginDetail, PluginScoreSummary, PluginPackagePreview } from './plugins/admin.ts'
 export type { PluginHostEntry } from './plugins/host.ts'
 export { hostNetworkRestricted, probePluginHost, HostStartError } from './plugins/host.ts'
-export { pluginHostEntry } from '@nextskin/plugin-host'
+export { pluginHostEntry, pluginSlots } from '@nextskin/plugin-host'
 export type { PluginSettingView } from './plugins/settings.ts'
 export type { PluginReferences } from './plugins/references.ts'
 /** 后台渲染插件声明的界面要用的类型（SDK 的 ui.ts） */

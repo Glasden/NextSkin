@@ -20,7 +20,8 @@ import { z } from 'zod'
 import { eventNames } from './events.ts'
 import { isValidVersion, parseVersion } from './package/semver.ts'
 import { settingProperties } from './settings.ts'
-import { MAX_WIDGETS_PER_SLOT, pluginFieldSchema, pluginPathSchema, widgetSlots } from './ui-schema.ts'
+import { MAX_WIDGETS_PER_SLOT, pluginSlots } from './slots.ts'
+import { pluginFieldSchema, pluginPathSchema } from './ui-schema.ts'
 
 /**
  * 核心实现的插件 API 版本，就是同一个提交里 SDK 的版本号（ADR-0035）。manifest 的 `api` 范围必须包含它
@@ -375,9 +376,9 @@ export function validateUi(ui: PluginContributions['ui'], permissions: ReadonlyS
     for (const key of Object.keys(widget))
       if (!['name', 'slot', 'title', 'permission', 'link', 'view'].includes(key))
         fail(`挂件 ${name} 里没有 ${key} 这一项`)
-    if (typeof widget.slot !== 'string' || !Object.hasOwn(widgetSlots, widget.slot))
-      fail(`挂件 ${name} 的 slot 只能是 ${Object.keys(widgetSlots).join('、')}`)
-    const slot = widget.slot as keyof typeof widgetSlots
+    if (typeof widget.slot !== 'string' || !Object.hasOwn(pluginSlots, widget.slot))
+      fail(`挂件 ${name} 的 slot 只能是 ${Object.keys(pluginSlots).join('、')}`)
+    const slot = widget.slot as keyof typeof pluginSlots
     const count = (slotCounts.get(slot) ?? 0) + 1
     if (count > MAX_WIDGETS_PER_SLOT) fail(`挂件 ${name} 所在的插槽 ${slot} 最多放 ${MAX_WIDGETS_PER_SLOT} 个挂件`)
     slotCounts.set(slot, count)
@@ -398,7 +399,7 @@ export function validateUi(ui: PluginContributions['ui'], permissions: ReadonlyS
         if (key !== 'page' && key !== 'label') fail(`挂件 ${name} 的 link 里没有 ${key} 这一项`)
       if (typeof link.page !== 'string' || !Object.hasOwn(pages, link.page))
         fail(`挂件 ${name} 链接的页面 ${String(link.page)} 不存在`)
-      if (pages[link.page]!.area !== widgetSlots[slot]) fail(`挂件 ${name} 的插槽和链接页面的 area 不一致`)
+      if (pages[link.page]!.area !== pluginSlots[slot].area) fail(`挂件 ${name} 的插槽和链接页面的 area 不一致`)
       if (typeof link.label !== 'string') fail(`挂件 ${name} 的 link.label 必须是文案键`)
     }
   }

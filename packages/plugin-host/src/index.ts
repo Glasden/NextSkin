@@ -50,6 +50,7 @@ export type {
   WireError,
 } from './protocol.ts'
 export { pluginHostEntry } from './entry.ts'
+export { pluginSlots } from './slots.ts'
 export {
   ChannelBackpressureError,
   ChannelClosedError,

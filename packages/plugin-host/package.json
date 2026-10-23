@@ -5,7 +5,8 @@
   "description": "插件侧运行时：加载插件定义、构造上下文、远程 Kysely 方言（ADR-0009、ADR-0033）",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./slots": "./src/slots.ts"
   },
   "scripts": {
     "build": "node scripts/build-host.ts",

@@ -1,3 +1,4 @@
+import type { PluginSlotName } from '@nextskin/domain'
 import { cx, Link, Markdown, Panel } from '@nextskin/ui'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
@@ -12,19 +13,22 @@ const statColumns = {
 /**
  * 插件放在首页上的挂件（ADR-0059，DESIGN.md §11）：大屏两列、窄屏一列，个数是奇数时最后一个占满一行。
  * 每个挂件一个区块：像素字的二级标题、右边链到插件页面，下面一块 Panel。没有挂件时什么也不渲染。
+ * 外层带 data-plugin-slot，文档站的截图和 e2e 靠它找到插槽（ADR-0060），不对外承诺。
  * mutedHeadings：标题用次要文字色，和后台概览上其他区块的标题一样
  */
 export async function PluginWidgets({
+  slot,
   widgets,
   mutedHeadings = false,
 }: {
+  slot: PluginSlotName
   widgets: PluginWidget[]
   mutedHeadings?: boolean
 }) {
   if (!widgets.length) return null
   const [t, format] = await Promise.all([getTranslations('pluginView'), getFormatter()])
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div data-plugin-slot={slot} className="grid gap-6 lg:grid-cols-2">
       {widgets.map((widget, index) => {
         const wide = widgets.length % 2 === 1 && index === widgets.length - 1
         const headingId = `widget-${widget.key.replace('/', '--')}`
