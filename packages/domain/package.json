@@ -22,6 +22,7 @@
     "@nextskin/db": "workspace:*",
     "@nextskin/email": "workspace:*",
     "@nextskin/i18n": "workspace:*",
+    "@nextskin/logging": "workspace:*",
     "@nextskin/plugin-host": "workspace:*",
     "@nextskin/plugin-sdk": "workspace:*",
     "@nextskin/skin": "workspace:*",

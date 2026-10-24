@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { backupSqlite, coreMigrations, createDatabase, migrateToLatest, type CoreDatabase } from '@nextskin/db'
+import { getLogger } from '@nextskin/logging'
 import type { Kysely } from 'kysely'
 import type { CoreConfig } from './config.ts'
 import { createCore, type Core, type CoreOptions } from './core.ts'
@@ -118,7 +119,7 @@ export async function openCore(
     const migrations = options.migrationReport ?? { core: [], plugins: [], backup: null }
     migrations.core = await migrateCore(db, config, { onBackup: (file) => (migrations.backup = file) })
     const renderCache = createLocalRenderCache(config.renderCacheDirectory)
-    void renderCache.pruneOtherVersions().catch(() => console.warn('旧版出图缓存清理失败'))
+    void renderCache.pruneOtherVersions().catch(() => getLogger('textures').warn('旧版出图缓存清理失败'))
     const core = createCore({
       release: options.release,
       updateCheck: options.updateCheck,
@@ -159,7 +160,7 @@ export async function openCore(
     if (options.startJobs !== false) {
       const code = await core.setup.prepareCode()
       if (code?.status === 'created' || code?.status === 'kept')
-        console.info(`[setup] 站点还没有初始化：打开 /setup 完成安装，安装码在 ${code.file}`)
+        getLogger('setup').info(`站点还没有初始化：打开 /setup 完成安装，安装码在 ${code.file}`)
       core.jobs.start()
       core.schedules.start()
     }

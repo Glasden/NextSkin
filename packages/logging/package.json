@@ -1,0 +1,22 @@
+{
+  "name": "@nextskin/logging",
+  "version": "0.0.0",
+  "private": true,
+  "description": "日志：记录的格式、给人看的一行文本、基于 Pino 的 logger 和测试用的捕获；核心、数据库层和启动器共用（ADR-0062）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "node ../../node_modules/typescript-native/bin/tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "pino": "10.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}
