@@ -46,6 +46,8 @@
 | `NEXTSKIN_HOST`         | `0.0.0.0`                          | 只经同机反向代理访问时改成 `127.0.0.1`。不读 `HOSTNAME`                                                                |
 | `NEXTSKIN_PORT`、`PORT` | `3000`                             | 先读 `NEXTSKIN_PORT`                                                                                                  |
 | `NEXTSKIN_ENV_FILE`     | `.env`                             | 只能在进程环境里设                                                                                                    |
+| `NEXTSKIN_LOG_LEVEL` | `info` | `debug`、`info`、`warn`、`error`。排查问题时临时改成 `debug`，插件的 `debug` 日志也会出来 |
+| `NEXTSKIN_LOG_FORMAT` | `text` | `json` 时每行写一条 JSON（NDJSON），给 journald、Docker 后面再接日志系统的人用 |
 
 ## 建站
 
@@ -123,7 +125,7 @@ location /_next/static/ {
 - 停止：给 `start` 发 SIGTERM 或 SIGINT（Windows 上是 Ctrl+C）。它经 IPC 让启动器按顺序停下：核心先收尾正在处理的请求和后台任务，最多 30 秒后被强杀；启动器 35 秒还没退出就被强杀。监管方的停止超时设成 40 秒。整棵进程树一起收到 SIGTERM 也没问题；管理进程被强杀时，启动器发现 IPC 断了也会自己停下。
 - 退出码：`0` 正常停止；`78` 配置错误（密钥太短、数据目录不可写、端口无效、数据目录已有服务在用、`current.json` 损坏……），重启也没用，监管方不要重启；`1` 其他错误。
 - 同一个实例目录同时只能运行一个 `start`。上一个还在退出时，新的最多等 40 秒，所以"停止后立即启动"的重启也能用。
-- 日志写到 stdout、stderr，不含密码、令牌、Cookie、连接串。
+- 日志写到 stdout、stderr：核心的日志每行带时间、级别和来源（`2026-10-24 20:15:03.123 WARN  core/mail …`），`warn` 及以上写 stderr，其余写 stdout。不含密码、令牌、Cookie、连接串。
 - 不想要管理进程（只检测、不一键升级）：设环境变量 `NEXTSKIN_MANAGER=off`，入口在本进程里直接运行当前版本的启动器，进程模型和以前一样。镜像里设了它。
 
 ## 命令行
