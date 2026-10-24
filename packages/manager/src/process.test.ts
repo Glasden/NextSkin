@@ -93,7 +93,9 @@ describe('监管启动器', () => {
       }
       return child
     }) as typeof spawn
-    const supervisor = new LauncherSupervisor(f.home, { spawn: spawnChild, shutdownTimeout: 20, log: discardLogger })
+    // 假启动器收到 shutdown 后先记事件、再不退出，等着被强杀：超时太短（原来 20 毫秒）时，
+    // 负载重的 CI 上它还没收到消息就被杀了，事件没记下
+    const supervisor = new LauncherSupervisor(f.home, { spawn: spawnChild, shutdownTimeout: 1000, log: discardLogger })
     disposers.push(() => supervisor.shutdown())
     await supervisor.start('1.0.0', true)
     await supervisor.shutdown()
