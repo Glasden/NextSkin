@@ -91,3 +91,5 @@ export {
   pluginQueryError,
   PluginQueryExecutionError,
 } from './sqlite/plugin-query.ts'
+
+export { databaseServerVersion } from './server-version.ts'

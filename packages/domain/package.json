@@ -30,6 +30,7 @@
     "@nextskin/updates": "workspace:*",
     "better-auth": "catalog:",
     "croner": "10.0.1",
+    "fflate": "catalog:",
     "hash-wasm": "4.12.0",
     "kysely": "catalog:",
     "nodemailer": "10.1.0",

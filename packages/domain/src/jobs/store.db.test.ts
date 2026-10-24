@@ -9,6 +9,8 @@ import {
   FAILED_JOB_RETENTION_DAYS,
   findDueJobs,
   insertJob,
+  jobStatistics,
+  jobSummary,
   rescheduleJob,
 } from './store.ts'
 
@@ -198,4 +200,27 @@ test('入队、认领、死信操作沿用调用方事务并随其回滚', async
   ).rejects.toThrow('业务回滚')
   expect(await db.selectFrom('jobs').selectAll().execute()).toEqual([])
   expect(await db.selectFrom('failed_jobs').selectAll().execute()).toEqual([])
+})
+
+test('诊断的统计：排队总数、到期最早的时间，只数核心死信；按名字的排队数、死信数和最近一条错误', async () => {
+  await insertJob(db, { name: 'core:test', payload: {}, runAt: later }, now)
+  await insertJob(db, { name: 'core:test', payload: {}, runAt: now }, now)
+  await insertJob(db, { name: 'plugin:demo:job:x', payload: {}, runAt: expired }, now)
+  const dead = { payload: '{}', dedupe_key: null, attempts: 3, created_at: now }
+  await db
+    .insertInto('failed_jobs')
+    .values([
+      { ...dead, name: 'core:test', last_error: '旧的错误', failed_at: now },
+      { ...dead, name: 'core:test', last_error: '新的错误', failed_at: later },
+      { ...dead, name: 'plugin:demo:job:x', last_error: null, failed_at: now },
+    ])
+    .execute()
+  expect(await jobSummary(db, later)).toEqual({ queued: 3, oldestDueAt: now, deadLetters: 2 })
+  expect(await jobSummary(db, toIsoTimestamp(new Date('2040-03-31T11:00:00.000Z')))).toMatchObject({
+    oldestDueAt: null,
+  })
+  expect(await jobStatistics(db)).toEqual([
+    { name: 'core:test', queued: 2, deadLetters: 2, lastError: '新的错误' },
+    { name: 'plugin:demo:job:x', queued: 1, deadLetters: 1, lastError: null },
+  ])
 })

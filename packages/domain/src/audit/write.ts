@@ -46,6 +46,7 @@ export const AUDIT_ACTIONS = {
   'job.deadLetter': 'job',
   'notification.send': 'notificationBroadcast',
   'notification.recall': 'notificationBroadcast',
+  'diagnostics.export': 'diagnostics',
   'update.prepare': 'update',
   'update.apply': 'update',
   'update.rollback': 'update',

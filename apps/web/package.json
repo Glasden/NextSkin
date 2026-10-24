@@ -37,6 +37,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "fflate": "catalog:",
     "tailwindcss": "catalog:",
     "vitest": "catalog:"
   }
