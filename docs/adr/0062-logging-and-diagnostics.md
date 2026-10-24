@@ -40,7 +40,7 @@ ADR-0002 定了 Pino 结构化日志、可选的 OTel 导出、用内存环形�
 - 级别由环境变量 `NEXTSKIN_LOG_LEVEL` 决定，默认 `info`，`pnpm dev` 默认 `debug`。
 - Pino 的 `redact` 按字段名兜底：`password`、`token`、`secret`、`cookie`、`authorization` 这类名字（顶层和下一层）的值换成 `[redacted]`。这只是兜底，不变量 11 照旧由写日志的地方自己守。
 - 插件的 `ctx.log`：`level` 和消息照旧，`source: 'plugin'` 和 `plugin` 由核心填；插件给的 fields 整个放在 `fields` 下，不展开到顶层，插件不能冒充核心的字段。截断照旧：消息截到 1000 个码点，fields 序列化后截到 2000 个字符，截断了的 `fields` 存成字符串。低于 `NEXTSKIN_LOG_LEVEL` 的不记，所以插件的 `debug` 默认只在 `pnpm dev` 里看得到。
-- plugin host 的 stderr 照现在按行截断，每行记成 `source: 'plugin-host'`、`warn`。
+- plugin host 的 stderr 照现在按行截断，每行记成 `source: 'plugin-host'`、`warn`，先过一遍原始输出的兜底（见下文）。
 - Better Auth 的日志接到子 logger，照旧只记消息本身、去掉查询参数。
 - 不记访问日志：反向代理有。
 
@@ -48,9 +48,11 @@ ADR-0002 定了 Pino 结构化日志、可选的 OTel 导出、用内存环形�
 
 核心的记录经已有的 IPC 通道（`NEXTSKIN_LAUNCHER_IPC=1`，ADR-0039）发给启动器，消息是 `{ nextskin: 'log', line }`，不写 stdout。核心的 stdout、stderr 从 `inherit` 改成 `pipe`，启动器逐行读，按 plugin host 的规则截断，每行记成 `source: 'core'`、`raw: true`，stdout 来的记 `info`，stderr 来的记 `warn`。Next 自己的输出、打开 logger 之前的报错、崩溃时 Node 打印的堆栈都从这里进来。
 
+- 原始行不经过 Pino 的 `redact`，第三方库打印的请求里可能带着机密，所以写出去之前先兜底：`Cookie`、`Set-Cookie`、`Authorization` 头的值，`Bearer`、`Basic` 后面的值，JWT 形状的串，URL 里的 `用户:密码@`，查询参数里 `token`、`code`、`secret`、`password` 一类的值，换成 `[redacted]`。诊断包的脱敏复用这套规则。
+
 - 结构化记录走 IPC，不和原始输出混在 stdout 里：Next 和第三方库打印的行里可能带着请求里的内容，混在一起就只能靠"这一行像不像 JSON"来区分，原始输出也就能伪造成核心的记录。
 - IPC 是核心和启动器之间可信的通道，Windows 上也已经在用。plugin host 不用 Node 的 IPC，是因为限不住插件发来的消息大小（ADR-0033），这条理由对核心不成立。
-- 核心发不出去、积压在 IPC 里的记录超过 1000 条时，丢掉新的、记下丢了几条，下一次发得出去时先补一条 `warn`（`log_ipc_dropped`）带上这个数。通道断开后改写 stderr。
+- 核心发不出去、积压在 IPC 里的记录超过 1000 条时，丢掉新的、记下丢了几条，下一次发得出去时先补一条 `warn`（`log_ipc_dropped`）带上这个数。通道断开后、发送失败的改写 stderr，断开时先补上丢了几条。
 
 启动器把三处来的记录（自己的、核心经 IPC 发来的、核心 stdout 和 stderr 的原始行）交给同一个出口，分成终端和文件两路。
 
@@ -59,16 +61,17 @@ ADR-0002 定了 Pino 结构化日志、可选的 OTel 导出、用内存环形�
 - 默认写成给人看的一行：本机时区的时间、级别、来源和 `area`、消息、字段。`warn` 及以上写 stderr，其余写 stdout。
 - `NEXTSKIN_LOG_FORMAT=json` 时原样写 NDJSON，给接了 journald、Docker 再往外送日志的人用。
 - 启动器自己的行不再带 `[nextskin]` 前缀，来源一栏写 `launcher`。
+- 终端没被及时读走（面板卡住、管道满了），积压超过 4 MB 时丢掉新的记录、记下条数，恢复后补一条 `warn`；文件照写。
 
 **文件**：
 
-- 写在 `<数据目录>/logs/nextskin.log`，NDJSON，POSIX 上权限 0600（同 `setup-code`）。启动时接着写已有的文件。
-- 当前文件超过上限就轮换：关掉它，已有的旧文件依次改名后移（`nextskin.1.log` 变成 `nextskin.2.log`……），当前文件改名为 `nextskin.1.log`，再打开新文件；超出份数的旧文件删掉。Windows 上改名失败时照 ADR-0061 的做法重试几次，还不行就接着写当前文件，下一条记录再试。
+- 写在 `<数据目录>/logs/nextskin.log`，NDJSON，POSIX 上权限 0600（同 `setup-code`），`logs` 目录 0700；已有的文件和目录（从备份恢复的）打开时也收紧。启动时接着写已有的文件。
+- 当前文件超过上限就轮换：关掉它，已有的旧文件依次改名后移（`nextskin.1.log` 变成 `nextskin.2.log`……），当前文件改名为 `nextskin.1.log`，再打开新文件；超出份数的旧文件删掉。Windows 上改名失败时照 ADR-0061 的做法重试几次，还不行就接着写当前文件，下一条记录再试。中途失败时序列里留下一个空位，下一次只把空位前面的往后挪，不再删旧文件。
 - 只按大小轮换，不按天：不依赖时钟，占用的空间有固定上限。
 - 上限是"高级"分区的两个设置项（ADR-0028），在后台调整：
   - `logging.maxFileSizeMb`：单个文件的上限，1 到 100 MB，默认 10；
   - `logging.maxFiles`：连同当前文件一共留几份，2 到 20，默认 5（默认合计约 50 MB）。至少 2 份：只留 1 份时，每次轮换都会清空全部日志。
-- 启动器读不了数据库，设置由核心经 IPC 告诉它（`{ nextskin: 'logConfig', … }`）：核心打开后发一次，之后每分钟读一次这两项，变了才发。启动器在收到之前、核心打不开数据库时用默认值。调小份数后当场删掉多出来的旧文件；调小大小后，当前文件超出的下一条记录就轮换。后台的说明写明"保存后一分钟内生效"。
+- 启动器读不了数据库，设置由核心经 IPC 告诉它（`{ nextskin: 'logConfig', … }`）：核心打开后发一次，之后每分钟读一次这两项，变了才发。启动器把收到的值存进 `logs/limits.json`；收到之前（重启后核心还没打开数据库，或者打不开）用上次存下的值，没有就用默认值。调小份数后当场删掉多出来的旧文件；调小大小后，当前文件超出的下一条记录就轮换。后台的说明写明"保存后一分钟内生效"。
 - `NEXTSKIN_LOG_FILE=off` 关掉文件，只写终端。默认开着，镜像里也开：诊断页读的就是这些文件。systemd、Docker 已经有日志系统、不想多存一份的可以关掉。
 
 **写文件不能拖住核心**：
