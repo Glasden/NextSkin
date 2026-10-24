@@ -222,11 +222,15 @@ test('核心一下子写很多时及时读走管道，不拖住核心；写盘�
   expect(await stop(child)).toEqual([0, null])
   const lines: string[] = []
   for (const name of await readdir(join(data, 'logs')))
-    lines.push(...(await readFile(join(data, 'logs', name), 'utf8')).split('\n').filter(Boolean))
+    if (name.endsWith('.log'))
+      lines.push(...(await readFile(join(data, 'logs', name), 'utf8')).split('\n').filter(Boolean))
   const records = lines.map((line) => parseLogRecord(line)!)
   const written = records.filter((record) => record.raw && record.msg.startsWith('burst ')).length
   const dropped = records
     .filter((record) => record.msg === '有记录没写进日志文件')
     .reduce((sum, record) => sum + (record.dropped as number), 0)
-  expect(written + dropped).toBe(total)
+  // 丢掉的也可能有同时写的启动器自己的几条（"核心已启动"……），所以只能是不少于
+  expect(written).toBeLessThanOrEqual(total)
+  expect(written + dropped).toBeGreaterThanOrEqual(total)
+  expect(written + dropped).toBeLessThanOrEqual(total + 5)
 }, 30_000)

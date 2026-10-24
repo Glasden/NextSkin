@@ -26,7 +26,7 @@ test('记录经 IPC 发出去；通道断开后改写 fallback', () => {
   expect(fallback).toEqual(['{"msg":"b"}'])
 })
 
-test('积压超过上限时丢掉新的；发得出去之后先补一条 warn 说丢了几条', () => {
+test('积压超过上限时丢掉新的；积压一清掉就补一条 warn 说丢了几条，不等下一条记录', () => {
   const { value, sent, callbacks } = channel()
   const write = ipcLogWriter(value, () => {}, 2)
   write('1')
@@ -35,6 +35,8 @@ test('积压超过上限时丢掉新的；发得出去之后先补一条 warn �
   write('4')
   expect(sent).toHaveLength(2)
   callbacks[0]!(null)
+  expect(sent).toHaveLength(3)
+  callbacks[1]!(null)
   write('5')
   expect(sent).toHaveLength(4)
   const notice = JSON.parse((sent[2] as { line: string }).line) as Record<string, unknown>
@@ -78,18 +80,19 @@ test('启动器只认这两种消息：一行记录、取值在范围里的轮�
   expect(logLimitsFromMessage({ nextskin: 'log', maxFileSizeMb: 20, maxFiles: 3 })).toBeNull()
 })
 
-test('发送失败的改写 fallback；断线时先补上丢了几条', () => {
+test('发送失败的改写 fallback，丢了几条也跟着补上：断线之后可能再也没有记录了', () => {
   const { value, sent, callbacks } = channel()
   const fallback: string[] = []
   const write = ipcLogWriter(value, (line) => fallback.push(line), 1)
   write('1')
   write('2')
-  callbacks[0]!(new Error('channel closed'))
-  expect(fallback).toEqual(['1'])
-  value.connected = false
   write('3')
+  value.connected = false
+  callbacks[0]!(new Error('channel closed'))
   expect(sent).toHaveLength(1)
-  expect(fallback).toHaveLength(3)
-  expect(JSON.parse(fallback[1]!)).toMatchObject({ level: 'warn', msg: 'log_ipc_dropped', dropped: 1 })
-  expect(fallback[2]).toBe('3')
+  expect(fallback).toHaveLength(2)
+  expect(fallback[0]).toBe('1')
+  expect(JSON.parse(fallback[1]!)).toMatchObject({ level: 'warn', msg: 'log_ipc_dropped', dropped: 2 })
+  write('4')
+  expect(fallback).toEqual([fallback[0], fallback[1], '4'])
 })
