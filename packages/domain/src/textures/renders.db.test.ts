@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { coreMigrations, migrateToLatest, toIsoTimestamp, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
+import { captureLogs } from '@nextskin/logging'
 import { MAX_POSE_DENSITY } from '@nextskin/skin'
 import { afterAll, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import { DomainError } from '../errors.ts'
@@ -164,18 +165,20 @@ test.each(['figure', 'both'] as const)(
 test.each(['figure', 'both'] as const)('%s 缓存读写失败仍可出图，且释放并发合并键', async (kind) => {
   const get = vi.spyOn(cache, 'get').mockRejectedValue(new Error('read failed')),
     put = vi.spyOn(cache, 'put').mockRejectedValue(new Error('write failed')),
-    warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    warn = captureLogs()
   const run = () => (kind === 'figure' ? service.figure(input) : service.pose({ hash, kind, model: 'alex', p: 3 }))
   try {
     const first = await run()
     expect(first).not.toBeNull()
     expect(await run()).toEqual(first)
     expect(render).toHaveBeenCalledTimes(2)
-    expect(warn).toHaveBeenCalledWith('写入出图缓存失败')
+    expect(warn.records).toContainEqual(
+      expect.objectContaining({ area: 'textures', level: 'warn', msg: '写入出图缓存失败' }),
+    )
   } finally {
     get.mockRestore()
     put.mockRestore()
-    warn.mockRestore()
+    warn.restore()
   }
 })
 
@@ -233,11 +236,13 @@ test('warm 皮肤生成头像和常用 3D 出图，披风按显示倍数和 DPR 
   expect(render.mock.calls.map(([i]) => i.k).sort()).toEqual([1, 2, 4, 8])
   await service.purge(hash)
   render.mockRejectedValue(new Error('sensitive detail'))
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const warn = captureLogs()
   try {
     service.warm(hash, 'cape')
-    await vi.waitFor(() => expect(warn).toHaveBeenCalledExactlyOnceWith('材质出图缓存预热失败'))
+    await vi.waitFor(() =>
+      expect(warn.records).toMatchObject([{ area: 'textures', level: 'warn', msg: '材质出图缓存预热失败' }]),
+    )
   } finally {
-    warn.mockRestore()
+    warn.restore()
   }
 })

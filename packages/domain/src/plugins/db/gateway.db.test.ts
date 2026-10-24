@@ -8,6 +8,7 @@ import {
   type CoreDatabase,
 } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
+import { createMemoryLogger } from '@nextskin/logging'
 import { remoteDialect } from '@nextskin/plugin-host'
 import { Kysely, sql } from 'kysely'
 import { afterAll, beforeAll, expect, test } from 'vitest'
@@ -25,7 +26,7 @@ let plugin: Kysely<Tables>
 let scope: PluginQueryScope
 const row = (code: string, n = 1) => ({ code, n, status: 'unused', used_by: null })
 const tables = new Set(['codes', 'logs', 'numbers'])
-const logs: string[] = []
+const { logger, records: logs } = createMemoryLogger()
 const sentinel = {
   namespace: 'core',
   key: 'plugin-test-sentinel',
@@ -40,7 +41,7 @@ beforeAll(async () => {
   gateway = createPluginDbGateway({
     db: database.db,
     sqliteFile: database.config.dialect === 'sqlite' ? database.config.file : undefined,
-    log: (line) => logs.push(line),
+    logger,
   })
   plugin = new Kysely<Tables>({
     dialect: remoteDialect(dialectOf(database.db), (node) => gateway.execute(scope, structuredClone(node))),
@@ -461,8 +462,17 @@ test('约束错误和普通错误使用固定文案，日志不含值', async ()
     code: 'failed',
     message: 'Plugin query failed',
   })
-  expect(logs.join('\n')).not.toContain('secret-value')
-  expect(logs.join('\n')).not.toContain('core-private-value')
+  expect(logs.length).toBeGreaterThan(0)
+  for (const record of logs)
+    expect(record).toMatchObject({
+      area: 'plugin-db',
+      level: 'debug',
+      msg: 'query',
+      plugin: 'invite-codes',
+      ms: expect.any(Number) as unknown,
+    })
+  expect(JSON.stringify(logs)).not.toContain('secret-value')
+  expect(JSON.stringify(logs)).not.toContain('core-private-value')
 })
 
 test('拦截器语句随核心事务回滚、重跑或提交', async () => {

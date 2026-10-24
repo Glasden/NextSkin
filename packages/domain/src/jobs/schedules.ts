@@ -1,4 +1,5 @@
 import { insertOrIgnore, toIsoTimestamp, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
+import { rootLogger, type Logger } from '@nextskin/logging'
 import { Cron } from 'croner'
 import type { Kysely } from 'kysely'
 import type { JobHandler, JobRunner } from './runner.ts'
@@ -36,18 +37,21 @@ export function createScheduler(options: {
   timeZone: () => Promise<string>
   now?: () => Date
   intervalMs?: number
-  log?: (line: string) => void
+  logger?: Logger
 }) {
   const { db, jobs, handlers, timeZone } = options
   const now = options.now ?? (() => new Date())
-  const log = options.log ?? ((line) => console.warn(line))
+  const log = (options.logger ?? rootLogger()).child({ area: 'schedules' })
   const entries = new Map<string, ScheduleEntry>()
   let running = false
   let prune = false
   let timer: ReturnType<typeof setTimeout> | undefined
   let checking: Promise<void> | undefined
   const failed = (error: unknown, name?: string) =>
-    log(`[schedules] tick_failed${name ? ` ${name}` : ''} ${error instanceof Error ? error.name : typeof error}`)
+    log.warn('tick_failed', {
+      ...(name ? { job: name } : {}),
+      error: error instanceof Error ? error.name : typeof error,
+    })
 
   async function check() {
     try {

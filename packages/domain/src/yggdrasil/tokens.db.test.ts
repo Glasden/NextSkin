@@ -1,3 +1,4 @@
+import { captureLogs } from '@nextskin/logging'
 import { expect, test, vi } from 'vitest'
 import { sha256 } from '../auth/auth.ts'
 import { Browser } from '../auth/security.test-helper.ts'
@@ -299,17 +300,19 @@ test('密码变更事件入队失败，改密码仍然成功，启动器令牌�
     if (name === 'test:password') return Promise.reject(new Error('queue unavailable'))
     return enqueue(tx, name, ...rest)
   })
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const warn = captureLogs()
   try {
     const changed = await browser.request('/api/auth/change-password', {
       currentPassword: password,
       newPassword: 'new-password-for-launcher',
     })
     expect(changed.status).toBe(200)
-    expect(warn).toHaveBeenCalledWith('[auth] password_event_failed')
+    expect(warn.records).toContainEqual(
+      expect.objectContaining({ area: 'auth', level: 'warn', msg: 'password_event_failed' }),
+    )
   } finally {
     spy.mockRestore()
-    warn.mockRestore()
+    warn.restore()
   }
   await expect(validate(token.accessToken)).rejects.toMatchObject(failure('token_invalid'))
 })

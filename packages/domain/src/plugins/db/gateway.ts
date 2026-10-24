@@ -11,6 +11,7 @@ import {
   PluginReadError,
   type CoreDatabase,
 } from '@nextskin/db'
+import { rootLogger, type Logger } from '@nextskin/logging'
 import { SelectQueryNode, type Kysely, type QueryResult } from 'kysely'
 import { physicalName, physicalPrefix, PLUGIN_ID, PluginQueryRejected, sanitizePluginQuery } from './sanitize.ts'
 
@@ -43,9 +44,10 @@ export function createPluginDbGateway(options: {
   db: Kysely<CoreDatabase>
   /** SQLite 时传数据库文件，用来开插件专用的只读 worker 连接 */
   sqliteFile?: string
-  log?: (line: string) => void
+  logger?: Logger
 }) {
   const { db } = options
+  const log = (options.logger ?? rootLogger()).child({ area: 'plugin-db' })
   const executor = createPluginQueryExecutor(db)
   const reader = options.sqliteFile ? createPluginSqliteReader(options.sqliteFile) : undefined
   let closed = false
@@ -90,7 +92,7 @@ export function createPluginDbGateway(options: {
         throw new PluginDbError(safe.code)
       } finally {
         // 不记录 SQL、参数或底层异常。非法 id 不进入日志。
-        if (PLUGIN_ID.test(scope.pluginId)) options.log?.(`plugin db ${scope.pluginId} ${Date.now() - start}ms`)
+        if (PLUGIN_ID.test(scope.pluginId)) log.debug('query', { plugin: scope.pluginId, ms: Date.now() - start })
       }
     },
     async dropTables(pluginId: string, tables: readonly string[]): Promise<void> {

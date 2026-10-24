@@ -1,3 +1,4 @@
+import { captureLogs } from '@nextskin/logging'
 import { markSiteInitialized } from '../setup/initialized.test-helper.ts'
 import {
   coreMigrations,
@@ -252,7 +253,7 @@ test('密码事件入队失败只记固定日志，不影响改密码或找回�
     if (name === 'test:password') throw new Error('sensitive data must never be logged')
     return enqueue(tx, name, payload, options)
   })
-  const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const log = captureLogs()
   try {
     expect(
       (
@@ -264,11 +265,14 @@ test('密码事件入队失败只记固定日志，不影响改密码或找回�
       ).status,
     ).toBe(200)
     await resetPassword('reset correct password')
-    expect(log.mock.calls).toEqual([['[auth] password_event_failed'], ['[auth] password_event_failed']])
+    expect(log.records).toMatchObject([
+      { area: 'auth', level: 'warn', msg: 'password_event_failed' },
+      { area: 'auth', level: 'warn', msg: 'password_event_failed' },
+    ])
     expect((await login('reset correct password')).response.status).toBe(200)
   } finally {
     spy.mockRestore()
-    log.mockRestore()
+    log.restore()
   }
 })
 

@@ -1,3 +1,4 @@
+import { getLogger } from '@nextskin/logging'
 import { DomainError } from '../errors.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 
@@ -52,7 +53,7 @@ export async function verifyCaptcha(
   fetcher: typeof fetch = globalThis.fetch,
 ): Promise<CaptchaResult> {
   const unavailable = (type: string, errorCodes: string[] = []): CaptchaResult => {
-    console.warn(`[captcha] ${config.provider} ${type}`)
+    getLogger('captcha').warn(type, { provider: config.provider })
     return { result: 'unavailable', errorCodes }
   }
   const body = new URLSearchParams({ secret: config.secretKey, response: input.token ?? '' })
@@ -90,7 +91,7 @@ export async function verifyCaptcha(
   // 分类检查全部错误码，返回给后台的诊断信息最多十条。
   const configurationError = configurationErrors[config.provider].find((code) => codes.includes(code))
   if (configurationError) {
-    console.error(`[captcha] ${config.provider} ${configurationError}`)
+    getLogger('captcha').error(configurationError, { provider: config.provider })
     return { result: 'unavailable', errorCodes }
   }
   if (

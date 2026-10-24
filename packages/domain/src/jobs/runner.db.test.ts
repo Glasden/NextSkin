@@ -1,5 +1,6 @@
 import { coreMigrations, migrateToLatest, toIsoTimestamp, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
+import { createMemoryLogger } from '@nextskin/logging'
 import { afterAll, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import { DomainError } from '../errors.ts'
 import { backoffMs, createJobRunner, JobDeferredError, type JobHandler, type JobRunnerOptions } from './runner.ts'
@@ -10,7 +11,7 @@ const store = await vi.importActual<typeof import('./store.ts')>('./store.ts')
 
 let database: TestDatabase<CoreDatabase>
 let clock: Date
-const lines: string[] = []
+const { logger, records: lines } = createMemoryLogger()
 
 beforeAll(async () => {
   database = await createTestDatabase<CoreDatabase>()
@@ -35,7 +36,7 @@ function runner(handlers: Record<string, JobHandler>, options: Partial<JobRunner
     handlers: new Map(Object.entries(handlers)),
     now: () => clock,
     random: () => 0.5,
-    log: (line) => lines.push(line),
+    logger,
     ...options,
   })
 }

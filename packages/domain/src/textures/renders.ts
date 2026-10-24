@@ -1,4 +1,5 @@
 import type { CoreDatabase } from '@nextskin/db'
+import { getLogger } from '@nextskin/logging'
 import { pickResolution, textureScale, TextureShapeError, type TextureType } from '@nextskin/skin'
 import type { Kysely } from 'kysely'
 import { DomainError } from '../errors.ts'
@@ -42,7 +43,7 @@ export function createRenders({
       if (error instanceof DomainError && error.code === 'service_unavailable') throw error
       return null
     }
-    await cache.put(key, bytes).catch(() => console.warn('写入出图缓存失败'))
+    await cache.put(key, bytes).catch(() => getLogger('textures').warn('写入出图缓存失败'))
     return bytes
   }
   async function render(key: RenderKey): Promise<Uint8Array | null> {
@@ -102,7 +103,7 @@ export function createRenders({
               ]),
         ])
         if (results.some((bytes) => bytes === null)) throw new Error('出图预热失败')
-      })().catch(() => console.warn('材质出图缓存预热失败'))
+      })().catch(() => getLogger('textures').warn('材质出图缓存预热失败'))
     },
     purge: (hash: string) => cache.deleteHash(hash),
   }

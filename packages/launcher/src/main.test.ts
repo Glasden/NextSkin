@@ -1,11 +1,14 @@
+import { coreMigrations, createDatabase, migrateToLatest } from '@nextskin/db'
+import { coreConfigFromEnv } from '@nextskin/domain/config'
 import { execFile } from 'node:child_process'
-import { mkdir, mkdtemp, readFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { removeTestDirectory } from '@nextskin/db/testing'
+import { parseLogRecord } from '@nextskin/logging'
 import { expect, test, vi } from 'vitest'
 import metadata from '../package.json' with { type: 'json' }
 import { run as disable2fa } from './commands/disable-2fa.ts'
@@ -181,4 +184,46 @@ test.each(['unset', 'same', 'different'] as const)(
 
 test('maintenance 命令已登记，错误参数给出专用用法', async () => {
   expect(await run('maintenance', 'invalid')).toEqual({ code: 1, output: '用法：nextskin maintenance [on|off]\n' })
+})
+
+test('migrate --json 的日志只写 stderr，格式在读取命令配置后确定', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'launcher-logging-'))
+  const file = join(directory, 'logging-config')
+  const config = coreConfigFromEnv({ NEXTSKIN_DATA_DIR: directory }, { cwd: directory, production: false })
+  const db = createDatabase(config.database)
+  try {
+    const migrations = Object.entries(coreMigrations).sort(([a], [b]) => a.localeCompare(b))
+    await migrateToLatest(db, Object.fromEntries(migrations.slice(0, -1)))
+    await db.destroy()
+    await writeFile(file, 'NEXTSKIN_LOG_FORMAT=json\n')
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      NEXTSKIN_ENV_FILE: file,
+      NEXTSKIN_DATA_DIR: directory,
+      NEXTSKIN_LOG_LEVEL: 'info',
+    }
+    delete env.NEXTSKIN_LOG_FORMAT
+    const result = await promisify(execFile)(
+      process.execPath,
+      [fileURLToPath(new URL('./main.ts', import.meta.url)), 'migrate', '--json'],
+      { env },
+    )
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      core: [migrations.at(-1)![0]],
+      backup: expect.any(String) as unknown,
+    })
+    const logs = result.stderr.trim().split('\n').map(parseLogRecord)
+    expect(logs).toContainEqual(
+      expect.objectContaining({
+        source: 'core',
+        area: 'migrate',
+        level: 'info',
+        msg: expect.stringContaining('已先把数据库备份到') as unknown,
+      }),
+    )
+    expect(logs).not.toContain(null)
+  } finally {
+    await db.destroy()
+    await removeTestDirectory(directory)
+  }
 })

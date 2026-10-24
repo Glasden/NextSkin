@@ -44,7 +44,15 @@ export interface LogTarget {
 }
 
 export function createLogger(source: LogSource, target: LogTarget): Logger {
-  return wrap(createPino(source, target), source, target)
+  // 换来源的子 logger 要另起一个 Pino 实例（来源在 base 里）。每个来源只建一次：插件每次 ctx.log 都会派生，
+  // 建实例要编译 redact
+  const roots = new Map<LogSource, PinoLogger>()
+  const rootFor = (next: LogSource) => {
+    let instance = roots.get(next)
+    if (!instance) roots.set(next, (instance = createPino(next, target)))
+    return instance
+  }
+  return wrap(rootFor(source), source, rootFor, target)
 }
 
 function createPino(source: LogSource, target: LogTarget): PinoLogger {
@@ -61,7 +69,12 @@ function createPino(source: LogSource, target: LogTarget): PinoLogger {
   )
 }
 
-function wrap(instance: PinoLogger, source: LogSource, target: LogTarget): Logger {
+function wrap(
+  instance: PinoLogger,
+  source: LogSource,
+  rootFor: (source: LogSource) => PinoLogger,
+  target: LogTarget,
+): Logger {
   const at =
     (level: Exclude<LogLevel, 'fatal'>) =>
     (msg: string, fields?: LogFields): void => {
@@ -74,12 +87,12 @@ function wrap(instance: PinoLogger, source: LogSource, target: LogTarget): Logge
     warn: at('warn'),
     error: at('error'),
     child: ({ source: next, ...bindings }) => {
-      if (next === undefined || next === source) return wrap(instance.child(bindings), source, target)
-      // 来源在 Pino 的 base 里，子 logger 改不了：另起一个写到同一出口的实例，带上已有的 bindings。
+      if (next === undefined || next === source) return wrap(instance.child(bindings), source, rootFor, target)
+      // 来源在 Pino 的 base 里，子 logger 改不了：从那个来源的实例派生，带上已有的 bindings。
       // bindings() 里也有 base 的 source，要去掉，否则写出两个 source、后一个是旧的
       const existing = { ...instance.bindings() }
       delete existing.source
-      return wrap(createPino(next, target).child({ ...existing, ...bindings }), next, target)
+      return wrap(rootFor(next).child({ ...existing, ...bindings }), next, rootFor, target)
     },
   }
 }

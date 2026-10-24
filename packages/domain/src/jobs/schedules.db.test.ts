@@ -1,5 +1,6 @@
 import { coreMigrations, migrateToLatest, toIsoTimestamp, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
+import { createMemoryLogger } from '@nextskin/logging'
 import { afterAll, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import { createJobRunner, type JobHandler } from './runner.ts'
 import { createScheduler, nextRunAt } from './schedules.ts'
@@ -7,7 +8,7 @@ import { createScheduler, nextRunAt } from './schedules.ts'
 let database: TestDatabase<CoreDatabase>
 let clock: Date
 let zone: string
-const lines: string[] = []
+const { logger, records: lines } = createMemoryLogger()
 const name = 'core:test'
 const handlers = new Map<string, JobHandler>([[name, { run: async () => {} }]])
 const db = () => database.db
@@ -22,7 +23,7 @@ function scheduler(cron = '0 0 * * *', jobs = createJobRunner({ db: db(), handle
     handlers,
     now,
     timeZone: () => Promise.resolve(zone),
-    log: (line) => lines.push(line),
+    logger,
     intervalMs: 10,
   })
   schedules.add({ name, job: name, cron, payload: { test: true } })
@@ -159,7 +160,7 @@ test('单个条目入队失败回滚且不影响其它条目，下轮重试；�
     handlers,
     now,
     timeZone: () => Promise.resolve(zone),
-    log: (line) => lines.push(line),
+    logger,
   })
   s.add({ name, job: name, cron: '* * * * *' })
   s.add({ name: 'core:other', job: name, cron: '* * * * *' })
@@ -167,14 +168,16 @@ test('单个条目入队失败回滚且不影响其它条目，下轮重试；�
   clock = new Date('2030-01-01T00:01:00Z')
   await s.tick()
   expect(await queue()).toHaveLength(1)
-  expect(lines).toEqual(['[schedules] tick_failed core:test TypeError'])
+  expect(lines).toMatchObject([
+    { area: 'schedules', level: 'warn', msg: 'tick_failed', job: 'core:test', error: 'TypeError' },
+  ])
   expect((await row()).next_run_at).toBe(iso('2030-01-01T00:01:00Z'))
   await s.tick()
   expect(await queue()).toHaveLength(2)
   zone = 'SECRET_CANARY'
   clock = new Date('2030-01-01T00:02:00Z')
   await s.tick()
-  expect(lines.join()).not.toContain('SECRET_CANARY')
+  expect(JSON.stringify(lines)).not.toContain('SECRET_CANARY')
 })
 
 test('注册校验名字、重复、处理函数、五段语法及不存在的日期', () => {
@@ -233,12 +236,12 @@ test('读取时区失败只记错误类型，下轮恢复后仍可触发', async
     handlers,
     now,
     timeZone,
-    log: (line) => lines.push(line),
+    logger,
   })
   s.add({ name, job: name, cron: '* * * * *' })
   timeZone.mockRejectedValueOnce(new Error('SECRET_CANARY'))
   await s.tick()
-  expect(lines).toEqual(['[schedules] tick_failed Error'])
+  expect(lines).toMatchObject([{ area: 'schedules', level: 'warn', msg: 'tick_failed', error: 'Error' }])
   expect(await db().selectFrom('job_schedules').selectAll().execute()).toEqual([])
   await s.tick()
   clock = new Date('2030-01-01T00:01:00Z')

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readdir, rename, rm, stat, unlink } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { getLogger } from '@nextskin/logging'
 
 export class MigrationBackupError extends Error {}
 
@@ -62,7 +63,7 @@ export async function backupSqlite(options: {
     // 无论系统时间是否回拨，本次的备份都必须保留。
     for (const name of backups.slice(Math.max(1, options.keep ?? 3) - 1)) await unlink(join(directory, name))
   } catch {
-    console.warn(`[nextskin] 清理旧的数据库备份失败：${directory}；备份已成功，继续执行迁移。`)
+    getLogger('backup').warn(`清理旧的数据库备份失败：${directory}；备份已成功，继续执行迁移。`)
   }
   return file
 }

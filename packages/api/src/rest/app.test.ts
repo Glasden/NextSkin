@@ -1,5 +1,6 @@
 import { coreSettingsRegistry, DomainError, type Core, type CoreSettingKey } from '@nextskin/domain'
 import { createTranslator } from '@nextskin/i18n'
+import { captureLogs } from '@nextskin/logging'
 import { expect, test, vi } from 'vitest'
 import { errorSchema } from './errors.ts'
 import { createApp } from '../app.ts'
@@ -157,16 +158,16 @@ test.each([new DomainError('unknown'), new Error('SECRET_CANARY')])(
   async (error) => {
     const { request, register } = setup()
     register.mockRejectedValue(error)
-    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const log = captureLogs()
     try {
       const response = await request(undefined, { 'accept-language': 'en' })
       expect(response.status).toBe(500)
       expect(await response.json()).toEqual({
         error: { code: 'internal_error', message: createTranslator('en')('errors.internal_error') },
       })
-      expect(log.mock.calls).toEqual([[`[rest] unhandled ${error.name}`]])
+      expect(log.records).toMatchObject([{ area: 'rest', level: 'error', msg: 'unhandled', error: error.name }])
     } finally {
-      log.mockRestore()
+      log.restore()
     }
   },
 )
@@ -174,15 +175,15 @@ test.each([new DomainError('unknown'), new Error('SECRET_CANARY')])(
 test('建会话失败仍然 201，无 Cookie，不泄露错误内容', async () => {
   const { request, createSession } = setup()
   createSession.mockRejectedValue(new Error('SECRET_CANARY'))
-  const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+  const log = captureLogs()
   try {
     const response = await request()
     expect(response.status).toBe(201)
     expect(await response.json()).toEqual({ uid: 42, signedIn: false })
     expect(response.headers.getSetCookie()).toEqual([])
-    expect(log.mock.calls).toEqual([['[rest] unhandled Error']])
+    expect(log.records).toMatchObject([{ area: 'rest', level: 'error', msg: 'unhandled', error: 'Error' }])
   } finally {
-    log.mockRestore()
+    log.restore()
   }
 })
 

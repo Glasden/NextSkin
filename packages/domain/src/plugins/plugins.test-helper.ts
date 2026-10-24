@@ -1,5 +1,6 @@
 import { coreMigrations, migrateToLatest, toIsoTimestamp, upsert, writeAuthDate, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
+import { createMemoryLogger } from '@nextskin/logging'
 import type { AnyPluginDefinition } from '@nextskin/plugin-host'
 import { afterEach, beforeEach } from 'vitest'
 import { createCore, type CoreOptions } from '../core.ts'
@@ -20,7 +21,7 @@ export function pluginEnvironment() {
   let database: TestDatabase<CoreDatabase>
   let core: ReturnType<typeof createCore> | undefined
   let sequence = 0
-  const lines: string[] = []
+  const { logger, records: lines } = createMemoryLogger()
   const secretKey = 'plugin-tests-only-secret-key-at-least-32-characters'
   beforeEach(async () => {
     database = await createTestDatabase<CoreDatabase>()
@@ -59,7 +60,8 @@ export function pluginEnvironment() {
     get databaseFile() {
       return database.config.dialect === 'sqlite' ? database.config.file : undefined
     },
-    lines,
+    records: lines,
+    logger,
     secretKey,
     async boot(plugins: readonly OfficialPlugin[], options: Partial<CoreOptions> = {}) {
       await core?.shutdown()
@@ -80,10 +82,10 @@ export function pluginEnvironment() {
         plugins: {
           official: plugins,
           sqliteFile: database.config.dialect === 'sqlite' ? database.config.file : undefined,
-          log: (line) => lines.push(line),
+          logger,
           ...options.plugins,
         },
-        jobs: { log: (line) => lines.push(line), ...options.jobs },
+        jobs: { logger, ...options.jobs },
       })
       await core.plugins.start()
       return core

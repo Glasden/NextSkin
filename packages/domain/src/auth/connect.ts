@@ -6,6 +6,7 @@ import {
   type oauthDeviceAuthorization,
 } from '@better-auth/oauth-provider'
 import { readAuthBoolean, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
+import { getLogger } from '@nextskin/logging'
 import type { BetterAuthPlugin } from 'better-auth'
 import { APIError, createAuthMiddleware, getSessionFromCtx, isAPIError } from 'better-auth/api'
 import type { Kysely } from 'kysely'
@@ -598,7 +599,7 @@ export function yggdrasilConnect(
                 }
               }
             } catch {
-              console.warn('[auth] oauth_token_check_failed')
+              getLogger('auth').warn('oauth_token_check_failed')
               throw new APIError('INTERNAL_SERVER_ERROR', {
                 error: 'server_error',
                 error_description: 'Token check failed',

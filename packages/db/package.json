@@ -15,6 +15,7 @@
     "test:db": "vitest run --config vitest.db.config.ts"
   },
   "dependencies": {
+    "@nextskin/logging": "workspace:*",
     "kysely": "catalog:",
     "mysql2": "catalog:",
     "pg": "catalog:"

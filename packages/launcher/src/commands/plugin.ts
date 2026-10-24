@@ -15,6 +15,7 @@ import {
   type PluginSummary,
 } from '@nextskin/domain'
 import { createTranslator } from '@nextskin/i18n'
+import { discardLogger } from '@nextskin/logging'
 import { officialPlugins } from '@nextskin/official-plugins'
 import type { ReadCommandContext } from '../context.ts'
 import { launcherPluginHost } from '../plugin-host.ts'
@@ -286,7 +287,7 @@ export async function run(argv: string[], read: ReadCommandContext, options: Opt
       pluginHost: launcherPluginHost(context),
       pluginHostMode: 'stage',
       // 插件系统记的是本进程里的登记和撤销（命令行退出前总会撤销），对执行命令的人只是噪音；结果由命令自己写
-      pluginLog: () => {},
+      pluginLogger: discardLogger,
     })
     const admin = opened.core.plugins.admin
     try {

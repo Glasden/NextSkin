@@ -1,3 +1,4 @@
+import { createMemoryLogger } from '@nextskin/logging'
 import { expect, test } from 'vitest'
 import { createMemorySiteImageStorage, siteImageFile } from './storage.ts'
 import { createSiteImageSweep } from './sweep.ts'
@@ -14,12 +15,12 @@ test('删掉一天以前写的、当前设置都没引用的图，连同白底�
   }
   clock = 2 * day
   await storage.write(siteImageFile(fresh), Uint8Array.of(3))
-  const lines: string[] = []
+  const { logger, records: lines } = createMemoryLogger()
   const sweep = createSiteImageSweep({
     storage,
     settings: { read: () => Promise.resolve({ 'site.logo': logo, 'site.favicon': favicon }) as never },
     now: () => new Date(clock + day / 2),
-    log: (line) => lines.push(line),
+    logger,
   })
   await sweep.run({ jobId: 1, payload: null, attempt: 1, signal: new AbortController().signal })
   expect((await storage.list()).map((entry) => entry.file).sort()).toEqual(
@@ -31,5 +32,5 @@ test('删掉一天以前写的、当前设置都没引用的图，连同白底�
       siteImageFile(fresh),
     ].sort(),
   )
-  expect(lines).toEqual(['[site-images] sweep deleted=2'])
+  expect(lines).toMatchObject([{ area: 'site-images', level: 'info', msg: 'sweep', deleted: 2 }])
 })

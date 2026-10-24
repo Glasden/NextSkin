@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { getLogger } from '@nextskin/logging'
 import { isSiteInitialized } from '../setup/initialized.ts'
 import { collectPluginFields } from '../plugins/form-fields.ts'
 import type { PluginSystem } from '../plugins/system.ts'
@@ -204,7 +205,7 @@ export function createRegister(
       if (!emailVerified && (await mail.configured())) await auth.sendVerificationEmail(email)
     } catch {
       // 提交后的签发或入队失败不影响注册；不记录可能携带邮箱、令牌的异常。
-      console.warn('[mail] verification_enqueue_failed attempt=1')
+      getLogger('mail').warn('verification_enqueue_failed', { attempt: 1 })
     }
     return { uid }
   }

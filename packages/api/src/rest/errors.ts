@@ -8,6 +8,7 @@ import {
   sourceLocale,
   type Messages,
 } from '@nextskin/i18n'
+import { getLogger } from '@nextskin/logging'
 import type { Context } from 'hono'
 import { getCookie } from 'hono/cookie'
 import { HTTPException } from 'hono/http-exception'
@@ -299,5 +300,5 @@ export function restErrorCode(error: Error): ResponseCode {
 }
 
 export function logError(error: unknown): void {
-  console.error(`[rest] unhandled ${error instanceof Error ? error.name : typeof error}`)
+  getLogger('rest').error('unhandled', { error: error instanceof Error ? error.name : typeof error })
 }

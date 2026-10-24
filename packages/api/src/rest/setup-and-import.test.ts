@@ -1,4 +1,5 @@
 import { coreSettingsRegistry, DomainError, type Core, type CoreSettingKey } from '@nextskin/domain'
+import { captureLogs } from '@nextskin/logging'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { createApp } from '../app.ts'
 import type { ImportGateway, ImportRunState, ImportStartInput } from '../import-gateway.ts'
@@ -199,11 +200,11 @@ test('新站经领域用例创建，自动登录逐个追加 Cookie，清除安�
   expect(cookies).toContain('other=two; HttpOnly')
   expect(cookies.find((cookie) => cookie.startsWith('nextskin-setup='))).toContain('Max-Age=0')
   env.core.auth.createSession.mockRejectedValueOnce(new Error('login failed'))
-  const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+  const log = captureLogs()
   try {
     expect(await (await env.request('POST', '/api/setup/site', body)).json()).toEqual({ uid: 7, signedIn: false })
   } finally {
-    log.mockRestore()
+    log.restore()
   }
 })
 

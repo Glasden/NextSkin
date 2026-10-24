@@ -1,3 +1,4 @@
+import type { Logger } from '@nextskin/logging'
 import { createOAuthClients } from './oauth/clients.ts'
 import { createDevices } from './oauth/devices.ts'
 import { createAuthorizations } from './oauth/authorizations.ts'
@@ -94,7 +95,7 @@ export interface CoreOptions {
     sqliteFile?: string
     /** 每个实例多久读一次插件的启用集合，默认 5 秒 */
     syncIntervalMs?: number
-    log?: (line: string) => void
+    logger?: Logger
     /** 测试用：替换进程内的插件加载 */
     load?: typeof loadPlugin
     /** plugin host 的入口；没有时安装插件不运行（命令行脚本） */
@@ -156,22 +157,26 @@ export function createCore(options: CoreOptions) {
       jobs,
       now,
       leaseMs,
-      log: options.jobs?.log,
+      logger: options.jobs?.logger,
     }),
   )
   handlers.set(
     SITE_IMAGE_SWEEP_JOB,
-    createSiteImageSweep({ storage: siteImages, settings, now, log: options.jobs?.log }),
+    createSiteImageSweep({ storage: siteImages, settings, now, logger: options.jobs?.logger }),
   )
   const schedules = createScheduler({
     db: options.db,
     jobs,
     handlers,
     now,
-    log: options.jobs?.log,
+    logger: options.jobs?.logger,
     timeZone: async () => (await settings.read(['site.timeZone']))['site.timeZone'],
   })
-  const pluginDb = createPluginDbGateway({ db: options.db, sqliteFile: options.plugins?.sqliteFile })
+  const pluginDb = createPluginDbGateway({
+    db: options.db,
+    sqliteFile: options.plugins?.sqliteFile,
+    logger: options.plugins?.logger,
+  })
   const plugins = createPluginSystem({
     db: options.db,
     dialect: dialectOf(options.db),
@@ -186,7 +191,7 @@ export function createCore(options: CoreOptions) {
     official: options.plugins?.official ?? [],
     now,
     syncIntervalMs: options.plugins?.syncIntervalMs,
-    log: options.plugins?.log,
+    logger: options.plugins?.logger,
     load: options.plugins?.load,
     host: options.plugins?.host ?? null,
     hostMode: options.plugins?.hostMode,

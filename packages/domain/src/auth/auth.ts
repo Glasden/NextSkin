@@ -3,6 +3,7 @@ import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-prov
 import { defineRequestState, hasRequestState } from '@better-auth/core/context'
 import { passkey } from '@better-auth/passkey'
 import { dialectOf, transactionWithRetry, type CoreDatabase } from '@nextskin/db'
+import { getLogger } from '@nextskin/logging'
 import { betterAuth, getCurrentAdapter, type BetterAuthOptions } from 'better-auth'
 import { APIError, createAuthMiddleware, isAPIError } from 'better-auth/api'
 import { hashPassword } from 'better-auth/crypto'
@@ -83,9 +84,9 @@ const verifiedPasswordHash = defineRequestState<string | null>(() => null)
 const logger: BetterAuthOptions['logger'] = {
   level: 'warn',
   log: (level, message) => {
-    const line = `[auth] ${redactLogMessage(message)}`
-    if (level === 'error') console.error(line)
-    else console.warn(line)
+    const line = redactLogMessage(message)
+    if (level === 'error') getLogger('auth').error(line)
+    else getLogger('auth').warn(line)
   },
 }
 
@@ -101,7 +102,7 @@ export function authOptions(config: AuthConfig) {
       await config.onPasswordChanged?.(Number(uid))
     } catch {
       // 密码已经提交；通知失败不能改变结果，也不能记录用户数据。
-      console.warn('[auth] password_event_failed')
+      getLogger('auth').warn('password_event_failed')
     }
   }
   return {
@@ -285,7 +286,7 @@ export function authOptions(config: AuthConfig) {
       errorURL: '/oauth/error',
       onError: (error) => {
         if (isAPIError(error) && error.status !== 'INTERNAL_SERVER_ERROR') return
-        console.error(`[auth] unhandled ${error instanceof Error ? error.name : typeof error}`)
+        getLogger('auth').error('unhandled', { error: error instanceof Error ? error.name : typeof error })
       },
     },
     plugins: [

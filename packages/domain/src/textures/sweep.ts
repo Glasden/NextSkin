@@ -1,4 +1,5 @@
 import { transactionWithRetry, type CoreDatabase } from '@nextskin/db'
+import { rootLogger, type Logger } from '@nextskin/logging'
 import type { Kysely } from 'kysely'
 import { z } from 'zod'
 import type { JobHandler, JobRunner } from '../jobs/runner.ts'
@@ -24,10 +25,10 @@ export function createTextureSweep(options: {
   jobs: Pick<JobRunner, 'enqueue'>
   now: () => Date
   leaseMs: number
-  log?: (line: string) => void
+  logger?: Logger
 }): JobHandler {
   const { db, storage, files, jobs, now, leaseMs } = options
-  const log = options.log ?? ((line) => console.info(line))
+  const log = (options.logger ?? rootLogger()).child({ area: 'jobs' })
   return {
     concurrency: 1,
     async run({ jobId, payload, signal }) {
@@ -78,7 +79,7 @@ export function createTextureSweep(options: {
             { dedupeKey: TEXTURE_SWEEP_JOB },
           )
         })
-      } else log(`[jobs] texture_sweep orphans=${orphans} temps=${temps}`)
+      } else log.info('texture_sweep', { orphans, temps })
     },
   }
 }

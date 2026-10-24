@@ -41,6 +41,12 @@ export default defineConfig(
     },
   },
 
+  {
+    files: ['packages/domain/src/**/*.ts', 'packages/api/src/**/*.ts', 'packages/db/src/**/*.ts'],
+    ignores: ['**/*.test.ts', '**/*.db.test.ts', '**/*.test-helper.ts'],
+    rules: { 'no-console': 'error' },
+  },
+
   // 不变量写成的规则（packages/eslint-plugin）
   nextskin.configs.recommended,
   {

@@ -13,7 +13,8 @@ import {
 } from '@nextskin/db'
 import { createTestDatabase, removeTestDirectory, type TestDatabase } from '@nextskin/db/testing'
 import { createImagePool, DomainError, type ImagePool } from '@nextskin/domain/importer'
-import { afterEach, beforeEach, expect, test, vi, type MockInstance } from 'vitest'
+import { captureLogs } from '@nextskin/logging'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { createImportService, type ImportService, type ImportServiceOptions, type ImportStartInput } from './service.ts'
 import type { SourceDatabase } from './source/schema.ts'
 import { createBsSchema, insertRows } from './testing/bs.ts'
@@ -28,7 +29,7 @@ let input: ImportStartInput
 let enter: ReturnType<typeof vi.fn<() => Promise<void>>>
 let exit: ReturnType<typeof vi.fn<() => Promise<void>>>
 let onImported: ReturnType<typeof vi.fn<() => Promise<void>>>
-let logs: MockInstance<typeof console.warn>
+let logs: ReturnType<typeof captureLogs>
 const meta = { entry: 'setup', startedBy: null } as const
 const salt = 'private-salt-fixture-never-persist'
 const password = 'private-database-password-fixture'
@@ -87,7 +88,7 @@ beforeEach(async () => {
   enter = vi.fn().mockResolvedValue(undefined)
   exit = vi.fn().mockResolvedValue(undefined)
   onImported = vi.fn().mockResolvedValue(undefined)
-  logs = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  logs = captureLogs()
   service = await open()
 })
 afterEach(async () => {
@@ -96,6 +97,7 @@ afterEach(async () => {
   await target?.cleanup()
   await env?.cleanup()
   await removeTestDirectory(directory)
+  logs.restore()
   vi.restoreAllMocks()
 })
 async function finished(token: string) {
@@ -163,7 +165,7 @@ test('维护模式覆盖运行和收尾，只有一个运行；试跑不回调�
   const serialized =
     JSON.stringify(service.run(second.token)) +
     JSON.stringify(await target.db.selectFrom('import_runs').selectAll().execute()) +
-    JSON.stringify(logs.mock.calls)
+    JSON.stringify(logs.records)
   expect(serialized).not.toContain(salt)
   expect(serialized).not.toContain(password)
 })
@@ -342,7 +344,7 @@ test('维护入口失败可重试；引擎在创建记录前失败也清理维�
   expect(service.run(run.token)?.report).toBeNull()
   expect(exit).toHaveBeenCalledOnce()
   expect(close).toHaveBeenCalledOnce()
-  expect(JSON.stringify(logs.mock.calls)).not.toContain(salt)
+  expect(JSON.stringify(logs.records)).not.toContain(salt)
 })
 
 test('网络连接的密码不进入 state、报告、运行行或日志；onImported 失败只记异常类型', async () => {
@@ -357,13 +359,15 @@ test('网络连接的密码不进入 state、报告、运行行或日志；onImp
   const serialized =
     JSON.stringify(service.run(run.token)) +
     JSON.stringify(await target.db.selectFrom('import_runs').selectAll().execute()) +
-    JSON.stringify(logs.mock.calls)
+    JSON.stringify(logs.records)
   expect(serialized).not.toContain(password)
   expect(serialized).not.toContain(salt)
   onImported.mockRejectedValueOnce(new Error(password))
   const real = await service.start({ ...input, dryRun: false }, meta)
   expect((await finished(real.token)).status).toBe('succeeded')
-  expect(logs).toHaveBeenCalledWith('[import] Error')
+  expect(logs.records).toContainEqual(
+    expect.objectContaining({ area: 'import', level: 'warn', msg: 'failed', error: 'Error' }),
+  )
 })
 
 test('close 会取消并等待运行结束，再关闭连接', async () => {
@@ -381,8 +385,8 @@ test('enter 出错后尽力退出维护，保留原来的领域错误；退出�
   expect(exit).toHaveBeenCalledOnce()
   expect(service.maintenance()).toBe(false)
   expect(await countRows(target.db.selectFrom('import_runs'))).toBe(0)
-  expect(logs).toHaveBeenCalledExactlyOnceWith('[import] Error')
-  expect(JSON.stringify(logs.mock.calls)).not.toContain(password)
+  expect(logs.records).toMatchObject([{ area: 'import', level: 'warn', msg: 'failed', error: 'Error' }])
+  expect(JSON.stringify(logs.records)).not.toContain(password)
   const run = await service.start(input, meta)
   expect((await finished(run.token)).status).toBe('succeeded')
 })
@@ -392,7 +396,11 @@ test('exit 失败仍公布结果并退出维护，日志提示重启且不带异
   const run = await service.start(input, meta)
   expect((await finished(run.token)).status).toBe('succeeded')
   expect(service.maintenance()).toBe(false)
-  expect(logs).toHaveBeenCalledWith('[import] Error')
-  expect(logs).toHaveBeenCalledWith('[import] 后台任务可能仍处于暂停状态，请重启服务')
-  expect(JSON.stringify(logs.mock.calls)).not.toContain(password)
+  expect(logs.records).toContainEqual(
+    expect.objectContaining({ area: 'import', level: 'warn', msg: 'failed', error: 'Error' }),
+  )
+  expect(logs.records).toContainEqual(
+    expect.objectContaining({ area: 'import', level: 'warn', msg: '后台任务可能仍处于暂停状态，请重启服务' }),
+  )
+  expect(JSON.stringify(logs.records)).not.toContain(password)
 })

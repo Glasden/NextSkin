@@ -28,7 +28,7 @@
 | `site` | 只读 `{ url, name }`；url 来自站点设置，去掉末尾斜杠。管理员没有填站点地址时是空串，路由里可以退回 `new URL(request.url).origin` |
 | `settings` | 按本插件 zod schema 解析后的只读设置，含已解密机密项。管理员修改后下一次调用可见；无效时不执行 handler，报设置不完整。见[设置](./settings.md) |
 | `t(key, params?, locale?)` | 翻译本插件文案。params 是字符串或数字的记录。请求内默认使用请求语言，其余调用用站点默认语言；显式 locale 可覆盖。找不到或格式化失败时尝试站点默认语言，仍失败就返回键名 |
-| `log.debug/info/warn/error(message, fields?)` | 无需 await，日志带插件 id。message 按 Unicode 码点截到 1000 字符；fields 是 JSON 记录，序列化后截到 2000 字符，截断后不保证仍是合法 JSON。核心不检查是否含机密 |
+| `log.debug/info/warn/error(message, fields?)` | 无需 await，日志带插件 id。低于站点日志级别的不记录：默认 `info`，`pnpm dev` 里是 `debug`，站长用 `NEXTSKIN_LOG_LEVEL` 调。message 按 Unicode 码点截到 1000 字符；fields 是 JSON 记录，原样放在日志的 `fields` 字段下，序列化后超过 2000 字符时截断、存成字符串。核心只把 `password`、`token`、`secret` 这类字段名的值换掉，不检查其余内容是否含机密 |
 | `signal` | 本次调用的取消信号。停用插件、调用超时时 abort；升级或其他插件启停引起整代换代时，在途调用照常完成。监听它来结束长操作，超时后才返回的结果不再接受 |
 | `jobs.enqueue` | 把本插件已声明任务入队，见下文和[任务](./jobs.md) |
 | `fetch` | 核心代发 HTTP，见下文 |

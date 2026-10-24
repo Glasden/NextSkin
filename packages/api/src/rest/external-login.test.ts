@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
+import { captureLogs } from '@nextskin/logging'
 import { toIsoTimestamp, writeAuthDate } from '../../../db/src/index.ts'
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
 import github from '../../../../plugins/oauth-github/src/official.ts'
@@ -367,7 +368,7 @@ describe.each(['official', 'host'] as const)('GitHub 第三方登录（%s）', (
       )
       expect(outbound).not.toHaveBeenCalled()
       expect(await cancelled.session()).toBeNull()
-      expect(env.lines.join('\n')).not.toContain(next)
+      expect(JSON.stringify(env.records)).not.toContain(next)
     },
   )
 
@@ -400,13 +401,17 @@ describe.each(['official', 'host'] as const)('GitHub 第三方登录（%s）', (
     const browser = new Browser()
     const { state } = await start(browser, 'signIn', authorizationNext)
     vi.spyOn(env.core.auth, 'createExternalSession').mockRejectedValueOnce(new Error('Session creation failed'))
-    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
-    expectRedirect(
-      await browser.callback(state),
-      `/sign-in?error=external_login_failed&next=${encodeURIComponent(authorizationNext)}`,
-    )
-    expect(logged).toHaveBeenCalledExactlyOnceWith('[rest] unhandled Error')
-    expect(await browser.session()).toBeNull()
+    const logged = captureLogs()
+    try {
+      expectRedirect(
+        await browser.callback(state),
+        `/sign-in?error=external_login_failed&next=${encodeURIComponent(authorizationNext)}`,
+      )
+      expect(logged.records).toMatchObject([{ area: 'rest', level: 'error', msg: 'unhandled', error: 'Error' }])
+      expect(await browser.session()).toBeNull()
+    } finally {
+      logged.restore()
+    }
   })
 
   test.each(['throw', 'token-error', 'invalid-subject', 'timeout'] as const)(
@@ -431,7 +436,7 @@ describe.each(['official', 'host'] as const)('GitHub 第三方登录（%s）', (
       } else response = await browser.callback(state)
       expectRedirect(response, '/sign-in?error=external_login_failed&next=%2Fuser%2Fplayers')
       expect(await browser.session()).toBeNull()
-      const logs = env.lines.join('\n')
+      const logs = JSON.stringify(env.records)
       expect(logs).toContain('login_failed')
       for (const secret of [
         authorizationCode,

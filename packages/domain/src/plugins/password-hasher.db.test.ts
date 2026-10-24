@@ -117,9 +117,11 @@ test('抛错、返回值不是布尔值都按不通过；日志里没有密码�
   result = true
   expect(await check()).toBe(false)
   expect(verify).toHaveBeenCalledTimes(3)
-  expect(env.lines.some((line) => line.includes('password_verify_failed main error'))).toBe(true)
-  expect(env.lines.some((line) => line.includes('breaker_open a:passwordHasher:main'))).toBe(true)
-  expect(env.lines.join('\n')).not.toContain('hunter2-secret')
+  expect(env.records).toContainEqual(
+    expect.objectContaining({ msg: 'password_verify_failed', provider: 'main', reason: 'error' }),
+  )
+  expect(env.records).toContainEqual(expect.objectContaining({ msg: 'breaker_open', key: 'a:passwordHasher:main' }))
+  expect(JSON.stringify(env.records)).not.toContain('hunter2-secret')
   const now = Date.now()
   vi.spyOn(Date, 'now').mockImplementation(() => now + 30_001)
   expect(await check()).toBe(true)

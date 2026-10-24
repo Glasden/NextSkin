@@ -5,6 +5,7 @@ import { coreMigrations, createDatabase, migrateToLatest, toIsoTimestamp, type C
 import { removeTestDirectory } from '@nextskin/db/testing'
 import { OfficialPluginMigrationError, openCore } from '@nextskin/domain'
 import { coreConfigFromEnv } from '@nextskin/domain/config'
+import { captureLogs } from '@nextskin/logging'
 import { officialPlugins } from '@nextskin/official-plugins'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { ConfigError } from '../config.ts'
@@ -31,6 +32,7 @@ let db: ReturnType<typeof createDatabase<CoreDatabase>>
 const last = Object.keys(coreMigrations).sort().at(-1)!
 const output: string[] = []
 const errors: string[] = []
+let logs: ReturnType<typeof captureLogs>
 let savedLog: typeof console.log
 let savedInfo: typeof console.info
 beforeEach(async () => {
@@ -56,10 +58,12 @@ beforeEach(async () => {
   vi.spyOn(console, 'error').mockImplementation((line: string) => {
     errors.push(line)
   })
+  logs = captureLogs()
   up.mockReset().mockResolvedValue(undefined)
   vi.mocked(openCore).mockClear()
 })
 afterEach(async () => {
+  logs.restore()
   vi.restoreAllMocks()
   await db.destroy()
   await removeTestDirectory(context.root)
@@ -102,7 +106,6 @@ for (const json of [false, true]) {
       {
         startJobs: false,
         officialPlugins,
-        pluginLog: expect.any(Function) as unknown,
         migrationReport: expect.any(Object) as unknown,
       },
     ])
@@ -125,7 +128,13 @@ for (const json of [false, true]) {
         backup: expect.any(String) as unknown,
       })
       expect((await readFile(report.backup!)).length).toBeGreaterThan(0)
-      expect(errors.join('\n')).toContain('已先把数据库备份到')
+      expect(logs.records).toContainEqual(
+        expect.objectContaining({
+          area: 'migrate',
+          level: 'info',
+          msg: expect.stringContaining('已先把数据库备份到') as unknown,
+        }),
+      )
       expect(errors).toContain('迁移日志')
       expect(errors).toContain('迁移提示')
     } else {
@@ -135,8 +144,6 @@ for (const json of [false, true]) {
         expect.stringContaining('[nextskin] 迁移之前已备份数据库到 '),
       ])
     }
-    call[1]!.pluginLog!('插件日志')
-    expect(errors).toContain('插件日志')
     expect(console.log).toBe(savedLog)
     expect(console.info).toBe(savedInfo)
     output.length = 0

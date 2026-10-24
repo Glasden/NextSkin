@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
+import { configureRootLogger, terminalWriter, logFormatFromEnv } from '@nextskin/logging'
 import metadata from '../package.json' with { type: 'json' }
 import { ConfigError, readConfig } from './config.ts'
 import type { LauncherContext } from './context.ts'
@@ -28,8 +29,15 @@ async function main(): Promise<number> {
   if (command === 'version') {
     return (await import('./commands/version.ts')).run(argv, context)
   }
-  if (command === 'doctor') return (await import('./commands/doctor.ts')).run(argv, context)
   if (command === 'start') return (await import('./commands/start.ts')).run(argv, context)
+  let write: ((line: string) => void) | undefined
+  configureRootLogger({
+    write: (line) => {
+      write ??= terminalWriter(logFormatFromEnv(process.env), { stdout: process.stderr, stderr: process.stderr })
+      write(line)
+    },
+  })
+  if (command === 'doctor') return (await import('./commands/doctor.ts')).run(argv, context)
   if (command === 'import' && argv.shift() !== 'blessing-skin') {
     console.error('用法：nextskin import blessing-skin [参数]')
     return 1

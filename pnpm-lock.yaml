@@ -452,6 +452,9 @@ importers:
       '@nextskin/importer':
         specifier: workspace:*
         version: link:../../packages/importer
+      '@nextskin/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
       '@nextskin/official-plugins':
         specifier: workspace:*
         version: link:../../packages/official-plugins
@@ -516,6 +519,9 @@ importers:
       '@nextskin/i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@nextskin/logging':
+        specifier: workspace:*
+        version: link:../logging
       '@nextskin/plugin-host':
         specifier: workspace:*
         version: link:../plugin-host
@@ -538,6 +544,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@nextskin/logging':
+        specifier: workspace:*
+        version: link:../logging
       kysely:
         specifier: 'catalog:'
         version: 0.29.6
@@ -683,6 +692,9 @@ importers:
       '@nextskin/domain':
         specifier: workspace:*
         version: link:../domain
+      '@nextskin/logging':
+        specifier: workspace:*
+        version: link:../logging
       kysely:
         specifier: 'catalog:'
         version: 0.29.6
@@ -708,6 +720,9 @@ importers:
       '@nextskin/importer':
         specifier: workspace:*
         version: link:../importer
+      '@nextskin/logging':
+        specifier: workspace:*
+        version: link:../logging
       '@nextskin/official-plugins':
         specifier: workspace:*
         version: link:../official-plugins
