@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@nextskin/logging": "workspace:*",
     "@nextskin/updates": "workspace:*",
     "fflate": "catalog:"
   },

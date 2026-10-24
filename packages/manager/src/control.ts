@@ -3,6 +3,7 @@ import { createServer, createConnection, type Socket } from 'node:net'
 import { access, chmod, chown, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
+import type { Logger } from '@nextskin/logging'
 import { MANAGER_PROTOCOL, compareVersions } from '@nextskin/updates'
 import { appendLog, pendingManager, readCurrent, renameRetry, validVersion } from './state.ts'
 import type { RunAs } from './run-as.ts'
@@ -15,6 +16,7 @@ import {
   type ManagerStatus,
   type UpdateLog,
 } from './types.ts'
+import { managerLogger } from './log.ts'
 
 const limit = 64 * 1024
 export const steps = [
@@ -192,7 +194,7 @@ export async function createControl(options: {
   writable?: boolean
   runAs?: RunAs
   chown?: typeof chown
-  log?: (message: string) => void
+  log?: Logger
 }): Promise<{ address: string; token: string; close(this: void): Promise<void> }> {
   const { home, bundled, manager } = options
   const writable = options.writable !== false
@@ -349,7 +351,7 @@ export async function createControl(options: {
   try {
     if (process.platform !== 'win32') {
       if (address !== join(resolve(home), 'releases/manager.sock'))
-        (options.log ?? console.error)('[nextskin] 实例路径过长，控制 socket 改用临时目录')
+        (options.log ?? managerLogger()).warn('实例路径过长，控制 socket 改用临时目录')
       await rm(address, { force: true })
     }
     await writeFile(temporary, token + '\n', { flag: 'wx', mode: 0o600 })

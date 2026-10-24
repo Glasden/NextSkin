@@ -1,6 +1,7 @@
 import { appendFile, mkdir, open, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import type { Logger } from '@nextskin/logging'
 import { compareVersions } from '@nextskin/updates'
 import { ConfigError, dialect, object, type Current, type UpdateLog } from './types.ts'
 
@@ -143,12 +144,7 @@ export async function lastLog(home: string): Promise<UpdateLog | null> {
 }
 
 /** Windows 上占用中的版本留到下次启动再删，不能为清理失败停掉已健康的站点。 */
-export async function pruneReleases(
-  home: string,
-  pointer: Current,
-  log: (line: string) => void,
-  keep: string[] = [],
-): Promise<void> {
+export async function pruneReleases(home: string, pointer: Current, log: Logger, keep: string[] = []): Promise<void> {
   for (const item of await readdir(join(home, 'releases'), { withFileTypes: true })) {
     if (
       item.isDirectory() &&
@@ -158,7 +154,7 @@ export async function pruneReleases(
       !keep.includes(item.name)
     )
       await rm(join(home, 'releases', item.name), { recursive: true, force: true }).catch(() =>
-        log(`[nextskin] 旧版本 ${item.name} 暂时无法删除，下次再清理`),
+        log.warn(`旧版本 ${item.name} 暂时无法删除，下次再清理`),
       )
   }
 }

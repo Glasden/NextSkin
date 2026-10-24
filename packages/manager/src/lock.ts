@@ -1,9 +1,11 @@
 import { chown, mkdir, rm, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import type { Logger } from '@nextskin/logging'
 import { ManagerError } from './types.ts'
 import type { RunAs } from './run-as.ts'
 import { sleep } from './state.ts'
+import { managerLogger } from './log.ts'
 
 export interface Lock {
   release(): void
@@ -62,7 +64,7 @@ export async function waitForLock(
     now?: () => number
     sleep?: (ms: number, signal?: AbortSignal) => Promise<void>
     acquire?: typeof acquireLock
-    log?: (line: string) => void
+    log?: Logger
   } = {},
 ): Promise<Lock | null> {
   const now = options.now ?? Date.now
@@ -84,7 +86,7 @@ export async function waitForLock(
     if (lock) return lock
     if (now() >= deadline) throw new ManagerError('另一个进程仍在运行，等待进程锁超时')
     if (!waiting)
-      (options.log ?? console.error)(`[nextskin] 另一个进程还在运行，等待它退出，最多 ${Math.ceil(timeout / 1000)} 秒`)
+      (options.log ?? managerLogger()).info(`另一个进程还在运行，等待它退出，最多 ${Math.ceil(timeout / 1000)} 秒`)
     waiting = true
     await (options.sleep ?? interruptibleSleep)(Math.min(options.interval ?? 500, deadline - now()), options.signal)
   }

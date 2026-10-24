@@ -1,6 +1,8 @@
 import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from 'node:child_process'
 import { chown, stat } from 'node:fs/promises'
+import type { Logger } from '@nextskin/logging'
 import { ConfigError } from './types.ts'
+import { managerLogger } from './log.ts'
 
 export interface RunAs {
   name: string
@@ -49,8 +51,8 @@ export function resolveRunAs(options: RunAsOptions = {}): RunAs | undefined {
   if (own !== 0) throw new ConfigError('降权要以 root 运行管理进程')
   return { name, uid, gid }
 }
-export function logRunAs(runAs: RunAs | undefined, log: (message: string) => void = console.error): void {
-  if (runAs) log(`[nextskin] 以 ${runAs.name}（${runAs.uid}/${runAs.gid}）运行服务`)
+export function logRunAs(runAs: RunAs | undefined, log: Logger = managerLogger()): void {
+  if (runAs) log.info(`以 ${runAs.name}（${runAs.uid}/${runAs.gid}）运行服务`)
 }
 
 /** root 没降权时，迁移会在服务用户的数据目录里留下 root 的文件；只给命令行离线执行的流水线用（ManagerOptions.checkDataOwner）。 */

@@ -1,3 +1,4 @@
+import { createMemoryLogger } from '@nextskin/logging'
 import type { execFileSync } from 'node:child_process'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { access, mkdir, readFile, rm, writeFile, type chown } from 'node:fs/promises'
@@ -30,6 +31,41 @@ async function setup() {
 }
 
 describe('停服时的命令', () => {
+  it('离线流水线的日志只写 stderr，不进入命令 output 或 stdout', async () => {
+    const f = await setup()
+    const lock = (await acquireLock(join(f.home, 'data/nextskin.lock')))!
+    disposers.push(() => Promise.resolve(lock.release()))
+    vi.stubEnv('NEXTSKIN_LOG_LEVEL', 'info')
+    vi.stubEnv('NEXTSKIN_LOG_FORMAT', 'json')
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+    try {
+      expect(
+        await runManagementCommand(f.home, '1.1.0', ['update', '--to', '1.1.0', '--yes'], {
+          ...f.options,
+          manager: { ...f.options.manager, sleep: () => Promise.resolve(lock.release()) },
+        }),
+      ).toBe(0)
+      expect(stdout).not.toHaveBeenCalled()
+      expect(stderr).toHaveBeenCalledTimes(1)
+      expect(JSON.parse(String(stderr.mock.calls[0]![0]))).toMatchObject({
+        source: 'manager',
+        level: 'info',
+        msg: '另一个进程还在运行，等待它退出，最多 5 秒',
+      })
+      expect(f.error).not.toHaveBeenCalled()
+      expect(f.output.mock.calls).toEqual([
+        ['预检：sqlite；核心迁移 0 条；插件迁移 0 条；档位 none'],
+        ['不兼容的插件：无'],
+        ['预计停站几秒到三十多秒；实际时间取决于数据库迁移，健康检查最多等待两分钟'],
+        ['manual 1.0.0 → 1.1.0：success'],
+      ])
+    } finally {
+      stdout.mockRestore()
+      stderr.mockRestore()
+      vi.unstubAllEnvs()
+    }
+  })
   it('--check 读签名清单，不拿锁、不启动', async () => {
     const f = await setup()
     const lock = (await acquireLock(join(f.home, 'releases/manager.lock')))!
@@ -246,10 +282,12 @@ it.skipIf(process.platform === 'win32')(
       delete actual.gid
       return spawn(args[0], args[1], actual)
     }) as typeof spawn
+    const { logger, records } = createMemoryLogger({ source: 'manager' })
     const options = {
       ...f.options,
       manager: {
         ...f.options.manager,
+        log: logger,
         env: { ...process.env, NEXTSKIN_RUN_AS: 'nextskin' },
         getuid: () => 0,
         execFileSync: identity,
@@ -262,9 +300,12 @@ it.skipIf(process.platform === 'win32')(
     expect(identity).toHaveBeenCalledTimes(4)
     expect(calls.map((call) => call.command)).toEqual(['doctor', 'doctor', 'migrate', 'doctor'])
     for (const call of calls) expect(call).toMatchObject({ uid: 1234, gid: 5678 })
-    expect(f.error.mock.calls.filter((call) => call[0] === '[nextskin] 以 nextskin（1234/5678）运行服务')).toHaveLength(
-      2,
-    )
+    expect(records).toHaveLength(2)
+    expect(records).toMatchObject([
+      { level: 'info', msg: '以 nextskin（1234/5678）运行服务' },
+      { level: 'info', msg: '以 nextskin（1234/5678）运行服务' },
+    ])
+    expect(f.error).not.toHaveBeenCalled()
   },
 )
 

@@ -39,6 +39,7 @@ import {
   type UpdateLog,
   type UpgradeResult,
 } from './types.ts'
+import { managerLogger } from './log.ts'
 
 export interface ManagerOptions extends Runtime, DownloadOptions {
   home: string
@@ -77,7 +78,7 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
   let prepared: Prepared | null = null
   let cancellation: AbortController | null = null
   const supervisor = options.supervisor ?? new LauncherSupervisor(home, options)
-  const log = (message: string) => (options.log ?? console.error)(`[nextskin] ${message}`)
+  const log = options.log ?? managerLogger()
   const current = () => pointer?.current ?? options.bundled
   const staging = join(home, 'releases/.staging')
   const command = (version: string, name: string, timeout: number, signal?: AbortSignal) =>
@@ -326,9 +327,9 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
   }
   const cleanup = async (clearStaging = true) => {
     if (!pointer) return
-    await pruneReleases(home, pointer, options.log ?? console.error)
+    await pruneReleases(home, pointer, log)
     if (clearStaging)
-      await rm(staging, { recursive: true, force: true }).catch(() => log('暂时无法清空准备目录，下次再清理'))
+      await rm(staging, { recursive: true, force: true }).catch(() => log.warn('暂时无法清空准备目录，下次再清理'))
   }
   const activateManager = async (version: string) => {
     const source = join(staging, `manager-${version}`)
@@ -461,9 +462,9 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
         let clearStaging = true
         await activateManager(version).catch(() => {
           clearStaging = false
-          log('新管理进程暂时无法放入 manager.next，已保留准备目录，请检查目录权限')
+          log.warn('新管理进程暂时无法放入 manager.next，已保留准备目录，请检查目录权限')
         })
-        await cleanup(clearStaging).catch(() => log('旧版本暂时无法清理，下次再试'))
+        await cleanup(clearStaging).catch(() => log.warn('旧版本暂时无法清理，下次再试'))
         return entry
       } catch (error) {
         if (error instanceof ConfigError && !stopped) throw error
@@ -475,7 +476,7 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
             reason: '新版本已通过健康检查，升级记录或清理未完成，请检查目录权限',
           }
           lastResult = entry
-          await appendLog(home, entry).catch(() => log(entry.reason))
+          await appendLog(home, entry).catch(() => log.warn(entry.reason))
           return entry
         }
         const entry = base()
@@ -657,14 +658,14 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
         entry.step = 11
         prepared = null
         await record(entry)
-        await cleanup().catch(() => log('旧版本暂时无法清理，下次再试'))
+        await cleanup().catch(() => log.warn('旧版本暂时无法清理，下次再试'))
         return entry
       } catch (error) {
         if (error instanceof ConfigError && !stopped) throw error
         if (accepted) {
           entry.reason = '回滚目标已通过健康检查，日志记录未完成，请检查目录权限'
           lastResult = entry
-          log(entry.reason)
+          log.warn(entry.reason)
           return entry
         }
         entry.reason = reason(error)
