@@ -2355,6 +2355,7 @@
         "managerUnzip": "One-click upgrade cannot reach this version, and there is no intermediate version to go through first. Upgrade by unzipping the {version} ZIP over the current directory, as described below.",
         "prepare": "Prepare {version}",
         "nothingTitle": "Up to date",
+        "uncheckedTitle": "Not checked yet",
         "nothing": "When a new stable release is out, upgrade it here with one click.",
         "preparingTitle": "Preparing {version}",
         "cancel": "Cancel",

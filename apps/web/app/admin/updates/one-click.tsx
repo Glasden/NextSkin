@@ -37,6 +37,12 @@ export function OneClickUpgrade({ initial }: { initial: UpdateStatus & { manager
   const router = useRouter()
   const toast = useToast()
   const [status, setStatus] = useState(initial)
+  // 点"检查更新"后 router.refresh() 送来服务端的新状态，换上它，不然查到了新版本这里还是"已经是最新版本"
+  const [previous, setPrevious] = useState(initial)
+  if (previous !== initial) {
+    setPrevious(initial)
+    setStatus(initial)
+  }
   const [switching, setSwitching] = useState<Switching | null>(() => {
     const operation = initial.manager.operation
     return operation && operation.kind !== 'prepare'
@@ -233,7 +239,9 @@ export function OneClickUpgrade({ initial }: { initial: UpdateStatus & { manager
           </div>
         ) : (
           <div className="flex flex-col gap-1">
-            <h3 className="text-base font-medium text-text">{t('nothingTitle')}</h3>
+            <h3 className="text-base font-medium text-text">
+              {t(status.checkedAt ? 'nothingTitle' : 'uncheckedTitle')}
+            </h3>
             <p className="text-sm text-pretty text-text-muted">{t('nothing')}</p>
           </div>
         )}

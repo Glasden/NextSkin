@@ -2355,6 +2355,7 @@
         "managerUnzip": "一键升级到不了这个版本，也没有能先升过去的中间版本。照下面的说明覆盖解压 {version} 的 ZIP 来升级。",
         "prepare": "准备升级到 {version}",
         "nothingTitle": "已经是最新版本",
+        "uncheckedTitle": "还没检查过",
         "nothing": "有新的正式版时，在这里一键升级。",
         "preparingTitle": "正在准备 {version}",
         "cancel": "取消",
