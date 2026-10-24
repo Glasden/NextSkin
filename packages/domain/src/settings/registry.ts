@@ -1,4 +1,5 @@
 import { locales } from '@nextskin/i18n'
+import { DEFAULT_LOG_FILE_LIMITS, LOG_FILE_LIMIT_RANGES } from '@nextskin/logging'
 import { z } from 'zod'
 import { initialUpdateState, updateStateSchema } from '../updates/state.ts'
 import { generateSigningKey, parseSigningKey } from '../yggdrasil/signing-key.ts'
@@ -237,6 +238,19 @@ export const coreSettingsRegistry = {
   'audit.retentionDays': { schema: z.int().min(0).max(3650), default: 0, section: 'advanced', secret: false },
   // 通知的保留天数，已读、未读都清理；0 表示不清理（ADR-0052）。
   'notifications.retentionDays': { schema: z.int().min(0).max(3650), default: 365, section: 'advanced', secret: false },
+  // 数据目录里日志文件的轮换上限（ADR-0062）：核心每分钟读一次，交给写文件的启动器
+  'logging.maxFileSizeMb': {
+    schema: z.int().min(LOG_FILE_LIMIT_RANGES.maxFileSizeMb.min).max(LOG_FILE_LIMIT_RANGES.maxFileSizeMb.max),
+    default: DEFAULT_LOG_FILE_LIMITS.maxFileSizeMb,
+    section: 'advanced',
+    secret: false,
+  },
+  'logging.maxFiles': {
+    schema: z.int().min(LOG_FILE_LIMIT_RANGES.maxFiles.min).max(LOG_FILE_LIMIT_RANGES.maxFiles.max),
+    default: DEFAULT_LOG_FILE_LIMITS.maxFiles,
+    section: 'advanced',
+    secret: false,
+  },
   // 每天读一次 dl.nextskin.org 的版本清单（ADR-0061）；检查的结果存在 updates.state，只由 updates/service.ts 写
   'updates.check': { schema: z.boolean(), default: true, section: 'advanced', secret: false },
   'updates.state': { schema: updateStateSchema, default: initialUpdateState, section: null, secret: false },

@@ -43,7 +43,7 @@ export function listenAddress(env: NodeJS.ProcessEnv): { host: string; port: num
 export async function readConfig(
   context: LauncherContext,
   env: NodeJS.ProcessEnv = process.env,
-  warn: (message: string) => void = console.error,
+  warn: (message: string) => void = (message) => console.error(`[nextskin] ${message}`),
 ): Promise<CommandContext> {
   const file = envFilePath(context, env)
   const { exists, values } = await readEnvFile(file)
@@ -62,9 +62,7 @@ export async function readConfig(
       throw new ConfigError(`没法生成 ${file}；请用环境变量 NEXTSKIN_SECRET 给出至少 32 个字符的随机字符串`)
     }
     env.NEXTSKIN_SECRET = secret
-    warn(
-      `[nextskin] 已生成 ${file}，里面是加密机密设置的密钥。请备份这个文件：丢了它，后台里保存的机密设置都要重新填写。`,
-    )
+    warn(`已生成 ${file}，里面是加密机密设置的密钥。请备份这个文件：丢了它，后台里保存的机密设置都要重新填写。`)
   }
   if (production && env.NEXTSKIN_SECRET && env.NEXTSKIN_SECRET.length < 32)
     throw new ConfigError('NEXTSKIN_SECRET 至少要有 32 个字符；请使用随机字符串')
