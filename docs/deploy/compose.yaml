@@ -27,6 +27,12 @@ services:
       - data:/data
     # 启动器停止时最多等核心 30 秒（ADR-0039），Docker 默认等 10 秒就强杀
     stop_grace_period: 40s
+    # Docker 默认的 json-file 不轮换，要设上限。数据卷的 logs/ 里另有一份，按后台的设置轮换（ADR-0062）
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
 
 volumes:
   data:

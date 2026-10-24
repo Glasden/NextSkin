@@ -11,6 +11,10 @@ sidebar:
 node nextskin.mjs doctor
 ```
 
+## 日志在哪
+
+数据目录的 `logs/nextskin.log`，一行一条 JSON，带时间、级别和来源；超过上限就轮换成 `nextskin.1.log`、`nextskin.2.log`……，默认每份 10 MB、留 5 份，在后台“设置 → 高级”里调。面板的输出、journald、`docker logs` 里是同样的内容，每条一行文字。贴出来之前先去掉里面的邮箱、IP 这些个人信息。
+
 ## 服务起不来
 
 - **端口被占用**：默认 3000，用 `NEXTSKIN_PORT`（或 `PORT`）换一个。
