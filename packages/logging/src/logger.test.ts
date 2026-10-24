@@ -60,3 +60,15 @@ test('测试用的 logger 默认收下 debug', () => {
   all.logger.debug('kept')
   expect(all.records).toMatchObject([{ level: 'debug', msg: 'kept' }])
 })
+
+test('子 logger 覆盖已有的字段、换来源时，每个键只写出一个', () => {
+  const lines: string[] = []
+  const logger = createLogger('core', { level: 'debug', write: (line) => void lines.push(line) })
+  logger.child({ area: 'a' }).child({ area: 'b' }).info('x')
+  logger.child({ area: 'a', plugin: 'p' }).child({ source: 'plugin', plugin: 'q' }).info('y')
+  expect(lines[0]!.match(/"area":/g)).toHaveLength(1)
+  expect(JSON.parse(lines[0]!)).toMatchObject({ area: 'b' })
+  expect(lines[1]!.match(/"plugin":/g)).toHaveLength(1)
+  expect(lines[1]!.match(/"source":/g)).toHaveLength(1)
+  expect(JSON.parse(lines[1]!)).toMatchObject({ source: 'plugin', area: 'a', plugin: 'q' })
+})

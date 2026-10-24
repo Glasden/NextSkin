@@ -1074,6 +1074,9 @@ importers:
       '@nextskin/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@nextskin/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
       '@nextskin/plugin-host':
         specifier: workspace:*
         version: link:../../packages/plugin-host
@@ -1175,6 +1178,9 @@ importers:
       '@nextskin/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@nextskin/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
       '@nextskin/plugin-host':
         specifier: workspace:*
         version: link:../../packages/plugin-host
