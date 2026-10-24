@@ -83,6 +83,8 @@ const expected = {
   'cache.publicMaxAge': integer(0),
   'audit.retentionDays': integer(0, 3650),
   'notifications.retentionDays': integer(0, 3650),
+  'logging.maxFileSizeMb': integer(1, 100),
+  'logging.maxFiles': integer(2, 20),
   'updates.check': boolean,
 } satisfies Partial<Record<CoreSettingKey, SettingControl>>
 

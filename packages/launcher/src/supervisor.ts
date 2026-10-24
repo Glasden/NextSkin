@@ -1,5 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { dirname } from 'node:path'
+import { logLimitsFromMessage, logLineFromMessage } from '@nextskin/logging'
+import { createLauncherOutput, type LauncherOutput } from './output.ts'
 
 export interface SupervisorOptions {
   serverJs: string
@@ -9,7 +11,8 @@ export interface SupervisorOptions {
   maxDelay?: number
   stableTime?: number
   shutdownTimeout?: number
-  log?: (message: string) => void
+  /** 启动器的出口：自己的记录、核心经 IPC 发来的记录、核心的原始输出都写到这里 */
+  output?: LauncherOutput
   onReady?: (pid: number | undefined) => void
   stopOn?: (stop: () => void) => () => void
 }
@@ -24,7 +27,8 @@ export function supervise(options: SupervisorOptions): Promise<number> {
   const maxDelay = options.maxDelay ?? 60_000
   const stableTime = options.stableTime ?? 300_000
   const shutdownTimeout = options.shutdownTimeout ?? 30_000
-  const log = (message: string) => (options.log ?? console.error)(`[nextskin] ${message}`)
+  const output = options.output ?? createLauncherOutput(process.env)
+  const log = output.logger
   return new Promise((resolve) => {
     let child: ChildProcess | undefined
     let stopping = false
@@ -56,7 +60,7 @@ export function supervise(options: SupervisorOptions): Promise<number> {
       stopping = true
       clearTimeout(restart)
       if (!child) return finish()
-      log('正在停止核心')
+      log.info('正在停止核心')
       if (child.connected) {
         try {
           child.send({ nextskin: 'shutdown' }, () => {
@@ -73,12 +77,24 @@ export function supervise(options: SupervisorOptions): Promise<number> {
       const current = spawn(process.execPath, [options.serverJs], {
         cwd: dirname(options.serverJs),
         env: options.env,
-        stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+        // 核心的输出由启动器逐行读走，和结构化记录一起写终端和日志文件（ADR-0062）
+        stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
         detached: process.platform !== 'win32',
         windowsHide: true,
       })
       child = current
+      for (const name of ['stdout', 'stderr'] as const) {
+        const lines = output.raw(name)
+        current[name]
+          ?.setEncoding('utf8')
+          .on('data', (chunk: string) => lines.push(chunk))
+          .on('end', () => lines.end())
+      }
       current.on('message', (message: unknown) => {
+        const line = logLineFromMessage(message)
+        if (line !== null) return output.write(line)
+        const limits = logLimitsFromMessage(message)
+        if (limits) return output.configure(limits)
         if (
           stopping ||
           readyAt !== undefined ||
@@ -89,16 +105,16 @@ export function supervise(options: SupervisorOptions): Promise<number> {
         )
           return
         readyAt = Date.now()
-        log('核心已启动')
+        log.info('核心已启动')
         options.onReady?.(current.pid)
       })
       // spawn 失败也会发 close；统一在 close 重启，避免一次失败排两个定时器。
-      current.on('error', () => log('无法启动核心进程'))
+      current.on('error', () => log.error('无法启动核心进程'))
       current.once('close', (code, signal) => {
         child = undefined
         if (stopping) return finish()
         if (readyAt !== undefined && Date.now() - readyAt >= stableTime) delay = initialDelay
-        log(`核心退出（${signal ? `信号 ${signal}` : `退出码 ${code ?? '未知'}`}），${delay} 毫秒后重启`)
+        log.warn(`核心退出（${signal ? `信号 ${signal}` : `退出码 ${code ?? '未知'}`}），${delay} 毫秒后重启`)
         restart = setTimeout(launch, delay)
         delay = Math.min(delay * 2, maxDelay)
       })

@@ -2011,6 +2011,16 @@
             "help": "Notifications are deleted this many days after they were sent, read or not. Set to 0 to keep them forever."
           }
         },
+        "logging": {
+          "maxFileSizeMb": {
+            "label": "Log file size limit (MB)",
+            "help": "When the log file being written in the logs/ folder of the data directory grows past this size, a new file is started. Takes effect within a minute after saving."
+          },
+          "maxFiles": {
+            "label": "Log files to keep",
+            "help": "How many log files to keep, including the one being written. Older files are deleted, so logs take up at most “size limit × files”. Takes effect within a minute after saving."
+          }
+        },
         "updates": {
           "check": {
             "label": "Check for updates",
