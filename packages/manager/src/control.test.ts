@@ -442,4 +442,8 @@ it('status 只返回合法且比运行中管理进程新的待生效版本', asy
     await writeFile(join(f.home, 'manager.next/VERSION'), version)
     expect(((await f.call('status')) as ManagerStatus).pendingManager).toBe(expected)
   }
+  // 命令行经根入口时已经把 manager.next 换进了 manager，常驻的仍是旧的：重启一次才生效
+  await rm(join(f.home, 'manager.next'), { recursive: true })
+  await writeFile(join(f.home, 'manager/VERSION'), '1.2.0\n')
+  expect(((await f.call('status')) as ManagerStatus).pendingManager).toBe('1.2.0')
 })

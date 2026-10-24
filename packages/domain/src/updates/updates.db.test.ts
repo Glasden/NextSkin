@@ -461,6 +461,31 @@ test('false 确认值原样传递，cancel 返回管理进程结果且不写审�
   expect(manager.reply).toHaveBeenLastCalledWith('cancel', {})
   expect(await logs()).toHaveLength(2)
 })
+test.each(['mysql', 'postgres'] as const)('%s 有迁移的回滚由核心直接拒绝，不转发、照样写审计', async (dialect) => {
+  const manager = managerConnection()
+  manager.status.rollback = { version: '0.3.0', migrations: true, dialect, backupAvailable: false }
+  const updates = service(undefined, manager.options)
+  await expect(updates.rollback(admin, { confirmed: true })).rejects.toMatchObject({ code: 'update_offline_required' })
+  expect(manager.reply).not.toHaveBeenCalledWith('rollback', expect.anything())
+  expect((await logs()).map((row) => row.details)).toEqual([
+    { version: '0.3.0', confirmed: true, accepted: false, code: 'update_offline_required' },
+  ])
+})
+test('存的检查结果形状对不上（换过版本）时当作没检查过，下次检查重写', async () => {
+  await upsert(db(), 'settings', {
+    values: {
+      namespace: 'core',
+      key: 'updates.state',
+      value: JSON.stringify({ checkedAt: at(), failure: null, latest: null, notified: [], rejected: 0 }),
+      updated_at: at(),
+    },
+    conflict: ['namespace', 'key'],
+    update: ['value'],
+  })
+  expect(await state()).toEqual({ checkedAt: null, failure: null, releases: [], notified: [], rejected: 0 })
+  await run()
+  expect((await state()).releases.map((release) => release.version)).toEqual(['0.5.0'])
+})
 test('status 的五种不可用原因与完整可用状态；源码和 Docker 不连接', async () => {
   const manager = managerConnection()
   const source = createUpdates({

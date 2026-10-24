@@ -69,9 +69,9 @@ interface UpdateLog {
 - 旧布局升级失败退出 78，不创建指向旧布局的 current.json，失败记在日志里，旧程序保留，提示照 ADR-0040 手工回退。SQLite 在迁移成功而健康检查失败时恢复备份。旧布局不能由管理进程启动。外部数据库有迁移时不迁移、同样退出 78，停服运行 `update --backup-confirmed` 完成切换（目标只能是自带版本），成功后删掉 `server/`、`cli/`。
 - 管理进程运行时根入口拒绝 `import`：切换时启动器放开数据锁到管理进程拿到之间有空窗。
 - 管理进程协议分两个常量（`@nextskin/updates`）：`MANAGER_PROTOCOL` 是本管理进程支持的最高协议，`REQUIRED_MANAGER_PROTOCOL` 是本版本要求的、写进清单条目。prepare 遇到要求更高协议的目标以 manager_outdated 拒绝，按顺序说明：`manager.next/VERSION` 比本管理进程新就提示重启；清单里有比 current 新、协议兼容的版本就提示先升到其中最新的；都没有就只能覆盖解压。
-- 外部数据库有迁移的回滚只在服务停着时由命令行执行：控制通道以 offline_required 拒绝（服务运行时恢复库，新版本还在写库，核心被拉起还会把恢复的库再迁移一遍）。离线回滚照旧先用目标版本 doctor 核对库已恢复，再改指针。
+- 外部数据库有迁移的回滚只在服务停着时由命令行执行：控制通道以 offline_required 拒绝（服务运行时恢复库，新版本还在写库，核心被拉起还会把恢复的库再迁移一遍）。离线回滚照旧先用目标版本 doctor 核对库已恢复，再改指针；拿不到数据锁（服务其实还在运行，比如 `NEXTSKIN_MANAGER=off`）同样以 offline_required 退出，不起任何程序，提示停服后再恢复一次库。核心也按 `rollback` 状态先拒绝，不把请求转给可能更旧的管理进程。
 - 根入口一键升级送不到：管理进程和它之间只靠 `manager/main.mjs`、`manager/VERSION`、`manager.next/VERSION`、`NEXTSKIN_MANAGER`，改动要向前兼容。
-- SQLite 回滚在恢复备份之前用当前版本 doctor 取得数据路径；目标旧版本此时可能因为库比它新而拒绝预检。外部数据库回滚则用目标版本 doctor 检查管理员已恢复的库。
+- SQLite 回滚在恢复备份之前用当前版本 doctor 取得数据路径；目标旧版本此时可能因为库比它新而拒绝预检。外部数据库回滚则用目标版本 doctor 检查管理员已恢复的库。SQLite 回滚在换回备份之前失败（等数据锁超时之类）时库还没动，照旧起当前版本，不让站点停着。
 - 健康检查通过后不因记录或清理失败自动回滚：此时已经可能接受用户写入。待生效管理进程移动失败时保留 staging，提示管理员检查权限。
 - 流式解压前逐条读取 ZIP 中央目录检查 Unix 链接属性；不支持 ZIP64、分卷和加密包，解压总大小上限 4 GiB。也拒绝 Windows 特殊文件名、尾随点和空格、控制字符和 ADS 路径。
 - 根入口换代删除 manager.old 前复制到临时的 manager.recovery，递归删除中途失败也能恢复完整旧程序；完成后删除冗余副本。恢复本身也被系统拒绝时提示人工恢复。
@@ -110,7 +110,7 @@ pnpm exec prettier --check packages/manager
 
 所有方法都可能返回 unauthorized、invalid_request；非预期异常返回 internal。prepare 后台错误进入日志和 lastResult。流水线保留 not_newer、unknown_version、manager_outdated、node_too_old、preflight_failed、download_failed 等错误码；预检包括 unknownCore、空间不足、doctor 失败或超时；下载错误包括清单读取、大小、SHA-256、解压及发行包校验失败。本地已解压目录不完整归为 preflight_failed。
 
-线上类型定义在 `src/types.ts` 的 `ManagerStatus`，与内部 `InternalManagerStatus` 分开：包含 protocol、pendingManager（`manager.next` 里比本管理进程新的版本，没有为 null）、version、current、previous、writable、operation、prepared、lastResult、failed、rollback。步骤编号转为 manifest / space / download / extract / preflight / confirm / stop / migrate / switch / start / cleanup；check 对外为 null。下载进度是 `{ received, total }`，total 来自签名条目的 size。mariadb 映射成 mysql，待执行迁移数组转为条数。rollback 由 previous 和 upgrades[current] 得出，仅暴露 SQLite 备份是否存在；不暴露数据目录、SQLite 文件或备份路径；`lastResult.reason` 和错误响应的 `message` 里的绝对路径换成 `<路径>`，完整的说明留在 `update-log.jsonl` 和管理进程的日志里。
+线上类型定义在 `src/types.ts` 的 `ManagerStatus`，与内部 `InternalManagerStatus` 分开：包含 protocol、pendingManager（`manager.next` 或 `manager` 里比本管理进程新的版本，没有为 null；服务运行时执行命令行，根入口会把 manager.next 先换进 `manager/`）、version、current、previous、writable、operation、prepared、lastResult、failed、rollback。步骤编号转为 manifest / space / download / extract / preflight / confirm / stop / migrate / switch / start / cleanup；check 对外为 null。下载进度是 `{ received, total }`，total 来自签名条目的 size。mariadb 映射成 mysql，待执行迁移数组转为条数。rollback 由 previous 和 upgrades[current] 得出，仅暴露 SQLite 备份是否存在；不暴露数据目录、SQLite 文件或备份路径；`lastResult.reason` 和错误响应的 `message` 里的绝对路径换成 `<路径>`，完整的说明留在 `update-log.jsonl` 和管理进程的日志里。
 
 ## 命令行
 
@@ -126,7 +126,7 @@ pnpm exec prettier --check packages/manager
 
 有 external-backup 迁移而没有 `--backup-confirmed` 时退出 1。没有 `--yes` 时只在 TTY 上询问一次 y/N；非 TTY 必须显式 `--yes`，拒绝或取消退出 1。`--yes` 在 rollback 中表示确认数据库恢复要求。
 
-服务停着时先拿管理进程锁，拿不到说明另一管理进程运行而控制通道不可达，退出 1。离线命令复用流水线，supervisor 的 start、stop、resume 均不启动进程：**服务停着时 update 只迁移和切换，不做健康检查**，rollback 同样如此。
+服务停着时先拿管理进程锁，拿不到说明另一管理进程运行而控制通道不可达，退出 1。离线命令复用流水线，supervisor 的 start、stop、resume 均不启动进程：**服务停着时 update 只迁移和切换，不做健康检查**，rollback 同样如此。命令行等数据锁最多 5 秒（管理进程监管时是 40 秒，等启动器放锁），拿不到多半是服务以别的方式在运行。运行时的 update 按管理进程报告的协议挑默认目标，不按命令行自己的。
 
 参数经 `node:util.parseArgs` 严格解析。成功和只读查询退出 0；用法错误、升级失败、自动回滚或取消退出 1；损坏指针、实例目录不可写和锁文件无法创建等配置错误退出 78。此处“不做健康检查”只针对停服命令，在线切换仍等待健康检查。
 

@@ -93,8 +93,8 @@ if (command === 'doctor') {
 }
 `
 
-// 健康检查的期限从拉起启动器算起；Windows 在整套检查的负载下光启动 node 就要一两秒
-export const healthTimeout = process.platform === 'win32' ? 5000 : 1000
+// 健康检查的期限从拉起启动器算起；Windows 在整套检查的负载下、CI 的机器上，光启动 node 就要一两秒
+export const healthTimeout = 5000
 
 export async function fixture(versions = ['1.0.0', '1.1.0']) {
   const home = await mkdtemp(join(tmpdir(), 'nextskin-manager-'))

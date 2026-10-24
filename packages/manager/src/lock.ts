@@ -66,7 +66,8 @@ export async function waitForLock(
   } = {},
 ): Promise<Lock | null> {
   const now = options.now ?? Date.now
-  const deadline = now() + (options.timeout ?? 40_000)
+  const timeout = options.timeout ?? 40_000
+  const deadline = now() + timeout
   let waiting = false
   for (;;) {
     if (options.signal?.aborted) return null
@@ -82,7 +83,8 @@ export async function waitForLock(
     }
     if (lock) return lock
     if (now() >= deadline) throw new ManagerError('另一个进程仍在运行，等待进程锁超时')
-    if (!waiting) (options.log ?? console.error)('[nextskin] 另一个进程还在运行，等待它退出，最多 40 秒')
+    if (!waiting)
+      (options.log ?? console.error)(`[nextskin] 另一个进程还在运行，等待它退出，最多 ${Math.ceil(timeout / 1000)} 秒`)
     waiting = true
     await (options.sleep ?? interruptibleSleep)(Math.min(options.interval ?? 500, deadline - now()), options.signal)
   }

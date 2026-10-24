@@ -52,6 +52,8 @@ export interface ManagerOptions extends Runtime, DownloadOptions {
   space?: (directory: string) => Promise<number>
   doctorTimeout?: number
   migrateTimeout?: number
+  /** 等数据锁的期限，默认 40 秒（等启动器退出）。服务停着时命令行用短的：拿不到说明服务还在跑，等也没用 */
+  lockTimeout?: number
   writeCurrent?: typeof writeCurrent
   /**
    * 命令行在服务停着时自己执行流水线，运行它的用户不一定是服务的用户：root 没设 NEXTSKIN_RUN_AS 而数据目录属于别人时拒绝。
@@ -101,6 +103,7 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
     options.lock
       ? options.lock(join(preflight.dataDirectory, 'nextskin.lock'), options.signal)
       : waitForLock(join(preflight.dataDirectory, 'nextskin.lock'), {
+          timeout: options.lockTimeout,
           signal: options.signal,
           log: options.log,
           now: options.now,
@@ -570,9 +573,12 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
       begin('rollback', version)
       const from = latest.current
       const upgrade = latest.upgrades[from]
+      // 外部库有迁移的回滚只由停着服务的命令行执行，控制通道拒绝（ADR-0061"回滚"）
+      const external = !!upgrade?.migrations && upgrade.dialect !== 'sqlite'
       let dataLock: Lock | null = null
       let stopped = false
       let databaseRestored = false
+      let switched = false
       let accepted = false
       const entry: UpdateLog = {
         at: timestamp(),
@@ -622,7 +628,14 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
         entry.step = 7
         await supervisor.stop()
         stopped = true
-        dataLock = await lock(preflight)
+        dataLock = await lock(preflight).catch((error: unknown) => {
+          // 拿不到数据锁：服务没经管理进程在跑（NEXTSKIN_MANAGER=off，或直接运行了某个版本的启动器）
+          if (!external) throw error
+          throw new ManagerError(
+            '服务还在运行，没有回滚：先停掉服务。服务在线时恢复的数据库可能又被写过，要再用升级前的备份恢复一次',
+            'offline_required',
+          )
+        })
         if (!dataLock) throw new ManagerError('管理进程正在停止')
         if (upgrade?.migrations && upgrade.dialect === 'sqlite') {
           step(8)
@@ -633,6 +646,7 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
         step(9)
         entry.step = 9
         await save({ ...latest, current: version, previous: null, upgrades: {} })
+        switched = true
         dataLock.release()
         dataLock = null
         step(10)
@@ -656,12 +670,13 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
         entry.reason = reason(error)
         if (stopped) {
           await supervisor.stop()
-          if (!databaseRestored && !upgrade?.migrations) {
+          // SQLite 在换回备份之前失败时库和指针都没动，可以照旧起当前版本；外部库已经由管理员恢复，不能再起要求新 schema 的程序
+          if (!databaseRestored && (!upgrade?.migrations || (!switched && !external))) {
             await save(latest)
             dataLock?.release()
             dataLock = null
             if (await restartOld(from)) entry.result = 'rolled-back'
-          } else {
+          } else if (databaseRestored || switched) {
             // 库已经回到升级前，不能为了恢复服务再启动要求新 schema 的程序。
             entry.reason += '；数据库已经恢复或由管理员处理，请人工检查回滚目标'
           }
