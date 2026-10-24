@@ -75,8 +75,9 @@ export function createDiagnosticsRedactor(options: {
       const segments = path.split('/').map(escape)
       const pattern = segments[0] === '' ? `[/\\\\]${segments.slice(1).join('[/\\\\]+')}` : segments.join('[/\\\\]+')
       // 同名的目录前缀不能匹配 /instance-other，也不匹配别的路径中间的同名段（实例目录是 /app 时的 web/app/admin）；
-      // 前面是 / 的照样换：file:///app/server.js。JSON 字符串在序列化前脱敏。
-      return [new RegExp(`(?<![\\w.-])${pattern}(?=$|[/\\\\\\s"'<>),;:])`, 'giu'), replacement] as const
+      // 前面是 / 的照样换：file:///app/server.js。后面只要不是接着的文件名就换：全角标点、句末的点、紧跟的中文都算结束，
+      // 宁可把 /data中文 换成 <数据目录>中文，也不漏掉"数据目录 /data，"。JSON 字符串在序列化前脱敏。
+      return [new RegExp(`(?<![\\w.-])${pattern}(?![\\w%-]|\\.[\\w%-])`, 'giu'), replacement] as const
     })
   function text(input: string): string {
     const v4 = (ip: string) => (isIP(ip) === 4 && !privateV4(ip) ? numbered(ips, ip, 'IP') : ip)

@@ -97,6 +97,19 @@ test('短的实例目录只换整段的路径开头，file:// 地址里的也换
   )
 })
 
+test('目录后面紧跟全角标点、句末的点或中文也换，接着文件名的不换', () => {
+  const redact = createDiagnosticsRedactor({
+    instanceDirectory: '/app',
+    dataDirectory: '/data',
+    homeDirectory: '/root',
+  })
+  expect(
+    redact.text('数据目录 /data，数据库 sqlite；/data。/data里 at /data. /data.bak /data%20x /data_old /data-old'),
+  ).toBe(
+    '数据目录 <数据目录>，数据库 sqlite；<数据目录>。<数据目录>里 at <数据目录>. /data.bak /data%20x /data_old /data-old',
+  )
+})
+
 test('没有 @ 的长串不会让邮箱的正则回溯：1 MB 也在一秒内', () => {
   const started = performance.now()
   make().text('x'.repeat(1024 * 1024))
