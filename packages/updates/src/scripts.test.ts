@@ -8,7 +8,7 @@ import { buildManifest, main as manifestMain } from '../scripts/build-manifest.t
 import { releaseKeys } from '../scripts/common.ts'
 import { generateReleaseKey } from '../scripts/keygen.ts'
 import { main as signMain, signRelease } from '../scripts/sign-release.ts'
-import { MANAGER_PROTOCOL, readManifest, signEntry, verifyDetached, verifyEntry } from './index.ts'
+import { REQUIRED_MANAGER_PROTOCOL, readManifest, signEntry, verifyDetached, verifyEntry } from './index.ts'
 import type { ReleaseEntry } from './index.ts'
 
 const { privateKey, publicKey } = generateKeyPairSync('ed25519', {
@@ -50,7 +50,7 @@ function entry(version = '1.2.3'): ReleaseEntry {
     sha256,
     size: zipData.length,
     minNode: 24,
-    managerProtocol: MANAGER_PROTOCOL,
+    managerProtocol: REQUIRED_MANAGER_PROTOCOL,
   }
 }
 

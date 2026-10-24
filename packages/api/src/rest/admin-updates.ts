@@ -5,6 +5,13 @@ import { clientIp } from '../client-ip.ts'
 import type { AppEnv } from '../env.ts'
 import { errorSchema } from './errors.ts'
 
+const release = z.object({
+  version: z.string(),
+  date: z.iso.datetime(),
+  notes: z.url(),
+  minNode: z.number().int().positive(),
+  managerProtocol: z.int().positive(),
+})
 const status = z.object({
   manager: updateManagerSchema,
   enabled: z.boolean(),
@@ -17,9 +24,8 @@ const status = z.object({
       z.object({ at: z.iso.datetime(), code: z.enum(['network', 'invalid', 'too_large']) }),
     ])
     .nullable(),
-  latest: z
-    .object({ version: z.string(), date: z.iso.datetime(), notes: z.url(), minNode: z.number().int().positive() })
-    .nullable(),
+  latest: release.nullable(),
+  target: release.nullable(),
 })
 const errorContent = { description: '请求失败', content: { 'application/json': { schema: errorSchema } } }
 const responses = {

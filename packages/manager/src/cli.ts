@@ -3,21 +3,22 @@ import { access, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { createInterface } from 'node:readline/promises'
-import { compareVersions } from '@nextskin/updates'
+import { MANAGER_PROTOCOL, compareVersions } from '@nextskin/updates'
 import { connectControl, managerStatus } from './control.ts'
 import { logRunAs, resolveRunAs } from './run-as.ts'
 import { readLegacyVersion, removeLegacy } from './start.ts'
 import { acquireLock } from './lock.ts'
 import { createManager, type ManagerOptions } from './pipeline.ts'
 import { readCurrent, sleep, validVersion } from './state.ts'
-import { ConfigError, ManagerError, reason, type Manager, type ManagerStatus } from './types.ts'
+import { ConfigError, ManagerError, offlineRollbackMessage, reason, type Manager, type ManagerStatus } from './types.ts'
 
 export const managerHelp = `管理进程的命令（升级和回滚，ADR-0061）：
   update [--to <版本>]     升级，默认到最新的正式版；不再询问加 --yes，
                            MySQL、PostgreSQL 有迁移时先备份、再加 --backup-confirmed
   update --check           列出比当前新的正式版
   update status            当前版本、进行中的操作和最近一次的结果
-  rollback [--yes]         回到上一个版本
+  rollback [--yes]         回到上一个版本；MySQL、PostgreSQL 有迁移时
+                           先停服务、用备份恢复数据库，再运行
   releases                 列出本机的版本目录
 update --check、update status、releases 加 --json 输出机器可读的结果。
 `
@@ -94,7 +95,12 @@ export async function runManagementCommand(
       else
         output(
           releases.length
-            ? releases.map((entry) => `${entry.version}  ${entry.date}  ${entry.notes}`).join('\n')
+            ? releases
+                .map(
+                  (entry) =>
+                    `${entry.version}  ${entry.date}  ${entry.notes}${entry.managerProtocol > MANAGER_PROTOCOL ? '（要求更新的管理进程）' : ''}`,
+                )
+                .join('\n')
             : '没有更新的正式版',
         )
       return 0
@@ -177,11 +183,13 @@ export async function runManagementCommand(
         const value = await getStatus()
         const rollback = value.rollback
         if (!rollback) throw new ManagerError('没有可回滚的上一个版本', 'no_previous')
+        if (remote && rollback.migrations && rollback.dialect !== 'sqlite')
+          throw new ManagerError(offlineRollbackMessage, 'offline_required')
         if (rollback.migrations)
           output(
             rollback.dialect === 'sqlite'
               ? '升级以后的所有写入都会丢失'
-              : '先用升级前的备份恢复数据库，再确认库已经恢复到升级之前',
+              : '服务停着、数据库已经用升级前的备份恢复了，才能继续',
           )
         await confirm(`确认回滚到 ${rollback.version}？[y/N] `)
         if (remote) {
@@ -192,6 +200,8 @@ export async function runManagementCommand(
         }
         const result = await manager!.rollback({ confirmed: true })
         printResult((await getStatus()).lastResult)
+        if (result.result === 'success' && rollback.migrations && rollback.dialect !== 'sqlite')
+          output(`已切换到 ${rollback.version}，启动服务即可`)
         return result.result === 'success' ? 0 : 1
       }
       const legacy = remote ? null : await readLegacyVersion(home)
@@ -211,7 +221,12 @@ export async function runManagementCommand(
       }
       if (!target) {
         const releases = await (await makeManager()).check()
-        target = releases[0]?.version
+        const latest = releases[0]
+        target = (releases.find((entry) => entry.managerProtocol <= MANAGER_PROTOCOL) ?? latest)?.version
+        if (latest && target && compareVersions(latest.version, target) > 0)
+          output(
+            `${latest.version} 要求更新的管理进程，这次先升级到 ${target}；重启一次服务以后再升级到 ${latest.version}`,
+          )
         if (!target) {
           output('没有更新的正式版')
           return 0

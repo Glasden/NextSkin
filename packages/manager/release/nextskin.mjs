@@ -1,4 +1,6 @@
 // 入口保留旧 Node 能解析的语法：版本检查通过后才加载管理进程。
+// 一键升级只解压 releases/<版本>/ 和 manager/，不更新本文件；装好以后它可能一直是第一次解压时的那份。
+// 后来的管理进程都要能被最早的入口加载：只靠 manager/main.mjs、manager/VERSION、manager.next/VERSION、NEXTSKIN_MANAGER 这几处约定，改动要向前兼容（ADR-0061）。
 export function checkNode(version) {
   return Number(version.split('.')[0]) >= 24
 }

@@ -119,7 +119,7 @@ docker compose exec nextskin cat /data/setup-code
 | SQLite 有迁移 | 自动备份到 `data/backups/` | 自动换回备份和旧版本 |
 | MySQL、PostgreSQL 有迁移 | 自己备份，在后台确认 | 不自动回滚数据库，按后台的说明用备份恢复 |
 
-- 回滚只能回到上一个版本。SQLite 有迁移时用升级前的备份换回库，**之后的写入都会丢失**；MySQL、PostgreSQL 有迁移时先自己恢复库，再确认。
+- 回滚只能回到上一个版本。SQLite 有迁移时用升级前的备份换回库，**之后的写入都会丢失**。MySQL、PostgreSQL 有迁移时不能在后台回滚：停掉服务，用升级前的备份恢复库，运行 `node nextskin.mjs rollback --yes`，再启动。
 - 命令行也能做：`node nextskin.mjs update`、`rollback`，见[命令行](/guide/commands/#update)。
 - 运行管理进程的用户要能写 `releases/`，否则只检测。
 

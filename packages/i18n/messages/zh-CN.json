@@ -211,9 +211,10 @@
     "update_not_prepared": "请先准备目标版本。",
     "update_not_newer": "目标版本不比当前版本新。",
     "update_unknown_version": "找不到目标正式版本。",
-    "update_manager_outdated": "请先重启服务，让新的管理进程生效。",
+    "update_manager_outdated": "这个版本要求更新的管理进程。",
     "update_node_too_old": "当前 Node.js 版本不满足目标版本的要求。",
     "update_backup_required": "请先备份数据库并确认备份已完成。",
+    "update_offline_required": "MySQL、PostgreSQL 有迁移时不能在线回滚：先停掉服务，用升级前的备份恢复数据库，再运行 node nextskin.mjs rollback --yes，然后启动服务。",
     "update_confirmation_required": "请先确认回滚所需的数据库恢复或数据丢失。",
     "update_no_previous": "没有可以回滚的上一个版本。",
     "update_backup_missing": "升级前的数据库备份已不存在，无法回滚。",
@@ -2333,7 +2334,12 @@
       "oneClick": {
         "readyTitle": "可以升级到 {version}",
         "ready": "先准备：下载、校验签名、解压，再对着在用的数据库预检新版本。这一步不停站，做完会列出要停多久、要不要先备份。",
-        "failedBefore": "这个版本上次没有升级成功。再准备一次会重新下载和预检。",
+        "failedBefore": "这个版本上次在这里迁移失败，或者迁移以后没能启动。再准备一次会重新下载和预检。",
+        "steppingTitle": "{latest} 要分两步升级",
+        "stepping": "{latest} 要的管理进程比现在用的新。先升到 {target}，升级完重启一次服务，让它带来的新管理进程生效，再回来升到 {latest}。",
+        "managerOutdatedTitle": "{version} 要的管理进程比现在用的新",
+        "managerPending": "新的管理进程已经随上一次升级装好了。重启一次服务让它生效，就能升到 {version}。",
+        "managerUnzip": "一键升级到不了这个版本，也没有能先升过去的中间版本。照下面的说明覆盖解压 {version} 的 ZIP 来升级。",
         "prepare": "准备升级到 {version}",
         "nothingTitle": "已经是最新版本",
         "nothing": "有新的正式版时，在这里一键升级。",
@@ -2401,19 +2407,24 @@
         "rollbackHints": {
           "plain": "上一次升级没有数据库迁移，直接换回 {version} 的程序。",
           "sqlite": "用升级前的备份换回 SQLite 库：升级以后的注册、上传和所有改动都会丢失。",
-          "external": "程序不碰数据库：先用升级前的备份恢复 {dialect} 数据库，再回来确认。"
+          "external": "{dialect} 有迁移时不能在后台回滚：恢复库的那段时间 {current} 还在线、还在写库。在服务器上照这几步做："
+        },
+        "rollbackSteps": {
+          "stop": "停掉服务。",
+          "restore": "用升级前的备份恢复 {dialect} 数据库。",
+          "command": "在实例目录里运行下面的命令。它先用 {version} 核对库确实恢复了，再换回 {version}，不会启动服务。",
+          "start": "启动服务，站点就回到了 {version}。",
+          "guide": "命令行回滚的说明"
         },
         "rollbackBlocked": "升级前的 SQLite 备份已经不在了，不能自动回滚。",
         "rollback": "回到 {version}",
         "rollbackDialogTitle": "回到 {version}？",
         "rollbackWarnings": {
           "plain": "站点会停几秒到三十多秒。",
-          "sqlite": "数据库会换回升级前的备份，升级以后的所有写入都会丢失。站点会停几秒到三十多秒。",
-          "external": "管理进程只换程序。数据库要先由你恢复到升级之前，否则 {version} 打不开它。"
+          "sqlite": "数据库会换回升级前的备份，升级以后的所有写入都会丢失。站点会停几秒到三十多秒。"
         },
         "rollbackConfirms": {
-          "sqlite": "我知道升级以后的所有写入都会丢失",
-          "external": "{dialect} 数据库已经恢复到升级之前"
+          "sqlite": "我知道升级以后的所有写入都会丢失"
         }
       }
     },

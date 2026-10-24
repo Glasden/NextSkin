@@ -80,12 +80,15 @@ export type ManagerErrorCode =
   | 'manager_outdated'
   | 'node_too_old'
   | 'backup_required'
+  | 'offline_required'
   | 'confirmation_required'
   | 'no_previous'
   | 'backup_missing'
   | 'preflight_failed'
   | 'download_failed'
   | 'internal'
+export const offlineRollbackMessage =
+  'MySQL、PostgreSQL 有迁移时不能在线回滚：先停掉服务，用升级前的备份恢复数据库，再运行 node nextskin.mjs rollback --yes，然后启动服务'
 export class ManagerError extends Error {
   readonly exitCode = 1
   readonly code: ManagerErrorCode
@@ -98,6 +101,7 @@ export class ManagerError extends Error {
 /** 交给核心和浏览器的状态只含业务信息，不能暴露本机路径。 */
 export interface ManagerStatus {
   protocol: number
+  pendingManager: string | null
   version: string
   current: string
   previous: string | null

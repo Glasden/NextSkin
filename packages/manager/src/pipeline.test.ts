@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { access, readFile, rm, writeFile, type chown } from 'node:fs/promises'
+import { access, mkdir, readFile, rm, writeFile, type chown } from 'node:fs/promises'
 import { join } from 'node:path'
 import { MANIFEST_URL } from '@nextskin/updates'
 import { createManager } from './pipeline.ts'
@@ -97,7 +97,7 @@ describe('升级流水线（真实启动器子进程）', () => {
     )
     expect(f.supervisor.running).toBe(true)
     expect(await exists(join(f.home, 'releases/1.1.0'))).toBe(false)
-    expect((await readCurrent(f.home))?.failed).toContain('1.1.0')
+    expect((await readCurrent(f.home))?.failed).toEqual([])
     expect((await events(f.home)).some((e) => e.command === 'shutdown')).toBe(false)
   })
   it('不兼容插件保留在预检结果里；缺字段给出固定诊断', async () => {
@@ -154,6 +154,7 @@ describe('升级流水线（真实启动器子进程）', () => {
     await f.manager.prepareLocal('1.1.0')
     expect(await f.manager.apply('1.1.0')).toMatchObject({ result: 'rolled-back', step: 10, migrations: false })
     expect((await readCurrent(f.home))?.current).toBe('1.0.0')
+    expect((await readCurrent(f.home))?.failed).toContain('1.1.0')
   })
   it('SQLite 健康检查失败会换回备份并删除 WAL/SHM', async () => {
     const f = await setup('sqlite', true)
@@ -198,6 +199,7 @@ describe('升级流水线（真实启动器子进程）', () => {
     await manager.prepareLocal('1.1.0')
     expect(await manager.apply('1.1.0')).toMatchObject({ result: 'rolled-back', step: 7 })
     expect((await events(f.home)).some((e) => e.command === 'migrate')).toBe(false)
+    expect((await readCurrent(f.home))?.failed).toEqual([])
   })
 })
 
@@ -251,7 +253,7 @@ describe('准备的边界和互斥', () => {
       keys: signed.keys,
       fetch: vi.fn(() => Promise.resolve(Response.json(signed.body))),
     })
-    await expect(manager.prepare('1.1.0')).rejects.toThrow(overrides.minNode ? 'Node 999' : '先重启一次')
+    await expect(manager.prepare('1.1.0')).rejects.toThrow(overrides.minNode ? 'Node 999' : '覆盖解压它的 ZIP')
   })
   it('拒绝路径、旧版本、未签名目标，磁盘不足', async () => {
     const f = await setup()
@@ -465,6 +467,8 @@ it.each([
     fetch: () => Promise.resolve(Response.json(signed.body)),
   })
   await expect(manager.prepare('1.1.0')).rejects.toMatchObject({ code })
+  expect((await readCurrent(f.home))?.failed).toEqual([])
+  expect((await manager.check()).map((entry) => entry.version)).toContain('1.1.0')
 })
 
 it('格式、清单、版本顺序、预检、下载错误都有对应 code', async () => {
@@ -484,6 +488,8 @@ it('格式、清单、版本顺序、预检、下载错误都有对应 code', as
       Promise.resolve(requestUrl(input) === MANIFEST_URL ? Response.json(signed.body) : new Response('bad')),
   })
   await expect(manager.prepare('1.1.0')).rejects.toMatchObject({ code: 'download_failed' })
+  expect((await readCurrent(f.home))?.failed).toEqual([])
+  expect((await manager.check()).map((entry) => entry.version)).toContain('1.1.0')
 })
 
 it.skipIf(process.platform === 'win32').each([false, true])(
@@ -714,6 +720,7 @@ it('停站拿锁后外部库出现新迁移而没有确认备份，不执行 mig
     result: 'rolled-back',
     reason: contains('停站期间有了新的数据库迁移，先备份，再重新准备并确认'),
   })
+  expect((await readCurrent(f.home))?.failed).toEqual([])
   expect(doctors).toBe(3)
   expect((await events(f.home)).some((e) => e.command === 'migrate')).toBe(false)
   expect((await readCurrent(f.home))?.current).toBe('1.0.0')
@@ -742,4 +749,40 @@ it('失败报告校验已提交列表；缺失或损坏的列表按空处理', (
       backup: null,
     })
   }
+})
+
+it('协议不兼容时优先提示重启待生效的管理进程，否则选择最新兼容中间版本', async () => {
+  const f = await setup()
+  const target = signedManifest(releaseZip('2.0.0'), '2.0.0', { managerProtocol: 2 })
+  const middle = signedManifest(releaseZip('1.2.0'), '1.2.0')
+  const older = signedManifest(releaseZip('1.1.0'), '1.1.0')
+  const manager = await createManager({
+    home: f.home,
+    bundled: '1.0.0',
+    keys: { ...target.keys, middle: middle.keys.test, older: older.keys.test },
+    fetch: () =>
+      Promise.resolve(
+        Response.json({
+          schema: 1,
+          releases: [
+            target.body.releases[0],
+            { ...older.body.releases[0], key: 'older' },
+            { ...middle.body.releases[0], key: 'middle' },
+          ],
+        }),
+      ),
+  })
+  const intermediate = '2.0.0 要求更新的管理进程：先升级到 1.2.0，重启一次服务，再升级到 2.0.0'
+  await expect(manager.prepare('2.0.0')).rejects.toMatchObject({ code: 'manager_outdated', message: intermediate })
+  await mkdir(join(f.home, 'manager.next'))
+  for (const version of ['invalid', '1.0.0', '0.9.0']) {
+    await writeFile(join(f.home, 'manager.next/VERSION'), version)
+    await expect(manager.prepare('2.0.0')).rejects.toThrow(intermediate)
+  }
+  await writeFile(join(f.home, 'manager.next/VERSION'), '1.2.0\n')
+  await expect(manager.prepare('2.0.0')).rejects.toMatchObject({
+    code: 'manager_outdated',
+    message: '先重启一次服务，让新的管理进程生效，再升级到 2.0.0',
+  })
+  expect((await readCurrent(f.home))?.failed).toEqual([])
 })

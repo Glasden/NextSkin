@@ -146,7 +146,8 @@ test('保存成功状态，向每位超级管理员发一次通知，重复检�
     deployment: 'bundle',
     checkedAt: at(),
     failure: null,
-    latest: { version: '0.5.0', date: entry().date, notes: entry().notes, minNode: 24 },
+    latest: { version: '0.5.0', date: entry().date, notes: entry().notes, minNode: 24, managerProtocol: 1 },
+    target: null,
   })
   expect(await state()).toMatchObject({ notified: ['0.5.0'], rejected: 0 })
   advance()
@@ -312,7 +313,7 @@ test('等待清单时不持有数据库事务，其他写操作可以完成', as
     finish(new Response(body()))
   }
   await checking
-  expect((await state()).latest?.version).toBe('0.5.0')
+  expect((await state()).releases[0]?.version).toBe('0.5.0')
 })
 
 const managerState: ManagerStatus = {
@@ -523,4 +524,44 @@ test('等 IPC 的时候没有数据库事务，其他写操作可完成，审计
   }
   await preparing
   expect(await logs()).toHaveLength(1)
+})
+
+test('每个协议只保留最新正式版，管理进程按自身协议选择目标，通知仍取最新版本', async () => {
+  const releases = [
+    { ...entry('0.6.0'), managerProtocol: 2 },
+    entry('0.4.0'),
+    { ...entry('0.8.0'), managerProtocol: 3 },
+    entry('0.5.0'),
+    { ...entry('0.7.0'), managerProtocol: 2 },
+  ]
+  fetcher.mockImplementation(() =>
+    Promise.resolve(
+      Response.json({
+        schema: 1,
+        releases: releases.map((release) => signEntry(release, privateKey, 'test')),
+      }),
+    ),
+  )
+  const manager = managerConnection()
+  const updates = service(undefined, manager.options)
+  expect(await updates.check(admin)).toMatchObject({ latest: { version: '0.8.0' }, target: { version: '0.5.0' } })
+  expect((await state()).releases.map(({ version, managerProtocol }) => [version, managerProtocol])).toEqual([
+    ['0.8.0', 3],
+    ['0.7.0', 2],
+    ['0.5.0', 1],
+  ])
+  expect((await state()).notified).toEqual(['0.8.0'])
+  manager.status.protocol = 2
+  expect((await updates.status(admin)).target?.version).toBe('0.7.0')
+  manager.status.protocol = 3
+  expect((await updates.status(admin)).target?.version).toBe('0.8.0')
+  manager.status.writable = false
+  expect((await updates.status(admin)).target).toBeNull()
+  expect(
+    (await service({ version: '0.5.0', deployment: 'bundle' }, manager.options).status(admin)).latest?.version,
+  ).toBe('0.8.0')
+  manager.status.writable = true
+  manager.status.protocol = 1
+  expect((await service({ version: '0.5.0', deployment: 'bundle' }, manager.options).status(admin)).target).toBeNull()
+  expect((await service({ version: '0.8.0', deployment: 'bundle' }, manager.options).status(admin)).latest).toBeNull()
 })

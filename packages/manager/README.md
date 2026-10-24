@@ -16,7 +16,7 @@ interface Manager {
 }
 ```
 
-`prepareLocal` 供管理进程处理手动解压的发行包；控制通道只暴露 prepare，由管理进程选择是否走 prepareLocal。`check`、准备、切换和回滚互斥；`status` 随时返回独立副本，`cancel` 只中止正在准备的操作。准备失败抛出带 `code` 的 `ManagerError`（默认 `internal`）；已经开始的切换或回滚返回持久化的结果，包括失败结果。没有准备目标、缺少备份确认、没有 previous、备份缺失或已有操作时直接拒绝，不写失败记录、不标记失败版本，保留 prepared。
+`prepareLocal` 供管理进程处理手动解压的发行包；控制通道只暴露 prepare，由管理进程选择是否走 prepareLocal。`check`、准备、切换和回滚互斥；`status` 随时返回独立副本，`cancel` 只中止正在准备的操作。准备失败抛出带 `code` 的 `ManagerError`（默认 `internal`）；已经开始的切换或回滚返回持久化的结果，包括失败结果。没有准备目标、缺少备份确认、没有 previous、备份缺失或已有操作时直接拒绝，不写失败记录、不标记失败版本，保留 prepared。`failed` 只记开始迁移以后的失败（迁移失败、新版本没通过健康检查）；准备失败（下载、空间、Node、管理进程协议、预检）和迁移之前的失败（等数据锁超时、停站后要重新确认备份）只写 lastResult 和日志。
 
 `InternalManagerStatus` 包含 `current`、`previous`、`operation: { kind, version, step, startedAt, progress? } | null`、`prepared: Preflight | null`、`lastResult: UpdateLog | null`。操作 kind 为 `check | prepare | apply | rollback`。`Preflight` 包含目标版本、绝对数据目录、SQLite 文件路径（其他数据库为 null）、方言、待执行的核心和插件迁移数组、不兼容插件数组，以及 `tier: none | sqlite | external-backup`。
 
@@ -68,6 +68,9 @@ interface UpdateLog {
 - 手动解压的外部数据库版本有迁移时，保留 prepared 和版本目录、继续启动 current，提示先备份，再在后台确认或停服运行 `node nextskin.mjs update --backup-confirmed`。离线 `update` 不带 `--to` 时，比 current 新的自带版本已经解压在 `releases/` 里就升到它，不读清单。
 - 旧布局升级失败退出 78，不创建指向旧布局的 current.json，失败记在日志里，旧程序保留，提示照 ADR-0040 手工回退。SQLite 在迁移成功而健康检查失败时恢复备份。旧布局不能由管理进程启动。外部数据库有迁移时不迁移、同样退出 78，停服运行 `update --backup-confirmed` 完成切换（目标只能是自带版本），成功后删掉 `server/`、`cli/`。
 - 管理进程运行时根入口拒绝 `import`：切换时启动器放开数据锁到管理进程拿到之间有空窗。
+- 管理进程协议分两个常量（`@nextskin/updates`）：`MANAGER_PROTOCOL` 是本管理进程支持的最高协议，`REQUIRED_MANAGER_PROTOCOL` 是本版本要求的、写进清单条目。prepare 遇到要求更高协议的目标以 manager_outdated 拒绝，按顺序说明：`manager.next/VERSION` 比本管理进程新就提示重启；清单里有比 current 新、协议兼容的版本就提示先升到其中最新的；都没有就只能覆盖解压。
+- 外部数据库有迁移的回滚只在服务停着时由命令行执行：控制通道以 offline_required 拒绝（服务运行时恢复库，新版本还在写库，核心被拉起还会把恢复的库再迁移一遍）。离线回滚照旧先用目标版本 doctor 核对库已恢复，再改指针。
+- 根入口一键升级送不到：管理进程和它之间只靠 `manager/main.mjs`、`manager/VERSION`、`manager.next/VERSION`、`NEXTSKIN_MANAGER`，改动要向前兼容。
 - SQLite 回滚在恢复备份之前用当前版本 doctor 取得数据路径；目标旧版本此时可能因为库比它新而拒绝预检。外部数据库回滚则用目标版本 doctor 检查管理员已恢复的库。
 - 健康检查通过后不因记录或清理失败自动回滚：此时已经可能接受用户写入。待生效管理进程移动失败时保留 staging，提示管理员检查权限。
 - 流式解压前逐条读取 ZIP 中央目录检查 Unix 链接属性；不支持 ZIP64、分卷和加密包，解压总大小上限 4 GiB。也拒绝 Windows 特殊文件名、尾随点和空格、控制字符和 ADS 路径。
@@ -102,12 +105,12 @@ pnpm exec prettier --check packages/manager
 | status   | `{}`                                            | 返回线上 `ManagerStatus`                                                                                                             |
 | prepare  | `{ version: string }`                           | 格式、busy、readonly；立即返回 `{ accepted: true }`，后台读取签名清单和准备；目标为已解压的 bundled 且比 current 新时走 prepareLocal |
 | apply    | `{ version: string, backupConfirmed: boolean }` | 格式、busy、readonly、not_prepared、backup_required；写完 accepted 并关闭连接后才切换                                                |
-| rollback | `{ confirmed: boolean }`                        | 格式、busy、readonly、no_previous（含目录缺失）、confirmation_required、backup_missing；写完 accepted 并关闭连接后才回滚             |
+| rollback | `{ confirmed: boolean }`                        | 格式、busy、readonly、no_previous（含目录缺失）、offline_required、confirmation_required、backup_missing；写完 accepted 并关闭连接后才回滚 |
 | cancel   | `{}`                                            | 只有准备中调用 cancel，返回 `{ cancelled: boolean }`                                                                                 |
 
 所有方法都可能返回 unauthorized、invalid_request；非预期异常返回 internal。prepare 后台错误进入日志和 lastResult。流水线保留 not_newer、unknown_version、manager_outdated、node_too_old、preflight_failed、download_failed 等错误码；预检包括 unknownCore、空间不足、doctor 失败或超时；下载错误包括清单读取、大小、SHA-256、解压及发行包校验失败。本地已解压目录不完整归为 preflight_failed。
 
-线上类型定义在 `src/types.ts` 的 `ManagerStatus`，与内部 `InternalManagerStatus` 分开：包含 protocol、version、current、previous、writable、operation、prepared、lastResult、failed、rollback。步骤编号转为 manifest / space / download / extract / preflight / confirm / stop / migrate / switch / start / cleanup；check 对外为 null。下载进度是 `{ received, total }`，total 来自签名条目的 size。mariadb 映射成 mysql，待执行迁移数组转为条数。rollback 由 previous 和 upgrades[current] 得出，仅暴露 SQLite 备份是否存在；不暴露数据目录、SQLite 文件或备份路径；`lastResult.reason` 和错误响应的 `message` 里的绝对路径换成 `<路径>`，完整的说明留在 `update-log.jsonl` 和管理进程的日志里。
+线上类型定义在 `src/types.ts` 的 `ManagerStatus`，与内部 `InternalManagerStatus` 分开：包含 protocol、pendingManager（`manager.next` 里比本管理进程新的版本，没有为 null）、version、current、previous、writable、operation、prepared、lastResult、failed、rollback。步骤编号转为 manifest / space / download / extract / preflight / confirm / stop / migrate / switch / start / cleanup；check 对外为 null。下载进度是 `{ received, total }`，total 来自签名条目的 size。mariadb 映射成 mysql，待执行迁移数组转为条数。rollback 由 previous 和 upgrades[current] 得出，仅暴露 SQLite 备份是否存在；不暴露数据目录、SQLite 文件或备份路径；`lastResult.reason` 和错误响应的 `message` 里的绝对路径换成 `<路径>`，完整的说明留在 `update-log.jsonl` 和管理进程的日志里。
 
 ## 命令行
 
@@ -116,9 +119,9 @@ pnpm exec prettier --check packages/manager
 | 命令                                                | 输出及行为                                                                                                                      |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `update status [--json]`                            | 运行时读控制通道；停服时读 current.json 和 update-log.jsonl，输出当前、上一个版本及最近结果；JSON 使用线上状态格式              |
-| `update --check [--json]`                           | 本进程按 Manager.check 的签名和版本逻辑列出较新的正式版，不拿锁；JSON 为版本条目数组                                            |
-| `update [--to <版本>] [--yes] [--backup-confirmed]` | 默认最新正式版；运行时 prepare 后每 500ms 轮询步骤和下载字节，展示预检、迁移数、不兼容插件及停站估计，然后确认 apply 并轮询结果 |
-| `rollback [--yes]`                                  | 只回 previous；SQLite 有迁移明确提示“升级以后的所有写入都会丢失”；外部库有迁移要求先用升级前备份恢复数据库，再确认库已恢复      |
+| `update --check [--json]`                           | 本进程按 Manager.check 的签名和版本逻辑列出较新的正式版，不拿锁；要求更高管理进程协议的版本在文本行末标注；JSON 为版本条目数组 |
+| `update [--to <版本>] [--yes] [--backup-confirmed]` | 默认最新的协议兼容的正式版（最新的要求更高协议时先输出一行说明）；运行时 prepare 后每 500ms 轮询步骤和下载字节，展示预检、迁移数、不兼容插件及停站估计，然后确认 apply 并轮询结果 |
+| `rollback [--yes]`                                  | 只回 previous；SQLite 有迁移明确提示“升级以后的所有写入都会丢失”；外部库有迁移时服务运行中直接拒绝（offline_required），服务停着时要求库已用升级前的备份恢复，成功后提示启动服务 |
 | `releases [--json]`                                 | 列出版本目录，标记 current、previous、bundled、failed 和管理进程是否运行；JSON 为 `{ running, releases }`                       |
 
 有 external-backup 迁移而没有 `--backup-confirmed` 时退出 1。没有 `--yes` 时只在 TTY 上询问一次 y/N；非 TTY 必须显式 `--yes`，拒绝或取消退出 1。`--yes` 在 rollback 中表示确认数据库恢复要求。

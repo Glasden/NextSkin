@@ -11,7 +11,14 @@ const result: UpdateStatus = {
   deployment: 'docker',
   checkedAt: '2026-10-23T00:00:00.000Z',
   failure: { at: '2026-10-23T00:01:00.000Z', code: 'http', status: 503 },
-  latest: { version: '0.5.0', date: '2026-10-23T00:00:00.000Z', notes: 'https://example.test/notes', minNode: 24 },
+  latest: {
+    version: '0.5.0',
+    date: '2026-10-23T00:00:00.000Z',
+    notes: 'https://example.test/notes',
+    minNode: 24,
+    managerProtocol: 1,
+  },
+  target: null,
 }
 function setup() {
   const read = vi.fn((keys: readonly CoreSettingKey[]) =>
@@ -157,6 +164,7 @@ const errorStatuses = {
   update_manager_outdated: 409,
   update_node_too_old: 409,
   update_backup_required: 400,
+  update_offline_required: 409,
   update_confirmation_required: 400,
   update_no_previous: 409,
   update_backup_missing: 409,

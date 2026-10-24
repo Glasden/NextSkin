@@ -8,6 +8,7 @@ const count = z.number().int().nonnegative()
 // object 会校验已知字段并去掉未知字段，管理进程加字段时不必同时升级核心。
 export const managerStatusSchema = z.object({
   protocol: z.number().int().positive(),
+  pendingManager: z.string().nullable().optional(),
   version: z.string(),
   current: z.string(),
   previous: z.string().nullable(),
@@ -75,6 +76,7 @@ export const managerErrorCodes = [
   'manager_outdated',
   'node_too_old',
   'backup_required',
+  'offline_required',
   'confirmation_required',
   'no_previous',
   'backup_missing',

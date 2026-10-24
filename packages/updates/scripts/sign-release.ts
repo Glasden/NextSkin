@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
-import { MANAGER_PROTOCOL, signDetached, signEntry, verifyEntry } from '../src/index.ts'
+import { REQUIRED_MANAGER_PROTOCOL, signDetached, signEntry, verifyEntry } from '../src/index.ts'
 import type { SignedEntry } from '../src/index.ts'
 import { releaseVersionPattern } from '../src/versions.ts'
 import { releaseKeys, runCli, ScriptError } from './common.ts'
@@ -55,7 +55,7 @@ export async function signRelease(
       sha256,
       size,
       minNode: MIN_NODE,
-      managerProtocol: MANAGER_PROTOCOL,
+      managerProtocol: REQUIRED_MANAGER_PROTOCOL,
     },
     privateKey,
     keyId,

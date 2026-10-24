@@ -33,7 +33,8 @@ export interface UpdateStatus {
   deployment: 'bundle' | 'docker' | 'source'
   checkedAt: string | null
   failure: UpdateState['failure']
-  latest: UpdateState['latest']
+  latest: UpdateState['releases'][number] | null
+  target: UpdateState['releases'][number] | null
 }
 export interface UpdateCheckOptions {
   fetch?: typeof fetch
@@ -71,15 +72,19 @@ export function createUpdates(options: {
   async function view(): Promise<UpdateStatus> {
     const values = await settings.read(['updates.check', 'updates.state'])
     const state = values['updates.state']
+    const manager = await managerView()
+    const releases = release
+      ? state.releases.filter((entry) => compareVersions(entry.version, release.version) > 0)
+      : []
     return {
-      manager: await managerView(),
+      manager,
       enabled: values['updates.check'],
       current: release?.version ?? null,
       deployment: release?.deployment ?? 'source',
       checkedAt: state.checkedAt,
       failure: state.failure,
-      latest:
-        release && state.latest && compareVersions(state.latest.version, release.version) > 0 ? state.latest : null,
+      latest: releases[0] ?? null,
+      target: manager.available ? (releases.find((entry) => entry.managerProtocol <= manager.protocol) ?? null) : null,
     }
   }
   async function perform() {
@@ -102,13 +107,26 @@ export function createUpdates(options: {
       if ('failure' in result) {
         state.failure = { at, ...result.failure }
       } else {
-        const latest = newerReleases(release.version, result.releases)[0]
+        const releases = newerReleases(release.version, result.releases)
+        const latest = releases[0]
         state.checkedAt = at
         state.failure = null
         state.rejected = result.rejected
-        state.latest = latest
-          ? { version: latest.version, date: latest.date, notes: latest.notes, minNode: latest.minNode }
-          : null
+        const protocols = new Set<number>()
+        state.releases = releases
+          .filter((entry) => {
+            if (protocols.has(entry.managerProtocol)) return false
+            protocols.add(entry.managerProtocol)
+            return true
+          })
+          .slice(0, 20)
+          .map(({ version, date, notes, minNode, managerProtocol }) => ({
+            version,
+            date,
+            notes,
+            minNode,
+            managerProtocol,
+          }))
         if (latest && !state.notified.includes(latest.version)) {
           await notifyUpdateAvailable(tx, latest.version, at)
           state.notified = [...state.notified, latest.version].slice(-20)

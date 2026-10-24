@@ -20,6 +20,7 @@ import {
   initialCurrent,
   lastLog,
   readCurrent,
+  pendingManager,
   renameRetry,
   requireVersion,
   validVersion,
@@ -211,7 +212,6 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
     const from = local?.from ?? current()
     const kind = local ? (local.legacy ? 'legacy' : 'manual') : 'update'
     let owned = false
-    let trusted = !!local
     cancellation = new AbortController()
     const signal = AbortSignal.any([cancellation.signal, ...(options.signal ? [options.signal] : [])])
     try {
@@ -227,9 +227,18 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
         if (!entry) throw new ManagerError('目标版本不在签名有效的正式版清单里', 'unknown_version')
         if (compareVersions(version, current()) <= 0) throw new ManagerError('目标版本必须比当前版本新', 'not_newer')
         if (pointer?.previous === version) throw new ManagerError('不能覆盖上一个版本', 'not_newer')
-        trusted = true
-        if (entry.managerProtocol > MANAGER_PROTOCOL)
-          throw new ManagerError('先重启一次服务，让新的管理进程生效', 'manager_outdated')
+        if (entry.managerProtocol > MANAGER_PROTOCOL) {
+          const pending = await pendingManager(home, options.bundled)
+          const compatible = newerReleases(current(), releases).find((item) => item.managerProtocol <= MANAGER_PROTOCOL)
+          throw new ManagerError(
+            pending
+              ? `先重启一次服务，让新的管理进程生效，再升级到 ${version}`
+              : compatible
+                ? `${version} 要求更新的管理进程：先升级到 ${compatible.version}，重启一次服务，再升级到 ${version}`
+                : `${version} 要求更新的管理进程，一键升级做不到：覆盖解压它的 ZIP 来升级`,
+            'manager_outdated',
+          )
+        }
         if (entry.minNode > (options.nodeMajor ?? Number(process.versions.node.split('.')[0])))
           throw new ManagerError(`目标版本需要 Node ${entry.minNode} 或更新版本，请先升级 Node`, 'node_too_old')
         step(2)
@@ -262,7 +271,6 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
       const failedStep = operation?.step ?? 1
       await cleanPreparation(version, owned)
       if (error instanceof ConfigError) throw error
-      if (trusted && !signal.aborted) await markFailed(version)
       await record({
         at: timestamp(),
         kind,
@@ -544,7 +552,7 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
           }
         }
         if (kind === 'legacy') entry.reason += '；请照 ADR-0040 手工回退，解压旧版本的 ZIP'
-        await markFailed(version)
+        if (migrationAttempted) await markFailed(version)
         await record(entry)
         if (stopped) prepared = null
         return entry

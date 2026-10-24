@@ -67,7 +67,8 @@ describe('停服时的命令', () => {
     expect(f.fetcher).not.toHaveBeenCalled()
     expect(await f.run(['update', '--to', '1.1.0', '--yes', '--backup-confirmed'], '1.1.0')).toBe(0)
     expect(await f.run(['rollback', '--yes'])).toBe(0)
-    expect(f.output.mock.calls.flat().join('\n')).toContain('先用升级前的备份恢复数据库，再确认库已经恢复到升级之前')
+    expect(f.output.mock.calls.flat().join('\n')).toContain('服务停着、数据库已经用升级前的备份恢复了，才能继续')
+    expect(f.output).toHaveBeenCalledWith('已切换到 1.0.0，启动服务即可')
   })
   it('非 TTY 必须 --yes；TTY 只问一次并支持拒绝', async () => {
     const f = await setup()
@@ -334,3 +335,100 @@ it('有指针的手动解压默认选 bundled，不读清单', async () => {
   expect(await readCurrent(f.home)).toMatchObject({ current: '1.1.0', previous: '1.0.0' })
   expect(f.fetcher).not.toHaveBeenCalled()
 })
+
+it('默认先升最新兼容版本；检查标注高协议，显式目标和无兼容版本都交给 prepare 说明', async () => {
+  const f = await setup()
+  const target = signedManifest(releaseZip('2.0.0'), '2.0.0', { managerProtocol: 2 })
+  const middle = signedManifest(releaseZip('1.1.0'))
+  const older = signedManifest(releaseZip('1.0.1'), '1.0.1')
+  const releases = [
+    target.body.releases[0],
+    { ...older.body.releases[0], key: 'older' },
+    { ...middle.body.releases[0], key: 'middle' },
+  ]
+  const zip = releaseZip('1.1.0')
+  const options = {
+    ...f.options,
+    manager: {
+      keys: { ...target.keys, middle: middle.keys.test, older: older.keys.test },
+      fetch: (input: Parameters<typeof fetch>[0]) =>
+        Promise.resolve(requestUrl(input) === MANIFEST_URL ? Response.json({ schema: 1, releases }) : zipResponse(zip)),
+    },
+  }
+  const run = (args: string[]) => runManagementCommand(f.home, '1.0.0', args, options)
+  expect(await run(['update', '--check'])).toBe(0)
+  const lines = f.output.mock.calls.at(-1)![0].split('\n')
+  expect(lines[0]).toMatch(/^2.0.0.*（要求更新的管理进程）$/)
+  expect(lines[1]).not.toContain('要求更新的管理进程')
+  expect(await run(['update', '--check', '--json'])).toBe(0)
+  expect(JSON.parse(f.output.mock.calls.at(-1)![0])).toMatchObject([
+    { version: '2.0.0', managerProtocol: 2 },
+    { version: '1.1.0', managerProtocol: 1 },
+    { version: '1.0.1', managerProtocol: 1 },
+  ])
+  expect(await run(['update', '--to', '2.0.0', '--yes'])).toBe(1)
+  expect(f.error).toHaveBeenLastCalledWith(expect.stringContaining('先升级到 1.1.0，重启一次服务'))
+  expect(await run(['update', '--yes'])).toBe(0)
+  expect(f.output).toHaveBeenCalledWith('2.0.0 要求更新的管理进程，这次先升级到 1.1.0；重启一次服务以后再升级到 2.0.0')
+  expect((await readCurrent(f.home))?.current).toBe('1.1.0')
+  // 同一运行版本的管理进程仍要先重启，不能直接跳到高协议版本。
+  expect(await run(['update', '--yes'])).toBe(1)
+  expect(f.error).toHaveBeenLastCalledWith(
+    expect.stringContaining('先重启一次服务，让新的管理进程生效，再升级到 2.0.0'),
+  )
+  await rm(join(f.home, 'manager.next'), { recursive: true })
+  expect(await run(['update', '--yes'])).toBe(1)
+  expect(f.error).toHaveBeenLastCalledWith(expect.stringContaining('一键升级做不到：覆盖解压它的 ZIP 来升级'))
+})
+
+it.each(['mysql', 'postgres'] as const)('%s 有迁移的在线回滚直接拒绝，--yes 也不能绕过', async (dialect) => {
+  const f = await setup()
+  await writeCurrent(f.home, {
+    ...initialCurrent('1.1.0'),
+    previous: '1.0.0',
+    upgrades: { '1.1.0': { from: '1.0.0', migrations: true, dialect, backup: null } },
+  })
+  const rollback = vi.fn()
+  const manager: Manager = {
+    status: () => ({ current: '1.1.0', previous: '1.0.0', operation: null, prepared: null, lastResult: null }),
+    check: vi.fn(),
+    prepare: vi.fn(),
+    prepareLocal: vi.fn(),
+    apply: vi.fn(),
+    cancel: vi.fn(),
+    rollback,
+  }
+  const service = await createControl({ home: f.home, bundled: '1.1.0', manager })
+  disposers.push(service.close)
+  const confirm = vi.fn(() => Promise.resolve(true))
+  for (const args of [['rollback'], ['rollback', '--yes']]) {
+    expect(await runManagementCommand(f.home, '1.1.0', args, { ...f.options, isTTY: true, confirm })).toBe(1)
+    expect(f.error).toHaveBeenLastCalledWith(expect.stringContaining('先停掉服务，用升级前的备份恢复数据库'))
+  }
+  expect(confirm).not.toHaveBeenCalled()
+  expect(rollback).not.toHaveBeenCalled()
+})
+
+it.each(['mysql', 'postgres'] as const)(
+  '%s 有迁移的离线回滚先提示恢复要求，再询问并核对目标数据库',
+  async (dialect) => {
+    const f = await setup()
+    f.behavior['1.1.0'] = { dialect, pending: true }
+    await f.configure()
+    expect(await f.run(['update', '--yes', '--backup-confirmed'], '1.1.0')).toBe(0)
+    f.behavior['1.0.0'] = { dialect, pending: true }
+    await f.configure()
+    const confirm = vi.fn(() => {
+      expect(f.output).toHaveBeenLastCalledWith('服务停着、数据库已经用升级前的备份恢复了，才能继续')
+      return Promise.resolve(true)
+    })
+    const run = () => runManagementCommand(f.home, '1.1.0', ['rollback'], { ...f.options, isTTY: true, confirm })
+    expect(await run()).toBe(1)
+    expect((await readCurrent(f.home))?.current).toBe('1.1.0')
+    await writeFile(join(f.home, 'data/db.sqlite'), 'db:1.0.0')
+    expect(await run()).toBe(0)
+    expect(confirm).toHaveBeenCalledTimes(2)
+    expect(f.output).toHaveBeenLastCalledWith('已切换到 1.0.0，启动服务即可')
+    expect((await events(f.home)).some((event) => event.command === 'start')).toBe(false)
+  },
+)

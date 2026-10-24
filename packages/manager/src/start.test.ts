@@ -58,7 +58,7 @@ describe('选版本', () => {
     f.behavior['1.1.0'] = { fail: 'secret' }
     await f.configure()
     expect(await selectVersion({ ...f, bundled: '1.1.0', log: vi.fn() })).toBe('1.0.0')
-    expect(await readCurrent(f.home)).toMatchObject({ current: '1.0.0', bundled: '1.1.0', failed: ['1.1.0'] })
+    expect(await readCurrent(f.home)).toMatchObject({ current: '1.0.0', bundled: '1.1.0', failed: [] })
     const before = (await events(f.home)).length
     await selectVersion({ ...f, bundled: '1.1.0' })
     expect((await events(f.home)).length).toBe(before)
