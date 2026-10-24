@@ -31,7 +31,7 @@ cd nextskin
 node nextskin.mjs start
 ```
 
-打开 `http://<服务器地址>:3000/setup` 建站，安装码在 `data/setup-code`。以后的版本在后台"更新"页一键升级，也可以把新的 zip 覆盖解压再启动。宝塔、1Panel、Docker、systemd、Windows 的步骤见 [`docs/deploy`](docs/deploy/README.md)，从 BS 迁移见 [`packages/importer/MIGRATION.md`](packages/importer/MIGRATION.md)。
+打开 `http://<服务器地址>:3000/setup` 建站，安装码在 `data/setup-code`。以后的版本在后台"更新"页一键升级，也可以把新的 zip 覆盖解压再启动。宝塔、1Panel、Docker、systemd、Windows 的步骤和反向代理的配置见[文档站的安装部署](https://docs.nextskin.org/guide/install/)，从 BS 迁移见 [`packages/importer/MIGRATION.md`](packages/importer/MIGRATION.md)。
 
 ## 开发
 
@@ -53,8 +53,7 @@ pnpm dev
 
 | 文档 | 内容 |
 |---|---|
-| [docs.nextskin.org](https://docs.nextskin.org) | 面向服主和玩家的使用文档、插件 API 参考 |
-| [`docs/deploy/`](docs/deploy/README.md) | 部署：各种面板和运行方式、配置、反向代理 |
+| [docs.nextskin.org](https://docs.nextskin.org) | 面向服主和玩家的使用文档（安装部署、升级、命令行）、插件 API 参考；源文件在 [`apps/docs`](apps/docs) |
 | [`packages/plugin-sdk/`](packages/plugin-sdk) | 插件开发 |
 | [`AGENTS.md`](AGENTS.md) | 开发约定 |
 | [`docs/ci.md`](docs/ci.md) | CI 与 PR 检查 |

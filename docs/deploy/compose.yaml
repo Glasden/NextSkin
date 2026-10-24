@@ -7,7 +7,7 @@
 # 3. 经反向代理打开站点的 /setup 建站；安装码用 docker compose exec nextskin cat /data/setup-code 查看。
 #
 # 命令行：服务运行时 docker compose exec nextskin nextskin <命令>（例如 set-role、doctor）；
-# 从 Blessing Skin 导入见同目录的 docker.md。
+# 从 Blessing Skin 导入、升级和回退见 https://docs.nextskin.org/guide/install/docker/ 。
 services:
   nextskin:
     # 升级前先读发布说明：带迁移的版本升级后回不去。想固定版本就写成具体的版本号，例如 :0.1.0

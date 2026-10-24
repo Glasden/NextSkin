@@ -36,11 +36,11 @@ node nextskin.mjs doctor
 
 ## 上传材质报 413
 
-反向代理的请求体上限太小。nginx 里加 `client_max_body_size 12m;`，然后 `nginx -s reload`。站点本身也限制单个文件大小，先确认不是超过了上限。
+反向代理的请求体上限太小。nginx 里加 `client_max_body_size 12m;`，然后 `nginx -s reload`（宝塔、1Panel 默认是 50 MB，不用改）。站点本身也限制单个文件大小，先确认不是超过了上限。
 
 ## 日志里的客户端 IP 都是代理地址
 
-反向代理后面要配“受信任的反向代理”（`network.trustedProxies`），否则站点只看到代理的地址，限流和审计都会按代理算。不要直接读客户端自带的 `X-Forwarded-For`。
+反向代理后面要配“受信任的反向代理”（`network.trustedProxies`），否则站点只看到代理的地址，限流和审计都会按代理算。怎么查代理的地址、怎么核对，见[反向代理与 HTTPS](/guide/install/reverse-proxy/#受信任的反向代理)。
 
 ## 忘了超级管理员密码 / 两步验证丢了
 
@@ -72,9 +72,15 @@ node nextskin.mjs disable-2fa owner@example.com
 
 具体配置和角色名对不上的排查见[在游戏里用](/players/client/)。注意角色名是 Minecraft 里的玩家名，不是站点账号。
 
+## 外置登录提示“本站还没有配置签名密钥”
+
+启动器登录失败，`/api/yggdrasil` 返回 400 和这句话：站点还没有签名私钥。它不会自动生成，建站以后由管理员在后台“设置 → Yggdrasil → 签名私钥”点“生成”，马上生效，见[生成签名私钥](/guide/install/#生成签名私钥)。
+
 ## 外置登录进不去
 
-先确认启动器里填的是 `https://你的站点/api/yggdrasil`，再确认游戏服务器的启动命令带着 `-javaagent:authlib-injector.jar=https://你的站点/api/yggdrasil`，并且 `server.properties` 里是 `online-mode=true`（设成 `false` 是离线模式，不经过站点验证）。步骤见[在游戏里用](/players/client/#外置登录)。自签证书要先把证书装进客户端的信任库。
+先确认后台已经[生成了签名私钥](/guide/install/#生成签名私钥)，再确认启动器里填的是 `https://你的站点/api/yggdrasil`，游戏服务器的启动命令带着 `-javaagent:authlib-injector.jar=https://你的站点/api/yggdrasil`，并且 `server.properties` 里是 `online-mode=true`（设成 `false` 是离线模式，不经过站点验证）。步骤见[在游戏里用](/players/client/#外置登录)。自签证书要先把证书装进客户端的信任库。
+
+站点这边的地址算错了也会进不去：照[安装部署的“检查”](/guide/install/#检查)看 `X-Authlib-Injector-API-Location` 头，成了 `http://` 或带着 `:443`，就是反向代理少了 `Host`、`X-Forwarded-Proto` 那两行。宝塔默认生成的配置就是这样，见[宝塔面板](/guide/install/baota/#6-改反向代理配置)。
 
 ## 数据目录能放网络盘吗
 
@@ -82,6 +88,6 @@ SQLite 是单写锁、同步执行，放 NFS/SMB 这类网络盘会又慢又容�
 
 ## 升级失败了怎么回退
 
-发行包：新版本没通过健康检查时，管理进程自己换回旧版本（SQLite 连同升级前的备份）；MySQL、PostgreSQL 有迁移而新版本起不来时不自动回滚，后台“更新”页写明要怎么做。升级成功以后想回去，在“更新”页或用 `node nextskin.mjs rollback` 回到上一个版本，见[安装部署](/guide/install/#升级与回退)。
+发行包：新版本没通过健康检查时，管理进程自己换回旧版本（SQLite 连同升级前的备份）；MySQL、PostgreSQL 有迁移而新版本起不来时不自动回滚，后台“更新”页写明要怎么做。升级成功以后想回去，在“更新”页或用 `node nextskin.mjs rollback` 回到上一个版本，见[升级与回退](/guide/upgrade/#回滚)。
 
-Docker：标签改回旧版本；有迁移时先用 `/data/backups/` 里的备份换回库，步骤见 [docker.md](https://github.com/Glasden/NextSkin/blob/main/docs/deploy/docker.md#升级和回退)。
+Docker：标签改回旧版本；有迁移时先用 `/data/backups/` 里的备份换回库，步骤见 [Docker](/guide/install/docker/#升级与回退)。

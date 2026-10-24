@@ -9,13 +9,11 @@ NextSkin 是自托管的站点：一台有 Node.js 的服务器即可运行，�
 
 ## 部署
 
-一台有 Node.js 的服务器、一个可写的数据目录就够了。安装步骤（发行包、Docker）、反向代理和环境变量见[安装部署](/guide/install/)。
-
-面板和 systemd 的图文步骤暂时还在[主仓 docs/deploy](https://github.com/Glasden/NextSkin/tree/main/docs/deploy)：宝塔、1Panel、systemd、Windows，以及完整的升级与回退说明。
+一台有 Node.js 的服务器、一个可写的数据目录就够了。先在[安装部署](/guide/install/)里选一种方式：宝塔面板、1Panel 有图文步骤，另有 Docker、systemd、Windows。以后的版本在后台一键升级，见[升级与回退](/guide/upgrade/)。
 
 ## 部署之后
 
-首次访问 `/setup` 建站，安装码在数据目录的 `setup-code`。日常运维用启动器的命令行：
+首次访问 `/setup` 建站，安装码在数据目录的 `setup-code`；建好站以后在后台生成外置登录的签名私钥，见[建站之后](/guide/install/#建站之后)。日常运维用启动器的命令行：
 
 ```bash
 node nextskin.mjs doctor

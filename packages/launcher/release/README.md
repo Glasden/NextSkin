@@ -4,6 +4,7 @@
 
 1. 解压发行包，进入 `nextskin/` 目录，运行 `node nextskin.mjs start`。
 2. 第一次启动会生成 `.env`，请备份它；打开 `http://<服务器地址>:3000/setup` 建站，安装码在 `data/setup-code`。
+3. 建站以后在后台“设置 → Yggdrasil”里生成签名私钥，否则外置登录不可用。
 
 运行 `node nextskin.mjs help` 查看命令，`node nextskin.mjs doctor` 检查运行环境。
 
@@ -13,4 +14,4 @@
 新版本没起来时会自动换回旧版本；SQLite 站点执行迁移之前会自动把库备份到 `data/backups/`。MySQL、PostgreSQL 有迁移时请先自己备份，升级前要确认。
 回滚：在“更新”页，或者运行 `node nextskin.mjs rollback`，回到上一个版本。
 
-[部署文档（宝塔、1Panel、Docker、systemd、Windows）](https://github.com/Glasden/NextSkin/tree/main/docs/deploy)
+[部署文档（宝塔、1Panel、Docker、systemd、Windows，反向代理与 HTTPS）](https://docs.nextskin.org/guide/install/)

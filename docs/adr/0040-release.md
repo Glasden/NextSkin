@@ -175,6 +175,17 @@ Next 产物里还有一些 `/ROOT/node_modules/.pnpm/next@…` 的字符串，�
   - **Docker 文档里的命令**：目录挂载属于 root 时退出 78、报 uid 1000；用 `debian` 镜像打包数据卷、用镜像里的 `sh` 在卷里换回备份都可行。顺带发现正常停止后 `nextskin.sqlite-wal` 还在：核心退出时不关数据库，SQLite 下次打开时重放。文档写明手工备份要停服务、拷整个数据目录。
   - **受信任的反向代理**：网关地址随部署方式变（默认网桥、Compose 网络、`1panel-network`），文档不让服主猜，改为看审计日志里自己登录的 IP，是内网地址就把它加进去。
   - **Windows**：Ctrl+C 的停止顺序没有在真实控制台里实测（发布工作流的 Windows 冒烟最后用 `taskkill /F`）；NSSM 的配置照它的文档写，标了未实测。）
+- （落地时补充，2026-10-24：部署文档迁进文档站（ADR-0054），每种方式一页（`apps/docs/src/content/docs/guide/install/`），升级与回退单独一页；宝塔、1Panel 配了截图。`docs/deploy/` 只留 `compose.yaml`（文档用它的 raw 地址下载）和指向文档站的 README，ZIP 里的 README、后台“更新”页的链接改指文档站。截图在每个面板单独的 LXD 容器里截，怎么搭、怎么截见 `apps/docs/screenshots/install/README.md`。这次在宝塔 13.1.0、1Panel v2.4.1（Ubuntu 24.04 arm64，Node 26.12.1）上从下载发行包走到建站、HTTPS、升级和回滚：
+  - **宝塔**：
+    - 首次登录的“初始化推荐配置”里只装 Nginx 就够；arm64 上 Nginx 从源码编译，十几分钟。Node 版本管理器里 v26 标着“测试版”（没进 LTS 的都这样标）。设了“命令行版本”后 `/usr/bin/node` 指向它，`sudo -u www node nextskin.mjs doctor` 全部通过。
+    - 文件管理器的“URL链接下载”能直接从 `dl.nextskin.org` 下载，解压出来属于 `www`；`.env` 在文件管理器的“终端”里写（打开时就在当前目录），属于 root 也没关系，启动前宝塔会 `chown`。
+    - 13.1 的“添加Node项目”没有环境变量一栏。要用文件夹选择器选项目目录，宝塔才读 `package.json`、填好启动选项 `start:node nextskin.mjs start`；“放行端口”不勾时 ufw 里不加 3000。进程树是 `npm run start` → 管理进程 → 启动器 → 核心，都是 `www`。
+    - 反向代理模板的问题实测成立：HTTPS 下 `X-Authlib-Injector-API-Location` 是 `http://skin.example.com:443/api/yggdrasil`，在“配置文件”里改成 `Host $http_host` 加 `X-Forwarded-Proto $scheme` 以后正确。保存 SSL 证书、开“强制HTTPS”只插入它们自己的几行，不动 `location /`；“项目配置”里点“保存修改”会按模板重新生成反向代理那一段，手改的两行丢失（SSL 那几行保留）。全局的 `client_max_body_size` 是 50m，不用另加。
+    - 同机的 Nginx 经回环地址转发，默认的受信任代理就够，审计日志里是访客的真实 IP。
+  - **1Panel**：应用商店里已经有 Node 26（26.12.1）。运行环境的“端口外部访问”关掉时只发布在 `127.0.0.1`。“创建网站 → 运行环境”生成的配置 `Host`、`X-Forwarded-Proto` 都对，`client_max_body_size` 50m，不用改。NextSkin 看到的对端是 `1panel-network` 的网关（`172.18.0.1`），要加进受信任的反向代理。`docker exec nextskin node /app/nextskin.mjs doctor` 全部通过。
+  - **订正上一条的核对方法**：审计日志只记管理操作和“完成站点安装”，不记登录。文档改成“随便改一项设置再改回来，看这两条记录的 IP”。
+  - **建站之后的缺口**：Yggdrasil 的签名私钥不会自动生成，建好站以后 `/api/yggdrasil` 返回 400（“本站还没有配置签名密钥”），直到管理员在“设置 → Yggdrasil”里点“生成”。后台概览的“还有配置没完成”会列出它；文档在建站之后一节、常见问题和 ZIP 里的 README 都写明了。
+  - 免费证书（宝塔的 LiteSSL、Let's Encrypt，1Panel 的 ACME）只截了申请表单：测试环境没有公网域名。证书一律用自签证书从“粘贴、上传已有证书”的入口装。）
 
 ### 下载渠道
 

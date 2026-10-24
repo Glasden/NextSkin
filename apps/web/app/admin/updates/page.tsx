@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const DOCKER_UPGRADE = 'docker compose pull && docker compose up -d'
-const BUNDLE_GUIDE = 'https://docs.nextskin.org/guide/install/'
+const BUNDLE_GUIDE = 'https://docs.nextskin.org/guide/upgrade/#手动升级'
 
 /**
  * 后台的更新页（ADR-0061）：当前版本和部署方式、核心每天检查到的新版本、这种部署方式该怎么升级。

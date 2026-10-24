@@ -54,7 +54,7 @@ Cloudflare 现在推荐新项目用 Workers 静态资源，Pages 继续可用，
 - 所有人 `pnpm install` 都会多装 Astro、Starlight 和 wrangler；wrangler 带着 workerd，Linux 上的二进制解压后约 140 MB。`pnpm build` 也会构建文档站。
 - 文档的修正跟着发版上线，不能随时更新。
 - `edge` 的 IP 要偶尔看一眼；不维护也只是变慢。
-- 文档站的内容和 `docs/deploy`、启动器的帮助还有重复。把面板、systemd、Windows 的步骤迁进文档站时消除，目前记为待办。
+- 文档站的内容和 `docs/deploy`、启动器的帮助还有重复。把面板、systemd、Windows 的步骤迁进文档站时消除，目前记为待办。（落地时补充，2026-10-24：部署文档已经迁进文档站，`docs/deploy/` 只留 `compose.yaml`，见 ADR-0040"部署文档和面板"的同日补充。命令行一页和启动器的帮助仍有重复。）
 
 ## 考虑过的其他方案
 

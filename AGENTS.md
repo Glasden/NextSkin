@@ -71,7 +71,7 @@ nextskin 管理进程（选版本、升级、回滚，ADR-0061；镜像里关掉
 | 路径 | 内容 |
 |---|---|
 | `apps/web` | Next.js 页面，只做 UI |
-| `apps/docs` | 文档站：Astro + Starlight 的静态页（ADR-0054）。安装、命令行的内容和 `docs/deploy`、启动器的帮助有重复，改了那边要一起改 |
+| `apps/docs` | 文档站：Astro + Starlight 的静态页（ADR-0054）。部署文档在这里（`guide/install/`，面板的截图怎么重拍见该目录 README）；命令行的内容和启动器的帮助有重复，改了那边要一起改 |
 | `apps/site` | 宣传站：Astro 静态页，场景是从介绍视频分叉的 React 组件（ADR-0055）。画面和文案里的说法要和代码对得上，约定见该目录 README |
 | `apps/dl` | dl.nextskin.org：从 R2 读出发行包和版本清单的 Worker（ADR-0061），正式版发布后由 `release-dl.yml` 部署 |
 | `packages/api` | Hono 应用：协议端点、REST API、插件路由网关 |

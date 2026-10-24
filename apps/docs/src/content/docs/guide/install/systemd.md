@@ -1,24 +1,13 @@
-# systemd
+---
+title: systemd
+description: 在不装面板的 Linux 服务器上用 systemd 运行 NextSkin：专用用户、单元文件、权限分离和升级。
+---
 
-用临时单元（`systemd-run --user`，和下面的单元同样的 `KillMode`、`TimeoutStopSec`、`Restart`、`RestartPreventExitStatus`）实测过：
-
-- 正常停止 46 毫秒，退出码 0；
-- 强杀启动器后，systemd 清掉剩下的核心并重启，3 秒后恢复；
-- 配置错误退出 78，单元停在 failed，不重启。
-
-按下面的步骤和单元文件（`User=nextskin`）在 Ubuntu 24.04（systemd 255，arm64，Node 24.21）上实测过，程序用的是 `pnpm build` 出来的发行目录，没有经过 ZIP：
-
-- 以服务用户运行的 `doctor` 没有失败项；
-- `enable --now` 后约 2 秒健康检查返回 200，监听地址按 `.env` 只有 `127.0.0.1:3000`；
-- `restart` 正常停止（`Deactivated successfully`）后重新启动，数据目录里的文件都属于 `nextskin`。
-
-开机自启未实测。公共部分见 [README.md](README.md)。
-
-上面的实测用的是 0.4 的布局（根目录直接是启动器）。0.4 之后的版本根目录的 `nextskin.mjs` 是管理进程（ADR-0061），单元文件改成下面的样子：管理进程以 root 运行，只用来换版本，站点照旧以 `nextskin` 运行。在容器里以 root 实测过这种权限分离：管理进程 uid 0，启动器和核心降到 `nextskin`、附加组清空；控制通道的 socket 是 `root:nextskin`、`0660`，别的用户连不上；`nextskin` 读不了令牌、写不了 `releases/`；停止退出码 0。systemd 单元本身、一键升级的全过程未实测。
+管理进程以 root 运行、只用来换版本，站点降到专用用户 `nextskin` 运行：站点被攻破也改不了程序目录，一键升级照样能用。前面的反向代理见[反向代理与 HTTPS](/guide/install/reverse-proxy/)。
 
 ## 安装
 
-用系统级安装的 Node（发行版的包、NodeSource 或官方二进制）。装在某个用户家目录下的 Node（nvm 等），服务用户读不到。
+用系统级安装的 Node 26（发行版的包、NodeSource 或官方二进制）。装在某个用户家目录下的 Node（nvm 等），服务用户读不到。
 
 ```bash
 sudo unzip nextskin-<版本>.zip -d /opt                  # 得到 /opt/nextskin，程序属于 root
@@ -28,7 +17,9 @@ sudo sh -c 'umask 077; printf "NEXTSKIN_SECRET=%s\nNEXTSKIN_HOST=127.0.0.1\n" "$
 sudo chown nextskin:nextskin /opt/nextskin/.env           # 备份这个文件
 ```
 
-程序目录（`nextskin.mjs`、`manager/`、`releases/`）属于 root，服务用户只读；只有 `data/` 和 `.env` 属于它。`.env` 存在时必须带 `NEXTSKIN_SECRET`。
+程序目录（`nextskin.mjs`、`manager/`、`releases/`）属于 root，服务用户只读；只有 `data/` 和 `.env` 属于它。`.env` 存在时必须带 `NEXTSKIN_SECRET`，否则启动以退出码 78 失败。
+
+## 单元文件
 
 `/etc/systemd/system/nextskin.service`：
 
@@ -65,9 +56,17 @@ journalctl -u nextskin -f
 sudo cat /opt/nextskin/data/setup-code
 ```
 
-不想让 root 常驻：去掉 `Environment=NEXTSKIN_RUN_AS=…`，加回 `User=nextskin`、`Group=nextskin`。这时管理进程写不了 `releases/`，后台只检测、不一键升级，升级照下面的"手动升级"。
+然后经反向代理打开 `https://<域名>/setup` [建站](/guide/install/#建站)。
+
+不想让 root 常驻：去掉 `Environment=NEXTSKIN_RUN_AS=…`，加上 `User=nextskin`、`Group=nextskin`。这时管理进程写不了 `releases/`，后台只检测新版本、不能一键升级，升级照下面的“手动升级”。
+
+:::note
+权限分离（管理进程 uid 0，启动器和核心降到 `nextskin`、附加组清空，控制通道的 socket 只有 root 和 `nextskin` 能连）在容器里以 root 实测过；这份单元文件下的开机自启和一键升级的全过程还没有实测。
+:::
 
 ## 命令行
+
+日常命令用服务用户运行，否则数据目录里会出现服务读写不了的文件：
 
 ```bash
 sudo -u nextskin node /opt/nextskin/nextskin.mjs doctor
@@ -84,14 +83,14 @@ sudo NEXTSKIN_RUN_AS=nextskin node /opt/nextskin/nextskin.mjs update --yes   # �
 
 ## 升级
 
-一键升级：后台"更新"页，或者 `sudo node /opt/nextskin/nextskin.mjs update`。
+一键升级：后台“更新”页，或者 `sudo node /opt/nextskin/nextskin.mjs update`，见[升级与回退](/guide/upgrade/)。
 
 手动升级：
 
 ```bash
 sudo systemctl stop nextskin
 # 备份 /opt/nextskin/data 和 /opt/nextskin/.env
-sudo unzip -o nextskin-<新版本>.zip -d /opt             # 不覆盖 .env 和 data/
+sudo unzip -o nextskin-<新版本>.zip -d /opt             # 不会覆盖 .env 和 data/
 sudo systemctl start nextskin
 ```
 

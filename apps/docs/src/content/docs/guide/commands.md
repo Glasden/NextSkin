@@ -64,7 +64,7 @@ node nextskin.mjs start
 
 - 发现解压进来的版本比在用的新（手动覆盖解压了新包），按一键升级的流程预检、迁移、启动，失败时回到旧版本。MySQL、PostgreSQL 有迁移时不会自己升级，日志说明怎么确认。
 - 环境变量 `NEXTSKIN_MANAGER=off` 时不启动管理进程，直接在本进程里运行当前版本的启动器，只能手动升级。镜像里设了它。
-- `NEXTSKIN_RUN_AS=<用户>`（只在 Linux 等 POSIX 系统上）：管理进程以 root 运行，站点降到这个用户，见 [systemd.md](https://github.com/Glasden/NextSkin/blob/main/docs/deploy/systemd.md)。
+- `NEXTSKIN_RUN_AS=<用户>`（只在 Linux 等 POSIX 系统上）：管理进程以 root 运行，站点降到这个用户，见 [systemd](/guide/install/systemd/)。
 
 - 启动前检查发行目录是否完整、数据目录能否写入，并打印版本、Node 版本、数据目录、数据库方言和监听地址。
 - 同一个数据目录同时只能有一个 `start`。上一个实例没退干净时会等它退出，最多 40 秒。
@@ -192,7 +192,7 @@ node nextskin.mjs update [--to <版本>] [--yes] [--backup-confirmed]
 node nextskin.mjs update status [--json]
 ```
 
-和后台的“更新”页是同一条流程（[安装部署](/guide/install/#升级与回退)）。
+和后台的“更新”页是同一条流程（[升级与回退](/guide/upgrade/)）。
 
 - `--check` 读签过名的版本清单，列出比当前新的正式版，什么也不改。
 - 不带 `--check` 时升级，默认到最新的正式版，`--to` 指定版本（只能是清单里比当前新的）。最新的版本要的管理进程比在用的新时（很少见），默认先升到在用的管理进程升得了的版本里最新的一个，提示你重启一次服务、再升级；上次迁移以后失败过的版本不再默认选。手动解压了更新的版本时，默认升到解压的版本，不读清单。先准备（下载、核对签名、解压、预检），打印预检的结果，再问一次确认；不是终端时要 `--yes`。MySQL、PostgreSQL 有迁移时，先自己备份，再加 `--backup-confirmed`。

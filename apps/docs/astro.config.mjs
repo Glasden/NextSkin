@@ -43,7 +43,20 @@ export default defineConfig({
           label: '服主指南',
           items: [
             { label: '概览', link: '/guide/' },
-            { label: '安装部署', link: '/guide/install/' },
+            {
+              label: '安装部署',
+              items: [
+                { label: '选择安装方式', link: '/guide/install/' },
+                { label: '宝塔面板', link: '/guide/install/baota/' },
+                { label: '1Panel', link: '/guide/install/1panel/' },
+                { label: 'Docker', link: '/guide/install/docker/' },
+                { label: 'systemd', link: '/guide/install/systemd/' },
+                { label: 'Windows', link: '/guide/install/windows/' },
+                { label: '反向代理与 HTTPS', link: '/guide/install/reverse-proxy/' },
+                { label: '配置与进程', link: '/guide/install/configuration/' },
+              ],
+            },
+            { label: '升级与回退', link: '/guide/upgrade/' },
             { label: '命令行', link: '/guide/commands/' },
             { label: '常见问题', link: '/guide/faq/' },
           ],

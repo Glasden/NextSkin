@@ -19,6 +19,7 @@ pnpm --filter @nextskin/docs build    # 输出到 apps/docs/dist
 | 插件 API 参考 | `src/content/docs/plugins/reference/` | 由 `packages/plugin-sdk/docs` 生成，不进仓库，改源文件 |
 | 插件 API 参考里的插槽一览 | `src/content/docs/plugins/reference/slots.mdx` | 由插槽的登记表和下面的截图生成，不进仓库 |
 | 插槽一览的截图和清单 | `src/assets/slots/` | `pnpm docs:screenshots` 生成，提交进仓库 |
+| 部署文档的截图 | `src/assets/install/` | 在真实的面板上手工截，见 [`screenshots/install/README.md`](screenshots/install/README.md) |
 | 版本和提交号 | `src/data/versions.json` | 生成，不进仓库 |
 
 插件 API 参考的侧栏顺序、单篇的版本徽章写在 `scripts/sync.ts` 的 `order`、`changedIn` 里。
@@ -74,6 +75,5 @@ DNS 记录都不开代理（ADR-0054）：
 
 ## 待办
 
-- [ ] 把 `docs/deploy` 里的面板、systemd、Windows 步骤迁入本站，主仓只留一份
 - [ ] 玩家指南补截图和完整步骤
 - [ ] SDK 1.0 正式发布后加快照（`plugins/v1/`）和版本切换
