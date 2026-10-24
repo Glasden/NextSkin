@@ -1,3 +1,5 @@
+import { Writable } from 'node:stream'
+import { setImmediate } from 'node:timers/promises'
 import { afterEach, expect, test } from 'vitest'
 import {
   captureLogs,
@@ -64,4 +66,20 @@ test('同一个进程一份 root logger；捕获期间收下 debug、不写终�
   log.warn('kept')
   expect(logs.records).toMatchObject([{ level: 'debug', source: 'core', area: 'auth', attempt: 1, msg: 'captured' }])
   expect(outer.map((line) => (JSON.parse(line) as { msg: string }).msg)).toEqual(['kept'])
+})
+
+test('读终端的一端关了（EPIPE）时写日志不让进程崩溃，和 console 一样', async () => {
+  const broken = new Writable({
+    write(_chunk, _encoding, callback) {
+      callback(Object.assign(new Error('write EPIPE'), { code: 'EPIPE' }))
+    },
+  })
+  const write = terminalWriter('text', { stdout: broken, stderr: broken })
+  const line = JSON.stringify({ level: 'info', time: '2026-10-24T12:00:00.000Z', source: 'core', msg: 'x' })
+  write(line)
+  write(line)
+  // error 事件在下一轮才发出：没人接住的话会成为未捕获的异常，测试失败
+  await setImmediate()
+  expect(broken.destroyed).toBe(true)
+  expect(() => write(line)).not.toThrow()
 })

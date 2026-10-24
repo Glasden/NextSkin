@@ -191,7 +191,7 @@ export function createJobRunner(options: JobRunnerOptions) {
       ])
     } catch (error) {
       if (error instanceof JobDeferredError) {
-        log.info('deferred', { job: job.name, attempt: job.attempts })
+        log.warn('deferred', { job: job.name, attempt: job.attempts })
         await deferJob(db, lease, { runAt: at(error.delayMs) })
         return
       }

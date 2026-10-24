@@ -86,10 +86,9 @@ function wrap(
     info: at('info'),
     warn: at('warn'),
     error: at('error'),
-    child: ({ source: next, ...bindings }) => {
-      if (next === undefined || next === source) return wrap(instance.child(bindings), source, rootFor, target)
-      // 来源在 Pino 的 base 里，子 logger 改不了：从那个来源的实例派生，带上已有的 bindings。
-      // bindings() 里也有 base 的 source，要去掉，否则写出两个 source、后一个是旧的
+    child: ({ source: next = source, ...bindings }) => {
+      // 不用 instance.child：Pino 的子 logger 只往后追加，覆盖已有的字段（area）、换来源时会写出两个同名的键。
+      // 从那个来源的实例派生，带上合并后的 bindings；bindings() 里也有 base 的 source，要去掉
       const existing = { ...instance.bindings() }
       delete existing.source
       return wrap(rootFor(next).child({ ...existing, ...bindings }), next, rootFor, target)

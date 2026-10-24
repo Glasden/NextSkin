@@ -716,7 +716,15 @@ test('after 检查失败关闭签发响应，只写固定日志', async () => {
     )
     expect(response.status).toBe(500)
     expect(await json(response)).toMatchObject({ error: 'server_error' })
-    expect(warn.records).toMatchObject([{ area: 'auth', level: 'warn', msg: 'oauth_token_check_failed' }])
+    expect(warn.records).toEqual([
+      {
+        time: expect.any(String) as unknown,
+        level: 'warn',
+        source: 'core',
+        area: 'auth',
+        msg: 'oauth_token_check_failed',
+      },
+    ])
   } finally {
     warn.restore()
   }
@@ -1018,7 +1026,15 @@ test('after 复核事务抛错时返回 server_error，不泄露令牌或异常�
     )
     expect(response.status).toBe(500)
     expect(await json(response)).toEqual({ error: 'server_error', error_description: 'Token check failed' })
-    expect(warn.records).toMatchObject([{ area: 'auth', level: 'warn', msg: 'oauth_token_check_failed' }])
+    expect(warn.records).toEqual([
+      {
+        time: expect.any(String) as unknown,
+        level: 'warn',
+        source: 'core',
+        area: 'auth',
+        msg: 'oauth_token_check_failed',
+      },
+    ])
     expect(failure).toHaveBeenCalledOnce()
   } finally {
     failure?.mockRestore()

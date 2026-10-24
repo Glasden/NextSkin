@@ -165,7 +165,16 @@ test.each([new DomainError('unknown'), new Error('SECRET_CANARY')])(
       expect(await response.json()).toEqual({
         error: { code: 'internal_error', message: createTranslator('en')('errors.internal_error') },
       })
-      expect(log.records).toMatchObject([{ area: 'rest', level: 'error', msg: 'unhandled', error: error.name }])
+      expect(log.records).toEqual([
+        {
+          time: expect.any(String) as unknown,
+          level: 'error',
+          source: 'core',
+          area: 'rest',
+          error: error.name,
+          msg: 'unhandled',
+        },
+      ])
     } finally {
       log.restore()
     }
@@ -181,7 +190,16 @@ test('建会话失败仍然 201，无 Cookie，不泄露错误内容', async () 
     expect(response.status).toBe(201)
     expect(await response.json()).toEqual({ uid: 42, signedIn: false })
     expect(response.headers.getSetCookie()).toEqual([])
-    expect(log.records).toMatchObject([{ area: 'rest', level: 'error', msg: 'unhandled', error: 'Error' }])
+    expect(log.records).toEqual([
+      {
+        time: expect.any(String) as unknown,
+        level: 'error',
+        source: 'core',
+        area: 'rest',
+        error: 'Error',
+        msg: 'unhandled',
+      },
+    ])
   } finally {
     log.restore()
   }

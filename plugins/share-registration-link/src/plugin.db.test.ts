@@ -2,6 +2,7 @@
 import { coreMigrations, migrateToLatest, toIsoTimestamp, writeAuthDate, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import { createCore, type Core, type PluginRouteRequest } from '@nextskin/domain'
+import { discardLogger } from '@nextskin/logging'
 import { afterAll, beforeAll, expect, test } from 'vitest'
 import plugin from './official.ts'
 
@@ -103,9 +104,9 @@ beforeAll(async () => {
     plugins: {
       official: [plugin],
       sqliteFile: database.config.dialect === 'sqlite' ? database.config.file : undefined,
-      log: () => {},
+      logger: discardLogger,
     },
-    jobs: { log: () => {} },
+    jobs: { logger: discardLogger },
   })
   await core.plugins.start()
   admin = await createUser('superadmin')

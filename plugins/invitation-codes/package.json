@@ -23,6 +23,7 @@
   "devDependencies": {
     "@nextskin/db": "workspace:*",
     "@nextskin/domain": "workspace:*",
+    "@nextskin/logging": "workspace:*",
     "@nextskin/plugin-host": "workspace:*",
     "@types/node": "catalog:",
     "kysely": "catalog:",

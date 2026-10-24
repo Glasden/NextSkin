@@ -77,14 +77,35 @@ export function logFormatFromEnv(env: Readonly<Record<string, string | undefined
   return env.NEXTSKIN_LOG_FORMAT?.trim().toLowerCase() === 'json' ? 'json' : 'text'
 }
 
+/** 终端的流：process.stdout、process.stderr，测试传普通对象 */
+export interface TerminalStream {
+  write(text: string, callback?: (error?: Error | null) => void): unknown
+  once?(event: 'error', listener: () => void): unknown
+  listenerCount?(event: 'error'): number
+}
+
 /** 写终端：warn 及以上写 stderr，其余写 stdout */
 export function terminalWriter(
   format: LogFormat,
-  streams: { stdout: { write(text: string): unknown }; stderr: { write(text: string): unknown } } = process,
+  streams: { stdout: TerminalStream; stderr: TerminalStream } = process,
 ): (line: string) => void {
   return (line) => {
     const record = parseLogRecord(line)
     const stream = record && LOG_LEVEL_VALUES[record.level] >= LOG_LEVEL_VALUES.warn ? streams.stderr : streams.stdout
-    stream.write(`${format === 'text' && record ? formatLogText(record) : line}\n`)
+    write(stream, `${format === 'text' && record ? formatLogText(record) : line}\n`)
+  }
+}
+
+/**
+ * 同 Node 的 console：读终端的一端关了（EPIPE，例如 `nextskin migrate | head`、面板断开了输出）时，写日志不能让进程崩溃。
+ * 写失败时流随后会发 error 事件，没有监听者就成了未捕获的异常，所以在回调里挂一个空的监听者接住它
+ */
+function write(stream: TerminalStream, text: string): void {
+  try {
+    stream.write(text, (error) => {
+      if (error && stream.listenerCount?.('error') === 0) stream.once?.('error', () => {})
+    })
+  } catch {
+    // 同步抛出的（流已经销毁）同样丢掉这一条
   }
 }
