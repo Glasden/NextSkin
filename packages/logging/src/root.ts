@@ -77,6 +77,11 @@ export function logFormatFromEnv(env: Readonly<Record<string, string | undefined
   return env.NEXTSKIN_LOG_FORMAT?.trim().toLowerCase() === 'json' ? 'json' : 'text'
 }
 
+/** `NEXTSKIN_LOG_FILE=off` 时不写日志文件，只写终端 */
+export function logFileEnabledFromEnv(env: Readonly<Record<string, string | undefined>>): boolean {
+  return env.NEXTSKIN_LOG_FILE?.trim().toLowerCase() !== 'off'
+}
+
 /** 终端的流：process.stdout、process.stderr，测试传普通对象 */
 export interface TerminalStream {
   write(text: string, callback?: (error?: Error | null) => void): unknown

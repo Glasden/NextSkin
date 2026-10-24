@@ -6,7 +6,7 @@
  */
 import { spawn } from 'node:child_process'
 import { isDeepStrictEqual } from 'node:util'
-import { discardLogger, type Logger } from '@nextskin/logging'
+import { discardLogger, lineSplitter, type Logger } from '@nextskin/logging'
 import {
   ChannelClosedError,
   createFrameChannel,
@@ -181,33 +181,11 @@ export function startHostGeneration(options: {
   )
   const log = logger.child({ area: 'plugin-host', generation: sequence })
   const stderr = logger.child({ source: 'plugin-host', generation: sequence })
-  // stderr 按行记日志。插件可以一直写不带换行的内容：一行攒到上限就记下、截断，剩下的丢到下一个换行为止，不在内存里攒
-  let partial = ''
-  let truncated = false
-  const flush = () => {
-    stderr.warn(partial.replace(/\r$/, ''))
-    partial = ''
-  }
+  // stderr 按行记日志，一行最多 MAX_STDERR_LINE 个字符（lineSplitter 不在内存里攒）
+  const stderrLines = lineSplitter(MAX_STDERR_LINE, (line) => stderr.warn(line))
   child.stderr.setEncoding('utf8')
-  child.stderr.on('data', (chunk: string) => {
-    const parts = chunk.split('\n')
-    for (let index = 0; index < parts.length; index++) {
-      if (index > 0) {
-        if (!truncated) flush()
-        truncated = false
-      }
-      if (truncated) continue
-      partial += parts[index]!
-      if (partial.length > MAX_STDERR_LINE) {
-        partial = partial.slice(0, MAX_STDERR_LINE)
-        flush()
-        truncated = true
-      }
-    }
-  })
-  child.stderr.on('end', () => {
-    if (partial && !truncated) flush()
-  })
+  child.stderr.on('data', (chunk: string) => stderrLines.push(chunk))
+  child.stderr.on('end', () => stderrLines.end())
 
   const pending = new Map<number, { invocationId: string; resolve(value: unknown): void; reject(error: Error): void }>()
   const byInvocation = new Map<string, number>()
