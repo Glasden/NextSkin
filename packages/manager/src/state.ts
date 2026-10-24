@@ -13,14 +13,21 @@ export function validVersion(value: unknown): value is string {
     return false
   }
 }
-/** 待生效版本必须比当前运行的管理进程新，不能只看目录是否存在。 */
+/**
+ * 待生效版本必须比当前运行的管理进程新，不能只看目录是否存在。命令行经根入口运行时也会把 manager.next 换进 manager，
+ * 常驻的管理进程却还是旧的，所以磁盘上的 manager 比自己新也算待生效（重启一次就换上）。
+ */
 export async function pendingManager(home: string, bundled: string): Promise<string | null> {
-  try {
-    const version = (await readFile(join(home, 'manager.next/VERSION'), 'utf8')).trim()
-    return validVersion(version) && compareVersions(version, bundled) > 0 ? version : null
-  } catch {
-    return null
+  let pending: string | null = null
+  for (const directory of ['manager.next', 'manager']) {
+    try {
+      const version = (await readFile(join(home, directory, 'VERSION'), 'utf8')).trim()
+      if (validVersion(version) && compareVersions(version, pending ?? bundled) > 0) pending = version
+    } catch {
+      // 目录不在或读不了就是没有
+    }
   }
+  return pending
 }
 export function requireVersion(value: string): void {
   if (!validVersion(value)) throw new ConfigError('版本号必须符合 semver，不能是路径或地址')

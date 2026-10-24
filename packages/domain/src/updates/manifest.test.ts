@@ -1,7 +1,7 @@
 import { expect, test, vi } from 'vitest'
 import { MANIFEST_URL } from '@nextskin/updates'
 import { fetchUpdateManifest } from './manifest.ts'
-import { initialUpdateState, updateStateSchema } from './state.ts'
+import { initialUpdateState, storedUpdateState, updateStateSchema } from './state.ts'
 
 const fetchWith = (response: Response) => vi.fn<typeof fetch>().mockResolvedValue(response)
 test('固定 GET 地址，禁重定向、Cookie，无查询参数或自定义头，有超时信号', async () => {
@@ -73,8 +73,8 @@ test('请求使用 15 秒超时', async () => {
     timeout.mockRestore()
   }
 })
-test('状态 schema 严格约束内部字段、错误状态码、版本和通知列表', () => {
-  expect(updateStateSchema.parse(initialUpdateState)).toEqual(initialUpdateState)
+test('状态 schema 严格约束内部字段、错误状态码、版本和通知列表；读出时不合格的当作没检查过', () => {
+  expect(storedUpdateState.parse(initialUpdateState)).toEqual(initialUpdateState)
   for (const patch of [
     { extra: true },
     { checkedAt: 'yesterday' },
@@ -106,6 +106,10 @@ test('状态 schema 严格约束内部字段、错误状态码、版本和通知
         managerProtocol: i + 1,
       })),
     },
-  ])
-    expect(updateStateSchema.safeParse({ ...initialUpdateState, ...patch }).success).toBe(false)
+  ]) {
+    expect(storedUpdateState.safeParse({ ...initialUpdateState, ...patch }).success).toBe(false)
+    expect(updateStateSchema.parse({ ...initialUpdateState, checkedAt: '2026-10-23T00:00:00Z', ...patch })).toEqual(
+      initialUpdateState,
+    )
+  }
 })

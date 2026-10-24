@@ -231,6 +231,40 @@ describe('回滚', () => {
     await f.configure()
     expect((await f.manager.rollback()).result).toBe('success')
   })
+  it('外部库有迁移时拿不到数据锁（服务没经管理进程在跑）就拒绝，指针不动、不起任何程序', async () => {
+    const f = await setup('mysql', true)
+    await f.manager.prepareLocal('1.1.0')
+    expect((await f.manager.apply('1.1.0', { backupConfirmed: true })).result).toBe('success')
+    await writeFile(join(f.home, 'data/db.sqlite'), 'original')
+    const offline = await createManager({
+      home: f.home,
+      bundled: '1.0.0',
+      supervisor: f.supervisor,
+      lock: () => Promise.reject(new Error('另一个进程仍在运行，等待进程锁超时')),
+    })
+    const before = (await events(f.home)).length
+    const result = await offline.rollback({ confirmed: true })
+    expect(result).toMatchObject({ result: 'failed', step: 7, reason: contains('服务还在运行，没有回滚') })
+    expect(result.reason).not.toContain('请人工检查回滚目标')
+    expect(await readCurrent(f.home)).toMatchObject({ current: '1.1.0', previous: '1.0.0' })
+    expect((await events(f.home)).slice(before).some((e) => e.command === 'start')).toBe(false)
+  })
+  it('SQLite 有迁移的回滚在换回备份之前失败时，库和指针没动，照旧起当前版本', async () => {
+    const f = await setup('sqlite', true)
+    await f.manager.prepareLocal('1.1.0')
+    expect((await f.manager.apply('1.1.0')).result).toBe('success')
+    const migrated = await readFile(join(f.home, 'data/db.sqlite'), 'utf8')
+    const manager = await createManager({
+      home: f.home,
+      bundled: '1.0.0',
+      supervisor: f.supervisor,
+      lock: () => Promise.reject(new Error('busy')),
+    })
+    expect(await manager.rollback({ confirmed: true })).toMatchObject({ result: 'rolled-back', step: 7 })
+    expect((await readCurrent(f.home))?.current).toBe('1.1.0')
+    expect(await readFile(join(f.home, 'data/db.sqlite'), 'utf8')).toBe(migrated)
+    expect(f.supervisor.running).toBe(true)
+  })
   it('备份或 previous 目录不在时拒绝', async () => {
     const f = await setup('sqlite', true)
     await f.manager.prepareLocal('1.1.0')

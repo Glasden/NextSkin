@@ -87,8 +87,16 @@ export async function runManagementCommand(
   try {
     const { command, status: statusCommand, values } = parse(argv)
     let runtime = options.manager ?? {}
+    // 服务停着才自己执行：拿不到数据锁说明服务没经管理进程在跑，等 5 秒就报错，不等满 40 秒
     const makeManager = () =>
-      createManager({ ...runtime, home, bundled, supervisor: offlineSupervisor, checkDataOwner: true })
+      createManager({
+        lockTimeout: 5_000,
+        ...runtime,
+        home,
+        bundled,
+        supervisor: offlineSupervisor,
+        checkDataOwner: true,
+      })
     if (values.check) {
       const releases = await (await makeManager()).check()
       if (values.json) output(JSON.stringify(releases))
@@ -222,7 +230,9 @@ export async function runManagementCommand(
       if (!target) {
         const releases = await (await makeManager()).check()
         const latest = releases[0]
-        target = (releases.find((entry) => entry.managerProtocol <= MANAGER_PROTOCOL) ?? latest)?.version
+        // 根入口可能已经给这个命令换上了新的管理进程，能升到哪个版本看常驻的那个
+        const protocol = remote ? (await getStatus()).protocol : MANAGER_PROTOCOL
+        target = (releases.find((entry) => entry.managerProtocol <= protocol) ?? latest)?.version
         if (latest && target && compareVersions(latest.version, target) > 0)
           output(
             `${latest.version} 要求更新的管理进程，这次先升级到 ${target}；重启一次服务以后再升级到 ${latest.version}`,

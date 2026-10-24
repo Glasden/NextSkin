@@ -19,7 +19,7 @@ import {
   type ManagerParams,
   type UpdateManager,
 } from './manager-client.ts'
-import { initialUpdateState, type UpdateState } from './state.ts'
+import { initialUpdateState, storedUpdateState, type UpdateState } from './state.ts'
 
 export const UPDATE_CHECK_JOB = 'core:update-check'
 export interface CoreRelease {
@@ -135,7 +135,7 @@ export function createUpdates(options: {
       await tx
         .updateTable('settings')
         .set({
-          value: encodeSettingValue('updates.state', state, { secretKey }),
+          value: encodeSettingValue('updates.state', storedUpdateState.parse(state), { secretKey }),
           updated_at: at,
         })
         .where('namespace', '=', coreSettingsNamespace)
@@ -166,6 +166,9 @@ export function createUpdates(options: {
       if (method === 'rollback') {
         const status = await client.request('status', {})
         version = status.rollback?.version ?? status.previous
+        // 管理进程也拒绝；核心再拦一次，常驻的管理进程可能比核心旧（ADR-0061"回滚"）
+        if (status.rollback?.migrations && status.rollback.dialect !== 'sqlite')
+          throw new DomainError('update_offline_required')
       }
       await client.request(method, input)
     } catch (cause) {
