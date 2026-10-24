@@ -57,6 +57,7 @@ const actionKeys = {
   'oauthClient.delete': 'oauthClientDelete',
   'notification.send': 'notificationSend',
   'notification.recall': 'notificationRecall',
+  'diagnostics.export': 'diagnosticsExport',
   'update.prepare': 'updatePrepare',
   'update.apply': 'updateApply',
   'update.rollback': 'updateRollback',
@@ -172,6 +173,8 @@ export async function AuditTable({
       const name = key ? settingText(settingFields, key).label : (text(entry.details.key) ?? t('subjects.setting'))
       return section ? <Link render={<NextLink href={settingsHref(section)} />}>{name}</Link> : name
     }
+    // 诊断包没有 id（记作 0），导出了也不留在服务器上（ADR-0062）
+    if (type === 'diagnostics') return t('subjects.diagnostics')
     // 核心任务的死信重试、删除之后就不在表里了，不链接；全部重试、全部删除记 0（ADR-0051）
     if (type === 'job') return id === 0 ? t('subjects.allJobs') : t('subjects.job', { id })
     // 通知的发送记录没有详情页，链接到发送记录的列表（ADR-0052）
@@ -446,6 +449,7 @@ export async function AuditTable({
       }),
     'notification.recall': (details) =>
       t('details.notificationRecall', { recipientCount: count(details.recipientCount) }),
+    'diagnostics.export': () => null,
     'update.prepare': (details) =>
       t('details.updatePrepare', {
         accepted: String(details.accepted === true),

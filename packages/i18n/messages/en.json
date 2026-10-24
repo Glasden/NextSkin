@@ -1238,7 +1238,8 @@
       "failedJobs": "Failed jobs",
       "oauthClients": "OAuth apps",
       "notifications": "Notifications",
-      "updates": "Updates"
+      "updates": "Updates",
+      "diagnostics": "Diagnostics"
     },
     "roles": {
       "banned": "Banned",
@@ -1510,6 +1511,7 @@
         "oauthClientDelete": "Delete OAuth app",
         "notificationSend": "Send notification",
         "notificationRecall": "Recall notification",
+        "diagnosticsExport": "Exported diagnostics bundle",
         "updatePrepare": "Prepare update",
         "updateApply": "Apply update",
         "updateRollback": "Roll back version"
@@ -1526,7 +1528,8 @@
         "job": "Failed job #{id}",
         "allJobs": "All failed jobs",
         "notificationBroadcast": "Notification broadcast #{id}",
-        "update": "{version, select, none {Update} other {Version {version}}}"
+        "update": "{version, select, none {Update} other {Version {version}}}",
+        "diagnostics": "Diagnostics bundle"
       },
       "actorSystem": "System",
       "actorPlugin": "Plugin {id}",
@@ -2436,6 +2439,181 @@
         "rollbackConfirms": {
           "sqlite": "I understand everything written since the upgrade is lost"
         }
+      }
+    },
+    "diagnostics": {
+      "title": "Diagnostics",
+      "description": "Start here when something goes wrong: runtime, database, storage, plugin host, background jobs and logs. When you ask someone for help, export a diagnostics bundle and send it to them.",
+      "durations": {
+        "days": "{days, plural, one {# day} other {# days}} {hours, plural, one {# hour} other {# hours}}",
+        "hours": "{hours, plural, one {# hour} other {# hours}} {minutes, plural, one {# minute} other {# minutes}}",
+        "minutes": "{minutes, plural, one {# minute} other {# minutes}}"
+      },
+      "versions": {
+        "title": "Versions",
+        "nextskin": "NextSkin",
+        "source": "Running from source",
+        "pluginApi": "Plugin API",
+        "node": "Node.js",
+        "os": "System",
+        "runMode": "Supervision",
+        "runModes": {
+          "manager": "Manager, with one-click upgrades",
+          "launcher": "Launcher",
+          "direct": "server.js run directly",
+          "development": "Development"
+        },
+        "uptime": "Uptime",
+        "startedAt": "Started {time}"
+      },
+      "database": {
+        "title": "Database",
+        "dialect": "Type",
+        "dialects": {
+          "sqlite": "SQLite",
+          "mysql": "MySQL / MariaDB",
+          "postgres": "PostgreSQL"
+        },
+        "serverVersion": "Server version",
+        "unknownVersion": "Unavailable",
+        "migrations": "Migrations",
+        "upToDate": "Up to date",
+        "pending": "Pending",
+        "newer": "Newer than this version",
+        "allApplied": "All core and enabled plugin migrations are applied",
+        "pendingCore": "{count, plural, one {# core migration is} other {# core migrations are}} pending; they run when the service restarts",
+        "unknownCore": "The database has {count, plural, one {# core migration} other {# core migrations}} this version doesn't know. A newer version may have upgraded it; go back to that version",
+        "pendingPlugin": "Plugin <id>{plugin}</id> has {count, plural, one {# pending migration} other {# pending migrations}}"
+      },
+      "storage": {
+        "title": "Storage",
+        "dataDirectory": "Data directory",
+        "free": "Free space",
+        "freeValue": "{free} / {total}",
+        "unknown": "Unavailable",
+        "lowSpace": "Low on space",
+        "logs": "Log files",
+        "logsValue": "{size}, {count, plural, one {# file} other {# files}}",
+        "logsOff": "Not written to files",
+        "dropped": "Log records dropped in the last 24 hours",
+        "droppedValue": "{count}",
+        "droppedAtLeast": "At least {count}; only the newest 8 MB of logs were checked",
+        "droppedBadge": "Logs dropped"
+      },
+      "pluginHost": {
+        "title": "Plugin host",
+        "states": {
+          "running": "Running",
+          "idle": "Not started",
+          "restarting": "Restarting",
+          "failed": "Stopped",
+          "disabled": "No plugins here"
+        },
+        "plugins": "Plugins running in it",
+        "empty": {
+          "running": "None",
+          "idle": "No uploaded plugin is enabled, so it isn't needed",
+          "restarting": "Back once it has restarted",
+          "failed": "All paused",
+          "disabled": "This process doesn't run uploaded plugins"
+        },
+        "lastError": "Last error",
+        "network": "Direct network access",
+        "networkRestricted": "Blocked: plugins can only reach the addresses they declare, through the site",
+        "networkUnrestricted": "Not blocked: this server's Node.js is older than 26",
+        "link": "Go to plugins"
+      },
+      "jobs": {
+        "title": "Background jobs",
+        "queued": "Queued",
+        "deadLetters": "Failed core jobs",
+        "failedBadge": "Failed jobs",
+        "oldest": "Longest-waiting due job",
+        "nothingDue": "Nothing overdue",
+        "link": "Go to failed jobs"
+      },
+      "update": {
+        "title": "Last upgrade",
+        "results": {
+          "success": "Succeeded",
+          "rolledBack": "Rolled back",
+          "failed": "Failed"
+        },
+        "kind": "How",
+        "kinds": {
+          "update": "One-click upgrade",
+          "manual": "Manual unzip",
+          "legacy": "Older upgrade",
+          "rollback": "Rollback"
+        },
+        "at": "When",
+        "versions": "Versions",
+        "versionsValue": "{from} → {to}",
+        "reason": "Reason",
+        "link": "Go to updates"
+      },
+      "logs": {
+        "title": "Logs",
+        "tableLabel": "Log records",
+        "columns": {
+          "time": "Time",
+          "level": "Level",
+          "source": "Source",
+          "message": "Message"
+        },
+        "levels": {
+          "debug": "Debug",
+          "info": "Info",
+          "warn": "Warn",
+          "error": "Error",
+          "fatal": "Fatal"
+        },
+        "sources": {
+          "launcher": "Launcher",
+          "core": "Core",
+          "plugin-host": "Plugin host",
+          "plugin": "Plugin"
+        },
+        "raw": "Raw output",
+        "unparsed": "Unparsed",
+        "levelLabel": "Minimum level",
+        "allLevels": "All levels",
+        "atLeast": "{level} and above",
+        "sourceLabel": "Source",
+        "allSources": "All sources",
+        "searchLabel": "Search logs",
+        "searchPlaceholder": "Keyword, case-insensitive",
+        "search": "Search",
+        "live": "New records every 5 seconds",
+        "pollFailed": "Couldn't refresh; trying again shortly",
+        "latest": "Back to latest",
+        "empty": "No records in the log files yet",
+        "emptyFiltered": "No records match the filters",
+        "shown": "{count, plural, one {# record} other {# records}} shown",
+        "end": "That's the oldest record",
+        "scanLimited": "Searched 8 MB further back without filling a page",
+        "older": "Older",
+        "continue": "Keep searching",
+        "unavailableTitle": "No log files found",
+        "unavailableOff": "File logging is off (NEXTSKIN_LOG_FILE=off), so logs only go to the terminal: check your panel's output, journald or docker logs. Once it's on, logs are written to {directory}.",
+        "unavailableEmpty": "Logs should be written to {directory}, but there are no log files there yet. An older launcher doesn't write files; its logs are in your panel's output, journald or docker logs.",
+        "guide": "Where are the logs"
+      },
+      "export": {
+        "open": "Export diagnostics",
+        "title": "Export diagnostics bundle",
+        "description": "Download a zip to send to whoever is helping you troubleshoot.",
+        "contents": {
+          "summary": "The summary on this page: versions, database, storage, plugin host and background jobs",
+          "settings": "All settings; for secrets, only whether they're set",
+          "environment": "Which NEXTSKIN_ environment variables are set, names only; plugin and background job status",
+          "logs": "Recent logs, up to 10 MB"
+        },
+        "redaction": "Email addresses, public IPs, tokens, passwords and the instance directory are replaced with placeholders. Player names, UUIDs, texture hashes and uids are kept.",
+        "review": "Replacement is best effort, and personal data it doesn't recognize stays in. Unzip it and look it over before you send it.",
+        "cancel": "Cancel",
+        "confirm": "Download",
+        "done": "Diagnostics bundle downloaded"
       }
     },
     "failedJobs": {

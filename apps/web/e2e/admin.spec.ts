@@ -3,13 +3,14 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createTranslator } from '@nextskin/i18n'
 import type { Page } from '@playwright/test'
+import { strFromU8, unzipSync } from 'fflate'
 import { expect, test } from './fixtures'
 import { nextskin } from './nextskin-cli'
 
 // 后台的主流程（ADR-0027）：举报 → 管理员删除材质 → 举报人看到已采纳 → 审计日志；封禁上传者 → 他只看到封禁说明，
 // CSL 对他的角色返回 403。设置页（ADR-0028）：只有超级管理员能进，改了立即生效。
 // 用户详情页（ADR-0036）：替丢了验证器的用户关掉两步验证、重设密码；角色页：改名、换材质、转让、删除；
-// 下架别人的材质、替用户加入和移出衣柜。
+// 下架别人的材质、替用户加入和移出衣柜。诊断页（ADR-0062）：摘要、筛日志、导出脱敏的诊断包。
 // 跑在 account 项目上：上传是 multipart 表单，接口按站点地址检查 Origin（playwright.config.ts）。
 // 两个用例放在同一个文件里按顺序跑：第一个按条数检查审计日志，另一个文件并行任命管理员会打乱它
 const t = createTranslator('zh-CN')
@@ -643,4 +644,91 @@ test('OAuth 应用页：从用户详情页进来停用、启用用户的应用�
   await expect(page.getByText(t('admin.audit.actions.oauthClientEnable'), { exact: true })).toBeVisible()
   await launcher.dispose()
   await ownerContext.close()
+})
+
+test('诊断页只有超级管理员能进：摘要写着发行版本和启动器，日志按来源和关键字筛；诊断包换掉了数据目录、不含密钥，审计记下了导出', async ({
+  page,
+  browser,
+}) => {
+  // 普通管理员进不来，接口也拒绝
+  const adminContext = await browser.newContext({ locale: 'zh-CN' })
+  const admin = await adminContext.newPage()
+  setRole(await register(admin, '203.0.113.210', `Dga${suffix}`), 'admin')
+  expect((await admin.goto('/admin/diagnostics'))?.status()).toBe(404)
+  expect((await admin.request.get('/api/admin/diagnostics/logs')).status()).toBe(403)
+  expect((await admin.request.post('/api/admin/diagnostics/export', { data: {} })).status()).toBe(403)
+  await adminContext.close()
+
+  setRole(await register(page, '203.0.113.211', `Dgs${suffix}`), 'superadmin')
+  await page.goto('/admin')
+  await page.getByRole('link', { name: t('admin.nav.diagnostics'), exact: true }).click()
+  await expect(page.getByRole('heading', { name: t('admin.diagnostics.title'), level: 1 })).toBeVisible()
+  const version = readFileSync(
+    fileURLToPath(new URL('../../../dist/nextskin/manager/VERSION', import.meta.url)),
+    'utf8',
+  ).trim()
+  const versions = page.getByRole('region', { name: t('admin.diagnostics.versions.title') })
+  await expect(versions).toContainText(version)
+  await expect(versions).toContainText(t('admin.diagnostics.versions.runModes.launcher'))
+  await expect(page.getByRole('region', { name: t('admin.diagnostics.database.title') })).toContainText(
+    t('admin.diagnostics.database.upToDate'),
+  )
+
+  // 日志：只看启动器的，搜启动时记的那一条
+  const logs = page.getByRole('region', { name: t('admin.diagnostics.logs.tableLabel') })
+  await expect(logs.getByRole('row').nth(1)).toBeVisible()
+  await page.getByRole('combobox', { name: t('admin.diagnostics.logs.sourceLabel') }).click()
+  await page.getByRole('option', { name: t('admin.diagnostics.logs.sources.launcher') }).click()
+  await page.getByRole('searchbox', { name: t('admin.diagnostics.logs.searchLabel') }).fill('核心已启动')
+  await page.getByRole('button', { name: t('admin.diagnostics.logs.search'), exact: true }).click()
+  const started = logs.getByRole('row').filter({ hasText: '核心已启动' })
+  await expect(started.first()).toBeVisible()
+  await expect(started.first()).toContainText(t('admin.diagnostics.logs.sources.launcher'))
+  await expect(logs.getByRole('row')).toHaveCount((await started.count()) + 1)
+  await page.getByRole('searchbox', { name: t('admin.diagnostics.logs.searchLabel') }).fill(`没有这条-${suffix}`)
+  await page.getByRole('button', { name: t('admin.diagnostics.logs.search'), exact: true }).click()
+  await expect(logs).toContainText(t('admin.diagnostics.logs.emptyFiltered'))
+
+  // 导出：先说明会替换什么，确认后下载
+  await page.getByRole('button', { name: t('admin.diagnostics.export.open') }).click()
+  const dialog = page.getByRole('dialog', { name: t('admin.diagnostics.export.title') })
+  await expect(dialog).toContainText(t('admin.diagnostics.export.review'))
+  const downloading = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: t('admin.diagnostics.export.confirm') }).click()
+  const download = await downloading
+  expect(download.suggestedFilename()).toMatch(/^nextskin-diagnostics-\d{8}T\d{6}Z\.zip$/)
+  const files = unzipSync(readFileSync(await download.path()))
+  expect(Object.keys(files)).toEqual(
+    expect.arrayContaining([
+      'README.txt',
+      'summary.json',
+      'settings.json',
+      'env.json',
+      'plugins.json',
+      'jobs.json',
+      'logs/nextskin.log',
+    ]),
+  )
+  const text = (name: string) => strFromU8(files[name]!)
+  expect(JSON.parse(text('summary.json'))).toMatchObject({
+    versions: { nextskin: version },
+    runMode: 'launcher',
+    database: { dialect: 'sqlite' },
+    storage: { dataDirectory: '<数据目录>' },
+  })
+  const env = JSON.parse(text('env.json')) as { names: string[]; database: unknown }
+  expect(env.names).toEqual(expect.arrayContaining(['NEXTSKIN_DATA_DIR', 'NEXTSKIN_SECRET']))
+  expect(env.database).toEqual({ dialect: 'sqlite' })
+  expect(text('logs/nextskin.log')).toContain('核心已启动')
+  // 数据目录在 JSON 里是转义过的（Windows 的反斜杠），两种写法都查
+  const dataDirectory = process.env.NEXTSKIN_E2E_ACCOUNT_DATA_DIR!
+  for (const [name, bytes] of Object.entries(files)) {
+    const content = strFromU8(bytes)
+    expect(content, name).not.toContain(process.env.NEXTSKIN_E2E_SECRET!)
+    expect(content, name).not.toContain(dataDirectory)
+    expect(content, name).not.toContain(JSON.stringify(dataDirectory).slice(1, -1))
+  }
+
+  await page.goto('/admin/audit')
+  await expect(page.getByText(t('admin.audit.actions.diagnosticsExport'), { exact: true }).first()).toBeVisible()
 })
