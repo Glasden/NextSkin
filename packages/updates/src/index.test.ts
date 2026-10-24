@@ -88,8 +88,8 @@ describe('条目签名与校验', () => {
     expect(verifyEntry(value, keys)).toBeNull()
   })
 
-  it('拒绝包装多字段和签名有效但 JSON 非法的条目', () => {
-    expect(verifyEntry({ ...signedRaw(release()), extra: true }, keys)).toBeNull()
+  it('忽略包装上多出的字段，拒绝签名有效但 JSON 非法的条目', () => {
+    expect(verifyEntry({ ...signedRaw(release()), extra: true }, keys)).toEqual(release())
     const entry = '{'
     expect(
       verifyEntry(
@@ -99,7 +99,7 @@ describe('条目签名与校验', () => {
     ).toBeNull()
   })
 
-  it('每一个字段都不能缺少、类型不能出错，也不能添加字段', () => {
+  it('每一个字段都不能缺少、类型不能出错', () => {
     for (const field of Object.keys(release())) {
       const entry: Record<string, unknown> = { ...release() }
       delete entry[field]
@@ -112,8 +112,13 @@ describe('条目签名与校验', () => {
         ),
       ).toBeNull()
     }
-    expect(verifyEntry(signedRaw({ ...release(), extra: true }), keys)).toBeNull()
     for (const value of [null, [], 'text']) expect(verifyEntry(signedRaw(value), keys)).toBeNull()
+  })
+
+  it('以后的版本加的字段签进条目，读出时忽略、不往下传', () => {
+    expect(verifyEntry(signedRaw({ ...release(), security: true, extra: { nested: 1 } }), keys)).toEqual(release())
+    // 认识的字段照样校验
+    expect(verifyEntry(signedRaw({ ...release(), size: 0, security: true }), keys)).toBeNull()
   })
 
   it.each([
@@ -159,8 +164,9 @@ describe('条目签名与校验', () => {
     }
   })
 
-  it('签名端也拒绝非法输入和非 ed25519 密钥', () => {
+  it('签名端也拒绝非法输入、不认识的字段和非 ed25519 密钥', () => {
     expect(() => signEntry({ ...release(), size: 0 }, privateKey, 'test-key')).toThrow()
+    expect(() => signEntry({ ...release(), extra: true } as ReleaseEntry, privateKey, 'test-key')).toThrow()
     expect(() => signEntry(release(), privateKey, 'BAD')).toThrow()
     const ec = generateKeyPairSync('ec', { namedCurve: 'prime256v1' })
     expect(() =>
@@ -247,17 +253,17 @@ describe('清单与下载地址', () => {
     expect(readManifest({ schema: 1, releases: [] })).toEqual({ releases: [], rejected: 0 })
   })
 
-  it.each([
-    null,
-    [],
-    {},
-    '{',
-    { schema: 2, releases: [] },
-    { schema: 1, releases: {} },
-    { schema: 1, releases: [], extra: true },
-  ])('非法清单抛 ManifestError：%j', (body) => {
-    expect(() => readManifest(body, keys)).toThrow(ManifestError)
+  it('清单顶层多出的字段忽略', () => {
+    const body = { schema: 1, releases: [signEntry(release(), privateKey, 'test-key')], generatedAt: 'now' }
+    expect(readManifest(body, keys)).toEqual({ releases: [release()], rejected: 0 })
   })
+
+  it.each([null, [], {}, '{', { schema: 2, releases: [] }, { schema: 1, releases: {} }, { releases: [] }])(
+    '非法清单抛 ManifestError：%j',
+    (body) => {
+      expect(() => readManifest(body, keys)).toThrow(ManifestError)
+    },
+  )
 
   it('下载顺序是 dl 然后 GitHub', () => {
     expect(MANIFEST_URL).toBe('https://dl.nextskin.org/releases/v1.json')

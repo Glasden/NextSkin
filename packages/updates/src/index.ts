@@ -25,6 +25,11 @@ MCowBQYDK2VwAyEALhERgqjUtP4iJTNiCVrPIL8RmWfVbbMZvyQFE/JeKlI=
 `,
 }
 
+/**
+ * 清单里的一个版本。读取端只认这些字段，条目、签名的包装和清单顶层多出的字段一律忽略：
+ * 以后加字段不换 schema，已部署的版本照样认得新条目。旧版本必须理解才能安全处理的变化，
+ * 换 schema 和清单地址，旧地址照旧发布（ADR-0061）。0.7.0 及之前的版本会拒绝多出字段的条目。
+ */
 export interface ReleaseEntry {
   version: string
   date: string
@@ -63,10 +68,12 @@ function positiveInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
 }
 
+const releaseEntryFields = ['version', 'date', 'notes', 'file', 'sha256', 'size', 'minNode', 'managerProtocol']
+
+/** 只核对认识的字段，多出的字段由调用方决定拒绝还是忽略 */
 function isReleaseEntry(value: unknown): value is ReleaseEntry {
   if (!isObject(value)) return false
-  const fields = ['version', 'date', 'notes', 'file', 'sha256', 'size', 'minNode', 'managerProtocol']
-  if (Object.keys(value).length !== fields.length || !fields.every((field) => Object.hasOwn(value, field))) return false
+  if (!releaseEntryFields.every((field) => Object.hasOwn(value, field))) return false
   if (typeof value.version !== 'string' || !releaseVersionPattern.test(value.version)) return false
   if (value.file !== `nextskin-${value.version}.zip`) return false
   if (typeof value.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(value.sha256)) return false
@@ -105,7 +112,9 @@ export function verifyDetached(data: Uint8Array, signature: Uint8Array, publicKe
 }
 
 export function signEntry(entry: ReleaseEntry, privateKeyPem: string, keyId: string): SignedEntry {
-  if (!isReleaseEntry(entry) || !keyIdPattern.test(keyId)) throw new Error('发布条目或 key id 不合法')
+  // 签名端只写认识的字段：加字段要先加进 ReleaseEntry
+  if (!isReleaseEntry(entry) || Object.keys(entry).length !== releaseEntryFields.length || !keyIdPattern.test(keyId))
+    throw new Error('发布条目或 key id 不合法')
   const body = JSON.stringify(entry)
   return {
     entry: body,
@@ -119,12 +128,7 @@ export function verifyEntry(
   keys: Readonly<Record<string, string>> = RELEASE_KEYS,
 ): ReleaseEntry | null {
   try {
-    if (
-      !isObject(signed) ||
-      Object.keys(signed).length !== 3 ||
-      !['entry', 'key', 'signature'].every((field) => Object.hasOwn(signed, field))
-    )
-      return null
+    if (!isObject(signed) || !['entry', 'key', 'signature'].every((field) => Object.hasOwn(signed, field))) return null
     const { entry, key, signature } = signed
     if (typeof entry !== 'string' || typeof key !== 'string' || typeof signature !== 'string') return null
     if (!keyIdPattern.test(key) || !Object.hasOwn(keys, key) || typeof keys[key] !== 'string') return null
@@ -134,7 +138,10 @@ export function verifyEntry(
     if (bytes.toString('base64') !== signature || !verifyDetached(Buffer.from(entry, 'utf8'), bytes, keys[key]))
       return null
     const parsed: unknown = JSON.parse(entry)
-    return isReleaseEntry(parsed) ? parsed : null
+    if (!isReleaseEntry(parsed)) return null
+    // 多出的字段不往下传，返回值和 ReleaseEntry 的形状一致
+    const { version, date, notes, file, sha256, size, minNode, managerProtocol } = parsed
+    return { version, date, notes, file, sha256, size, minNode, managerProtocol }
   } catch {
     return null
   }
@@ -157,7 +164,6 @@ export function readManifest(
   }
   if (
     !isObject(body) ||
-    Object.keys(body).length !== 2 ||
     !Object.hasOwn(body, 'schema') ||
     !Object.hasOwn(body, 'releases') ||
     body.schema !== 1 ||
