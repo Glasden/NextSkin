@@ -1238,7 +1238,8 @@
       "failedJobs": "失败任务",
       "oauthClients": "OAuth 应用",
       "notifications": "通知",
-      "updates": "更新"
+      "updates": "更新",
+      "diagnostics": "诊断"
     },
     "roles": {
       "banned": "已封禁",
@@ -1510,6 +1511,7 @@
         "oauthClientDelete": "删除 OAuth 应用",
         "notificationSend": "发送通知",
         "notificationRecall": "撤回通知",
+        "diagnosticsExport": "导出诊断包",
         "updatePrepare": "准备升级",
         "updateApply": "执行升级",
         "updateRollback": "回滚版本"
@@ -1526,7 +1528,8 @@
         "job": "失败任务 #{id}",
         "allJobs": "全部失败任务",
         "notificationBroadcast": "通知发送 #{id}",
-        "update": "{version, select, none {升级} other {版本 {version}}}"
+        "update": "{version, select, none {升级} other {版本 {version}}}",
+        "diagnostics": "诊断包"
       },
       "actorSystem": "系统",
       "actorPlugin": "插件 {id}",
@@ -2436,6 +2439,181 @@
         "rollbackConfirms": {
           "sqlite": "我知道升级以后的所有写入都会丢失"
         }
+      }
+    },
+    "diagnostics": {
+      "title": "诊断",
+      "description": "排查问题时先看这里：运行环境、数据库、存储、插件进程、后台任务和日志。请别人帮忙看时，导出诊断包发给对方。",
+      "durations": {
+        "days": "{days, plural, other {# 天}} {hours, plural, other {# 小时}}",
+        "hours": "{hours, plural, other {# 小时}} {minutes, plural, other {# 分钟}}",
+        "minutes": "{minutes, plural, other {# 分钟}}"
+      },
+      "versions": {
+        "title": "版本",
+        "nextskin": "NextSkin",
+        "source": "源码运行",
+        "pluginApi": "插件 API",
+        "node": "Node.js",
+        "os": "系统",
+        "runMode": "运行方式",
+        "runModes": {
+          "manager": "管理进程监管，可以一键升级",
+          "launcher": "启动器监管",
+          "direct": "直接运行 server.js",
+          "development": "开发环境"
+        },
+        "uptime": "已运行",
+        "startedAt": "{time} 启动"
+      },
+      "database": {
+        "title": "数据库",
+        "dialect": "类型",
+        "dialects": {
+          "sqlite": "SQLite",
+          "mysql": "MySQL / MariaDB",
+          "postgres": "PostgreSQL"
+        },
+        "serverVersion": "服务端版本",
+        "unknownVersion": "读不到",
+        "migrations": "迁移",
+        "upToDate": "已是最新",
+        "pending": "有迁移没执行",
+        "newer": "比程序新",
+        "allApplied": "核心和已启用插件的迁移都执行了",
+        "pendingCore": "核心有 {count, plural, other {# 个迁移}}还没执行，重启服务时会执行",
+        "unknownCore": "数据库里有 {count, plural, other {# 个}}这个版本不认识的核心迁移：可能被更新的版本升级过，回到那个版本再运行",
+        "pendingPlugin": "插件 <id>{plugin}</id> 有 {count, plural, other {# 个迁移}}还没执行"
+      },
+      "storage": {
+        "title": "存储",
+        "dataDirectory": "数据目录",
+        "free": "剩余空间",
+        "freeValue": "{free} / {total}",
+        "unknown": "读不到",
+        "lowSpace": "空间不足",
+        "logs": "日志文件",
+        "logsValue": "{size}，{count, plural, other {# 个文件}}",
+        "logsOff": "没有写文件",
+        "dropped": "最近 24 小时丢掉的日志",
+        "droppedValue": "{count} 条",
+        "droppedAtLeast": "至少 {count} 条，只看了最新的 8 MB 日志",
+        "droppedBadge": "日志有丢失"
+      },
+      "pluginHost": {
+        "title": "插件进程",
+        "states": {
+          "running": "运行中",
+          "idle": "未启动",
+          "restarting": "正在重启",
+          "failed": "已停止",
+          "disabled": "不运行插件"
+        },
+        "plugins": "在里面运行的插件",
+        "empty": {
+          "running": "没有",
+          "idle": "还没有启用上传安装的插件，用不着它",
+          "restarting": "重启好之后恢复",
+          "failed": "都暂停了",
+          "disabled": "这个进程不运行上传安装的插件"
+        },
+        "lastError": "上一次出错",
+        "network": "直接连网",
+        "networkRestricted": "拦得住：插件只能经站点访问它声明的地址",
+        "networkUnrestricted": "拦不住：这台服务器的 Node.js 早于 26",
+        "link": "去插件页"
+      },
+      "jobs": {
+        "title": "后台任务",
+        "queued": "排队中",
+        "deadLetters": "核心的失败任务",
+        "failedBadge": "有失败任务",
+        "oldest": "等得最久的任务",
+        "nothingDue": "没有到期还没执行的",
+        "link": "去失败任务页"
+      },
+      "update": {
+        "title": "最近一次升级",
+        "results": {
+          "success": "成功",
+          "rolledBack": "已回滚",
+          "failed": "失败"
+        },
+        "kind": "方式",
+        "kinds": {
+          "update": "一键升级",
+          "manual": "手动解压",
+          "legacy": "旧版本的升级",
+          "rollback": "回滚"
+        },
+        "at": "时间",
+        "versions": "版本",
+        "versionsValue": "{from} → {to}",
+        "reason": "原因",
+        "link": "去更新页"
+      },
+      "logs": {
+        "title": "日志",
+        "tableLabel": "日志记录",
+        "columns": {
+          "time": "时间",
+          "level": "级别",
+          "source": "来源",
+          "message": "内容"
+        },
+        "levels": {
+          "debug": "调试",
+          "info": "信息",
+          "warn": "警告",
+          "error": "错误",
+          "fatal": "致命"
+        },
+        "sources": {
+          "launcher": "启动器",
+          "core": "核心",
+          "plugin-host": "插件进程",
+          "plugin": "插件"
+        },
+        "raw": "原始输出",
+        "unparsed": "无法解析",
+        "levelLabel": "最低级别",
+        "allLevels": "全部级别",
+        "atLeast": "{level}及以上",
+        "sourceLabel": "来源",
+        "allSources": "全部来源",
+        "searchLabel": "搜索日志",
+        "searchPlaceholder": "关键字，不区分大小写",
+        "search": "搜索",
+        "live": "每 5 秒自动取新的",
+        "pollFailed": "自动刷新没有成功，稍后会再试",
+        "latest": "回到最新",
+        "empty": "日志文件里还没有记录",
+        "emptyFiltered": "没有符合筛选的记录",
+        "shown": "已显示 {count, plural, other {# 条}}",
+        "end": "已经到最早的记录",
+        "scanLimited": "这次往前找了 8 MB，还没凑够一页",
+        "older": "更早的",
+        "continue": "继续往前找",
+        "unavailableTitle": "没有找到日志文件",
+        "unavailableOff": "文件日志关掉了（NEXTSKIN_LOG_FILE=off），日志只写到终端：看面板的输出、journald 或 docker logs。打开后日志写在 {directory}。",
+        "unavailableEmpty": "日志应该写在 {directory}，那里还没有日志文件。由旧版本的启动器拉起时不写文件，日志在面板的输出、journald 或 docker logs 里。",
+        "guide": "日志在哪"
+      },
+      "export": {
+        "open": "导出诊断包",
+        "title": "导出诊断包",
+        "description": "下载一个 zip，发给帮你排查问题的人。",
+        "contents": {
+          "summary": "这一页上的摘要：版本、数据库、存储、插件进程和后台任务",
+          "settings": "全部设置；机密项只记有没有设置",
+          "environment": "设了哪些 NEXTSKIN_ 开头的环境变量，只记名字；插件和后台任务的状态",
+          "logs": "最近的日志，最多 10 MB"
+        },
+        "redaction": "邮箱、公网 IP、令牌、密码和实例目录会换成占位符；角色名、UUID、材质 hash 和 uid 原样保留。",
+        "review": "替换是尽力而为，认不出来的个人信息会留在里面。发出去之前，先解压自己看一遍。",
+        "cancel": "取消",
+        "confirm": "下载",
+        "done": "诊断包已经下载"
       }
     },
     "failedJobs": {
