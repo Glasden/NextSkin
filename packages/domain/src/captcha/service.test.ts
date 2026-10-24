@@ -1,3 +1,4 @@
+import { captureLogs } from '@nextskin/logging'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { createCaptcha } from './service.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
@@ -10,10 +11,13 @@ const endpoints = [
   'https://www.recaptcha.net/recaptcha/api/siteverify',
 ]
 const input = { token: 'TOKEN_CANARY', ip: '198.51.100.7' }
-afterEach(() => vi.restoreAllMocks())
+let logs: ReturnType<typeof captureLogs>
+afterEach(() => {
+  logs.restore()
+  vi.restoreAllMocks()
+})
 beforeEach(() => {
-  vi.spyOn(console, 'warn').mockImplementation(() => {})
-  vi.spyOn(console, 'error').mockImplementation(() => {})
+  logs = captureLogs()
 })
 
 function setup(provider: (typeof providers)[number] = 'turnstile') {
@@ -96,12 +100,12 @@ test.each(providers)('%s 密钥错误记 error，服务商故障记 warn，令�
   for (const code of configCodes) {
     fetcher.mockResolvedValueOnce(Response.json({ success: false, 'error-codes': [code] }))
     expect(await captcha.test(input)).toEqual({ result: 'unavailable', errorCodes: [code] })
-    expect(console.error).toHaveBeenLastCalledWith(`[captcha] ${provider} ${code}`)
+    expect(logs.records.at(-1)).toMatchObject({ area: 'captcha', level: 'error', provider, msg: code })
   }
   for (const code of ['internal-error', 'bad-request']) {
     fetcher.mockResolvedValueOnce(Response.json({ success: false, 'error-codes': [code] }))
     await expect(captcha.verify(input)).rejects.toMatchObject({ code: 'captcha_unavailable' })
-    expect(console.warn).toHaveBeenLastCalledWith(`[captcha] ${provider} provider_error`)
+    expect(logs.records.at(-1)).toMatchObject({ area: 'captcha', level: 'warn', provider, msg: 'provider_error' })
   }
   fetcher.mockResolvedValueOnce(Response.json({ success: false, 'error-codes': ['timeout-or-duplicate'] }))
   expect(await captcha.test(input)).toEqual({ result: 'failed', errorCodes: ['timeout-or-duplicate'] })
@@ -112,7 +116,7 @@ test.each(providers)('%s 超时、网络错误、非 2xx、非 JSON 和错误结
   const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(AbortSignal.abort())
   fetcher.mockRejectedValueOnce(new DOMException('TOKEN_CANARY SECRET_CANARY', 'TimeoutError'))
   await expect(captcha.verify(input)).rejects.toMatchObject({ code: 'captcha_unavailable' })
-  expect(console.warn).toHaveBeenLastCalledWith(`[captcha] ${provider} timeout`)
+  expect(logs.records.at(-1)).toMatchObject({ area: 'captcha', level: 'warn', provider, msg: 'timeout' })
   timeout.mockRestore()
   fetcher.mockRejectedValueOnce(new Error('TOKEN_CANARY SECRET_CANARY'))
   await expect(captcha.verify(input)).rejects.toMatchObject({ code: 'captcha_unavailable' })
@@ -126,7 +130,7 @@ test.each(providers)('%s 超时、网络错误、非 2xx、非 JSON 和错误结
     fetcher.mockResolvedValueOnce(response)
     expect(await captcha.test(input)).toEqual({ result: 'unavailable', errorCodes: [] })
   }
-  expect(JSON.stringify(vi.mocked(console.warn).mock.calls)).not.toMatch(/TOKEN_CANARY|SECRET_CANARY|SITE_CANARY/)
+  expect(JSON.stringify(logs.records)).not.toMatch(/TOKEN_CANARY|SECRET_CANARY|SITE_CANARY/)
 })
 
 test('没启用和两个密钥没填全时不发请求，每次都重新读设置', async () => {
@@ -156,7 +160,9 @@ test('诊断错误码最多十条，分类仍检查第十条之后的配置错�
   const codes = [...Array.from({ length: 12 }, (_, i) => `code-${i}`), 'invalid-input-secret']
   fetcher.mockResolvedValueOnce(Response.json({ success: false, 'error-codes': codes }))
   expect(await captcha.test(input)).toEqual({ result: 'unavailable', errorCodes: codes.slice(0, 10) })
-  expect(console.error).toHaveBeenCalledWith('[captcha] turnstile invalid-input-secret')
+  expect(logs.records).toContainEqual(
+    expect.objectContaining({ area: 'captcha', level: 'error', provider: 'turnstile', msg: 'invalid-input-secret' }),
+  )
 })
 
 test('错误码里有非字符串时当作响应格式不对，即使 success 为真也不放行', async () => {

@@ -1,5 +1,6 @@
 import { coreMigrations, migrateToLatest, toIsoTimestamp, upsert, writeAuthDate, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
+import { createMemoryLogger } from '@nextskin/logging'
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest'
 import { createCore, encodeSettingValue, type Core, type CoreSettingKey, type CoreSettingValue } from '../index.ts'
 import type { MailMessage, MailTransport } from './types.ts'
@@ -11,7 +12,7 @@ let core: Core
 let uid: number
 let send: MailTransport['send']
 const messages: MailMessage[] = []
-const lines: string[] = []
+const { logger, records: lines } = createMemoryLogger()
 
 beforeAll(async () => {
   database = await createTestDatabase<CoreDatabase>()
@@ -43,7 +44,7 @@ beforeEach(async () => {
       read: () => Promise.resolve(null),
     },
     mailTransport: { send: (message) => send(message) },
-    jobs: { log: (line) => lines.push(line) },
+    jobs: { logger },
   })
   const now = writeAuthDate(database.db, toIsoTimestamp(new Date()))
   await database.db
@@ -145,7 +146,7 @@ test('发送失败到次数用完进死信：载荷去掉链接，错误和日�
       read: () => Promise.resolve(null),
     },
     mailTransport: { send: (message) => send(message) },
-    jobs: { log: (line) => lines.push(line), now: () => clock },
+    jobs: { logger, now: () => clock },
   })
   await core.mail.send('resetPassword', user(), url)
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -205,7 +206,7 @@ test('确认新邮箱链接过期时丢弃，通知无期限；两种死信都�
       read: () => Promise.resolve(null),
     },
     mailTransport: { send: (message) => send(message) },
-    jobs: { now: () => clock, log: (line) => lines.push(line) },
+    jobs: { now: () => clock, logger },
   })
   await core.mail.send('confirmEmailChange', { id: String(uid), email: 'new@example.test' }, url)
   await core.jobs.enqueue(database.db, MAIL_JOB, { template: 'emailChanged', uid, to: 'old@example.test' })
@@ -264,7 +265,7 @@ test('进死信时通知邮件保留渲染要用的内容，能放回队列重�
       read: () => Promise.resolve(null),
     },
     mailTransport: { send: (message) => send(message) },
-    jobs: { now: () => clock, log: (line) => lines.push(line) },
+    jobs: { now: () => clock, logger },
   })
   const at = toIsoTimestamp(new Date())
   const notices = [

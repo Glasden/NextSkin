@@ -1,4 +1,5 @@
 import { readAuthBoolean, readAuthDate, type IsoTimestamp, type CoreDatabase, type UserRole } from '@nextskin/db'
+import { getLogger } from '@nextskin/logging'
 import { isAPIError } from 'better-auth/api'
 import {
   DEVICE_CODE_GRANT_TYPE,
@@ -362,7 +363,7 @@ export function createAuthService(options: AuthServiceOptions) {
         await options.onPasswordChanged?.(input.uid)
       } catch {
         // 密码已经设好；通知失败不能改变结果，也不能记录用户数据
-        console.warn('[auth] password_event_failed')
+        getLogger('auth').warn('password_event_failed')
       }
     },
 

@@ -12,6 +12,7 @@ import {
   type PluginSummary,
 } from '@nextskin/domain'
 import { createTranslator } from '@nextskin/i18n'
+import { discardLogger, captureLogs } from '@nextskin/logging'
 import { afterEach, beforeEach, expect, test, vi, type MockInstance } from 'vitest'
 import type { CommandContext, ReadCommandContext } from '../context.ts'
 import { run } from './plugin.ts'
@@ -190,14 +191,18 @@ test.each([true, false])('打开核心使用 stage host；source=%s', async (sou
     startJobs: false,
     officialPlugins: [],
     pluginHostMode: 'stage',
-    pluginLog: expect.any(Function) as unknown,
+    pluginLogger: discardLogger,
     pluginHost: pluginHostEntry({ root: source ? repository : resolve(context.root, 'server'), bundled: !source }),
   })
   // 插件系统的日志不进命令行的输出
-  const info = vi.spyOn(console, 'info').mockImplementation(() => {})
+  const logs = captureLogs()
   const [, options] = vi.mocked(openCore).mock.calls[0]!
-  options?.pluginLog?.('[plugins] a activated version=1.0.0')
-  expect(info).not.toHaveBeenCalled()
+  options?.pluginLogger?.info('activated', { plugin: 'a', version: '1.0.0' })
+  try {
+    expect(logs.records).toEqual([])
+  } finally {
+    logs.restore()
+  }
   expect(log).not.toHaveBeenCalledWith('[plugins] a activated version=1.0.0')
   expect(close).toHaveBeenCalledOnce()
 })

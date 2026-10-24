@@ -125,6 +125,6 @@ npm install --save-dev typescript
 
 也可以不经过后台，在那个仓库里用命令行：`pnpm nextskin plugin install <tgz 的路径> --yes` 安装或升级，`pnpm nextskin plugin enable <插件 id>` 启用，`pnpm dev` 不用停，几秒后就切换过去。正式站点上是发行目录里的 `node nextskin.mjs plugin …`。
 
-注册一个测试用户，在运行 `pnpm dev` 的终端里查找 `[plugin:hello]`。核心还会记录 `[plugins] hello on:user.registered …ms ok` 这类调用结果。后台详情页能看到最近错误和死信，能重试或删除死信；普通日志看服务端输出。
+注册一个测试用户，在运行 `pnpm dev` 的终端里查找 `plugin/hello`。核心还会在 `core/plugins` 下记录每次调用的调用点、耗时和结果。后台详情页能看到最近错误和死信，能重试或删除死信；普通日志看服务端输出。
 
 更新代码后增加插件自己的 version，再重新构建、上传升级；新版本必须大于已安装版本，同版替换也会被拒绝。迁移只向前走，不支持降级。停用保留设置、数据和积压任务；卸载会删除这些数据，不能当成临时开关。

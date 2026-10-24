@@ -19,6 +19,7 @@ import {
   type CoreDatabase,
 } from '@nextskin/db'
 import { matchLocale } from '@nextskin/i18n'
+import { getLogger } from '@nextskin/logging'
 import type { Kysely } from 'kysely'
 import { z } from 'zod'
 import { DomainError } from '../errors.ts'
@@ -214,7 +215,7 @@ export function createExternalLogin(options: {
       })
     } catch {
       // 不记录可能带着邮箱的异常
-      console.warn('[mail] external_linked_enqueue_failed')
+      getLogger('mail').warn('external_linked_enqueue_failed')
     }
   }
 

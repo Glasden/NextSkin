@@ -13,6 +13,7 @@
  *   插件的任务和事件留在表里，等 host 恢复（ADR-0033"运行时防护"）。
  */
 import type { UserRole } from '@nextskin/db'
+import { rootLogger, type Logger } from '@nextskin/logging'
 import type { ExtractedPluginManifest as PluginManifest } from '@nextskin/plugin-host'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -293,7 +294,7 @@ export function createPluginSystem(options: {
   gateway: PluginDbExecutor
   official: readonly OfficialPlugin[]
   now: () => Date
-  log?: (line: string) => void
+  logger?: Logger
   syncIntervalMs?: number
   /** 加载官方插件的方式：默认在本进程内加载；测试换成别的实现 */
   load?: typeof loadPlugin
@@ -317,7 +318,8 @@ export function createPluginSystem(options: {
   const { db, handlers, events, schedules, gateway, now } = options
   /** 本进程运行安装插件：有 host，而且不是只用它准备的命令行 */
   const runsInstalled = !!options.host && options.hostMode !== 'stage'
-  const log = options.log ?? ((line: string) => console.info(line))
+  const baseLogger = options.logger ?? rootLogger()
+  const log = baseLogger.child({ area: 'plugins' })
   const kv = createPluginKv(db, now)
   const coreData = createPluginCoreData(db, options.storage)
   const pluginSettings = createPluginSettings(db, options.secretKey, now)
@@ -438,7 +440,7 @@ export function createPluginSystem(options: {
 
   function setRunnable(state: ActivePlugin, value: boolean) {
     if (state.stopped) return
-    if (state.runnable !== value) log(`[plugins] ${state.known.manifest.id} ${value ? 'runnable' : 'suspended'}`)
+    if (state.runnable !== value) log.info(value ? 'runnable' : 'suspended', { plugin: state.known.manifest.id })
     state.runnable = value
   }
 
@@ -452,7 +454,7 @@ export function createPluginSystem(options: {
       sequence: ++generationSequence,
       onRequest: (invocationId, method, args) => handleRequest(invocationId, method as CoreMethod, args as never),
       onExit: (exited, detail) => onHostExit(exited, detail),
-      log,
+      logger: baseLogger,
     })
     generations.add(started)
     return started
@@ -474,7 +476,7 @@ export function createPluginSystem(options: {
       hostState.failedKey = exited.key
       // 只记诊断信息（退出码、信号），说明的话由后台按语言写
       hostState.lastError = detail
-      log(`[plugins] host_failed crashes=${hostState.crashes.length}`)
+      log.warn('host_failed', { crashes: hostState.crashes.length })
       return
     }
     const delay = Math.min((options.hostRestart?.baseDelayMs ?? 1000) * 2 ** (hostState.crashes.length - 1), 30_000)
@@ -506,10 +508,10 @@ export function createPluginSystem(options: {
       try {
         local = await options.packages.ensure(row.id, row.version, hash)
       } catch (error) {
-        log(`[plugins] ${row.id} package_failed ${errorMessage(error)}`)
+        log.warn('package_failed', { plugin: row.id, reason: errorMessage(error) })
       }
       if (!local) {
-        if (!warned.has(hash)) log(`[plugins] ${row.id} package_unavailable version=${row.version}`)
+        if (!warned.has(hash)) log.warn('package_unavailable', { plugin: row.id, version: row.version })
         warned.add(hash)
         // 取不到新版本的包：留着上一次的 manifest 给后台显示，但不启用它、不加载旧的代码（syncLocked），下次同步再取
         if (current?.local) known.set(row.id, { ...current, local: null })
@@ -521,7 +523,7 @@ export function createPluginSystem(options: {
           installedKnown(local, () => generation),
         )
       } catch (error) {
-        log(`[plugins] ${row.id} manifest_invalid ${errorMessage(error)}`)
+        log.warn('manifest_invalid', { plugin: row.id, reason: errorMessage(error) })
       }
     }
   }
@@ -562,7 +564,7 @@ export function createPluginSystem(options: {
         hostState.retryAt =
           Date.now() + Math.min(START_RETRY_MS * 2 ** (hostState.startFailures - 1), START_RETRY_MAX_MS)
         hostState.lastError = errorMessage(error)
-        log(`[plugins] host_start_failed ${errorMessage(error)}`)
+        log.error('host_start_failed', { reason: errorMessage(error) })
         return
       }
     }
@@ -573,7 +575,7 @@ export function createPluginSystem(options: {
     hostState.failedKey = null
     hostState.lastError = null
     if (previous) dispose(previous, 'retire')
-    log(`[plugins] host_generation ${candidate.sequence} ${key}`)
+    log.info('host_generation', { generation: candidate.sequence, key })
   }
 
   /** 官方插件的请求同样克隆一次；错误只带名字、消息和 code，和跨进程时一样 */
@@ -613,9 +615,13 @@ export function createPluginSystem(options: {
     const a = args as Record<string, unknown>
     const id = invocation.pluginId
     if (method === 'log') {
-      const level = ['debug', 'info', 'warn', 'error'].includes(String(a.level)) ? String(a.level) : 'info'
-      const fields = a.fields === undefined ? '' : ` ${[...JSON.stringify(a.fields)].slice(0, 2000).join('')}`
-      log(`[plugin:${id}] ${level} ${[...String(a.message)].slice(0, 1000).join('')}${fields}`)
+      const level = a.level === 'debug' || a.level === 'warn' || a.level === 'error' ? a.level : 'info'
+      const serialized = a.fields === undefined ? undefined : [...JSON.stringify(a.fields)]
+      const fields =
+        serialized === undefined
+          ? undefined
+          : { fields: serialized.length > 2000 ? serialized.slice(0, 2000).join('') : a.fields }
+      baseLogger.child({ source: 'plugin', plugin: id })[level]([...String(a.message)].slice(0, 1000).join(''), fields)
       return null
     }
     // 事务内的拦截器只等得起本地的数据库操作；迁移和设置校验也只碰自己的表（ADR-0033）
@@ -858,7 +864,7 @@ export function createPluginSystem(options: {
       // 超时了插件那边可能还在跑：让它的 ctx.signal 也中止
       plugin.known.loaded.cancel(invocationId)
       // 第一版没有指标系统，只记日志：插件 id、调用点、耗时、结果（ADR-0033）
-      log(`[plugins] ${id} ${point} ${Date.now() - started}ms ${outcome}`)
+      log[outcome === 'ok' ? 'info' : 'warn']('call', { plugin: id, point, ms: Date.now() - started, outcome })
     }
   }
 
@@ -1050,7 +1056,7 @@ export function createPluginSystem(options: {
       schedules.add({ name, cron: entry.schedule, job: pluginJobName(id, entry.job), payload: entry.payload })
       state.registered.schedules.push(name)
     })
-    log(`[plugins] ${id} activated version=${manifest.version}`)
+    log.info('activated', { plugin: id, version: manifest.version })
   }
 
   /** `cancel` 为 false 是换代（升级、改授权）：撤销登记，在途的调用照常做完（ADR-0035） */
@@ -1071,7 +1077,7 @@ export function createPluginSystem(options: {
       }
       state.known.loaded.unload()
     }
-    log(`[plugins] ${id} deactivated`)
+    log.info('deactivated', { plugin: id })
   }
 
   /**
@@ -1125,7 +1131,7 @@ export function createPluginSystem(options: {
         // 上一个版本在途的调用照常做完
         deactivate(id, false)
         const key = `activate:${id}:${plugin.manifest.version}`
-        if (!warned.has(key)) log(`[plugins] ${id} activate_failed ${errorMessage(error)}`)
+        if (!warned.has(key)) log.warn('activate_failed', { plugin: id, reason: errorMessage(error) })
         warned.add(key)
       }
     }
@@ -1153,7 +1159,9 @@ export function createPluginSystem(options: {
       const keep = new Set<string>()
       for (const plugin of known.values()) if (plugin.local) keep.add(plugin.local.dir)
       for (const item of generations) for (const plugin of item.plugins.values()) keep.add(plugin.dir)
-      await options.packages.prune(keep).catch((error: unknown) => log(`[plugins] prune_failed ${errorMessage(error)}`))
+      await options.packages
+        .prune(keep)
+        .catch((error: unknown) => log.warn('prune_failed', { reason: errorMessage(error) }))
     }
   }
 
@@ -1165,7 +1173,7 @@ export function createPluginSystem(options: {
 
   function tick(): Promise<void> {
     syncing ??= exclusive(() => syncLocked())
-      .catch((error: unknown) => log(`[plugins] sync_failed ${error instanceof Error ? error.name : 'error'}`))
+      .catch((error: unknown) => log.warn('sync_failed', { error: error instanceof Error ? error.name : 'error' }))
       .finally(() => {
         syncing = undefined
         if (running) scheduleSync()
@@ -1188,7 +1196,7 @@ export function createPluginSystem(options: {
     if (breaker.failures >= BREAKER_THRESHOLD) {
       breaker.openUntil = Date.now() + BREAKER_COOLDOWN_MS
       breaker.failures = 0
-      log(`[plugins] breaker_open ${key} cooldown=${BREAKER_COOLDOWN_MS}ms`)
+      log.warn('breaker_open', { key, cooldown: BREAKER_COOLDOWN_MS })
     }
     breakers.set(key, breaker)
   }
@@ -1207,7 +1215,7 @@ export function createPluginSystem(options: {
     const policy = interceptorPolicies[name]
     for (const [id, names] of unavailable)
       if (names.has(name)) {
-        log(`[plugins] ${id} intercept_failed ${name} unavailable`)
+        log.warn('intercept_failed', { plugin: id, name, reason: 'unavailable' })
         return { action: 'unavailable' }
       }
     const list = activeWith('interceptors', (items) => items.some((item) => item.name === name))
@@ -1222,7 +1230,7 @@ export function createPluginSystem(options: {
       scope = await requestScope()
     } catch {
       // 准备 scope（例如读站点默认语言）出错也按不可用处理，失败时拒绝的点不能因此漏过去
-      log(`[plugins] intercept_failed ${name} scope_error`)
+      log.warn('intercept_failed', { name, reason: 'scope_error' })
       return { action: 'unavailable' }
     }
     for (const { plugin } of list) {
@@ -1239,11 +1247,12 @@ export function createPluginSystem(options: {
       } catch (error) {
         recordFailure(key)
         // 插件抛出的消息由插件负责，留给作者排查；核心自己的错误消息里不带请求数据
-        log(
-          error instanceof PluginInvocationError
-            ? `[plugins] ${id} intercept_failed ${name} ${error.reason} ${[...error.message].slice(0, 300).join('')}`
-            : `[plugins] ${id} intercept_failed ${name} error`,
-        )
+        log.warn('intercept_failed', {
+          plugin: id,
+          name,
+          reason: error instanceof PluginInvocationError ? error.reason : 'error',
+          ...(error instanceof PluginInvocationError ? { message: [...error.message].slice(0, 300).join('') } : {}),
+        })
         return { action: 'unavailable' }
       }
       // 插件侧可能被完全控制：返回值在这里再检查一遍，合法的返回值才清掉失败计数
@@ -1309,14 +1318,14 @@ export function createPluginSystem(options: {
     } catch (error) {
       const reason = error instanceof PluginInvocationError ? error.reason : 'error'
       recordFailure(key)
-      log(`[plugins] ${pluginId} login_failed ${call.kind} ${providerId} ${reason}`)
+      log.warn('login_failed', { plugin: pluginId, kind: call.kind, provider: providerId, reason })
       throw new DomainError(reason === 'unavailable' ? 'external_login_unavailable' : 'external_login_failed')
     }
     // 插件侧可能被完全控制：返回值在这里再检查一遍，合法的返回值才清掉失败计数
     const checked = check(result)
     if (checked === undefined) {
       recordFailure(key)
-      log(`[plugins] ${pluginId} login_failed ${call.kind} ${providerId} invalid_result`)
+      log.warn('login_failed', { plugin: pluginId, kind: call.kind, provider: providerId, reason: 'invalid_result' })
       throw new DomainError('external_login_failed')
     }
     breakers.delete(key)
@@ -1596,7 +1605,7 @@ export function createPluginSystem(options: {
       try {
         user = await db.selectFrom('users').select(['role', 'locale']).where('id', '=', input.uid).executeTakeFirst()
       } catch {
-        log(`[plugins] intercept_failed ${name} user_error`)
+        log.warn('intercept_failed', { name, reason: 'user_error' })
         return { action: 'unavailable' }
       }
       if (!user) throw new DomainError('unauthenticated')
@@ -1653,15 +1662,17 @@ export function createPluginSystem(options: {
             )
           } catch (error) {
             recordFailure(key)
-            log(
-              `[plugins] ${id} password_verify_failed ${provider.id} ${error instanceof PluginInvocationError ? error.reason : 'error'}`,
-            )
+            log.warn('password_verify_failed', {
+              plugin: id,
+              provider: provider.id,
+              reason: error instanceof PluginInvocationError ? error.reason : 'error',
+            })
             continue
           }
           // 插件侧可能被完全控制：返回值在这里再检查一遍
           if (typeof result !== 'boolean') {
             recordFailure(key)
-            log(`[plugins] ${id} password_verify_failed ${provider.id} invalid_result`)
+            log.warn('password_verify_failed', { plugin: id, provider: provider.id, reason: 'invalid_result' })
             continue
           }
           breakers.delete(key)

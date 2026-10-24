@@ -7,6 +7,7 @@ import {
   type PlayerView,
 } from '@nextskin/domain'
 import { createTranslator } from '@nextskin/i18n'
+import { captureLogs } from '@nextskin/logging'
 import { expect, test, vi } from 'vitest'
 import { createApp } from '../app.ts'
 
@@ -191,15 +192,15 @@ test('未知用户的错误与非 JSON 响应用站点语言；非 JSON 响应�
     errorMessage: createTranslator('zh-CN')('yggdrasil.errors.content_type'),
   })
   expect(methods.authenticate).not.toHaveBeenCalled()
-  const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+  const log = captureLogs()
   try {
     methods.validate.mockRejectedValue(new Error('sensitive password token otp'))
     const failed = await request('/authserver/validate')
     expect(failed.status).toBe(500)
     expect(await failed.text()).toBe('Internal Server Error')
-    expect(log).not.toHaveBeenCalled()
+    expect(log.records).toEqual([])
   } finally {
-    log.mockRestore()
+    log.restore()
   }
 })
 

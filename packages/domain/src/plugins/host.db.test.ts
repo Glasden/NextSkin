@@ -770,7 +770,7 @@ test('命令行（host 只用来准备）安装、启用、升级、停用、卸
     },
     plugins: {
       sqliteFile: env.databaseFile,
-      log: (line) => env.lines.push(line),
+      logger: env.logger,
       host: hostEntry,
       hostMode: 'stage',
       // 同步只在测试里手动触发
@@ -780,7 +780,7 @@ test('命令行（host 只用来准备）安装、启用、升级、停用、卸
         store: createLocalPluginPackageStore(join(storage.dir, 'plugin-packages')),
       }),
     },
-    jobs: { log: (line) => env.lines.push(line) },
+    jobs: { logger: env.logger },
   })
   await cli.plugins.start()
   try {
@@ -1023,7 +1023,14 @@ test('升级保留在途调用；停用取消退役一代里本插件的调用�
   await env.core.plugins.admin.disable(actor, 'waiter')
   expect(signal?.aborted).toBe(true)
   await rejected
-  await until(() => env.lines.some((line) => line.includes('WAIT_ABORTED')))
+  await until(() =>
+    env.records.some(
+      (record) => record.source === 'plugin-host' && record.level === 'warn' && record.msg.includes('WAIT_ABORTED'),
+    ),
+  )
+  const stderr = env.records.find((record) => record.msg.includes('WAIT_ABORTED'))!
+  expect(stderr).toMatchObject({ source: 'plugin-host', level: 'warn', generation: expect.any(Number) as unknown })
+  expect(stderr).not.toHaveProperty('area')
   expect(text((await env.core.plugins.route(route('other', '/version'))).body)).toBe('other')
 })
 
@@ -1042,7 +1049,11 @@ test('调用方给了更短的期限（首页的挂件，ADR-0059）：按它超
     code: 'plugin_timeout',
   })
   expect(Date.now() - started).toBeLessThan(5_000)
-  await until(() => env.lines.some((line) => line.includes('WAIT_ABORTED')))
+  await until(() =>
+    env.records.some(
+      (record) => record.source === 'plugin-host' && record.level === 'warn' && record.msg.includes('WAIT_ABORTED'),
+    ),
+  )
 })
 
 test('表里换成了本实例取不到的新版本：插件不可用，但在途的调用照常做完，不中止', async () => {

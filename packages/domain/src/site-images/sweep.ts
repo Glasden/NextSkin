@@ -1,3 +1,4 @@
+import { rootLogger, type Logger } from '@nextskin/logging'
 import type { JobHandler } from '../jobs/runner.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
 import type { SiteImageStorage } from './storage.ts'
@@ -11,10 +12,10 @@ export function createSiteImageSweep(options: {
   storage: SiteImageStorage
   settings: Pick<ReturnType<typeof createSettingQueries>, 'read'>
   now: () => Date
-  log?: (line: string) => void
+  logger?: Logger
 }): JobHandler {
   const { storage, settings, now } = options
-  const log = options.log ?? ((line) => console.info(line))
+  const log = (options.logger ?? rootLogger()).child({ area: 'site-images' })
   return {
     concurrency: 1,
     async run({ signal }) {
@@ -31,7 +32,7 @@ export function createSiteImageSweep(options: {
         await storage.delete(file)
         deleted++
       }
-      if (deleted) log(`[site-images] sweep deleted=${deleted}`)
+      if (deleted) log.info('sweep', { deleted })
     },
   }
 }

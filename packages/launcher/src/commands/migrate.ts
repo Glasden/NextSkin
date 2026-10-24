@@ -34,7 +34,6 @@ export async function run(argv: string[], read: ReadCommandContext): Promise<num
         startJobs: false,
         migrationReport,
         officialPlugins,
-        pluginLog: (line) => console.error(line),
       })
       const { migrations } = opened
       // 迁移已经提交：关闭时出错不能报成迁移失败，否则升级流程会把成功的升级回滚掉

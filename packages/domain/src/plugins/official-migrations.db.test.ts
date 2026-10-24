@@ -12,6 +12,7 @@ import {
   type CoreDatabase,
 } from '@nextskin/db'
 import { createTestDatabase, removeTestDirectory, type TestDatabase } from '@nextskin/db/testing'
+import { discardLogger, captureLogs } from '@nextskin/logging'
 import { definePlugin, table } from '@nextskin/plugin-sdk'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { coreConfigFromEnv, openCore } from '../bootstrap.ts'
@@ -26,15 +27,17 @@ let opened: Awaited<ReturnType<typeof openCore>>[]
 const timestamp = toIsoTimestamp(new Date('2026-10-20T12:00:00Z'))
 const last = Object.keys(coreMigrations).sort().at(-1)!
 
+let logs: ReturnType<typeof captureLogs>
 beforeEach(async () => {
   database = await createTestDatabase<CoreDatabase>()
   directory = await mkdtemp(join(tmpdir(), 'nextskin-official-migrations-'))
   config = coreConfigFromEnv({ NEXTSKIN_DATA_DIR: directory }, { cwd: directory, production: false })
   config.database = database.config
   opened = []
-  vi.spyOn(console, 'info').mockImplementation(() => {})
+  logs = captureLogs()
 })
 afterEach(async () => {
+  logs.restore()
   vi.useRealTimers()
   vi.restoreAllMocks()
   try {
@@ -79,7 +82,7 @@ async function seed(id: string, enabled = true) {
 }
 
 async function boot(officialPlugins: OfficialPlugin[]) {
-  const result = await openCore(config, { startJobs: false, officialPlugins, pluginLog: () => {} })
+  const result = await openCore(config, { startJobs: false, officialPlugins, pluginLogger: discardLogger })
   opened.push(result)
   return result
 }

@@ -3,10 +3,13 @@ import { copyFile, mkdir, mkdtemp, readFile, readdir, stat, utimes, writeFile } 
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import { DatabaseSync, StatementSync } from 'node:sqlite'
+import { captureLogs } from '@nextskin/logging'
 import { sql, type Kysely } from 'kysely'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { backupSqlite, createDatabase, migrateToLatest, MigrationBackupError } from '../index.ts'
 import { removeTestDirectory } from '../testing.ts'
+
+vi.mock('node:fs/promises', { spy: true })
 
 type Schema = {
   items: { n: number }
@@ -182,4 +185,25 @@ test.each([false, true])('VACUUM INTO 写了一半失败时只删除本次临时
   expect(await readdir(backups)).toEqual(existing ? [basename(file)] : [])
   if (existing) expect(await readFile(file)).toEqual(original)
   expect(await db.selectFrom('items').selectAll().execute()).toEqual([{ n: 42 }])
+})
+
+test('清理旧备份失败只记录警告，保留成功的备份且不记录异常消息', async () => {
+  const backups = join(directory, 'backups')
+  const logs = captureLogs()
+  try {
+    vi.mocked(readdir).mockRejectedValueOnce(new Error('BACKUP_SECRET_CANARY'))
+    const file = await backupSqlite({ file: sourceFile, directory: backups, label, now })
+    expect((await readFile(file)).length).toBeGreaterThan(0)
+    expect(logs.records).toMatchObject([
+      {
+        source: 'core',
+        area: 'backup',
+        level: 'warn',
+        msg: `清理旧的数据库备份失败：${backups}；备份已成功，继续执行迁移。`,
+      },
+    ])
+    expect(JSON.stringify(logs.records)).not.toContain('BACKUP_SECRET_CANARY')
+  } finally {
+    logs.restore()
+  }
 })

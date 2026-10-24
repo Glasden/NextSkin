@@ -1,4 +1,5 @@
 import { toIsoTimestamp, type CoreDatabase, type IsoTimestamp } from '@nextskin/db'
+import { rootLogger, type Logger } from '@nextskin/logging'
 import type { Kysely } from 'kysely'
 import { DomainError } from '../errors.ts'
 import {
@@ -62,7 +63,7 @@ export interface JobRunnerOptions {
   stopTimeoutMs?: number
   now?: () => Date
   random?: () => number
-  log?: (line: string) => void
+  logger?: Logger
 }
 
 const LEASE_MARGIN_MS = 30_000
@@ -92,7 +93,7 @@ export function createJobRunner(options: JobRunnerOptions) {
   const pollIntervalMs = options.pollIntervalMs ?? 1000
   const now = options.now ?? (() => new Date())
   const random = options.random ?? Math.random
-  const log = options.log ?? ((line) => console.warn(line))
+  const log = (options.logger ?? rootLogger()).child({ area: 'jobs' })
   const active = new Map<number, { name: string; done: Promise<void>; controller: AbortController }>()
   // execute 超时后可能已经结束，处理函数仍要单独跟踪到真正完成。
   const executions = new Set<Promise<void>>()
@@ -139,7 +140,7 @@ export function createJobRunner(options: JobRunnerOptions) {
         }
       }
     } catch (error) {
-      log(`[jobs] poll_failed ${error instanceof Error ? error.name : typeof error}`)
+      log.warn('poll_failed', { error: error instanceof Error ? error.name : typeof error })
     }
     return started
   }
@@ -148,7 +149,7 @@ export function createJobRunner(options: JobRunnerOptions) {
     const controller = new AbortController()
     const done = execute(job, handler, timeoutMs, controller)
       .catch((error: unknown) =>
-        log(`[jobs] settle_failed ${job.name} ${error instanceof Error ? error.name : 'error'}`),
+        log.warn('settle_failed', { job: job.name, error: error instanceof Error ? error.name : 'error' }),
       )
       .finally(() => {
         active.delete(job.id)
@@ -190,12 +191,12 @@ export function createJobRunner(options: JobRunnerOptions) {
       ])
     } catch (error) {
       if (error instanceof JobDeferredError) {
-        log(`[jobs] deferred ${job.name} attempt=${job.attempts}`)
+        log.info('deferred', { job: job.name, attempt: job.attempts })
         await deferJob(db, lease, { runAt: at(error.delayMs) })
         return
       }
       const code = errorCode(error)
-      log(`[jobs] failed ${job.name} code=${code} attempt=${job.attempts}`)
+      log.warn('failed', { job: job.name, code, attempt: job.attempts })
       const text = (error instanceof JobTimeoutError ? null : describe(handler, error)) ?? code
       if (job.attempts >= maxAttempts)
         await failJob(db, lease, { error: text, now: at(), payload: deadLetter(handler, job.payload) })

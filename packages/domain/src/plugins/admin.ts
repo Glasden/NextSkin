@@ -12,6 +12,7 @@ import {
   type CoreDatabase,
   type IsoTimestamp,
 } from '@nextskin/db'
+import { getLogger } from '@nextskin/logging'
 import {
   compareVersions,
   PLUGIN_API_VERSION,
@@ -694,7 +695,7 @@ export function createPluginAdmin(options: {
         if (row?.package_hash && row.package_hash !== preview.packageHash)
           await packages.store
             .delete(row.package_hash)
-            .catch(() => console.warn(`[plugins] ${id} old_package_delete_failed`))
+            .catch(() => getLogger('plugins').warn('old_package_delete_failed', { plugin: id }))
         return { id, version: manifest.version, action: preview.action }
       })
     },

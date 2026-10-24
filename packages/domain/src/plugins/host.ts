@@ -6,6 +6,7 @@
  */
 import { spawn } from 'node:child_process'
 import { isDeepStrictEqual } from 'node:util'
+import { discardLogger, type Logger } from '@nextskin/logging'
 import {
   ChannelClosedError,
   createFrameChannel,
@@ -63,7 +64,7 @@ export async function probePluginHost(
     sequence: 0,
     onRequest: () => Promise.reject(new Error('空的 plugin host 不应请求核心')),
     onExit: () => {},
-    log: () => {},
+    logger: discardLogger,
     readyTimeoutMs: options.readyTimeoutMs ?? 10_000,
   })
   await generation.kill()
@@ -161,10 +162,10 @@ export function startHostGeneration(options: {
   onRequest(invocationId: string, method: string, args: unknown): Promise<unknown>
   /** 就绪之后进程意外退出（不是 retire、kill 让它退出的） */
   onExit(generation: HostGeneration, detail: string): void
-  log: (line: string) => void
+  logger: Logger
   readyTimeoutMs?: number
 }): Promise<HostGeneration> {
-  const { entry, sequence, log } = options
+  const { entry, sequence, logger } = options
   const plugins = new Map(options.plugins.map((plugin) => [plugin.id, plugin]))
   const readable = [...entry.readPaths, ...options.plugins.map((plugin) => plugin.dir)]
   const child = spawn(
@@ -178,12 +179,13 @@ export function startHostGeneration(options: {
       windowsHide: true,
     },
   )
-  const prefix = `[plugin-host#${sequence}]`
+  const log = logger.child({ area: 'plugin-host', generation: sequence })
+  const stderr = logger.child({ source: 'plugin-host', generation: sequence })
   // stderr 按行记日志。插件可以一直写不带换行的内容：一行攒到上限就记下、截断，剩下的丢到下一个换行为止，不在内存里攒
   let partial = ''
   let truncated = false
   const flush = () => {
-    log(`${prefix} ${partial.replace(/\r$/, '')}`)
+    stderr.warn(partial.replace(/\r$/, ''))
     partial = ''
   }
   child.stderr.setEncoding('utf8')
@@ -233,7 +235,7 @@ export function startHostGeneration(options: {
   }
 
   function fail(reason: string) {
-    log(`${prefix} protocol_error ${reason}`)
+    log.warn('protocol_error', { reason })
     child.kill('SIGKILL')
   }
 
@@ -336,7 +338,7 @@ export function startHostGeneration(options: {
     },
     onClose(error) {
       // 通道关了进程也就没用了：超长的消息、解不开的消息都走到这里
-      if (error) log(`${prefix} channel_closed ${error.message}`)
+      if (error) log.warn('channel_closed', { reason: error.message })
       child.kill('SIGKILL')
     },
   })
@@ -352,12 +354,12 @@ export function startHostGeneration(options: {
       return
     }
     if (wasAlive && !stopping) {
-      log(`${prefix} exited ${detail}`)
+      log.warn('exited', { code, signal })
       options.onExit(generation, detail)
     }
   })
   child.once('error', (error) => {
-    log(`${prefix} spawn_failed ${error.name}`)
+    log.error('spawn_failed', { error: error.name })
     rejectReady(new HostStartError('plugin host 启动失败'))
   })
 
@@ -409,7 +411,7 @@ export function startHostGeneration(options: {
         if (!pending.size) finish()
         else
           setTimeout(() => {
-            log(`${prefix} retire_timeout`)
+            log.warn('retire_timeout')
             child.kill('SIGKILL')
           }, RETIRE_LIMIT_MS).unref()
       }

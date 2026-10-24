@@ -1,4 +1,5 @@
 import { countRows, dialectOf, toIsoTimestamp, writeAuthDate } from '@nextskin/db'
+import { createMemoryLogger } from '@nextskin/logging'
 import { loadPlugin, remoteDialect, type CoreRpc, type InvocationContext, type PluginCall } from '@nextskin/plugin-host'
 import { definePlugin, deny, table } from '@nextskin/plugin-sdk'
 import { Kysely, type KyselyPlugin, type QueryId } from 'kysely'
@@ -917,7 +918,9 @@ test('准备签发拦截器的 scope 时读站点默认语言出错，按不可�
     action: 'unavailable',
   })
   expect(handler).not.toHaveBeenCalled()
-  expect(env.lines.some((line) => line.includes('intercept_failed yggdrasil.issueToken scope_error'))).toBe(true)
+  expect(env.records).toContainEqual(
+    expect.objectContaining({ msg: 'intercept_failed', name: 'yggdrasil.issueToken', reason: 'scope_error' }),
+  )
 })
 
 test('签发拒绝按码点截断 reason/message；priority、id 排序并短路', async () => {
@@ -968,7 +971,9 @@ test.each(['throw', 'invalid', 'unavailable'] as const)(
     await enable('a')
     for (let n = 0; n < 4; n++) await expect(issueToken()).resolves.toEqual({ action: 'unavailable' })
     expect(run).toHaveBeenCalledTimes(3)
-    expect(env.lines.some((line) => line.includes('intercept:yggdrasil.issueToken'))).toBe(true)
+    expect(env.records).toContainEqual(
+      expect.objectContaining({ msg: 'call', point: 'intercept:yggdrasil.issueToken' }),
+    )
     const now = Date.now()
     vi.spyOn(Date, 'now').mockImplementation(() => now + 30_001)
     run.mockImplementation(() => Promise.resolve(null))
@@ -1595,4 +1600,58 @@ test('启动迁移使用领域层注入的时钟，重复调用只报告本次�
   expect(await env.core.plugins.migrateEnabledOfficial({ beforeUpgrade })).toEqual([])
   expect(up).toHaveBeenCalledOnce()
   expect(beforeUpgrade).toHaveBeenCalledOnce()
+})
+
+test.each(['debug', 'info', 'warn'] as const)('插件日志保留来源、字段和码点截断，按 logger 过滤：%s', async (level) => {
+  const memory = createMemoryLogger({ level })
+  const message = '😀'.repeat(1001)
+  const short = { source: 'core', area: 'forged', plugin: 'other', value: '😀'.repeat(20) }
+  const boundary = { value: '😀'.repeat(1988) }
+  const long = { value: '😀'.repeat(1989) }
+  expect([...JSON.stringify(boundary)]).toHaveLength(2000)
+  const entries = [
+    { level: 'debug' as const, message: 'debug' },
+    { level: 'info' as const, message: 'info', fields: short },
+    { level: 'warn' as const, message: 'warn', fields: boundary },
+    { level: 'error' as const, message, fields: long },
+    { level: 'unknown' as 'info', message: 'fallback' },
+  ]
+  await env.boot(
+    [
+      official(
+        'a',
+        definePlugin({
+          capabilities: [],
+          routes: { 'GET /': { auth: 'public', handler: () => Promise.resolve(new Response()) } },
+        }),
+      ),
+    ],
+    {
+      plugins: {
+        logger: memory.logger,
+        load: injected(async (_, context, rpc) => {
+          for (const entry of entries) await rpc(context.invocationId, 'log', entry)
+          return { status: 200, statusText: 'OK', headers: [], body: null }
+        }),
+      },
+    },
+  )
+  await enable('a')
+  memory.records.length = 0
+  await env.core.plugins.route(routeInput('/'))
+  const logs = memory.records.filter((record) => record.source === 'plugin')
+  const expected = [
+    { level: 'debug', msg: 'debug' },
+    { level: 'info', msg: 'info', fields: short },
+    { level: 'warn', msg: 'warn', fields: boundary },
+    { level: 'error', msg: '😀'.repeat(1000), fields: [...JSON.stringify(long)].slice(0, 2000).join('') },
+    { level: 'info', msg: 'fallback' },
+  ].filter(
+    (record) =>
+      level === 'debug' || (level === 'info' ? record.level !== 'debug' : ['warn', 'error'].includes(record.level)),
+  )
+  expect(logs).toMatchObject(expected.map((record) => ({ source: 'plugin', plugin: 'a', ...record })))
+  for (const record of logs) expect(record).not.toHaveProperty('area')
+  for (const record of logs.filter((record) => ['debug', 'fallback'].includes(record.msg)))
+    expect(record).not.toHaveProperty('fields')
 })

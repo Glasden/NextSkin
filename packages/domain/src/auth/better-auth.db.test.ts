@@ -1,7 +1,8 @@
+import { captureLogs } from '@nextskin/logging'
 import { markSiteInitialized } from '../setup/initialized.test-helper.ts'
 import { coreMigrations, migrateToLatest, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
-import { afterAll, beforeAll, expect, test, vi } from 'vitest'
+import { afterAll, beforeAll, expect, test } from 'vitest'
 import { createCore, type Core } from '../core.ts'
 import { createAuth, redactLogMessage, type Auth } from './auth.ts'
 
@@ -88,9 +89,7 @@ test('被拒绝的 callbackURL 写进日志时不带查询串里的令牌（不�
   // NODE_ENV=test 时 Better Auth 默认跳过 Origin 和回调地址检查，这里打开
   const skipped = context.skipOriginCheck
   context.skipOriginCheck = false
-  const lines: string[] = []
-  const error = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => void lines.push(args.join(' ')))
-  const warn = vi.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => void lines.push(args.join(' ')))
+  const logs = captureLogs()
   try {
     const response = await auth.handler(
       new Request(`${ROOT}/api/auth/sign-in/email`, {
@@ -105,10 +104,9 @@ test('被拒绝的 callbackURL 写进日志时不带查询串里的令牌（不�
     )
     expect(response.status).toBe(403)
   } finally {
-    error.mockRestore()
-    warn.mockRestore()
+    logs.restore()
     context.skipOriginCheck = skipped
   }
-  expect(lines.some((line) => line.includes('untrusted.example.test'))).toBe(true)
-  expect(lines.join('\n')).not.toContain('LOG_CANARY')
+  expect(logs.records.some((record) => record.msg.includes('untrusted.example.test'))).toBe(true)
+  expect(JSON.stringify(logs.records)).not.toContain('LOG_CANARY')
 })

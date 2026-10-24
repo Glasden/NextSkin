@@ -411,8 +411,8 @@ test.each(['invalid subject', '', 's'.repeat(256)])('核心拒绝插件返回的
     params: { intent: 'signIn', next: '/user/players' },
   })
   expect(await bindings()).toEqual([])
-  expect(env.lines.join('\n')).toContain('login_failed')
-  expect(env.lines.join('\n')).not.toContain(identity.email)
+  expect(JSON.stringify(env.records)).toContain('login_failed')
+  expect(JSON.stringify(env.records)).not.toContain(identity.email)
 })
 
 test('绑定认发起它的那个会话：换了会话、会话被删、旧 state 没有记下会话，都按过期处理', async () => {

@@ -11,6 +11,7 @@ import {
   type CoreDatabase,
 } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
+import { discardLogger } from '@nextskin/logging'
 import { hashPassword } from 'better-auth/crypto'
 import type { EventName } from '@nextskin/plugin-sdk'
 import type { KyselyPlugin, QueryId, Transaction } from 'kysely'
@@ -78,7 +79,7 @@ function makeCore(lateWindow = 0, connection = db()) {
     textureClaimLeaseMs: 10,
     textureDeleteDelayMs: 20,
     textureDeleteAttemptLeaseMs: 100,
-    jobs: { log: () => {} },
+    jobs: { logger: discardLogger },
   })
   warm = vi.spyOn(core.renders, 'warm').mockImplementation(() => {})
   purge = vi.spyOn(core.renders, 'purge').mockResolvedValue()

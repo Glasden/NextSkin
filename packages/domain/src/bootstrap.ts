@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { backupSqlite, coreMigrations, createDatabase, migrateToLatest, type CoreDatabase } from '@nextskin/db'
-import { getLogger } from '@nextskin/logging'
+import { getLogger, type Logger } from '@nextskin/logging'
 import type { Kysely } from 'kysely'
 import type { CoreConfig } from './config.ts'
 import { createCore, type Core, type CoreOptions } from './core.ts'
@@ -58,10 +58,10 @@ async function backupMigrations(
   // 核心尚未打开，同一批迁移沿用备份。期间手工改过库时须重启，清空内存记录后重新备份。
   const file = await attempt.backup
   const count = pending.core.length + pending.plugins.reduce((total, item) => total + item.migrations.length, 0)
-  console.info(
+  getLogger('migrate').info(
     reused
-      ? `[nextskin] 有 ${count} 个迁移要执行，沿用本进程为这批迁移做的备份 ${file}；核心打不开期间手工改过库的话，请重启服务，会重新备份`
-      : `[nextskin] 有 ${count} 个迁移要执行，已先把数据库备份到 ${file}`,
+      ? `有 ${count} 个迁移要执行，沿用本进程为这批迁移做的备份 ${file}；核心打不开期间手工改过库的话，请重启服务，会重新备份`
+      : `有 ${count} 个迁移要执行，已先把数据库备份到 ${file}`,
   )
   return file
 }
@@ -106,8 +106,8 @@ export async function openCore(
     officialPlugins?: readonly OfficialPlugin[]
     pluginHost?: PluginHostEntry | null
     pluginHostMode?: 'run' | 'stage'
-    /** 插件系统的日志，默认写 stdout；管理插件的命令行有自己的输出，传空函数 */
-    pluginLog?: (line: string) => void
+    /** 插件系统的日志；管理插件的命令行有自己的输出，传 discardLogger */
+    pluginLogger?: Logger
     /** 核心和插件分批提交；调用方持有报告，失败时仍能取到已提交迁移和还原点。 */
     migrationReport?: MigrationReport
   } = {},
@@ -137,7 +137,7 @@ export async function openCore(
         sqliteFile: config.database.dialect === 'sqlite' ? config.database.file : undefined,
         host: options.pluginHost ?? null,
         hostMode: options.pluginHostMode,
-        log: options.pluginLog,
+        logger: options.pluginLogger,
         packages: createPluginPackages({
           directory: config.pluginDirectory,
           store: createLocalPluginPackageStore(config.pluginPackageDirectory),

@@ -104,6 +104,8 @@ docker compose exec nextskin cat /data/setup-code
 | `NEXTSKIN_DATABASE_URL` | `sqlite:<数据目录>/nextskin.sqlite` | 或 `mysql://用户:密码@主机:端口/库名`、`postgres://…`，库要先建好 |
 | `NEXTSKIN_HOST` | `0.0.0.0` | 只经同机反向代理访问时改成 `127.0.0.1` |
 | `NEXTSKIN_PORT`、`PORT` | `3000` | 先读 `NEXTSKIN_PORT` |
+| `NEXTSKIN_LOG_LEVEL` | `info` | `debug`、`info`、`warn`、`error`，排查问题时临时改成 `debug` |
+| `NEXTSKIN_LOG_FORMAT` | `text` | `json` 时每行写一条 JSON，给接日志系统的人用 |
 
 ## 升级与回退
 

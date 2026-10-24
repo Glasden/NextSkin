@@ -1,5 +1,4 @@
 import { randomBytes } from 'node:crypto'
-import { inspect } from 'node:util'
 import {
   coreMigrations,
   insertReturningId,
@@ -11,6 +10,7 @@ import {
 } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import type { OAuthExtensionGrantHandler, oauthProvider } from '@better-auth/oauth-provider'
+import { captureLogs } from '@nextskin/logging'
 import type { BetterAuthPlugin } from 'better-auth'
 import { dispatchAuthEndpoint, type DispatchContext } from 'better-auth/api'
 import { MAX_HEAD_DENSITY, RENDERER_VERSION } from '@nextskin/skin'
@@ -701,7 +701,7 @@ test('after 检查失败关闭签发响应，只写固定日志', async () => {
   })
   const code = await device()
   await approve(code)
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const warn = captureLogs()
   try {
     const response = await auth.handler(
       new Request(`${ROOT}/api/auth/oauth2/token`, {
@@ -716,9 +716,9 @@ test('after 检查失败关闭签发响应，只写固定日志', async () => {
     )
     expect(response.status).toBe(500)
     expect(await json(response)).toMatchObject({ error: 'server_error' })
-    expect(warn).toHaveBeenCalledExactlyOnceWith('[auth] oauth_token_check_failed')
+    expect(warn.records).toMatchObject([{ area: 'auth', level: 'warn', msg: 'oauth_token_check_failed' }])
   } finally {
-    warn.mockRestore()
+    warn.restore()
   }
 })
 
@@ -1003,7 +1003,7 @@ test('after 复核事务抛错时返回 server_error，不泄露令牌或异常�
   await auth.api.getJwks()
   const code = await device('openid offline_access')
   await approve(code, false)
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const warn = captureLogs()
   try {
     const response = await auth.handler(
       new Request(`${ROOT}/api/auth/oauth2/token`, {
@@ -1018,11 +1018,11 @@ test('after 复核事务抛错时返回 server_error，不泄露令牌或异常�
     )
     expect(response.status).toBe(500)
     expect(await json(response)).toEqual({ error: 'server_error', error_description: 'Token check failed' })
-    expect(warn).toHaveBeenCalledExactlyOnceWith('[auth] oauth_token_check_failed')
+    expect(warn.records).toMatchObject([{ area: 'auth', level: 'warn', msg: 'oauth_token_check_failed' }])
     expect(failure).toHaveBeenCalledOnce()
   } finally {
     failure?.mockRestore()
-    warn.mockRestore()
+    warn.restore()
   }
 })
 
@@ -1035,19 +1035,17 @@ test.each([
   ['/oauth2/authorize', 415],
 ] as const)('%s 拒绝不是对象的 JSON 请求体，不把请求体写进日志', async (path, status) => {
   const marker = `marker-${randomBytes(8).toString('hex')}`
-  const spies = (['log', 'info', 'warn', 'error', 'debug'] as const).map((method) =>
-    vi.spyOn(console, method).mockImplementation(() => undefined),
-  )
+  const logs = captureLogs()
   try {
     for (const body of [JSON.stringify(marker), JSON.stringify([marker]), 'null']) {
       const response = await request(path, body, { 'content-type': 'application/json' })
       expect(response.status).toBe(status)
       expect(await response.text()).not.toContain(marker)
     }
-    const logged = spies.flatMap((spy) => spy.mock.calls.flat().map((arg) => inspect(arg))).join('\n')
+    const logged = JSON.stringify(logs.records)
     expect(logged).not.toContain(marker)
   } finally {
-    for (const spy of spies) spy.mockRestore()
+    logs.restore()
   }
 })
 

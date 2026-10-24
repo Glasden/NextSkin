@@ -1,3 +1,4 @@
+import { captureLogs } from '@nextskin/logging'
 import { markSiteInitialized } from '../setup/initialized.test-helper.ts'
 import {
   coreMigrations,
@@ -398,11 +399,11 @@ test('验证邮件在提交后入队，Better Auth 接受链接并验证邮箱�
 test('验证邮件签发或入队失败不回滚注册；缺少站点地址不使用请求 Host 签发令牌', async () => {
   await setting('mail.transport', 'smtp')
   await setting('mail.from', { address: 'sender@example.test', name: '' })
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const warn = captureLogs()
   try {
     await expect(core.users.register(input())).resolves.toHaveProperty('uid')
   } finally {
-    warn.mockRestore()
+    warn.restore()
   }
   expect(messages).toEqual([])
 })
@@ -412,15 +413,17 @@ test('验证邮件入队失败仍然注册成功，日志不包含邮件或令�
   const enqueue = vi.spyOn(core.mail, 'send').mockImplementation(() => {
     throw new Error('MAIL_TOKEN_CANARY')
   })
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const warn = captureLogs()
   try {
     await expect(core.users.register(input())).resolves.toHaveProperty('uid')
     expect(enqueue).toHaveBeenCalledOnce()
-    expect(warn.mock.calls.flat().join(' ')).toContain('verification_enqueue_failed')
-    expect(warn.mock.calls.flat().join(' ')).not.toContain('MAIL_TOKEN_CANARY')
+    expect(warn.records).toContainEqual(
+      expect.objectContaining({ area: 'mail', level: 'warn', msg: 'verification_enqueue_failed', attempt: 1 }),
+    )
+    expect(JSON.stringify(warn.records)).not.toContain('MAIL_TOKEN_CANARY')
   } finally {
     enqueue.mockRestore()
-    warn.mockRestore()
+    warn.restore()
   }
   expect(await countRows(database.db.selectFrom('accounts'))).toBe(1)
 })

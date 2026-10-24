@@ -15,6 +15,7 @@
     "@nextskin/domain": "workspace:*",
     "@nextskin/i18n": "workspace:*",
     "@nextskin/importer": "workspace:*",
+    "@nextskin/logging": "workspace:*",
     "@nextskin/official-plugins": "workspace:*",
     "@nextskin/plugin-host": "workspace:*"
   },

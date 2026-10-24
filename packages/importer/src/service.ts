@@ -12,6 +12,7 @@ import {
   type ImportRunsTable,
 } from '@nextskin/db'
 import { createImagePool, createLocalTextureStorage, DomainError, type ImagePool } from '@nextskin/domain/importer'
+import { getLogger } from '@nextskin/logging'
 import type { Selectable } from 'kysely'
 import type { ImportProgress } from './context.ts'
 import { checkImportOptions, ImportOptionsError, runImport } from './engine.ts'
@@ -214,7 +215,7 @@ function summary(row: Selectable<ImportRunsTable>, report = parseReport(row.repo
 }
 const digest = (token: string) => createHash('sha256').update(token).digest()
 function logError(error: unknown) {
-  console.warn(`[import] ${error instanceof Error ? error.name : 'Error'}`)
+  getLogger('import').warn('failed', { error: error instanceof Error ? error.name : 'Error' })
 }
 
 export async function createImportService(options: ImportServiceOptions): Promise<ImportService> {
@@ -315,7 +316,7 @@ export async function createImportService(options: ImportServiceOptions): Promis
             await options.maintenance.exit()
           } catch (error) {
             logError(error)
-            console.warn('[import] 后台任务可能仍处于暂停状态，请重启服务')
+            getLogger('import').warn('后台任务可能仍处于暂停状态，请重启服务')
           }
           if (result?.status === 'succeeded' && !input.dryRun) {
             try {

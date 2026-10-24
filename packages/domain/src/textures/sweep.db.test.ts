@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { coreMigrations, migrateToLatest, toIsoTimestamp, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
+import { createMemoryLogger } from '@nextskin/logging'
 import { afterAll, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import { createJobRunner, type JobHandler } from '../jobs/runner.ts'
 import { createTextureFiles, TEXTURE_RECYCLE_JOB } from './files.ts'
@@ -14,7 +15,7 @@ const now = () => new Date(clock)
 const hash = (n: number) => n.toString(16).padStart(64, '0')
 const objects = new Map<string, Date>()
 const temps: { hash: string; claimId: string; modifiedAt: Date }[] = []
-const lines: string[] = []
+const { logger, records: lines } = createMemoryLogger()
 let storage: ReturnType<typeof createStorage>
 let files: ReturnType<typeof createTextureFiles>
 let jobs: ReturnType<typeof createJobRunner>
@@ -62,7 +63,7 @@ beforeEach(async () => {
   clock = Date.parse('2030-01-01T00:00:00Z')
   storage = createStorage()
   const handlers = new Map<string, JobHandler>()
-  jobs = createJobRunner({ db: db(), handlers, now, log: (line) => lines.push(line) })
+  jobs = createJobRunner({ db: db(), handlers, now, logger })
   files = createTextureFiles({
     db: db(),
     storage,
@@ -73,7 +74,7 @@ beforeEach(async () => {
     deleteDelayMs,
   })
   for (const [name, handler] of Object.entries(files.handlers)) handlers.set(name, handler)
-  sweep = createTextureSweep({ db: db(), storage, files, jobs, now, leaseMs, log: (line) => lines.push(line) })
+  sweep = createTextureSweep({ db: db(), storage, files, jobs, now, leaseMs, logger })
   handlers.set(TEXTURE_SWEEP_JOB, sweep)
 })
 
@@ -120,7 +121,7 @@ test('孤儿认领为 deleting，并在同一事务排回收；经过 D 后沿�
   expect((await db().selectFrom('texture_files').select('claim_id').executeTakeFirstOrThrow()).claim_id).toEqual(
     expect.any(String),
   )
-  expect(lines).toEqual(['[jobs] texture_sweep orphans=1 temps=0'])
+  expect(lines).toMatchObject([{ area: 'jobs', level: 'info', msg: 'texture_sweep', orphans: 1, temps: 0 }])
   clock += deleteDelayMs
   await jobs.drain()
   expect(objects.has(hash(1))).toBe(true)
@@ -141,7 +142,7 @@ test('已有行及不到一天或正好一天的文件不动，重复认领返�
   ])
   expect(await files.adoptOrphans([hash(1)])).toBe(0)
   expect(await db().selectFrom('jobs').selectAll().execute()).toEqual([])
-  expect(lines).toEqual(['[jobs] texture_sweep orphans=0 temps=0'])
+  expect(lines).toMatchObject([{ area: 'jobs', level: 'info', msg: 'texture_sweep', orphans: 0, temps: 0 }])
 })
 
 test('候选查询后被并发认领时走真实冲突插入，不重复排任务或计数', async () => {
@@ -164,7 +165,7 @@ test('候选查询后被并发认领时走真实冲突插入，不重复排任�
     jobs,
     now,
     leaseMs,
-    log: (line) => lines.push(line),
+    logger,
   })
   const adopt = vi.spyOn(files, 'adoptOrphans')
   const enqueue = vi.spyOn(jobs, 'enqueue')
@@ -175,7 +176,7 @@ test('候选查询后被并发认领时走真实冲突插入，不重复排任�
   ])
   expect(enqueue).not.toHaveBeenCalled()
   expect(await db().selectFrom('jobs').selectAll().execute()).toEqual([])
-  expect(lines).toEqual(['[jobs] texture_sweep orphans=0 temps=0'])
+  expect(lines).toMatchObject([{ area: 'jobs', level: 'info', msg: 'texture_sweep', orphans: 0, temps: 0 }])
 })
 
 test('整页孤儿认领中途入队失败时全部回滚，重试正确累计整页计数', async () => {
@@ -190,7 +191,7 @@ test('整页孤儿认领中途入队失败时全部回滚，重试正确累计�
   await run()
   expect(await db().selectFrom('texture_files').selectAll().execute()).toHaveLength(2)
   expect(await db().selectFrom('jobs').selectAll().execute()).toHaveLength(2)
-  expect(lines).toEqual(['[jobs] texture_sweep orphans=2 temps=0'])
+  expect(lines).toMatchObject([{ area: 'jobs', level: 'info', msg: 'texture_sweep', orphans: 2, temps: 0 }])
 })
 
 test('临时文件只删超过租期且不是当前 pending 认领的文件', async () => {
@@ -212,7 +213,7 @@ test('临时文件只删超过租期且不是当前 pending 认领的文件', as
   expect(storage.deleteTemp).toHaveBeenCalledWith(hash(1), stale)
   expect(storage.deleteTemp).toHaveBeenCalledWith(hash(2), deleting)
   expect(storage.deleteTemp).toHaveBeenCalledWith(hash(5), temps[5]!.claimId)
-  expect(lines).toEqual(['[jobs] texture_sweep orphans=0 temps=3'])
+  expect(lines).toMatchObject([{ area: 'jobs', level: 'info', msg: 'texture_sweep', orphans: 0, temps: 3 }])
 })
 
 test('满一页释放旧任务的去重键再续跑，游标和累计计数保留且不重扫临时文件', async () => {
@@ -237,7 +238,7 @@ test('满一页释放旧任务的去重键再续跑，游标和累计计数保�
   await run(JSON.parse(rows[1]!.payload), rows[1]!.id)
   expect(storage.listTemp).toHaveBeenCalledTimes(1)
   expect(storage.list).toHaveBeenLastCalledWith({ after: hash(1000), limit: 1000 })
-  expect(lines).toEqual(['[jobs] texture_sweep orphans=2 temps=1'])
+  expect(lines).toMatchObject([{ area: 'jobs', level: 'info', msg: 'texture_sweep', orphans: 2, temps: 1 }])
 })
 
 test('非法续跑载荷拒绝；取消后不动存储或数据库', async () => {
@@ -259,7 +260,7 @@ test('执行器实际续跑到末页，整轮只扫描一次临时目录并保�
   expect(await db().selectFrom('jobs').selectAll().where('name', '=', TEXTURE_SWEEP_JOB).execute()).toEqual([])
   expect(await db().selectFrom('jobs').selectAll().where('name', '=', TEXTURE_RECYCLE_JOB).execute()).toHaveLength(2)
   expect(storage.listTemp).toHaveBeenCalledTimes(1)
-  expect(lines).toEqual(['[jobs] texture_sweep orphans=2 temps=1'])
+  expect(lines).toMatchObject([{ area: 'jobs', level: 'info', msg: 'texture_sweep', orphans: 2, temps: 1 }])
 })
 
 test('已提交续跑的页崩溃重试只释放自己的去重键，不产生第二条续跑链', async () => {

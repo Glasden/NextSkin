@@ -1,4 +1,5 @@
 import { toIsoTimestamp, writeAuthDate, transactionWithRetry } from '@nextskin/db'
+import { captureLogs } from '@nextskin/logging'
 import { afterAll, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 import { deleteClaimedDeviceCodes, deleteOAuthTokensForUser, deletePlayerAuthorizations } from './revoke.ts'
 import { oauthFixture, seedOAuth } from './oauth.test-helper.ts'
@@ -148,15 +149,17 @@ test('密码变更事件入队失败，凭据吊销仍已单独提交', async ()
     if (name === 'test:password') return Promise.reject(new Error('queue unavailable'))
     return enqueue(tx, name, ...rest)
   })
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const warn = captureLogs()
   try {
     expect(
       (await owner.request('/api/auth/change-password', { currentPassword: password, newPassword: fresh })).status,
     ).toBe(200)
-    expect(warn).toHaveBeenCalledWith('[auth] password_event_failed')
+    expect(warn.records).toContainEqual(
+      expect.objectContaining({ area: 'auth', level: 'warn', msg: 'password_event_failed' }),
+    )
   } finally {
     spy.mockRestore()
-    warn.mockRestore()
+    warn.restore()
   }
   for (const table of ['oauth_access_tokens', 'oauth_refresh_tokens', 'device_code_selections'] as const)
     expect(await env.db.selectFrom(table).selectAll().where('user_id', '=', uid).execute()).toEqual([])

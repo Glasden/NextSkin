@@ -1,8 +1,9 @@
 import { coreMigrations, migrateToLatest, type CoreDatabase } from '@nextskin/db'
 import { createTestDatabase, testDialect, type TestDatabase } from '@nextskin/db/testing'
+import { captureLogs } from '@nextskin/logging'
 import { getMigrations } from 'better-auth/db/migration'
 import type { Kysely } from 'kysely'
-import { afterAll, beforeAll, expect, test, vi } from 'vitest'
+import { afterAll, beforeAll, expect, test } from 'vitest'
 import { authOptions } from './auth.ts'
 
 // ADR-0015：Better Auth 的表由我们的迁移创建，这里用 Better Auth 自己的 schema 比对确认迁移结果符合它的期望。
@@ -25,15 +26,15 @@ function options(db: Kysely<CoreDatabase>) {
 
 /** 跑一次比对，收集 Better Auth 通过 logger 打出的警告 */
 async function compare(db: Kysely<CoreDatabase>) {
-  const warnings: string[] = []
-  const warn = vi.spyOn(console, 'warn').mockImplementation((line: unknown) => void warnings.push(String(line)))
-  const error = vi.spyOn(console, 'error').mockImplementation((line: unknown) => void warnings.push(String(line)))
+  const logs = captureLogs()
   try {
     const plan = await getMigrations(options(db))
-    return { plan, warnings: warnings.filter((line) => line.includes('different type') || line.includes('nullable')) }
+    return {
+      plan,
+      warnings: logs.records.filter(({ msg }) => msg.includes('different type') || msg.includes('nullable')),
+    }
   } finally {
-    warn.mockRestore()
-    error.mockRestore()
+    logs.restore()
   }
 }
 
@@ -41,8 +42,8 @@ async function compare(db: Kysely<CoreDatabase>) {
 const ACCEPTED =
   testDialect() === 'sqlite'
     ? [
-        '[auth] Field nickname in table users has a different type in the database. Expected string but got varchar(255).',
-        '[auth] Field email in table users has a different type in the database. Expected string but got varchar(255).',
+        'Field nickname in table users has a different type in the database. Expected string but got varchar(255).',
+        'Field email in table users has a different type in the database. Expected string but got varchar(255).',
       ]
     : []
 
@@ -71,6 +72,11 @@ test('类型和可空性警告不超出 Better Auth 自己迁移出来的库', a
   const baseline = await compare(reference.db)
   expect(baseline.plan.toBeCreated).toEqual([])
   const { warnings } = await compare(ours.db)
-  const unexpected = warnings.filter((line) => !baseline.warnings.includes(line) && !ACCEPTED.includes(line))
+  const unexpected = warnings.filter(
+    (record) =>
+      !baseline.warnings.some(
+        (other) => other.msg === record.msg && other.level === record.level && other.area === record.area,
+      ) && !ACCEPTED.includes(record.msg),
+  )
   expect(unexpected).toEqual([])
 })
