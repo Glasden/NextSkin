@@ -17,6 +17,7 @@
 - **协议兼容**：CSL、USM、Legacy 和 Yggdrasil 的路径、状态码、响应与 BS v6 一致，玩家的模组和启动器不用换。以从真实 BS v6 录制的契约用例为准。
 - **从 BS 迁移**：只读导入 BS 6 的库和材质，旧站不受影响，玩家 UUID 原样保留。
 - **部署简单**：一个 zip，有 Node 24 就能运行，没有原生依赖、不需要 Redis。默认 SQLite，也支持 MySQL / MariaDB、PostgreSQL；另有 Docker 镜像。
+- **一键升级**：站点每天读一份签过名的版本清单，有新版本时通知超级管理员。用发行包部署的在后台点一下就能升级：先下载、验签、对着在用的库预检，站点照常运行，再停站几秒到半分钟切换。新版本没起来就自动回到旧版本，SQLite 有迁移时连库一起换回升级前的自动备份；升级以后也能回滚到上一个版本。MySQL、PostgreSQL 有迁移时要先自己备份。
 - **插件**：安装的插件跑在独立进程里，用到什么能力先声明。插件 SDK 发布在 npm（[`@nextskin/plugin-sdk`](packages/plugin-sdk)）；第三方登录、邀请码等官方插件随发行包分发。
 
 还在 0.x，各版本的变化见 [Releases](https://github.com/Glasden/NextSkin/releases)，还没做完的部分见 [`docs/PROGRESS.md`](docs/PROGRESS.md)。
@@ -30,7 +31,7 @@ cd nextskin
 node nextskin.mjs start
 ```
 
-打开 `http://<服务器地址>:3000/setup` 建站，安装码在 `data/setup-code`。宝塔、1Panel、Docker、systemd、Windows 的步骤见 [`docs/deploy`](docs/deploy/README.md)，从 BS 迁移见 [`packages/importer/MIGRATION.md`](packages/importer/MIGRATION.md)。
+打开 `http://<服务器地址>:3000/setup` 建站，安装码在 `data/setup-code`。以后的版本在后台"更新"页一键升级，也可以把新的 zip 覆盖解压再启动。宝塔、1Panel、Docker、systemd、Windows 的步骤见 [`docs/deploy`](docs/deploy/README.md)，从 BS 迁移见 [`packages/importer/MIGRATION.md`](packages/importer/MIGRATION.md)。
 
 ## 开发
 
