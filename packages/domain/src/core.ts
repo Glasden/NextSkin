@@ -1,3 +1,6 @@
+import { resolve } from 'node:path'
+import { createDiagnostics } from './diagnostics/service.ts'
+import type { DiagnosticsRuntime } from './diagnostics/types.ts'
 import type { Logger } from '@nextskin/logging'
 import { createOAuthClients } from './oauth/clients.ts'
 import { createDevices } from './oauth/devices.ts'
@@ -61,7 +64,8 @@ import { createSigningKeyQuery } from './yggdrasil/signing-key.ts'
 import { createUpdates, UPDATE_CHECK_JOB, type CoreRelease, type UpdateCheckOptions } from './updates/service.ts'
 import type { ManagerClientOptions } from './updates/manager-client.ts'
 
-export interface CoreOptions {
+export interface CoreOptions extends Partial<DiagnosticsRuntime> {
+  dataDirectory?: string
   manager?: ManagerClientOptions
   release?: CoreRelease
   updateCheck?: UpdateCheckOptions
@@ -126,6 +130,7 @@ export function createCore(options: CoreOptions) {
   // 执行器每次轮询都读这张表，事件订阅和核心任务往里登记处理函数
   const handlers = new Map<string, JobHandler>()
   const now = options.now ?? options.jobs?.now ?? (() => new Date())
+  const startedAt = toIsoTimestamp(now())
   const jobs = createJobRunner({ ...options.jobs, now, db: options.db, handlers })
   const events = createEvents(jobs, handlers)
   const mail = createMailService(options.db, settings, jobs, options.mailTransport)
@@ -288,6 +293,20 @@ export function createCore(options: CoreOptions) {
     ...createProfileTextures({ db: options.db, settings, tokens, upload, closet, players }),
   }
   return {
+    diagnostics: createDiagnostics({
+      db: options.db,
+      secretKey: options.secretKey,
+      now,
+      startedAt,
+      plugins,
+      updates,
+      version: options.release?.version,
+      dataDirectory: options.dataDirectory ?? resolve('data'),
+      instanceDirectory: options.instanceDirectory ?? resolve('.'),
+      runMode: options.runMode ?? (options.production ? 'direct' : 'development'),
+      envNames: options.envNames ?? [],
+      fileLogging: options.fileLogging ?? false,
+    }),
     updates,
     themes: createThemes({ db: options.db, settings, plugins, secretKey: options.secretKey, now }),
     home: createHomeQueries(options.db, settings, now),

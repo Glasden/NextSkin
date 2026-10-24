@@ -17,6 +17,7 @@ export {
   DEFAULT_LOG_FILE_LIMITS,
   isLogFileLimits,
   LOG_DIRECTORY,
+  LOG_FILE_DROPPED,
   LOG_FILE,
   LOG_FILE_LIMIT_RANGES,
   openLogFile,
@@ -27,6 +28,7 @@ export {
 } from './file.ts'
 export {
   ipcLogWriter,
+  LOG_IPC_DROPPED,
   logLimitsFromMessage,
   logLineFromMessage,
   type IpcChannel,

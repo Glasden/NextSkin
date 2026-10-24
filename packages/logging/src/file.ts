@@ -2,6 +2,9 @@ import { chmod, mkdir, open, readdir, readFile, rename, rm, writeFile } from 'no
 import { join } from 'node:path'
 import type { Logger } from './logger.ts'
 
+/** 写盘恢复后补报丢了多少条的消息，诊断页按它统计 */
+export const LOG_FILE_DROPPED = '有记录没写进日志文件'
+
 /** 数据目录下的日志目录（ADR-0062） */
 export const LOG_DIRECTORY = 'logs'
 /** 当前的文件；轮换出来的是 `nextskin.1.log`（最新）、`nextskin.2.log`…… */
@@ -263,7 +266,7 @@ export function openLogFile(options: LogFileOptions): LogFile {
       if (dropped > 0 && pending < maxPending / 2) {
         const count = dropped
         dropped = 0
-        options.report.warn('有记录没写进日志文件', { file: path(LOG_FILE), dropped: count })
+        options.report.warn(LOG_FILE_DROPPED, { file: path(LOG_FILE), dropped: count })
       }
     }
   }

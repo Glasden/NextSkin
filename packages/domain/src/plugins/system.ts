@@ -941,6 +941,28 @@ export function createPluginSystem(options: {
   const deferUnavailable = (error: unknown) =>
     error instanceof PluginInvocationError && error.reason === 'unavailable' ? new JobDeferredError() : error
 
+  /** manifest 与已执行记录的差集；诊断和真正执行迁移共用。 */
+  async function pendingFor(plugin: KnownPlugin): Promise<string[]> {
+    const done = new Set(
+      (
+        await db.selectFrom('plugin_migrations').select('name').where('plugin_id', '=', plugin.manifest.id).execute()
+      ).map((row) => row.name),
+    )
+    return plugin.manifest.migrations.filter((name) => !done.has(name))
+  }
+
+  async function pendingMigrations(officialOnly = false): Promise<{ plugin: string; migrations: string[] }[]> {
+    const rows = await db.selectFrom('plugins').select('id').where('is_enabled', '=', 1).orderBy('id').execute()
+    const pending: { plugin: string; migrations: string[] }[] = []
+    for (const { id } of rows) {
+      const plugin = known.get(id)
+      if (!plugin || (officialOnly && !officialIds.has(id))) continue
+      const migrations = await pendingFor(plugin)
+      if (migrations.length) pending.push({ plugin: id, migrations })
+    }
+    return pending
+  }
+
   /** 跑还没跑过的迁移：DDL 只能在这里执行（ADR-0010）。安装插件的迁移在准备切换过去的那一代里跑 */
   async function runMigrations(
     plugin: KnownPlugin,
@@ -951,12 +973,7 @@ export function createPluginSystem(options: {
     } = {},
   ): Promise<string[]> {
     const id = plugin.manifest.id
-    const done = new Set(
-      (await db.selectFrom('plugin_migrations').select('name').where('plugin_id', '=', id).execute()).map(
-        (row) => row.name,
-      ),
-    )
-    const pending = plugin.manifest.migrations.filter((name) => !done.has(name))
+    const pending = await pendingFor(plugin)
     for (const [index, name] of pending.entries()) {
       await options.beforeUpgrade?.(pending.slice(index))
       try {
@@ -1346,25 +1363,15 @@ export function createPluginSystem(options: {
   }
 
   return {
+    /** 只读已启用且 manifest 已知的插件，不加载 host、不执行迁移。 */
+    pendingMigrations: () => pendingMigrations(),
     /** 官方插件随核心升级；先完成迁移才能登记它的新代码，锁内重新读取以免重复执行。 */
     async migrateEnabledOfficial(
       migrationOptions: {
         beforeUpgrade?(pending: { plugin: string; migrations: string[] }[]): Promise<void>
       } = {},
     ): Promise<{ plugin: string; migrations: string[] }[]> {
-      const rows = await db.selectFrom('plugins').select('id').where('is_enabled', '=', 1).orderBy('id').execute()
-      const pending: { plugin: string; migrations: string[] }[] = []
-      for (const { id } of rows) {
-        if (!officialIds.has(id)) continue
-        const plugin = known.get(id)!
-        const done = new Set(
-          (await db.selectFrom('plugin_migrations').select('name').where('plugin_id', '=', id).execute()).map(
-            (row) => row.name,
-          ),
-        )
-        const migrations = plugin.manifest.migrations.filter((name) => !done.has(name))
-        if (migrations.length) pending.push({ plugin: id, migrations })
-      }
+      const pending = await pendingMigrations(true)
       const executed: { plugin: string; migrations: string[] }[] = []
       const timestamp = () => toIsoTimestamp(now())
       for (const [index, item] of pending.entries()) {

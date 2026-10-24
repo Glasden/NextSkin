@@ -173,3 +173,6 @@ export type {
   ManagerParams,
   ManagerResults,
 } from './updates/manager-client.ts'
+
+export type { DiagnosticsRuntime, DiagnosticsSummary } from './diagnostics/types.ts'
+export type { DiagnosticsLogQuery, DiagnosticsLogEntry, DiagnosticsLogPage } from './diagnostics/logs.ts'

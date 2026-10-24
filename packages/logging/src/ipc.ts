@@ -1,5 +1,8 @@
 import { isLogFileLimits, type LogFileLimits } from './file.ts'
 
+/** IPC 积压时丢弃计数提示的消息，诊断页按它统计丢了多少条 */
+export const LOG_IPC_DROPPED = 'log_ipc_dropped'
+
 /**
  * 由启动器拉起时，核心经 IPC 发给启动器的消息（ADR-0062）：一条记录，和日志文件的轮换上限。
  * 结构化记录不走 stdout：混在原始输出里就只能靠"像不像 JSON"来区分，原始输出也就能伪造成核心的记录
@@ -73,7 +76,7 @@ export function ipcLogWriter(
       level: 'warn',
       source: 'core',
       area: 'logging',
-      msg: 'log_ipc_dropped',
+      msg: LOG_IPC_DROPPED,
       dropped,
     })
     dropped = 0

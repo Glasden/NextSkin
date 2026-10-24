@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   countRows,
+  countBy,
   insertOrIgnore,
   insertReturningId,
   toIsoTimestamp,
@@ -264,4 +265,43 @@ export async function deleteDeadLetter(
   if (!row || !row.name.startsWith(options.prefix)) return false
   const result = await db.deleteFrom('failed_jobs').where('id', '=', options.id).executeTakeFirstOrThrow()
   return result.numDeletedRows > 0n
+}
+
+/** 健康摘要只把核心死信计入告警；队列包含插件任务。 */
+export async function jobSummary(db: Kysely<CoreDatabase>, now: IsoTimestamp) {
+  const [queued, oldest, deadLetters] = await Promise.all([
+    countRows(db.selectFrom('jobs')),
+    db.selectFrom('jobs').select('run_at').where('run_at', '<=', now).orderBy('run_at').limit(1).executeTakeFirst(),
+    countDeadLetters(db, CORE_JOB_PREFIX),
+  ])
+  return { queued, oldestDueAt: oldest?.run_at ?? null, deadLetters }
+}
+
+/** 每个名字只读最近的一条错误，不加载任务载荷。 */
+export async function jobStatistics(db: Kysely<CoreDatabase>) {
+  const [queued, failed] = await Promise.all([
+    countBy(db.selectFrom('jobs'), 'name'),
+    countBy(db.selectFrom('failed_jobs'), 'name'),
+  ])
+  const names = [...new Set([...queued.keys(), ...failed.keys()])].map(String).sort()
+  return Promise.all(
+    names.map(async (name) => {
+      const last = failed.has(name)
+        ? await db
+            .selectFrom('failed_jobs')
+            .select('last_error')
+            .where('name', '=', name)
+            .orderBy('failed_at', 'desc')
+            .orderBy('id', 'desc')
+            .limit(1)
+            .executeTakeFirst()
+        : undefined
+      return {
+        name,
+        queued: queued.get(name) ?? 0,
+        deadLetters: failed.get(name) ?? 0,
+        lastError: last?.last_error ?? null,
+      }
+    }),
+  )
 }

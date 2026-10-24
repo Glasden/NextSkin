@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { createImportService, type ImportService } from '@nextskin/importer'
 import { createApp } from '@nextskin/api'
 import {
@@ -10,6 +10,7 @@ import {
   type Core,
   type CoreOptions,
 } from '@nextskin/domain'
+import { logFileEnabledFromEnv } from '@nextskin/logging'
 import { officialPlugins } from '@nextskin/official-plugins'
 
 export interface Server {
@@ -54,16 +55,19 @@ async function releaseVersion(): Promise<string | undefined> {
 }
 
 function createOpener(): () => Promise<Server> {
+  const envNames = Object.keys(process.env)
+    .filter((name) => name.startsWith('NEXTSKIN_'))
+    .sort()
   // 移除环境里的凭据，但在共享的闭包里保留，打开核心失败后重试时控制通道仍然可用。
   const address = process.env.NEXTSKIN_MANAGER_ADDRESS
   const token = process.env.NEXTSKIN_MANAGER_TOKEN
   delete process.env.NEXTSKIN_MANAGER_ADDRESS
   delete process.env.NEXTSKIN_MANAGER_TOKEN
   const manager = address && token ? { address, token } : undefined
-  return () => open(manager)
+  return () => open(manager, envNames)
 }
 
-async function open(manager: CoreOptions['manager']): Promise<Server> {
+async function open(manager: CoreOptions['manager'], envNames: string[]): Promise<Server> {
   const production = process.env.NODE_ENV === 'production'
   const config = coreConfigFromEnv(process.env, { cwd: process.cwd(), production })
   // 工作目录是 apps/web（next dev）或 standalone 产物里的 apps/web（server.js 会切过去），上两级是根目录。
@@ -72,6 +76,18 @@ async function open(manager: CoreOptions['manager']): Promise<Server> {
   const version = await releaseVersion()
   const deployment = process.env.NEXTSKIN_DEPLOYMENT === 'docker' ? 'docker' : 'bundle'
   const opened = await openCore(config, {
+    envNames,
+    runMode: manager
+      ? 'manager'
+      : process.env.NEXTSKIN_LAUNCHER_IPC === '1'
+        ? 'launcher'
+        : production
+          ? 'direct'
+          : 'development',
+    instanceDirectory: process.env.NEXTSKIN_ENV_FILE
+      ? dirname(resolve(process.env.NEXTSKIN_ENV_FILE))
+      : resolve(process.cwd(), '../..'),
+    fileLogging: logFileEnabledFromEnv(process.env),
     ...(version && deployment === 'bundle' && manager ? { manager } : {}),
     officialPlugins,
     pluginHost,

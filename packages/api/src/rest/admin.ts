@@ -1,3 +1,4 @@
+import { registerAdminDiagnostics } from './admin-diagnostics.ts'
 import { registerAdminUpdates } from './admin-updates.ts'
 import { registerAdminNotifications } from './notifications.ts'
 import { createRoute, z, type OpenAPIHono } from '@hono/zod-openapi'
@@ -253,5 +254,6 @@ export function registerAdmin(app: OpenAPIHono<AppEnv>, core: Core) {
   // 核心任务的死信（ADR-0051）
   registerAdminFailedJobs(app, core)
   registerAdminUpdates(app, core)
+  registerAdminDiagnostics(app, core)
   registerAdminNotifications(app, core)
 }

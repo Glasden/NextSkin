@@ -98,6 +98,10 @@ export function migrateCore(
 export async function openCore(
   config: CoreConfig,
   options: {
+    runMode?: CoreOptions['runMode']
+    envNames?: CoreOptions['envNames']
+    instanceDirectory?: CoreOptions['instanceDirectory']
+    fileLogging?: CoreOptions['fileLogging']
     release?: CoreOptions['release']
     updateCheck?: CoreOptions['updateCheck']
     manager?: CoreOptions['manager']
@@ -121,6 +125,11 @@ export async function openCore(
     const renderCache = createLocalRenderCache(config.renderCacheDirectory)
     void renderCache.pruneOtherVersions().catch(() => getLogger('textures').warn('旧版出图缓存清理失败'))
     const core = createCore({
+      dataDirectory: config.dataDirectory,
+      runMode: options.runMode,
+      envNames: options.envNames,
+      instanceDirectory: options.instanceDirectory,
+      fileLogging: options.fileLogging,
       release: options.release,
       updateCheck: options.updateCheck,
       manager: options.manager,
