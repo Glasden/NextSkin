@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   MANAGER_PROTOCOL,
+  REQUIRED_MANAGER_PROTOCOL,
   MANIFEST_URL,
   ManifestError,
   RELEASE_KEYS,
@@ -324,4 +325,9 @@ describe('内置公钥', () => {
     expect(files).toEqual(RELEASE_KEYS)
     for (const pem of Object.values(RELEASE_KEYS)) expect(createPublicKey(pem).asymmetricKeyType).toBe('ed25519')
   })
+})
+
+it('启动器和核心要求的协议不高于管理进程支持的协议', () => {
+  expect(REQUIRED_MANAGER_PROTOCOL).toBeGreaterThanOrEqual(1)
+  expect(REQUIRED_MANAGER_PROTOCOL).toBeLessThanOrEqual(MANAGER_PROTOCOL)
 })

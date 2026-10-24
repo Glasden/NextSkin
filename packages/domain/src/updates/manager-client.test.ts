@@ -217,3 +217,9 @@ test.each([
     fake(response).client.request('apply', { version: '0.5.0', backupConfirmed: false }),
   ).rejects.toMatchObject({ code: 'update_unreachable' })
 })
+
+test.each([undefined, null, '0.5.0'])('status 兼容旧管理进程缺省的 pendingManager：%j', async (pendingManager) => {
+  const result = { ...status, ...(pendingManager === undefined ? {} : { pendingManager }) }
+  const { client } = fake({ ok: true, result })
+  expect(await client.request('status', {})).toEqual(result)
+})

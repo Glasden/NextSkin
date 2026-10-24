@@ -4,9 +4,17 @@ import { access, chmod, chown, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { MANAGER_PROTOCOL, compareVersions } from '@nextskin/updates'
-import { appendLog, readCurrent, renameRetry, validVersion } from './state.ts'
+import { appendLog, pendingManager, readCurrent, renameRetry, validVersion } from './state.ts'
 import type { RunAs } from './run-as.ts'
-import { ManagerError, object, reason, type Manager, type ManagerStatus, type UpdateLog } from './types.ts'
+import {
+  ManagerError,
+  object,
+  offlineRollbackMessage,
+  reason,
+  type Manager,
+  type ManagerStatus,
+  type UpdateLog,
+} from './types.ts'
 
 const limit = 64 * 1024
 export const steps = [
@@ -56,6 +64,7 @@ export async function managerStatus(
   const entry = state.lastResult
   return {
     protocol: MANAGER_PROTOCOL,
+    pendingManager: await pendingManager(home, bundled),
     version: bundled,
     current: state.current,
     previous: pointer?.previous ?? null,
@@ -166,6 +175,8 @@ export function validateOperation(
   }
   if (method === 'rollback') {
     if (!status.rollback) throw new ManagerError('没有可回滚的上一个版本', 'no_previous')
+    if (status.rollback.migrations && status.rollback.dialect !== 'sqlite')
+      throw new ManagerError(offlineRollbackMessage, 'offline_required')
     if (status.rollback.migrations && params.confirmed !== true)
       throw new ManagerError('有数据库迁移，请先确认回滚及数据库恢复要求', 'confirmation_required')
     if (status.rollback.migrations && status.rollback.dialect === 'sqlite' && !status.rollback.backupAvailable)

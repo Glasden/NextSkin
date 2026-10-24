@@ -85,7 +85,27 @@ test('状态 schema 严格约束内部字段、错误状态码、版本和通知
     { notified: ['1.0.0', '1.0.0'] },
     { notified: ['1.0.0-rc.1'] },
     { notified: Array.from({ length: 21 }, (_, i) => `1.0.${i}`) },
-    { latest: { version: '1.0.0', date: 'invalid', notes: 'http://example.test', minNode: 0 } },
+    { releases: [{ version: '1.0.0', date: 'invalid', notes: 'http://example.test', minNode: 0, managerProtocol: 1 }] },
+    {
+      releases: [
+        {
+          version: '1.0.0',
+          date: '2026-10-23T00:00:00Z',
+          notes: 'https://example.test',
+          minNode: 24,
+          managerProtocol: 0,
+        },
+      ],
+    },
+    {
+      releases: Array.from({ length: 21 }, (_, i) => ({
+        version: `1.0.${i}`,
+        date: '2026-10-23T00:00:00Z',
+        notes: 'https://example.test',
+        minNode: 24,
+        managerProtocol: i + 1,
+      })),
+    },
   ])
     expect(updateStateSchema.safeParse({ ...initialUpdateState, ...patch }).success).toBe(false)
 })

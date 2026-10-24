@@ -1,6 +1,6 @@
 import { ManagerError } from './types.ts'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { access, mkdir, readFile, rm, stat, type chown } from 'node:fs/promises'
+import { access, mkdir, readFile, rm, stat, writeFile, type chown } from 'node:fs/promises'
 import { createConnection, Socket } from 'node:net'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { MANAGER_PROTOCOL } from '@nextskin/updates'
 import { controlAddress, controlRequest, createControl, managerStatus, redactPaths } from './control.ts'
 import { createManager } from './pipeline.ts'
-import { fixture } from './fixtures.ts'
+import { contains, fixture } from './fixtures.ts'
 import { initialCurrent, writeCurrent } from './state.ts'
 import type { InternalManagerStatus, Manager, ManagerStatus, Preflight } from './types.ts'
 
@@ -156,6 +156,7 @@ describe('线上状态与同步拒绝', () => {
     const result = await f.call('status')
     expect(result).toEqual({
       protocol: MANAGER_PROTOCOL,
+      pendingManager: null,
       version: '1.1.0',
       current: '1.1.0',
       previous: '1.0.0',
@@ -410,5 +411,35 @@ it('请求在 status 期间断开，不执行操作、不永久占住预留', as
   } finally {
     status.mockRestore()
     pause.mockRestore()
+  }
+})
+
+it.each(['mysql', 'mariadb', 'postgres'] as const)('%s 有迁移时先拒绝在线回滚，不受确认值影响', async (dialect) => {
+  const f = await setup()
+  await writeCurrent(f.home, {
+    ...initialCurrent('1.1.0'),
+    previous: '1.0.0',
+    upgrades: { '1.1.0': { from: '1.0.0', migrations: true, dialect, backup: null } },
+  })
+  for (const confirmed of [false, true])
+    await expect(f.call('rollback', { confirmed })).rejects.toMatchObject({
+      code: 'offline_required',
+      message: contains('先停掉服务'),
+    })
+  expect(f.manager.rollback).not.toHaveBeenCalled()
+})
+
+it('status 只返回合法且比运行中管理进程新的待生效版本', async () => {
+  const f = await setup()
+  expect(((await f.call('status')) as ManagerStatus).pendingManager).toBeNull()
+  await mkdir(join(f.home, 'manager.next'))
+  for (const [version, expected] of [
+    ['1.2.0\n', '1.2.0'],
+    ['1.1.0', null],
+    ['1.0.0', null],
+    ['invalid', null],
+  ] as const) {
+    await writeFile(join(f.home, 'manager.next/VERSION'), version)
+    expect(((await f.call('status')) as ManagerStatus).pendingManager).toBe(expected)
   }
 })

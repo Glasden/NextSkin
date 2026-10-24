@@ -5,7 +5,14 @@ export { compareVersions, releaseVersionPattern } from './versions.ts'
 
 /** 核心和管理进程使用同一份清单。 */
 export const MANIFEST_URL = 'https://dl.nextskin.org/releases/v1.json'
+/** 管理进程支持的最高协议，向下兼容到 1。 */
 export const MANAGER_PROTOCOL = 1
+/**
+ * 本版本启动器和核心要求的管理进程协议，写进清单的 managerProtocol。
+ * 升协议分两步：先发 MANAGER_PROTOCOL 加一、REQUIRED_MANAGER_PROTOCOL 不变的版本，
+ * 之后的版本才能提高 REQUIRED_MANAGER_PROTOCOL，让旧管理进程先升级到中间版本再重启。
+ */
+export const REQUIRED_MANAGER_PROTOCOL = 1
 /**
  * 内置的发布公钥：key id → SPKI PEM。私钥只在 GitHub 的 release 环境里（ADR-0061）。
  * 换钥：先发一个同时内置新旧公钥的版本，再改 release-site.yml 的 key id 和 secret；旧公钥泄露了才删掉它。

@@ -1,11 +1,12 @@
 'use client'
 
 import type { ManagerStatus, UpdateStatus } from '@nextskin/domain'
-import { Alert, Button, Checkbox, Dialog, DialogClose, Panel, ProgressBar, Steps, useToast } from '@nextskin/ui'
+import { Alert, Button, Checkbox, Dialog, DialogClose, Link, Panel, ProgressBar, Steps, useToast } from '@nextskin/ui'
 import { useFormatter, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { apiError, getJson, sendJson } from '../../../lib/api-client'
+import { Command, UpgradeSteps } from './upgrade-steps'
 
 /** 准备阶段的步骤，名字和管理进程报的 step 一致（ADR-0061"升级的流水线"1–5） */
 const PREPARE_STEPS = ['manifest', 'space', 'download', 'extract', 'preflight'] as const
@@ -14,6 +15,8 @@ const PREPARE_POLL_MS = 1000
 const SWITCH_POLL_MS = 2000
 /** 停站、迁移、启动加健康检查最多两分多钟，过了五分钟还没回来就让管理员去服务器上看 */
 const SWITCH_PATIENCE_MS = 5 * 60_000
+const ROLLBACK_COMMAND = 'node nextskin.mjs rollback --yes'
+const ROLLBACK_GUIDE = 'https://docs.nextskin.org/guide/commands/#rollback'
 
 type Managed = ManagerStatus & { available: true }
 type Switching = { kind: 'apply' | 'rollback'; version: string; since: number }
@@ -131,7 +134,8 @@ export function OneClickUpgrade({ initial }: { initial: UpdateStatus & { manager
 
   if (!manager) return null
   const { latest } = status
-  const target = manager.prepared?.version ?? latest?.version ?? null
+  // 目标是在用的管理进程升得了的最新版本；最新的要更新的管理进程时，先升到它、重启一次再升（ADR-0061）
+  const target = manager.prepared?.version ?? status.target?.version ?? null
   const megabytes = (bytes: number) => format.number(bytes / 1024 / 1024, { maximumFractionDigits: 1 })
 
   return (
@@ -207,11 +211,25 @@ export function OneClickUpgrade({ initial }: { initial: UpdateStatus & { manager
                 <p className="text-sm text-pretty text-text-muted">{t('failedBefore')}</p>
               )}
             </div>
+            {latest && latest.version !== target && (
+              <Alert tone="info" title={t('steppingTitle', { latest: latest.version })}>
+                {t('stepping', { target, latest: latest.version })}
+              </Alert>
+            )}
             <div>
               <Button variant="primary" loading={sending === 'prepare'} onClick={() => void prepare(target)}>
                 {t('prepare', { version: target })}
               </Button>
             </div>
+          </div>
+        ) : latest ? (
+          <div className="flex flex-col gap-1">
+            <h3 className="text-base font-medium text-text">
+              {t('managerOutdatedTitle', { version: latest.version })}
+            </h3>
+            <p className="text-sm text-pretty text-text-muted">
+              {t(manager.pendingManager ? 'managerPending' : 'managerUnzip', { version: latest.version })}
+            </p>
           </div>
         ) : (
           <div className="flex flex-col gap-1">
@@ -224,6 +242,7 @@ export function OneClickUpgrade({ initial }: { initial: UpdateStatus & { manager
       {!switching && !manager.operation && manager.rollback && (
         <Rollback
           rollback={manager.rollback}
+          current={manager.current}
           onRollback={(confirmed) => start('rollback', manager.rollback!.version, { confirmed })}
         />
       )}
@@ -360,12 +379,17 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-/** 回到上一个版本（ADR-0061"回滚"）：要确认什么取决于那次升级有没有迁移、用的什么库 */
+/**
+ * 回到上一个版本（ADR-0061"回滚"）：要确认什么取决于那次升级有没有迁移、用的什么库。
+ * MySQL、PostgreSQL 有迁移时不能在线回滚（恢复库的时候新版本还在写库），只写出停着服务做的步骤
+ */
 function Rollback({
   rollback,
+  current,
   onRollback,
 }: {
   rollback: NonNullable<ManagerStatus['rollback']>
+  current: string
   onRollback: (confirmed: boolean) => Promise<boolean>
 }) {
   const t = useTranslations('admin.updates.oneClick')
@@ -375,7 +399,11 @@ function Rollback({
   const sqlite = rollback.dialect === 'sqlite'
   const kind = !rollback.migrations ? 'plain' : sqlite ? 'sqlite' : 'external'
   const blocked = kind === 'sqlite' && !rollback.backupAvailable
-  const values = { version: rollback.version, dialect: rollback.dialect ? t(`dialects.${rollback.dialect}`) : '' }
+  const values = {
+    version: rollback.version,
+    current,
+    dialect: rollback.dialect ? t(`dialects.${rollback.dialect}`) : '',
+  }
 
   async function send() {
     setSending(true)
@@ -395,39 +423,58 @@ function Rollback({
           {blocked ? t('rollbackBlocked') : t(`rollbackHints.${kind}`, values)}
         </p>
       </div>
-      {!blocked && (
-        <div>
-          <Dialog
-            alert
-            open={open}
-            onOpenChange={(next) => {
-              setOpen(next)
-              if (!next) setConfirmed(false)
-            }}
-            trigger={<Button variant="danger">{t('rollback', values)}</Button>}
-            title={t('rollbackDialogTitle', values)}
-            description={t(`rollbackWarnings.${kind}`, values)}
-            actions={
-              <>
-                <DialogClose>{t('cancelApply')}</DialogClose>
-                <Button
-                  variant="danger"
-                  loading={sending}
-                  disabled={kind !== 'plain' && !confirmed}
-                  onClick={() => void send()}
-                >
-                  {t('rollback', values)}
-                </Button>
-              </>
-            }
-          >
-            {kind !== 'plain' && (
-              <Checkbox checked={confirmed} onCheckedChange={(checked) => setConfirmed(checked)}>
-                {t(`rollbackConfirms.${kind}`, values)}
-              </Checkbox>
-            )}
-          </Dialog>
-        </div>
+      {kind === 'external' ? (
+        <UpgradeSteps
+          steps={[
+            <p key="stop">{t('rollbackSteps.stop')}</p>,
+            <p key="restore">{t('rollbackSteps.restore', values)}</p>,
+            <div key="command" className="flex min-w-0 flex-col gap-2">
+              <p>{t('rollbackSteps.command', values)}</p>
+              <Command>{ROLLBACK_COMMAND}</Command>
+            </div>,
+            <p key="start">{t('rollbackSteps.start', values)}</p>,
+          ]}
+          footer={
+            <Link href={ROLLBACK_GUIDE} target="_blank" rel="noreferrer">
+              {t('rollbackSteps.guide')}
+            </Link>
+          }
+        />
+      ) : (
+        !blocked && (
+          <div>
+            <Dialog
+              alert
+              open={open}
+              onOpenChange={(next) => {
+                setOpen(next)
+                if (!next) setConfirmed(false)
+              }}
+              trigger={<Button variant="danger">{t('rollback', values)}</Button>}
+              title={t('rollbackDialogTitle', values)}
+              description={t(`rollbackWarnings.${kind}`, values)}
+              actions={
+                <>
+                  <DialogClose>{t('cancelApply')}</DialogClose>
+                  <Button
+                    variant="danger"
+                    loading={sending}
+                    disabled={kind === 'sqlite' && !confirmed}
+                    onClick={() => void send()}
+                  >
+                    {t('rollback', values)}
+                  </Button>
+                </>
+              }
+            >
+              {kind === 'sqlite' && (
+                <Checkbox checked={confirmed} onCheckedChange={(checked) => setConfirmed(checked)}>
+                  {t('rollbackConfirms.sqlite')}
+                </Checkbox>
+              )}
+            </Dialog>
+          </div>
+        )
       )}
     </Panel>
   )

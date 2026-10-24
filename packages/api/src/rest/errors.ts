@@ -26,6 +26,7 @@ const statuses = {
   update_manager_outdated: 409,
   update_node_too_old: 409,
   update_backup_required: 400,
+  update_offline_required: 409,
   update_confirmation_required: 400,
   update_no_previous: 409,
   update_backup_missing: 409,

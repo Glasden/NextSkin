@@ -13,6 +13,15 @@ export function validVersion(value: unknown): value is string {
     return false
   }
 }
+/** 待生效版本必须比当前运行的管理进程新，不能只看目录是否存在。 */
+export async function pendingManager(home: string, bundled: string): Promise<string | null> {
+  try {
+    const version = (await readFile(join(home, 'manager.next/VERSION'), 'utf8')).trim()
+    return validVersion(version) && compareVersions(version, bundled) > 0 ? version : null
+  } catch {
+    return null
+  }
+}
 export function requireVersion(value: string): void {
   if (!validVersion(value)) throw new ConfigError('版本号必须符合 semver，不能是路径或地址')
 }

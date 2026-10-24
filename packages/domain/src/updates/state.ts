@@ -6,6 +6,7 @@ export const updateReleaseSchema = z.strictObject({
   date: z.iso.datetime(),
   notes: z.url({ protocol: /^https$/ }),
   minNode: z.int().positive(),
+  managerProtocol: z.int().positive(),
 })
 export const updateFailureSchema = z.discriminatedUnion('code', [
   z.strictObject({ at: z.iso.datetime(), code: z.literal('http'), status: z.int().min(100).max(599) }),
@@ -14,7 +15,7 @@ export const updateFailureSchema = z.discriminatedUnion('code', [
 export const updateStateSchema = z.strictObject({
   checkedAt: z.iso.datetime().nullable(),
   failure: updateFailureSchema.nullable(),
-  latest: updateReleaseSchema.nullable(),
+  releases: z.array(updateReleaseSchema).max(20),
   notified: z
     .array(version)
     .max(20)
@@ -25,7 +26,7 @@ export type UpdateState = z.infer<typeof updateStateSchema>
 export const initialUpdateState: UpdateState = {
   checkedAt: null,
   failure: null,
-  latest: null,
+  releases: [],
   notified: [],
   rejected: 0,
 }

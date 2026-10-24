@@ -3,12 +3,12 @@ import { Alert, Badge, Link, Panel } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
-import type { ReactNode } from 'react'
 import { getServer } from '../../../lib/server'
 import { requireAdmin } from '../../../lib/session'
 import { settingsHref } from '../settings/setting-text'
 import { UpdateCheckButton } from './check-button'
 import { OneClickUpgrade } from './one-click'
+import { Command, UpgradeSteps } from './upgrade-steps'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('admin.updates')
@@ -129,9 +129,7 @@ export default async function AdminUpdatesPage() {
                   <p key="backup">{t('dockerSteps.backup')}</p>,
                   <div key="pull" className="flex min-w-0 flex-col gap-2">
                     <p>{t('dockerSteps.pull')}</p>
-                    <pre className="overflow-x-auto rounded-sm bg-surface-sunken px-3 py-2 font-mono text-sm text-text">
-                      {DOCKER_UPGRADE}
-                    </pre>
+                    <Command>{DOCKER_UPGRADE}</Command>
                   </div>,
                 ]}
                 footer={t('dockerSteps.after')}
@@ -203,24 +201,5 @@ async function LatestPanel({
         </div>
       )}
     </Panel>
-  )
-}
-
-/** 带序号的升级步骤，序号的样式同用户中心的启动器步骤 */
-function UpgradeSteps({ steps, footer }: { steps: ReactNode[]; footer: ReactNode }) {
-  return (
-    <>
-      <ol className="flex flex-col gap-4">
-        {steps.map((step, index) => (
-          <li key={index} className="flex gap-4">
-            <span aria-hidden className="w-6 shrink-0 font-pixel text-pixel-2 text-text-muted tabular-nums">
-              {index + 1}
-            </span>
-            <div className="flex min-w-0 flex-col gap-1 pt-1 text-sm text-pretty text-text">{step}</div>
-          </li>
-        ))}
-      </ol>
-      <p className="border-t border-border pt-4 text-sm text-pretty text-text-muted">{footer}</p>
-    </>
   )
 }

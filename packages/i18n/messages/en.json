@@ -211,9 +211,10 @@
     "update_not_prepared": "Prepare the target version first.",
     "update_not_newer": "The target version is not newer than the current version.",
     "update_unknown_version": "The target release could not be found.",
-    "update_manager_outdated": "Restart the service to activate the new update manager first.",
+    "update_manager_outdated": "This version needs a newer manager process.",
     "update_node_too_old": "The current Node.js version does not meet the target release requirements.",
     "update_backup_required": "Back up the database and confirm the backup first.",
+    "update_offline_required": "Online rollback is unavailable for MySQL and PostgreSQL updates with migrations: stop the service, restore the database from the backup taken before the update, run node nextskin.mjs rollback --yes, then start the service.",
     "update_confirmation_required": "Confirm the database restore or data loss required for rollback first.",
     "update_no_previous": "There is no previous version to roll back to.",
     "update_backup_missing": "The database backup from before the update is missing. Rollback is unavailable.",
@@ -2333,7 +2334,12 @@
       "oneClick": {
         "readyTitle": "{version} is available",
         "ready": "Prepare first: download, verify the signature, unzip, then check the new version against the database in use. The site keeps running; afterwards you see how long it will be down and whether to back up first.",
-        "failedBefore": "The last upgrade to this version did not succeed. Preparing again downloads and checks it anew.",
+        "failedBefore": "Last time this version failed its migrations here, or did not start after them. Preparing again downloads and checks it anew.",
+        "steppingTitle": "{latest} takes two steps",
+        "stepping": "{latest} needs a newer manager process than the one running now. Upgrade to {target} first, restart the service once so the manager it brings takes over, then come back and upgrade to {latest}.",
+        "managerOutdatedTitle": "{version} needs a newer manager process",
+        "managerPending": "The new manager process came with the last upgrade. Restart the service once to activate it, then you can upgrade to {version}.",
+        "managerUnzip": "One-click upgrade cannot reach this version, and there is no intermediate version to go through first. Upgrade by unzipping the {version} ZIP over the current directory, as described below.",
         "prepare": "Prepare {version}",
         "nothingTitle": "Up to date",
         "nothing": "When a new stable release is out, upgrade it here with one click.",
@@ -2401,19 +2407,24 @@
         "rollbackHints": {
           "plain": "The last upgrade had no database migrations, so the {version} program is simply switched back in.",
           "sqlite": "The SQLite database is replaced by the backup taken before the upgrade: every sign-up, upload and change since then is lost.",
-          "external": "The database is not touched: restore the {dialect} database from the backup taken before the upgrade, then come back and confirm."
+          "external": "With {dialect} migrations, rollback cannot be done from here: while the database is being restored, {current} would still be online and writing to it. Follow these steps on the server:"
+        },
+        "rollbackSteps": {
+          "stop": "Stop the service.",
+          "restore": "Restore the {dialect} database from the backup taken before the upgrade.",
+          "command": "Run the command below in the instance directory. It checks with {version} that the database really was restored, then switches back to {version} without starting the service.",
+          "start": "Start the service. The site is back on {version}.",
+          "guide": "Command-line rollback"
         },
         "rollbackBlocked": "The SQLite backup taken before the upgrade is gone, so it cannot be rolled back automatically.",
         "rollback": "Go back to {version}",
         "rollbackDialogTitle": "Go back to {version}?",
         "rollbackWarnings": {
           "plain": "The site will be down for a few seconds to over thirty.",
-          "sqlite": "The database is replaced by the backup taken before the upgrade, and everything written since is lost. The site will be down for a few seconds to over thirty.",
-          "external": "Only the program is switched. Restore the database to its state before the upgrade first, or {version} cannot open it."
+          "sqlite": "The database is replaced by the backup taken before the upgrade, and everything written since is lost. The site will be down for a few seconds to over thirty."
         },
         "rollbackConfirms": {
-          "sqlite": "I understand everything written since the upgrade is lost",
-          "external": "The {dialect} database has been restored to its state before the upgrade"
+          "sqlite": "I understand everything written since the upgrade is lost"
         }
       }
     },
