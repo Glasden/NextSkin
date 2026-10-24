@@ -622,8 +622,10 @@ describe('部分迁移的失败恢复', () => {
       reason: contains('数据库已经部分迁移，新版本保留，需要管理员用升级前的备份恢复'),
     })
     expect((await readCurrent(f.home))?.current).toBe('1.1.0')
-    await vi.waitFor(async () =>
-      expect((await events(f.home)).some((e) => e.command === 'start' && e.version === '1.1.0')).toBe(true),
+    // 启动记录由真实的启动器子进程写，CI 上可能超过 waitFor 默认的 1 秒
+    await vi.waitFor(
+      async () => expect((await events(f.home)).some((e) => e.command === 'start' && e.version === '1.1.0')).toBe(true),
+      { timeout: 10_000 },
     )
     expect((await events(f.home)).some((e) => e.command === 'start' && e.version === '1.0.0')).toBe(false)
   })

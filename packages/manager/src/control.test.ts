@@ -302,7 +302,8 @@ it('apply 先写完 accepted 并关闭服务端 socket，再调用流水线的 s
     expect(
       await controlRequest(service.address, service.token, 'apply', { version: '1.1.0', backupConfirmed: false }),
     ).toEqual({ accepted: true })
-    await vi.waitFor(() => expect(manager.status().lastResult?.result).toBe('success'))
+    // 真实的流水线要起几次 doctor、migrate 子进程，CI 上超过 waitFor 默认的 1 秒
+    await vi.waitFor(() => expect(manager.status().lastResult?.result).toBe('success'), { timeout: 10_000 })
     expect(supervisor.stop).toHaveBeenCalledTimes(1)
     expect(await managerStatus(f.home, '1.0.0', manager, true)).toMatchObject({ current: '1.1.0' })
   } finally {
