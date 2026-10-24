@@ -6,7 +6,7 @@
  */
 import { spawn } from 'node:child_process'
 import { isDeepStrictEqual } from 'node:util'
-import { discardLogger, lineSplitter, type Logger } from '@nextskin/logging'
+import { discardLogger, lineSplitter, redactSecrets, type Logger } from '@nextskin/logging'
 import {
   ChannelClosedError,
   createFrameChannel,
@@ -181,8 +181,8 @@ export function startHostGeneration(options: {
   )
   const log = logger.child({ area: 'plugin-host', generation: sequence })
   const stderr = logger.child({ source: 'plugin-host', generation: sequence })
-  // stderr 按行记日志，一行最多 MAX_STDERR_LINE 个字符（lineSplitter 不在内存里攒）
-  const stderrLines = lineSplitter(MAX_STDERR_LINE, (line) => stderr.warn(line))
+  // stderr 按行记日志，一行最多 MAX_STDERR_LINE 个字符（lineSplitter 不在内存里攒）；机密形状的内容先换掉
+  const stderrLines = lineSplitter(MAX_STDERR_LINE, (line) => stderr.warn(redactSecrets(line)))
   child.stderr.setEncoding('utf8')
   child.stderr.on('data', (chunk: string) => stderrLines.push(chunk))
   child.stderr.on('end', () => stderrLines.end())

@@ -1,4 +1,4 @@
-import { mkdir, open, readdir, rename, rm } from 'node:fs/promises'
+import { chmod, mkdir, open, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Logger } from './logger.ts'
 
@@ -6,6 +6,8 @@ import type { Logger } from './logger.ts'
 export const LOG_DIRECTORY = 'logs'
 /** 当前的文件；轮换出来的是 `nextskin.1.log`（最新）、`nextskin.2.log`…… */
 export const LOG_FILE = 'nextskin.log'
+/** 上次收到的轮换上限，放在日志目录里：重启后、核心打开数据库之前照它轮换 */
+export const LOG_LIMITS_FILE = 'limits.json'
 
 export function rotatedLogFile(index: number): string {
   return `nextskin.${index}.log`
@@ -39,9 +41,12 @@ export function isLogFileLimits(value: unknown): value is LogFileLimits {
 export interface LogFileSystem {
   mkdir(path: string, options: { recursive: true; mode: number }): Promise<unknown>
   open(path: string, flags: 'a', mode: number): Promise<LogFileHandle>
+  chmod(path: string, mode: number): Promise<void>
   rename(from: string, to: string): Promise<void>
   rm(path: string, options: { force: true }): Promise<void>
   readdir(path: string): Promise<string[]>
+  readFile(path: string, encoding: 'utf8'): Promise<string>
+  writeFile(path: string, data: string, options: { mode: number }): Promise<void>
 }
 
 export interface LogFileHandle {
@@ -50,14 +55,14 @@ export interface LogFileHandle {
   close(): Promise<void>
 }
 
-const nodeFileSystem: LogFileSystem = { mkdir, open, rename, rm, readdir }
+const nodeFileSystem: LogFileSystem = { mkdir, open, chmod, rename, rm, readdir, readFile, writeFile }
 
 export interface LogFileOptions {
   /** `<数据目录>/logs` */
   directory: string
   /** 丢了记录、写不进去、轮换失败时的提示写到这里，和其余记录同一个出口 */
   report: Logger
-  /** 收到设置之前用默认值；`configure` 可以随时换 */
+  /** 一开始的上限；不给就用上次收到的（`limits.json`），没有再用默认值。`configure` 可以随时换 */
   limits?: LogFileLimits
   /** 等着写盘的内容的上限，默认 4 MB */
   maxPending?: number
@@ -86,6 +91,7 @@ const RETRY_DELAY = 1000
 const MIN_BATCH = 64 * 1024
 /** Windows 上文件被别的进程（杀毒软件、正在读日志的编辑器）占着时改名会失败，照 ADR-0061 重试几次 */
 const RETRYABLE = ['EPERM', 'EBUSY', 'EACCES']
+const ROTATED = /^nextskin\.(\d+)\.log$/
 
 /**
  * 写日志文件并按大小轮换（ADR-0062）。一个数据目录同时只有一个写入方（启动器，或者不经过启动器时的核心），
@@ -97,8 +103,9 @@ export function openLogFile(options: LogFileOptions): LogFile {
   const sleep = options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)))
   const maxPending = options.maxPending ?? 4 * MB
   const path = (name: string) => join(options.directory, name)
-  // 收到设置之前，轮换不删旧文件（最多留到设置允许的份数）：站长可能设了比默认多的份数，按默认值删就丢了日志
-  let limits = options.limits
+  let limits: LogFileLimits = options.limits ?? DEFAULT_LOG_FILE_LIMITS
+  // 没给上限时，第一次写盘之前读 limits.json；configure 先到就不读了
+  let loadLimits = !options.limits
   const lines: string[] = []
   const sizes: number[] = []
   let pending = 0
@@ -107,11 +114,14 @@ export function openLogFile(options: LogFileOptions): LogFile {
   let reportedAt = -Infinity
   let handle: LogFileHandle | undefined
   let written = 0
+  // 写到一半失败时文件末尾可能是半行：下一次写之前先补一个换行，后面的记录不和它粘在一起
+  let brokenTail = false
   let prune = false
+  let persist = false
   let closed = false
   let running: Promise<void> | undefined
 
-  const maxBytes = () => (limits ?? DEFAULT_LOG_FILE_LIMITS).maxFileSizeMb * MB
+  const maxBytes = () => limits.maxFileSizeMb * MB
 
   const report = (msg: string, error: unknown) => {
     if (now() - reportedAt < REPORT_INTERVAL) return
@@ -123,7 +133,7 @@ export function openLogFile(options: LogFileOptions): LogFile {
     if (running) return
     running = drain().then(() => {
       running = undefined
-      if (lines.length > 0 || prune) kick()
+      if (lines.length > 0 || prune || persist) kick()
     })
   }
 
@@ -137,6 +147,15 @@ export function openLogFile(options: LogFileOptions): LogFile {
   }
 
   const openCurrent = async () => {
+    if (loadLimits) {
+      loadLimits = false
+      try {
+        const saved: unknown = JSON.parse(await fs.readFile(path(LOG_LIMITS_FILE), 'utf8'))
+        if (isLogFileLimits(saved)) limits = { maxFileSizeMb: saved.maxFileSizeMb, maxFiles: saved.maxFiles }
+      } catch {
+        // 没有、读不了、格式不对：用默认值
+      }
+    }
     await fs.mkdir(options.directory, { recursive: true, mode: 0o700 })
     const opened = await fs.open(path(LOG_FILE), 'a', 0o600)
     try {
@@ -146,6 +165,9 @@ export function openLogFile(options: LogFileOptions): LogFile {
       throw error
     }
     handle = opened
+    // mode 只管新建的：已有的目录、文件（从备份恢复的、旧版本建的）也收紧成只有运行服务的用户能读（Windows 上不起作用）
+    await fs.chmod(options.directory, 0o700).catch(() => undefined)
+    await fs.chmod(path(LOG_FILE), 0o600).catch(() => undefined)
   }
 
   const closeCurrent = async () => {
@@ -160,21 +182,26 @@ export function openLogFile(options: LogFileOptions): LogFile {
         await fs.rename(path(from), path(to))
         return
       } catch (error) {
-        const code = errorCode(error)
-        if (code === 'ENOENT') return
-        if (attempt >= 4 || !RETRYABLE.includes(code ?? '')) throw error
+        if (attempt >= 4 || !RETRYABLE.includes(errorCode(error) ?? '')) throw error
         await sleep((attempt + 1) * 50)
       }
     }
   }
 
-  // 已有的旧文件依次后移，当前文件改名为 nextskin.1.log，超出份数的删掉。改名失败就接着写当前文件，下一批再试
+  // 旧文件依次后移，当前文件改名为 nextskin.1.log。上一次轮换中途失败时，序列里有个空位：只把空位前面的往后挪，
+  // 不删文件；没有空位（份数满了）才删最旧的一份。改名失败就接着写当前文件，下一批再试
   const rotate = async () => {
     await closeCurrent()
-    const keep = (limits?.maxFiles ?? LOG_FILE_LIMIT_RANGES.maxFiles.max) - 1
+    const keep = limits.maxFiles - 1
     try {
-      await fs.rm(path(rotatedLogFile(keep)), { force: true })
-      for (let index = keep - 1; index >= 1; index--) await move(rotatedLogFile(index), rotatedLogFile(index + 1))
+      const existing = new Set(await fs.readdir(options.directory))
+      let gap = 1
+      while (gap <= keep && existing.has(rotatedLogFile(gap))) gap++
+      if (gap > keep) {
+        await fs.rm(path(rotatedLogFile(keep)), { force: true })
+        gap = keep
+      }
+      for (let index = gap - 1; index >= 1; index--) await move(rotatedLogFile(index), rotatedLogFile(index + 1))
       await move(LOG_FILE, rotatedLogFile(1))
     } catch (error) {
       report('日志文件轮换失败，接着写当前的文件', error)
@@ -183,7 +210,6 @@ export function openLogFile(options: LogFileOptions): LogFile {
   }
 
   const removeExtra = async () => {
-    if (!limits) return
     let names: string[]
     try {
       names = await fs.readdir(options.directory)
@@ -191,13 +217,19 @@ export function openLogFile(options: LogFileOptions): LogFile {
       return
     }
     for (const name of names) {
-      const index = /^nextskin\.(\d+)\.log$/.exec(name)?.[1]
+      const index = ROTATED.exec(name)?.[1]
       if (index && Number(index) >= limits.maxFiles) await fs.rm(path(name), { force: true }).catch(() => undefined)
     }
   }
 
   const drain = async () => {
-    while (lines.length > 0 || prune) {
+    while (lines.length > 0 || prune || persist) {
+      if (persist) {
+        persist = false
+        await fs.mkdir(options.directory, { recursive: true, mode: 0o700 }).catch(() => undefined)
+        await fs.writeFile(path(LOG_LIMITS_FILE), `${JSON.stringify(limits)}\n`, { mode: 0o600 }).catch(() => undefined)
+        continue
+      }
       if (prune) {
         prune = false
         await removeExtra()
@@ -208,8 +240,10 @@ export function openLogFile(options: LogFileOptions): LogFile {
         if (!handle) await openCurrent()
         if (written >= maxBytes()) await rotate()
         batch = take(Math.max(maxBytes() - written, MIN_BATCH))
-        const text = `${batch.join('\n')}\n`
+        const text = `${brokenTail ? '\n' : ''}${batch.join('\n')}\n`
+        brokenTail = true
         await handle!.appendFile(text)
+        brokenTail = false
         written += Buffer.byteLength(text)
       } catch (error) {
         // 磁盘满、没有权限：这一批和排着的都丢掉，过一会儿重新打开再试
@@ -222,7 +256,8 @@ export function openLogFile(options: LogFileOptions): LogFile {
         report('日志文件写不进去，先丢掉新的记录', error)
         continue
       }
-      if (dropped > 0) {
+      // 补一条丢了多少：排着的还很满时先不补，否则这一条也会被丢掉，计数跟着丢了
+      if (dropped > 0 && pending < maxPending / 2) {
         const count = dropped
         dropped = 0
         options.report.warn('有记录没写进日志文件', { file: path(LOG_FILE), dropped: count })
@@ -244,12 +279,16 @@ export function openLogFile(options: LogFileOptions): LogFile {
       kick()
     },
     configure(next) {
-      const fewer = !limits || next.maxFiles < limits.maxFiles
-      limits = { ...next }
-      if (fewer && !closed) {
-        prune = true
-        kick()
-      }
+      if (closed) return
+      const fewer = next.maxFiles < limits.maxFiles
+      const changed =
+        loadLimits || fewer || next.maxFileSizeMb !== limits.maxFileSizeMb || next.maxFiles !== limits.maxFiles
+      loadLimits = false
+      limits = { maxFileSizeMb: next.maxFileSizeMb, maxFiles: next.maxFiles }
+      if (!changed) return
+      persist = true
+      if (fewer) prune = true
+      kick()
     },
     async flush() {
       while (running) await running

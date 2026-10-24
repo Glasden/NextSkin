@@ -1,4 +1,5 @@
-// 日志（ADR-0062）：记录的格式、给人看的一行文本、基于 Pino 的 logger、按大小轮换的日志文件、核心经 IPC 交给启动器的消息。
+// 日志（ADR-0062）：记录的格式、给人看的一行文本、基于 Pino 的 logger、按大小轮换的日志文件、核心经 IPC 交给启动器的消息、
+// 管不住内容的原始输出里机密形状的替换。
 // 核心各处用 getLogger(模块)，需要注入的地方接 Logger，测试用 createMemoryLogger 或 captureLogs
 export {
   isLogLevel,
@@ -33,6 +34,7 @@ export {
   type LogMessage,
 } from './ipc.ts'
 export { lineSplitter } from './lines.ts'
+export { redactSecrets } from './redact.ts'
 export {
   captureLogs,
   configureRootLogger,

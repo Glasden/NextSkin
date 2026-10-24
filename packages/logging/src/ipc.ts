@@ -38,7 +38,7 @@ export interface IpcChannel {
 
 /**
  * 核心那一侧的出口：记录经 IPC 发给启动器。积压在通道里、还没发出去的超过 `maxBacklog` 条时丢掉新的、记下条数，
- * 下一次发出去时先补一条 warn 说丢了几条。通道断开后改写 `fallback`（stderr）
+ * 下一次发出去时先补一条 warn 说丢了几条。通道断开、发送失败的改写 `fallback`（stderr）
  */
 export function ipcLogWriter(
   channel: IpcChannel,
@@ -50,33 +50,38 @@ export function ipcLogWriter(
   const send = (line: string) => {
     backlog++
     try {
-      channel.send!({ nextskin: 'log', line } satisfies LogMessage, () => {
+      channel.send!({ nextskin: 'log', line } satisfies LogMessage, (error) => {
         backlog--
+        // 发出去之前通道关了（启动器正在退出）
+        if (error) fallback(line)
       })
     } catch {
       backlog--
       fallback(line)
     }
   }
+  const notice = () => {
+    const line = JSON.stringify({
+      time: new Date().toISOString(),
+      level: 'warn',
+      source: 'core',
+      area: 'logging',
+      msg: 'log_ipc_dropped',
+      dropped,
+    })
+    dropped = 0
+    return line
+  }
   return (line) => {
-    if (!channel.connected || !channel.send) return fallback(line)
+    if (!channel.connected || !channel.send) {
+      if (dropped > 0) fallback(notice())
+      return fallback(line)
+    }
     if (backlog >= maxBacklog) {
       dropped++
       return
     }
-    if (dropped > 0) {
-      send(
-        JSON.stringify({
-          time: new Date().toISOString(),
-          level: 'warn',
-          source: 'core',
-          area: 'logging',
-          msg: 'log_ipc_dropped',
-          dropped,
-        }),
-      )
-      dropped = 0
-    }
+    if (dropped > 0) send(notice())
     send(line)
   }
 }

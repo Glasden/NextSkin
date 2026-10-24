@@ -77,3 +77,19 @@ test('启动器只认这两种消息：一行记录、取值在范围里的轮�
   expect(logLimitsFromMessage({ nextskin: 'logConfig', maxFileSizeMb: 0.5, maxFiles: 3 })).toBeNull()
   expect(logLimitsFromMessage({ nextskin: 'log', maxFileSizeMb: 20, maxFiles: 3 })).toBeNull()
 })
+
+test('发送失败的改写 fallback；断线时先补上丢了几条', () => {
+  const { value, sent, callbacks } = channel()
+  const fallback: string[] = []
+  const write = ipcLogWriter(value, (line) => fallback.push(line), 1)
+  write('1')
+  write('2')
+  callbacks[0]!(new Error('channel closed'))
+  expect(fallback).toEqual(['1'])
+  value.connected = false
+  write('3')
+  expect(sent).toHaveLength(1)
+  expect(fallback).toHaveLength(3)
+  expect(JSON.parse(fallback[1]!)).toMatchObject({ level: 'warn', msg: 'log_ipc_dropped', dropped: 1 })
+  expect(fallback[2]).toBe('3')
+})

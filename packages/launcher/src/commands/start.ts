@@ -27,12 +27,16 @@ export async function run(
   try {
     return await prepareAndSupervise(context, output, stop, stopOn)
   } catch (error) {
-    log.error(error instanceof ConfigError ? error.message : '启动失败；请检查配置、文件权限和数据库是否可用。')
-    return error instanceof ConfigError ? 78 : 1
+    return startFailed(log, error)
   } finally {
     stop.dispose()
     await output.close()
   }
+}
+
+function startFailed(log: Logger, error: unknown): number {
+  log.error(error instanceof ConfigError ? error.message : '启动失败；请检查配置、文件权限和数据库是否可用。')
+  return error instanceof ConfigError ? 78 : 1
 }
 
 async function prepareAndSupervise(
@@ -87,7 +91,12 @@ async function prepareAndSupervise(
           }
         : undefined,
     })
+  } catch (error) {
+    // 关掉文件之前记下，原因也进日志文件
+    return startFailed(log, error)
   } finally {
+    // 写完日志、关掉文件再放开锁：下一个启动器拿到锁就会写同一个文件
+    await output.close()
     lock.release()
   }
 }
