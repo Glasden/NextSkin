@@ -12,7 +12,8 @@ beforeEach(async () => {
   directory = join(await mkdtemp(join(tmpdir(), 'nextskin-log-')), 'logs')
 })
 afterEach(async () => {
-  await rm(join(directory, '..'), { recursive: true, force: true })
+  // Windows 上杀毒软件会占着刚写的文件一会儿，删目录要重试
+  await rm(join(directory, '..'), { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
 })
 
 const realFs: LogFileSystem = nodeFs
@@ -302,4 +303,53 @@ test('轮换中途改名失败后重试：只往空位挪，不一份一份删�
   ])
   expect(await read('nextskin.2.log')).toEqual(['A'])
   expect(await read('nextskin.log')).toEqual(['after'])
+})
+
+test('读 limits.json 期间收到设置：读回来的旧值不盖掉新的，存下的是新的', async () => {
+  await mkdir(directory)
+  await writeFile(join(directory, 'limits.json'), '{"maxFileSizeMb":1,"maxFiles":2}\n')
+  for (let index = 1; index <= 3; index++) await writeFile(join(directory, `nextskin.${index}.log`), `${index}\n`)
+  let started!: () => void
+  const reading = new Promise<void>((resolve) => (started = resolve))
+  let release!: () => void
+  const released = new Promise<void>((resolve) => (release = resolve))
+  const fs: LogFileSystem = {
+    ...realFs,
+    readFile: async (path, encoding) => {
+      started()
+      await released
+      return readFile(path, encoding)
+    },
+  }
+  const { logger } = createMemoryLogger()
+  const file = openLogFile({ directory, report: logger, fs })
+  file.write('a')
+  await reading
+  file.configure({ maxFileSizeMb: 20, maxFiles: 10 })
+  release()
+  await file.close()
+  expect(JSON.parse(await readFile(join(directory, 'limits.json'), 'utf8'))).toEqual({
+    maxFileSizeMb: 20,
+    maxFiles: 10,
+  })
+  expect(await names()).toEqual(['nextskin.1.log', 'nextskin.2.log', 'nextskin.3.log', 'nextskin.log'])
+})
+
+test('还没读 limits.json 就收到设置：照新的份数清掉旧上限下留的归档', async () => {
+  await mkdir(directory)
+  await writeFile(join(directory, 'limits.json'), '{"maxFileSizeMb":10,"maxFiles":8}\n')
+  for (let index = 1; index <= 7; index++) await writeFile(join(directory, `nextskin.${index}.log`), `${index}\n`)
+  const { logger } = createMemoryLogger()
+  const file = openLogFile({ directory, report: logger })
+  file.configure({ maxFileSizeMb: 10, maxFiles: 6 })
+  file.write('a')
+  await file.close()
+  expect(await names()).toEqual([
+    'nextskin.1.log',
+    'nextskin.2.log',
+    'nextskin.3.log',
+    'nextskin.4.log',
+    'nextskin.5.log',
+    'nextskin.log',
+  ])
 })

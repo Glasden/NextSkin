@@ -106,6 +106,8 @@ export function openLogFile(options: LogFileOptions): LogFile {
   let limits: LogFileLimits = options.limits ?? DEFAULT_LOG_FILE_LIMITS
   // 没给上限时，第一次写盘之前读 limits.json；configure 先到就不读了
   let loadLimits = !options.limits
+  // 收到过 configure：读文件期间才到的，也不让读回来的旧值盖掉
+  let configured = false
   const lines: string[] = []
   const sizes: number[] = []
   let pending = 0
@@ -151,7 +153,8 @@ export function openLogFile(options: LogFileOptions): LogFile {
       loadLimits = false
       try {
         const saved: unknown = JSON.parse(await fs.readFile(path(LOG_LIMITS_FILE), 'utf8'))
-        if (isLogFileLimits(saved)) limits = { maxFileSizeMb: saved.maxFileSizeMb, maxFiles: saved.maxFiles }
+        if (!configured && isLogFileLimits(saved))
+          limits = { maxFileSizeMb: saved.maxFileSizeMb, maxFiles: saved.maxFiles }
       } catch {
         // 没有、读不了、格式不对：用默认值
       }
@@ -280,14 +283,14 @@ export function openLogFile(options: LogFileOptions): LogFile {
     },
     configure(next) {
       if (closed) return
-      const fewer = next.maxFiles < limits.maxFiles
-      const changed =
-        loadLimits || fewer || next.maxFileSizeMb !== limits.maxFileSizeMb || next.maxFiles !== limits.maxFiles
+      // 第一次收到时不知道磁盘上的 limits.json 和归档是什么样（可能还没读，也可能正在读），照样存一遍、清一遍
+      const changed = !configured || next.maxFileSizeMb !== limits.maxFileSizeMb || next.maxFiles !== limits.maxFiles
+      configured = true
       loadLimits = false
       limits = { maxFileSizeMb: next.maxFileSizeMb, maxFiles: next.maxFiles }
       if (!changed) return
       persist = true
-      if (fewer) prune = true
+      prune = true
       kick()
     },
     async flush() {

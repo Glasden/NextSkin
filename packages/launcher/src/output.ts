@@ -50,21 +50,13 @@ export interface LauncherOutput {
 export function createLauncherOutput(env: NodeJS.ProcessEnv, terminal?: (line: string) => void): LauncherOutput {
   let file: LogFile | undefined
   let early: string[] | undefined = []
-  let terminalDropped = 0
   const toTerminal =
     terminal ??
-    ((line: string) => {
-      if (process.stdout.writableLength + process.stderr.writableLength > MAX_TERMINAL_PENDING) {
-        terminalDropped++
-        return
-      }
-      terminalWriter(logFormatFromEnv(env))(line)
-      if (terminalDropped > 0) {
-        const dropped = terminalDropped
-        terminalDropped = 0
-        logger.warn('终端的输出没被及时读走，有记录没写到终端', { dropped })
-      }
-    })
+    boundedTerminal(
+      (line) => terminalWriter(logFormatFromEnv(env))(line),
+      () => process.stdout.writableLength + process.stderr.writableLength,
+      (dropped) => logger.warn('终端的输出没被及时读走，有记录没写到终端', { dropped }),
+    )
   const write = (line: string) => {
     toTerminal(line)
     if (file) file.write(line)
@@ -100,5 +92,35 @@ export function createLauncherOutput(env: NodeJS.ProcessEnv, terminal?: (line: s
       early = undefined
       await file?.close()
     },
+  }
+}
+
+/**
+ * 写终端；`pending()`（还没被读走的字节数）超过上限时丢掉、记下条数，恢复后经 `report` 补一条。
+ * 补的这一条也写终端，不受上限限制：否则它刚好又越过上限时会被丢掉，计数跟着丢了
+ */
+export function boundedTerminal(
+  write: (line: string) => void,
+  pending: () => number,
+  report: (dropped: number) => void,
+  limit = MAX_TERMINAL_PENDING,
+): (line: string) => void {
+  let dropped = 0
+  let reporting = false
+  return (line) => {
+    if (!reporting && pending() > limit) {
+      dropped++
+      return
+    }
+    write(line)
+    if (dropped === 0 || reporting) return
+    const count = dropped
+    dropped = 0
+    reporting = true
+    try {
+      report(count)
+    } finally {
+      reporting = false
+    }
   }
 }

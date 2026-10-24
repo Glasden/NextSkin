@@ -48,7 +48,7 @@ ADR-0002 定了 Pino 结构化日志、可选的 OTel 导出、用内存环形�
 
 核心的记录经已有的 IPC 通道（`NEXTSKIN_LAUNCHER_IPC=1`，ADR-0039）发给启动器，消息是 `{ nextskin: 'log', line }`，不写 stdout。核心的 stdout、stderr 从 `inherit` 改成 `pipe`，启动器逐行读，按 plugin host 的规则截断，每行记成 `source: 'core'`、`raw: true`，stdout 来的记 `info`，stderr 来的记 `warn`。Next 自己的输出、打开 logger 之前的报错、崩溃时 Node 打印的堆栈都从这里进来。
 
-- 原始行不经过 Pino 的 `redact`，第三方库打印的请求里可能带着机密，所以写出去之前先兜底：`Cookie`、`Set-Cookie`、`Authorization` 头的值，`Bearer`、`Basic` 后面的值，JWT 形状的串，URL 里的 `用户:密码@`，查询参数里 `token`、`code`、`secret`、`password` 一类的值，换成 `[redacted]`。诊断包的脱敏复用这套规则。
+- 原始行不经过 Pino 的 `redact`，第三方库打印的请求里可能带着机密，所以写出去之前先兜底：`Cookie`、`Set-Cookie`、`Authorization` 头和 JSON 里同名字段的值，`Bearer` 后面的值，JWT 形状的串，URL 里的 `用户:密码@`，查询参数里 `token`、`code`、`secret` 一类的值，`password=`、`api_key:` 这类键值，换成 `[redacted]`。`code`、`key` 这类在普通报错里常见的词只在查询参数里认，免得吞掉正常的内容。诊断包的脱敏复用这套规则。
 
 - 结构化记录走 IPC，不和原始输出混在 stdout 里：Next 和第三方库打印的行里可能带着请求里的内容，混在一起就只能靠"这一行像不像 JSON"来区分，原始输出也就能伪造成核心的记录。
 - IPC 是核心和启动器之间可信的通道，Windows 上也已经在用。plugin host 不用 Node 的 IPC，是因为限不住插件发来的消息大小（ADR-0033），这条理由对核心不成立。
@@ -82,7 +82,7 @@ ADR-0002 定了 Pino 结构化日志、可选的 OTel 导出、用内存环形�
 
 ### 不经过启动器时
 
-- `pnpm dev` 和直接运行 `server.js`：核心自己写终端（给人看的格式）和日志文件，只有结构化记录，收不到原始输出；轮换的上限直接读设置。这样开发时诊断页也有日志可看。
+- `pnpm dev` 和直接运行 `server.js`：核心自己写终端（给人看的格式）和日志文件，只有结构化记录，收不到原始输出；轮换的上限直接读设置。这样开发时诊断页也有日志可看。核心不拿数据目录的锁：和启动器共用一个数据目录本来就不支持（数据库、后台任务一样会冲突），两边的日志文件也会互相轮换掉。
 - 命令行里在进程内打开核心的命令（`migrate`、`plugin`、`set-role`……）只写终端，不写文件：服务可能正在运行，再写一份会和启动器的轮换冲突。
 - 管理进程（ADR-0061）自己的行照旧只写终端，格式换成同样的一行文本，来源写 `manager`；它照旧原样转发启动器的输出。升级的结果已经在 `update-log.jsonl` 里，核心经管理进程的 `status` 读到。
 

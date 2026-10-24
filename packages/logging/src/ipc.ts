@@ -52,12 +52,19 @@ export function ipcLogWriter(
     try {
       channel.send!({ nextskin: 'log', line } satisfies LogMessage, (error) => {
         backlog--
-        // 发出去之前通道关了（启动器正在退出）
-        if (error) fallback(line)
+        if (error) {
+          // 发出去之前通道关了（启动器正在退出）
+          fallback(line)
+          if (dropped > 0) fallback(notice())
+        } else if (dropped > 0 && backlog < maxBacklog) {
+          // 积压清掉了就补上，不等下一条记录：之后可能再也没有记录了
+          send(notice())
+        }
       })
     } catch {
       backlog--
       fallback(line)
+      if (dropped > 0) fallback(notice())
     }
   }
   const notice = () => {
