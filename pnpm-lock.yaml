@@ -758,6 +758,9 @@ importers:
 
   packages/manager:
     dependencies:
+      '@nextskin/logging':
+        specifier: workspace:*
+        version: link:../logging
       '@nextskin/updates':
         specifier: workspace:*
         version: link:../updates

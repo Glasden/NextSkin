@@ -3,6 +3,7 @@ import { access, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { createInterface } from 'node:readline/promises'
+import { createLogger, logLevelFromEnv, logFormatFromEnv, terminalWriter } from '@nextskin/logging'
 import { MANAGER_PROTOCOL, compareVersions } from '@nextskin/updates'
 import { connectControl, managerStatus } from './control.ts'
 import { logRunAs, resolveRunAs } from './run-as.ts'
@@ -86,7 +87,13 @@ export async function runManagementCommand(
   const errorOutput = options.error ?? console.error
   try {
     const { command, status: statusCommand, values } = parse(argv)
-    let runtime = options.manager ?? {}
+    const log =
+      options.manager?.log ??
+      createLogger('manager', {
+        level: logLevelFromEnv(process.env),
+        write: terminalWriter(logFormatFromEnv(process.env), { stdout: process.stderr, stderr: process.stderr }),
+      })
+    let runtime = { ...options.manager, log }
     // 服务停着才自己执行：拿不到数据锁说明服务没经管理进程在跑，等 5 秒就报错，不等满 40 秒
     const makeManager = () =>
       createManager({
@@ -171,7 +178,7 @@ export async function runManagementCommand(
     if (!remote) {
       const runAs = runtime.runAs ?? resolveRunAs(runtime)
       runtime = { ...runtime, runAs }
-      logRunAs(runAs, errorOutput)
+      logRunAs(runAs, log)
       try {
         await access(join(home, 'releases'), constants.W_OK)
       } catch {
@@ -277,7 +284,7 @@ export async function runManagementCommand(
       }
       const result = await manager!.apply(target, { backupConfirmed: !!values['backup-confirmed'] })
       printResult((await getStatus()).lastResult)
-      if (legacy && result.result === 'success') await removeLegacy(home, errorOutput)
+      if (legacy && result.result === 'success') await removeLegacy(home, log)
       return result.result === 'success' ? 0 : 1
     } finally {
       lock?.release()

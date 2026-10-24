@@ -7,6 +7,7 @@ import { ConfigError, reason } from './types.ts'
 import { requireVersion } from './state.ts'
 import { connectControl } from './control.ts'
 import { selectedVersion, start } from './start.ts'
+import { managerLogger } from './log.ts'
 
 export async function dispatch(
   home: string,
@@ -36,6 +37,7 @@ export async function dispatch(
 async function main(): Promise<void> {
   // 打包后 main.mjs 位于 manager/；实例目录始终由根入口的位置确定，不读 .env。
   const home = dirname(dirname(fileURLToPath(import.meta.url)))
+  const command = (process.argv[2] === '--' ? process.argv[3] : process.argv[2]) ?? 'help'
   try {
     let bundled: string
     try {
@@ -44,11 +46,12 @@ async function main(): Promise<void> {
       throw new ConfigError('发行目录不完整，缺少 manager/VERSION')
     }
     requireVersion(bundled)
-    const code = await dispatch(home, bundled)
+    const code = await dispatch(home, bundled, command)
     // 透传的启动器可能已经设置了更准确的退出码。
     if (code !== 0 || process.exitCode === undefined) process.exitCode = code
   } catch (error) {
-    console.error(`[nextskin] ${reason(error)}`)
+    if (command === 'start') managerLogger().error(reason(error))
+    else console.error(`[nextskin] ${reason(error)}`)
     process.exitCode = error instanceof ConfigError ? 78 : 1
   }
 }

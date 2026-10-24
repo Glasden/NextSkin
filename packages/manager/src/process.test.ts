@@ -1,3 +1,4 @@
+import { createMemoryLogger, discardLogger } from '@nextskin/logging'
 import type { chown } from 'node:fs/promises'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { join } from 'node:path'
@@ -21,7 +22,7 @@ describe('监管启动器', () => {
     const f = await setup()
     f.behavior['1.0.0'] = { exit: code }
     await f.configure()
-    const supervisor = new LauncherSupervisor(f.home, { log: vi.fn() })
+    const supervisor = new LauncherSupervisor(f.home, { log: discardLogger })
     disposers.push(() => supervisor.shutdown())
     await supervisor.start('1.0.0')
     expect(await supervisor.finished).toBe(code)
@@ -33,7 +34,7 @@ describe('监管启动器', () => {
     await f.configure()
     const delays: number[] = []
     const supervisor = new LauncherSupervisor(f.home, {
-      log: vi.fn(),
+      log: discardLogger,
       initialDelay: 2,
       maxDelay: 5,
       sleep: async (ms) => {
@@ -49,7 +50,7 @@ describe('监管启动器', () => {
     await f.configure()
     const reset: number[] = []
     const stable = new LauncherSupervisor(f.home, {
-      log: vi.fn(),
+      log: discardLogger,
       initialDelay: 2,
       maxDelay: 10,
       stableTime: 10,
@@ -66,7 +67,7 @@ describe('监管启动器', () => {
   it('停止只发送 IPC，继承实例目录并去掉 NEXTSKIN_MANAGER', async () => {
     const f = await setup()
     const supervisor = new LauncherSupervisor(f.home, {
-      log: vi.fn(),
+      log: discardLogger,
       env: { ...process.env, NEXTSKIN_MANAGER: 'off' },
     })
     disposers.push(() => supervisor.shutdown())
@@ -92,13 +93,13 @@ describe('监管启动器', () => {
       }
       return child
     }) as typeof spawn
-    const supervisor = new LauncherSupervisor(f.home, { spawn: spawnChild, shutdownTimeout: 20, log: vi.fn() })
+    const supervisor = new LauncherSupervisor(f.home, { spawn: spawnChild, shutdownTimeout: 20, log: discardLogger })
     disposers.push(() => supervisor.shutdown())
     await supervisor.start('1.0.0', true)
     await supervisor.shutdown()
     expect(calls).toEqual(['SIGKILL'])
     expect((await events(f.home)).some((e) => e.command === 'shutdown')).toBe(true)
-    const second = new LauncherSupervisor(f.home, { shutdownTimeout: 10_000, log: vi.fn() })
+    const second = new LauncherSupervisor(f.home, { shutdownTimeout: 10_000, log: discardLogger })
     disposers.push(() => second.shutdown())
     await second.start('1.0.0', true)
     const stopped = second.shutdown()
@@ -110,7 +111,7 @@ describe('监管启动器', () => {
     const f = await setup()
     f.behavior['1.0.0'] = { exit: 0 }
     await f.configure()
-    const supervisor = new LauncherSupervisor(f.home, { log: vi.fn() })
+    const supervisor = new LauncherSupervisor(f.home, { log: discardLogger })
     disposers.push(() => supervisor.shutdown())
     await expect(supervisor.start('1.0.0', true)).rejects.toThrow('之前退出')
     expect(healthUrl({ host: '::', port: 3000 })).toBe('http://[::1]:3000/api/health')
@@ -126,7 +127,7 @@ describe('管理进程和数据锁', () => {
     const first = (await acquireLock(path))!
     disposers.push(() => Promise.resolve(first.release()))
     expect(await acquireLock(path)).toBeNull()
-    const waiting = waitForLock(path, { timeout: 500, interval: 5, log: vi.fn() })
+    const waiting = waitForLock(path, { timeout: 500, interval: 5, log: discardLogger })
     setTimeout(() => first.release(), 25)
     const second = await waiting
     expect(second).not.toBeNull()
@@ -138,10 +139,10 @@ describe('管理进程和数据锁', () => {
     const first = (await acquireLock(path))!
     disposers.push(() => Promise.resolve(first.release()))
     const controller = new AbortController()
-    const waiting = waitForLock(path, { timeout: 500, signal: controller.signal, log: vi.fn() })
+    const waiting = waitForLock(path, { timeout: 500, signal: controller.signal, log: discardLogger })
     setTimeout(() => controller.abort(), 10)
     expect(await waiting).toBeNull()
-    await expect(waitForLock(path, { timeout: 5, interval: 1, log: vi.fn() })).rejects.toThrow('等待进程锁超时')
+    await expect(waitForLock(path, { timeout: 5, interval: 1, log: discardLogger })).rejects.toThrow('等待进程锁超时')
   })
   it('取得锁后刚好收到取消会立即释放', async () => {
     const f = await setup()
@@ -171,7 +172,7 @@ it('只有被监管的 start 获得控制地址和令牌，doctor、migrate 剔�
     return spawn(...args)
   }) as typeof spawn
   const env = { ...process.env, NEXTSKIN_MANAGER_ADDRESS: 'inherited', NEXTSKIN_MANAGER_TOKEN: 'inherited' }
-  const supervisor = new LauncherSupervisor(f.home, { spawn: spawnChild, env, log: vi.fn() })
+  const supervisor = new LauncherSupervisor(f.home, { spawn: spawnChild, env, log: discardLogger })
   disposers.push(() => supervisor.shutdown())
   const control = { address: 'test-address', token: 'test-token' }
   supervisor.setControl(control)
@@ -200,7 +201,7 @@ it.each([false, true])('start、doctor、migrate 的 uid/gid 和用户环境（�
   }) as typeof spawn
   const runAs = separated ? { name: 'nextskin', uid: 1234, gid: 5678 } : undefined
   const env = { ...process.env, HOME: '/test/admin', USER: 'admin', LOGNAME: 'admin' }
-  const runtime = { runAs, env, spawn: spawnChild, log: vi.fn() }
+  const runtime = { runAs, env, spawn: spawnChild, log: discardLogger }
   const supervisor = new LauncherSupervisor(f.home, runtime)
   disposers.push(() => supervisor.shutdown())
   await supervisor.start('1.0.0')
@@ -261,7 +262,7 @@ it.skipIf(process.platform === 'win32')('内存 journal 的数据锁仍阻止其
     chown: vi.fn<typeof chown>().mockResolvedValue(undefined),
   }))!
   disposers.push(() => Promise.resolve(lock.release()))
-  const supervisor = new LauncherSupervisor(f.home, { log: vi.fn(), healthInterval: 10, healthTimeout })
+  const supervisor = new LauncherSupervisor(f.home, { log: discardLogger, healthInterval: 10, healthTimeout })
   disposers.push(() => supervisor.shutdown())
   await expect(supervisor.start('1.0.0', true)).rejects.toThrow('78')
   await supervisor.stop()
@@ -304,7 +305,7 @@ it('强杀同时杀核心，并等它消失后 stop 才返回；使用最近一�
       await gate
     },
     shutdownTimeout: 1,
-    log: vi.fn(),
+    log: discardLogger,
   })
   disposers.push(() => supervisor.shutdown())
   await supervisor.start('1.0.0')
@@ -333,7 +334,7 @@ it.each([false, true])('强杀缺少 pid 时直接返回，有 pid 但未消失�
       return true
     }),
   }) as unknown as import('node:child_process').ChildProcess
-  const log = vi.fn()
+  const { logger, records } = createMemoryLogger({ source: 'manager' })
   const kill = vi.fn<typeof process.kill>(() => true)
   let clock = 0
   const supervisor = new LauncherSupervisor('/unused', {
@@ -345,15 +346,19 @@ it.each([false, true])('强杀缺少 pid 时直接返回，有 pid 但未消失�
       return Promise.resolve()
     },
     shutdownTimeout: 1,
-    log,
+    log: logger,
   })
   await supervisor.start('1.0.0')
   if (hasPid) child.emit('message', { nextskin: 'ready', version: '1.0.0', host: '127.0.0.1', port: 3000, pid: 5678 })
   await supervisor.stop()
   expect(clock).toBe(hasPid ? 5000 : 0)
-  if (hasPid) expect(log).toHaveBeenCalledWith(expect.stringContaining('5 秒内仍未退出'))
-  else {
-    expect(kill).not.toHaveBeenCalled()
-    expect(log).toHaveBeenCalledWith(expect.stringContaining('没有核心 pid'))
-  }
+  expect(records).toHaveLength(2)
+  expect(records).toMatchObject([
+    { level: 'info', msg: '正在停止启动器' },
+    {
+      level: 'warn',
+      msg: hasPid ? '强杀后核心在 5 秒内仍未退出，请人工检查' : '强杀启动器时没有核心 pid，无法确认核心是否已经退出',
+    },
+  ])
+  if (!hasPid) expect(kill).not.toHaveBeenCalled()
 })

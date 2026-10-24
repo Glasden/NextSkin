@@ -1,6 +1,7 @@
 import { constants } from 'node:fs'
 import { access, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { Logger } from '@nextskin/logging'
 import { logRunAs, resolveRunAs } from './run-as.ts'
 import { createControl } from './control.ts'
 import { createManager, type ManagerOptions } from './pipeline.ts'
@@ -9,6 +10,7 @@ import { LauncherSupervisor, stopSignals } from './process.ts'
 import { initialCurrent, readCurrent, requireVersion, pruneReleases, writeCurrent } from './state.ts'
 import { compareVersions } from '@nextskin/updates'
 import { ConfigError, ManagerError, type Manager, type Current } from './types.ts'
+import { managerLogger } from './log.ts'
 
 async function exists(path: string): Promise<boolean> {
   try {
@@ -27,10 +29,10 @@ export async function readLegacyVersion(home: string): Promise<string | null> {
   requireVersion(version)
   return version
 }
-export async function removeLegacy(home: string, log: (line: string) => void = console.error): Promise<void> {
+export async function removeLegacy(home: string, log: Logger = managerLogger()): Promise<void> {
   for (const name of ['server', 'cli'])
     await rm(join(home, name), { recursive: true, force: true }).catch(() =>
-      log(`[nextskin] 旧布局的 ${name} 暂时无法删除，请稍后清理`),
+      log.warn(`旧布局的 ${name} 暂时无法删除，请稍后清理`),
     )
 }
 export interface SelectionOptions {
@@ -40,7 +42,7 @@ export interface SelectionOptions {
   writable?: () => Promise<void>
   onReadOnly?: () => void
   writeCurrent?: typeof writeCurrent
-  log?: (line: string) => void
+  log?: Logger
 }
 /** 不做升级的命令和 off 模式只读指针，不能创建锁、探测文件或补写 bundled。 */
 export async function selectedVersion(home: string, bundled: string): Promise<string> {
@@ -51,7 +53,7 @@ export async function selectVersion(options: SelectionOptions): Promise<string> 
   const { home, bundled, manager } = options
   requireVersion(bundled)
   const pointer = await readCurrent(home)
-  const log = (message: string) => (options.log ?? console.error)(`[nextskin] ${message}`)
+  const log = options.log ?? managerLogger()
   const fallback = pointer?.current ?? bundled
   const write = async (value: Current) => {
     try {
@@ -69,7 +71,7 @@ export async function selectVersion(options: SelectionOptions): Promise<string> 
     if (pointer) {
       if (pointer.bundled === bundled) return pointer.current
       if (compareVersions(bundled, pointer.current) <= 0) {
-        log('解压的版本比当前旧，忽略；要回到旧版本用 rollback')
+        log.warn('解压的版本比当前旧，忽略；要回到旧版本用 rollback')
         await write({ ...pointer, bundled })
         return pointer.current
       }
@@ -82,19 +84,19 @@ export async function selectVersion(options: SelectionOptions): Promise<string> 
         try {
           const preflight = await manager.prepareLocal(bundled)
           if (preflight.tier === 'external-backup') {
-            log(
+            log.warn(
               `解压的 ${bundled} 有数据库迁移，${preflight.dialect} 要先自己备份：备份以后在后台的“更新”页确认升级，或停掉服务后运行 node nextskin.mjs update --backup-confirmed；现在照旧运行 ${pointer.current}`,
             )
             return pointer.current
           }
         } catch (error) {
           if (error instanceof ConfigError) throw error
-          log(error instanceof ManagerError ? error.message : '手动升级预检失败')
+          log.warn(error instanceof ManagerError ? error.message : '手动升级预检失败')
           return pointer.current
         }
         const result = await manager.apply(bundled)
         if (result.result !== 'success') {
-          log(result.reason ?? '手动升级失败')
+          log.warn(result.reason ?? '手动升级失败')
           if (result.result === 'failed' && result.step >= 7 && (await readCurrent(home))?.current === pointer.current)
             failedSwitch = result.reason ?? '旧版本未能恢复运行'
         }
@@ -129,7 +131,7 @@ export async function selectVersion(options: SelectionOptions): Promise<string> 
   } catch (error) {
     if (!(error instanceof ReadOnlyError)) throw error
     options.onReadOnly?.()
-    log('releases 目录或 current.json 不可写，只读模式：不切换版本')
+    log.warn('releases 目录或 current.json 不可写，只读模式：不切换版本')
     return fallback
   }
 }
@@ -216,7 +218,7 @@ export async function start(
     if (writable) {
       const pointer = await readCurrent(options.home)
       if (pointer)
-        await pruneReleases(options.home, pointer, options.log ?? console.error, [
+        await pruneReleases(options.home, pointer, options.log ?? managerLogger(), [
           manager.status().prepared?.version ?? '',
         ]).catch(() => {})
     }

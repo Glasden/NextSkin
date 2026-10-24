@@ -1,3 +1,4 @@
+import { createMemoryLogger } from '@nextskin/logging'
 import { ManagerError } from './types.ts'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { access, mkdir, readFile, rm, stat, writeFile, type chown } from 'node:fs/promises'
@@ -113,14 +114,15 @@ describe('控制通道的信任边界', () => {
     if (process.platform !== 'win32') await expect(access(f.service.address)).rejects.toThrow()
     const home = join(f.home, '长'.repeat(50))
     await mkdir(join(home, 'releases'), { recursive: true })
-    const log = vi.fn()
-    const service = await createControl({ home, bundled: '1.0.0', manager: f.manager, log })
+    const { logger, records } = createMemoryLogger({ source: 'manager' })
+    const service = await createControl({ home, bundled: '1.0.0', manager: f.manager, log: logger })
     disposers.push(service.close)
     const hash = createHash('sha256').update(home).digest('hex').slice(0, 16)
     expect(controlAddress(home, 'win32')).toBe(`\\\\.\\pipe\\nextskin-${hash}`)
     if (process.platform !== 'win32') {
       expect(service.address).toBe(join(tmpdir(), `nextskin-${hash}.sock`))
-      expect(log).toHaveBeenCalledWith(expect.stringContaining('临时目录'))
+      expect(records).toHaveLength(1)
+      expect(records).toMatchObject([{ level: 'warn', msg: '实例路径过长，控制 socket 改用临时目录' }])
     }
   })
 })

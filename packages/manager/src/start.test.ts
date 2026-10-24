@@ -1,3 +1,4 @@
+import { createMemoryLogger, discardLogger } from '@nextskin/logging'
 import type { execFileSync } from 'node:child_process'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { access, mkdir, readFile, rm, writeFile, type chown } from 'node:fs/promises'
@@ -21,10 +22,10 @@ async function setup() {
     healthTimeout,
     healthInterval: 10,
     shutdownTimeout: 100,
-    log: vi.fn(),
+    log: discardLogger,
   })
   disposers.push(() => supervisor.shutdown())
-  const manager = await createManager({ home: f.home, bundled: '1.1.0', supervisor, log: vi.fn() })
+  const manager = await createManager({ home: f.home, bundled: '1.1.0', supervisor, log: discardLogger })
   return { ...f, manager, supervisor }
 }
 async function exists(path: string) {
@@ -57,7 +58,7 @@ describe('选版本', () => {
     const f = await setup()
     f.behavior['1.1.0'] = { fail: 'secret' }
     await f.configure()
-    expect(await selectVersion({ ...f, bundled: '1.1.0', log: vi.fn() })).toBe('1.0.0')
+    expect(await selectVersion({ ...f, bundled: '1.1.0', log: discardLogger })).toBe('1.0.0')
     expect(await readCurrent(f.home)).toMatchObject({ current: '1.0.0', bundled: '1.1.0', failed: [] })
     const before = (await events(f.home)).length
     await selectVersion({ ...f, bundled: '1.1.0' })
@@ -66,10 +67,11 @@ describe('选版本', () => {
   it.each(['0.9.0', '1.0.0'])('解压较旧或相等的 %s，只改 bundled', async (bundled) => {
     const f = await setup()
     await writeCurrent(f.home, { ...initialCurrent('1.0.0'), bundled: '0.8.0' })
-    const log = vi.fn()
-    expect(await selectVersion({ ...f, bundled, log })).toBe('1.0.0')
+    const { logger, records } = createMemoryLogger({ source: 'manager' })
+    expect(await selectVersion({ ...f, bundled, log: logger })).toBe('1.0.0')
     expect((await readCurrent(f.home))?.bundled).toBe(bundled)
-    expect(log).toHaveBeenCalledWith(expect.stringContaining('解压的版本比当前旧'))
+    expect(records).toHaveLength(1)
+    expect(records).toMatchObject([{ level: 'warn', msg: '解压的版本比当前旧，忽略；要回到旧版本用 rollback' }])
     expect(await events(f.home)).toEqual([])
   })
   it('旧布局成功时 previous=null，删除旧程序', async () => {
@@ -105,27 +107,34 @@ describe('选版本', () => {
   it('access 失败只读启动 current，无指针时使用自带版本', async () => {
     const f = await setup()
     const writable = () => Promise.reject(new Error('read-only'))
-    const log = vi.fn()
-    expect(await selectVersion({ ...f, bundled: '1.1.0', writable, log })).toBe('1.0.0')
+    const { logger, records } = createMemoryLogger({ source: 'manager' })
+    expect(await selectVersion({ ...f, bundled: '1.1.0', writable, log: logger })).toBe('1.0.0')
     expect((await readCurrent(f.home))?.bundled).toBe('1.0.0')
-    expect(log).toHaveBeenCalledWith(expect.stringContaining('只读模式'))
+    expect(records).toHaveLength(1)
+    expect(records).toMatchObject([{ level: 'warn', msg: 'releases 目录或 current.json 不可写，只读模式：不切换版本' }])
     await rm(join(f.home, 'releases/current.json'))
-    expect(await selectVersion({ ...f, bundled: '1.1.0', writable, log })).toBe('1.1.0')
+    expect(await selectVersion({ ...f, bundled: '1.1.0', writable, log: logger })).toBe('1.1.0')
     expect(await readCurrent(f.home)).toBeNull()
+    expect(records).toHaveLength(2)
+    expect(records).toMatchObject([
+      { level: 'warn', msg: 'releases 目录或 current.json 不可写，只读模式：不切换版本' },
+      { level: 'warn', msg: 'releases 目录或 current.json 不可写，只读模式：不切换版本' },
+    ])
   })
   it('写 current.json 失败退回只读，不执行预检和停止', async () => {
     const f = await setup()
-    const log = vi.fn()
+    const { logger, records } = createMemoryLogger({ source: 'manager' })
     expect(
       await selectVersion({
         ...f,
         bundled: '1.1.0',
         writeCurrent: () => Promise.reject(new Error('permissions')),
-        log,
+        log: logger,
       }),
     ).toBe('1.0.0')
     expect(await events(f.home)).toEqual([])
-    expect(log).toHaveBeenCalledWith(expect.stringContaining('只读模式'))
+    expect(records).toHaveLength(1)
+    expect(records).toMatchObject([{ level: 'warn', msg: 'releases 目录或 current.json 不可写，只读模式：不切换版本' }])
   })
   it('off 模式和普通命令只读选版本，在本进程加载，保持 argv', async () => {
     const f = await setup()
@@ -157,27 +166,24 @@ describe('选版本', () => {
     const f = await setup()
     const lock = (await acquireLock(join(f.home, 'releases/manager.lock')))!
     disposers.push(() => Promise.resolve(lock.release()))
-    let waiting!: () => void
-    const entered = new Promise<void>((r) => {
-      waiting = r
-    })
+    const { logger, records } = createMemoryLogger({ source: 'manager' })
     const starting = start({
       home: f.home,
       bundled: '1.0.0',
-      log: () => {
-        waiting()
-      },
+      log: logger,
     })
-    await entered
+    await vi.waitFor(() => expect(records).toHaveLength(1))
     process.emit('SIGTERM', 'SIGTERM')
     expect(await starting).toBe(0)
+    expect(records).toHaveLength(1)
+    expect(records).toMatchObject([{ level: 'info', msg: '另一个进程还在运行，等待它退出，最多 40 秒' }])
     expect(await events(f.home)).toEqual([])
   })
   it('start 监管退出 0，持锁到启动器退出，释放锁', async () => {
     const f = await setup()
     f.behavior['1.0.0'] = { exit: 0 }
     await f.configure()
-    expect(await start({ home: f.home, bundled: '1.0.0', log: vi.fn() })).toBe(0)
+    expect(await start({ home: f.home, bundled: '1.0.0', log: discardLogger })).toBe(0)
     const lock = await acquireLock(join(f.home, 'releases/manager.lock'))
     expect(lock).not.toBeNull()
     lock?.release()
@@ -204,7 +210,7 @@ it('第二次 SIGINT 强杀不响应 shutdown 的启动器', async () => {
     return child
   }) as typeof spawn
   expect(
-    await start({ home: f.home, bundled: '1.0.0', spawn: spawnChild, shutdownTimeout: 10_000, log: vi.fn() }),
+    await start({ home: f.home, bundled: '1.0.0', spawn: spawnChild, shutdownTimeout: 10_000, log: discardLogger }),
   ).toBe(0)
   expect(kills).toEqual(['SIGKILL'])
 })
@@ -214,7 +220,9 @@ it('手动升级 MySQL 失败且旧版本打不开时退出，不再次偷偷启
   f.behavior['1.1.0'] = { dialect: 'mysql', migrateFail: true }
   f.behavior['1.0.0'] = { dialect: 'mysql', health: 503 }
   await f.configure()
-  await expect(selectVersion({ ...f, bundled: '1.1.0', log: vi.fn() })).rejects.toThrow('用升级前的备份恢复数据库')
+  await expect(selectVersion({ ...f, bundled: '1.1.0', log: discardLogger })).rejects.toThrow(
+    '用升级前的备份恢复数据库',
+  )
   expect(f.supervisor.running).toBe(false)
 })
 
@@ -224,12 +232,18 @@ it.each(['mysql', 'postgres'] as const)(
     const f = await setup()
     f.behavior['1.1.0'] = { dialect, pending: true }
     await f.configure()
-    const log = vi.fn()
-    expect(await selectVersion({ ...f, bundled: '1.1.0', log })).toBe('1.0.0')
+    const { logger, records } = createMemoryLogger({ source: 'manager' })
+    expect(await selectVersion({ ...f, bundled: '1.1.0', log: logger })).toBe('1.0.0')
     expect(f.manager.status().prepared?.tier).toBe('external-backup')
     expect(f.manager.status().lastResult).toBeNull()
     expect((await readCurrent(f.home))?.failed).toEqual([])
-    expect(log).toHaveBeenCalledWith(expect.stringContaining('--backup-confirmed'))
+    expect(records).toHaveLength(1)
+    expect(records).toMatchObject([
+      {
+        level: 'warn',
+        msg: `解压的 1.1.0 有数据库迁移，${dialect} 要先自己备份：备份以后在后台的“更新”页确认升级，或停掉服务后运行 node nextskin.mjs update --backup-confirmed；现在照旧运行 1.0.0`,
+      },
+    ])
     expect((await events(f.home)).some((e) => ['migrate', 'start'].includes(e.command))).toBe(false)
   },
 )
@@ -276,7 +290,7 @@ it('手动外部库迁移时 start 保留版本目录和 prepared，启动器得
     }
     return child
   }) as typeof spawn
-  expect(await start({ home: f.home, bundled: '1.1.0', spawn: spawnChild, log: vi.fn() })).toBe(0)
+  expect(await start({ home: f.home, bundled: '1.1.0', spawn: spawnChild, log: discardLogger })).toBe(0)
   await inspect
   expect(status).toMatchObject({ current: '1.0.0', prepared: { version: '1.1.0' } })
   expect(await exists(join(f.home, 'releases/1.1.0/server/VERSION'))).toBe(true)
@@ -299,7 +313,7 @@ it('只读模式不开控制通道、不向启动器传令牌', async () => {
       bundled: '1.1.0',
       spawn: spawnChild,
       writable: () => Promise.reject(new Error('readonly')),
-      log: vi.fn(),
+      log: discardLogger,
     }),
   ).toBe(0)
   expect(env?.NEXTSKIN_MANAGER_ADDRESS).toBeUndefined()
@@ -322,7 +336,7 @@ it.skipIf(process.platform === 'win32')('start 解析身份一次、打印一行
     delete actual.gid
     return spawn(args[0], args[1], actual)
   }) as typeof spawn
-  const log = vi.fn()
+  const { logger, records } = createMemoryLogger({ source: 'manager' })
   expect(
     await start({
       home: f.home,
@@ -332,11 +346,12 @@ it.skipIf(process.platform === 'win32')('start 解析身份一次、打印一行
       execFileSync: identity,
       spawn: spawnChild,
       chown: ownership,
-      log,
+      log: logger,
     }),
   ).toBe(0)
   expect(identity).toHaveBeenCalledTimes(2)
-  expect(log).toHaveBeenCalledWith('[nextskin] 以 nextskin（1234/5678）运行服务')
+  expect(records).toHaveLength(1)
+  expect(records).toMatchObject([{ level: 'info', msg: '以 nextskin（1234/5678）运行服务' }])
   expect(calls).toHaveLength(1)
   expect(calls[0]?.uid).toBe(1234)
   expect(calls[0]?.gid).toBe(5678)

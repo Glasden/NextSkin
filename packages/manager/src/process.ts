@@ -1,8 +1,10 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
+import type { Logger } from '@nextskin/logging'
 import { ManagerError, object } from './types.ts'
 import type { RunAs, RunAsOptions } from './run-as.ts'
 import { interruptibleSleep } from './lock.ts'
+import { managerLogger } from './log.ts'
 
 export const stopSignals: readonly NodeJS.Signals[] =
   process.platform === 'win32' ? ['SIGINT', 'SIGTERM', 'SIGHUP'] : ['SIGINT', 'SIGTERM']
@@ -12,7 +14,7 @@ export interface Runtime extends RunAsOptions {
   fetch?: typeof fetch
   now?: () => number
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>
-  log?: (line: string) => void
+  log?: Logger
   shutdownTimeout?: number
   healthTimeout?: number
   healthInterval?: number
@@ -137,8 +139,8 @@ export class LauncherSupervisor {
       this.finish = resolve
     })
   }
-  private log(message: string) {
-    ;(this.options.log ?? console.error)(`[nextskin] ${message}`)
+  private get log(): Logger {
+    return this.options.log ?? managerLogger()
   }
   private now() {
     return (this.options.now ?? Date.now)()
@@ -174,7 +176,7 @@ export class LauncherSupervisor {
         })
       }),
     }
-    child.on('error', () => this.log('无法启动版本启动器'))
+    child.on('error', () => this.log.error('无法启动版本启动器'))
     child.on('message', (message: unknown) => {
       if (
         !object(message) ||
@@ -225,7 +227,7 @@ export class LauncherSupervisor {
           this.delay = this.options.initialDelay ?? 1000
         const delay = this.delay
         this.delay = Math.min(delay * 2, this.options.maxDelay ?? 60_000)
-        this.log(`启动器退出（${signal ? `信号 ${signal}` : `退出码 ${code ?? '未知'}`}），${delay} 毫秒后重启`)
+        this.log.warn(`启动器退出（${signal ? `信号 ${signal}` : `退出码 ${code ?? '未知'}`}），${delay} 毫秒后重启`)
         const restart = new AbortController()
         this.restart = restart
         await (this.options.sleep ?? interruptibleSleep)(delay, restart.signal)
@@ -276,13 +278,13 @@ export class LauncherSupervisor {
     session.child.kill('SIGKILL')
     const pid = session.ready?.pid
     if (!pid) {
-      this.log('强杀启动器时没有核心 pid，无法确认核心是否已经退出')
+      this.log.warn('强杀启动器时没有核心 pid，无法确认核心是否已经退出')
       return
     }
     try {
       ;(this.options.kill ?? process.kill)(pid, 'SIGKILL')
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') this.log('无法强杀核心，请人工检查核心是否已经退出')
+      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') this.log.warn('无法强杀核心，请人工检查核心是否已经退出')
     }
   }
   private async waitForCore(session: Session): Promise<void> {
@@ -296,7 +298,7 @@ export class LauncherSupervisor {
         if ((error as NodeJS.ErrnoException).code === 'ESRCH') return
       }
       if (this.now() >= deadline) {
-        this.log('强杀后核心在 5 秒内仍未退出，请人工检查')
+        this.log.warn('强杀后核心在 5 秒内仍未退出，请人工检查')
         return
       }
       // 启动器已经退了，核心可能还在收尾；停止信号不能跳过这段等待。
@@ -314,7 +316,7 @@ export class LauncherSupervisor {
         await this.waitForCore(session)
         return
       }
-      this.log('正在停止启动器')
+      this.log.info('正在停止启动器')
       if (session.child.connected) {
         try {
           session.child.send({ nextskin: 'shutdown' }, () => {})

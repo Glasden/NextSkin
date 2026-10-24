@@ -1,3 +1,4 @@
+import { discardLogger } from '@nextskin/logging'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { access, mkdir, readFile, rm, writeFile, type chown } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -28,7 +29,7 @@ async function setup(dialect: Dialect = 'sqlite', pending = false, download = fa
   f.behavior['1.0.0'] = { dialect }
   f.behavior['1.1.0'] = { dialect, pending }
   await f.configure()
-  const log = vi.fn()
+  const log = discardLogger
   const supervisor = new LauncherSupervisor(f.home, {
     healthTimeout,
     healthInterval: 15,

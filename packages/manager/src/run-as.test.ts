@@ -1,3 +1,4 @@
+import { createMemoryLogger } from '@nextskin/logging'
 import { describe, expect, it, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import { mkdtemp, rm, stat } from 'node:fs/promises'
@@ -58,11 +59,12 @@ describe('NEXTSKIN_RUN_AS 的 NSS 解析', () => {
     expect(() => resolveRunAs(input)).toThrow(expect.objectContaining({ exitCode: 78 }))
   })
   it('只打印服务用户身份，不打印环境', () => {
-    const log = vi.fn()
-    logRunAs({ name: 'nextskin', uid: 1234, gid: 5678 }, log)
-    expect(log.mock.calls).toEqual([['[nextskin] 以 nextskin（1234/5678）运行服务']])
-    logRunAs(undefined, log)
-    expect(log).toHaveBeenCalledTimes(1)
+    const { logger, records } = createMemoryLogger({ source: 'manager' })
+    logRunAs({ name: 'nextskin', uid: 1234, gid: 5678 }, logger)
+    expect(records).toHaveLength(1)
+    expect(records).toMatchObject([{ level: 'info', msg: '以 nextskin（1234/5678）运行服务' }])
+    logRunAs(undefined, logger)
+    expect(records).toHaveLength(1)
   })
 })
 
