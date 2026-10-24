@@ -67,6 +67,7 @@ location / {
 - `Host` 要和玩家请求里的一致，`X-Forwarded-Proto` 决定协议端点算出来的站点地址。
 - `client_max_body_size` 至少 12 MB：材质上传和插件包都走这个入口。
 - 反向代理不在同一个网络命名空间里时（Docker、1Panel、另一台机器），还要把网关地址加进后台“设置 → 高级 → 受信任的反向代理”，否则客户端 IP 会识别错。
+- 不要用 `alias`、`root` 让 nginx 直接读 `/_next/static/` 或材质文件：程序路径每次升级都变，升级以后全站的脚本和样式 404；直接读材质会把删掉的材质继续发出去，响应头也和协议约定的对不上。NextSkin 已经给这些响应带上了长期缓存的 `Cache-Control`，交给浏览器和 CDN 就够了；要在 nginx 上缓存，用 `proxy_cache` 反代、只缓存 200，见[部署文档的“缓存”](https://github.com/Glasden/NextSkin/blob/main/docs/deploy/README.md#缓存)。
 
 ## Docker
 

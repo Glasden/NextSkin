@@ -79,6 +79,36 @@ location / {
 
 确认方法：经反向代理登录后台，看"审计日志"里自己这次登录的 IP。是你的公网 IP 就对了；是 `172.x`、`10.x` 这类地址，就把这个地址加进受信任的反向代理，退出再登录一次核对。
 
+### 缓存
+
+能长期缓存的响应，NextSkin 自己带上了 `Cache-Control`：`/_next/static/` 下的脚本、样式和出图（`/render/…`，地址里带出图的版本）是一年的 `immutable`；材质文件按后台"设置 → 高级 → 公开资源的缓存时间"（默认一年）。浏览器和 CDN 照着缓存就够了，反向代理不用另外配。
+
+不要用 `alias`、`root` 让 nginx 直接读程序目录或数据目录里的文件：
+
+- `/_next/static/`：程序在 `releases/<版本>/` 里，路径每次升级都变。指向旧路径的配置在升级以后让全站的脚本和样式 404。
+- `/textures/…`：NextSkin 只返回还在用的材质（删掉的材质，文件默认一小时以后才从磁盘上清掉），`ETag`、`Last-Modified` 也是协议约定的格式。直接读文件会把删掉的材质继续发出去，响应头和皮肤站模组、启动器期待的对不上，还得让 nginx 的用户能进数据目录。
+
+想让 nginx 少回源，就用 `proxy_cache` 反代这两类路径、只缓存 200（在线上站点实测过）：
+
+```nginx
+# http 块里（proxy_cache_path 只能放在 http 上下文）
+proxy_cache_path /var/cache/nginx/nextskin levels=1:2 keys_zone=nextskin:16m max_size=512m inactive=30d use_temp_path=off;
+```
+
+```nginx
+# server 块里，和 location / 并列；/render/ 再写一段同样的
+location /_next/static/ {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_cache nextskin;
+    proxy_cache_valid 200 30d;
+}
+```
+
+升级的那一刻，还开着旧页面的访客会请求旧版本的文件、得到 404；只缓存 200，这些 404 不会留在缓存里。
+
 ### CDN 和内容安全策略
 
 页面带 `Content-Security-Policy` 响应头：只执行带本次请求 nonce 的脚本（ADR-0053）。反向代理和 CDN 不要去掉或改写这个头，也不要另加一条 CSP。往页面里插脚本、改写页面里的脚本的 CDN 功能会被它拦下，以 Cloudflare 为例：
