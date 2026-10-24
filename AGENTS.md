@@ -83,7 +83,7 @@ nextskin 管理进程（选版本、升级、回滚，ADR-0061；镜像里关掉
 | `packages/email` | 邮件模板，无依赖的 HTML 模板函数（ADR-0020） |
 | `packages/theme` | 配色主题：可改的颜色 token、钻石青的取值、推导、对比度检查和生成 CSS，无依赖的纯函数；ui 的测试、plugin host 的 manifest 校验和核心的主题注册表共用（ADR-0057） |
 | `packages/updates` | 版本清单的格式、ed25519 签名和校验、版本比较，无依赖，核心和管理进程共用；发布用的签名和生成清单的脚本。内置公钥换钥的步骤见 `RELEASE_KEYS` 的注释（ADR-0061） |
-| `packages/logging` | 日志（ADR-0062）：记录的格式（一行 JSON）、终端上给人看的一行、基于 Pino 的 logger。核心各处用 `getLogger(模块)`，要注入的地方接 `Logger`，测试用 `createMemoryLogger` 或 `captureLogs` |
+| `packages/logging` | 日志（ADR-0062）：记录的格式（一行 JSON）、终端上给人看的一行、基于 Pino 的 logger、按大小轮换的日志文件、核心经 IPC 交给启动器的消息。核心各处用 `getLogger(模块)`，要注入的地方接 `Logger`，测试用 `createMemoryLogger` 或 `captureLogs`。由启动器拉起时文件由启动器写（`packages/launcher/src/output.ts`），否则核心自己写（`apps/web/lib/logging.ts`） |
 | `packages/plugin-sdk`、`plugin-host` | 插件 API（公开面，ADR-0033）；插件侧的运行时：host 进程的入口和帧协议、加载插件定义、构造 `ctx`、插件包的格式和校验。核心侧的注册表、网关、换代和安装在 `packages/domain/src/plugins/` |
 | `packages/plugin-cli` | `nextskin-plugin build`：把插件打成插件包（manifest、单文件的服务端代码、文案），插件作者和测试共用。和 SDK 一起发布到 npm，版本号相同；发布的是连同 plugin-host、SDK、zod 打成的单文件（ADR-0035） |
 | `packages/eslint-plugin` | 把不变量写成的 lint 规则 |

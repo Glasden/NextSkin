@@ -106,6 +106,7 @@ docker compose exec nextskin cat /data/setup-code
 | `NEXTSKIN_PORT`、`PORT` | `3000` | 先读 `NEXTSKIN_PORT` |
 | `NEXTSKIN_LOG_LEVEL` | `info` | `debug`、`info`、`warn`、`error`，排查问题时临时改成 `debug` |
 | `NEXTSKIN_LOG_FORMAT` | `text` | `json` 时每行写一条 JSON，给接日志系统的人用 |
+| `NEXTSKIN_LOG_FILE` | 开 | `off` 时不写数据目录里的 `logs/`，只写终端 |
 
 ## 升级与回退
 
