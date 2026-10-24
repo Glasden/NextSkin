@@ -2,7 +2,7 @@
   "name": "@nextskin/logging",
   "version": "0.0.0",
   "private": true,
-  "description": "日志：记录的格式、给人看的一行文本、基于 Pino 的 logger 和测试用的捕获；核心、数据库层和启动器共用（ADR-0062）",
+  "description": "日志：记录的格式、给人看的一行文本、基于 Pino 的 logger、按大小轮换的日志文件、核心经 IPC 交给启动器的消息和测试用的捕获；核心、数据库层、启动器和管理进程共用（ADR-0062）",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
