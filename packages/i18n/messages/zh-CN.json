@@ -231,7 +231,7 @@
     "update_download_failed": "升级文件下载失败，请稍后重试。",
     "update_internal": "升级管理进程发生内部错误。",
     "update_invalid_request": "升级请求参数无效。",
-    "custom_head_invalid": "第 {line} 行：{reason, select, text {直接写的 JavaScript 要放进 '<script>' 标签。} tag {页头代码只收 '<script>'、'<meta>'、'<noscript>'，不能使用 '<'{tag}'>'；CSS 写进自定义 CSS。} attribute {'<'{tag}'>' 不能带 {attribute} 属性。} event_handler {'<'{tag}'>' 不能带 {attribute} 属性，事件属性不会执行。} script_src {'<'{tag}'>' 的 src 必须以 https://、http:// 或 // 开头。} script_src_and_code {'<'{tag}'>' 有 src 时不能再写内联代码。} script_code {'<'{tag}'>' 里的代码没有正常结束：缺了结束标签，或者有没配对的 '<'!--。} script_type {'<'{tag}'>' 不支持 type 值「{value}」。} meta {'<'{tag}'>' 必须有 content，且 name 和 property 只能选一个。} meta_reserved {'<'{tag}'>' 的「{value}」由站点输出，不能重复设置。} other {页头代码不符合规则。}}",
+    "custom_head_invalid": "第 {line} 行：{reason, select, text {直接写的 JavaScript 要放进 '<script>' 标签。} tag {页头代码只收 '<script>'、'<meta>'、'<noscript>'，不能使用 '<'{tag}'>'；CSS 写进自定义 CSS。} attribute {'<'{tag}'>' 不能带 {attribute} 属性。} event_handler {'<'{tag}'>' 不能带 {attribute} 属性，事件属性不会执行。} script_src {'<'{tag}'>' 的 src 必须以 https://、http:// 或 // 开头。} script_src_and_code {'<'{tag}'>' 有 src 时不能再写内联代码。} script_code {'<'{tag}'>' 里的代码没有正常结束：缺了结束标签，或者有没配对的 '<'!--。} script_duplicate {src 为「{value}」的 async 脚本写了两遍，页面上只会输出第一个；删掉一个。} script_type {'<'{tag}'>' 不支持 type 值「{value}」。} meta {'<'{tag}'>' 必须有 content，且 name 和 property 只能选一个。} meta_reserved {'<'{tag}'>' 的「{value}」由站点输出，不能重复设置。} other {页头代码不符合规则。}}",
     "custom_css_invalid": "CSS 里不能出现 '</style'。"
   },
   "score": {

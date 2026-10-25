@@ -374,12 +374,20 @@ test('超级管理员保存设置：字段错误以设置键为名，整批拒�
   const saved = await request('PATCH', '/admin/settings', { values: { 'site.name': 'New name' } })
   expect(saved.status).toBe(200)
   expect(await saved.json()).toEqual({ updated: ['site.name'] })
-  // 公告和内容政策各 20000 个字，超出其他接口 16 KiB 的请求体上限
-  const longest = { 'site.announcement': '𝓐'.repeat(20000), 'texture.contentPolicy': '𝓐'.repeat(20000) }
-  const markdown = await request('PATCH', '/admin/settings', { values: longest })
-  expect(markdown.status).toBe(200)
-  expect(await markdown.json()).toEqual({ updated: ['site.announcement', 'texture.contentPolicy'] })
-  const tooLarge = await request('PATCH', '/admin/settings', { values: { 'site.name': 'a'.repeat(200 * 1024) } })
+  // 所有长文本都填满、每个字 4 字节，一次也能保存，远超其他接口 16 KiB 的请求体上限
+  const longest = {
+    'site.announcement': '𝓐'.repeat(20000),
+    'site.footer': '𝓐'.repeat(2000),
+    'texture.contentPolicy': '𝓐'.repeat(20000),
+    'maintenance.message': '𝓐'.repeat(2000),
+    'custom.head': `<script>/*${'𝓐'.repeat(20000 - '<script>/**/</script>'.length)}*/</script>`,
+    'custom.css': '𝓐'.repeat(50000),
+    'custom.adsTxt': '𝓐'.repeat(50000),
+  }
+  const full = await request('PATCH', '/admin/settings', { values: longest })
+  expect(full.status).toBe(200)
+  expect(((await full.json()) as { updated: string[] }).updated.sort()).toEqual(Object.keys(longest).sort())
+  const tooLarge = await request('PATCH', '/admin/settings', { values: { 'site.name': 'a'.repeat(1025 * 1024) } })
   expect(tooLarge.status).toBe(413)
 })
 

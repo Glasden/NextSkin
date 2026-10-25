@@ -26,6 +26,7 @@ export interface HeadCodeError {
     | 'script_src'
     | 'script_src_and_code'
     | 'script_code'
+    | 'script_duplicate'
     | 'script_type'
     | 'meta'
     | 'meta_reserved'
@@ -53,6 +54,7 @@ export function parseHeadCode(
 ): { ok: true; elements: HeadElement[] } | { ok: false; error: HeadCodeError } {
   const fragment = parseFragment(source, { sourceCodeLocationInfo: true })
   const elements: HeadElement[] = []
+  const asyncSources = new Set<string>()
   for (const node of fragment.childNodes) {
     const line = node.sourceCodeLocation?.startLine ?? 1
     if (node.nodeName === '#comment') continue
@@ -82,6 +84,13 @@ export function parseHeadCode(
       if (attributes.src !== undefined) {
         attributes.src = attributes.src.trim()
         if (!/^(?:https?:)?\/\//i.test(attributes.src)) return invalid('script_src', { attribute: 'src' })
+        // React 把 async 的外部脚本当成资源：挪到 <head> 前面（async 本来就不保证执行顺序），按 src 去重。
+        // 同一个 src 写第二遍会连同它的 data-* 一起被丢掉，所以直接报错
+        if (attributes.async) {
+          if (asyncSources.has(attributes.src))
+            return invalid('script_duplicate', { attribute: 'src', value: attributes.src })
+          asyncSources.add(attributes.src)
+        }
       }
       // 取标签里的文字，不按源码位置截：没写结束标签时 parse5 记的元素结束位置停在开始标签上，代码会被截成空的。
       // 和源码的差别只在换行统一成 \n，浏览器解析时也这样做
