@@ -271,7 +271,8 @@ export async function extract(
     await access(join(manager, 'main.mjs'))
     signal?.throwIfAborted()
     await rm(join(home, 'releases', version), { recursive: true, force: true })
-    await renameRetry(target, join(home, 'releases', version))
+    // 杀毒软件会扫刚解压的整个目录，改名要等它扫完；Windows 上实测 4.5 秒常常不够
+    await renameRetry(target, join(home, 'releases', version), { attempts: 60, signal })
   } finally {
     await file.close()
   }
