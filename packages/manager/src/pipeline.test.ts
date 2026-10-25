@@ -17,7 +17,7 @@ import {
 } from './fixtures.ts'
 import { readCurrent, writeCurrent } from './state.ts'
 import { parsePreflight, parseMigration } from './preflight.ts'
-import type { Dialect } from './types.ts'
+import type { Current, Dialect } from './types.ts'
 
 const disposers: (() => Promise<unknown>)[] = []
 afterEach(async () => {
@@ -274,6 +274,90 @@ describe('回滚', () => {
     await expect(f.manager.rollback({ confirmed: true })).rejects.toMatchObject({ code: 'backup_missing' })
     await rm(join(f.home, 'releases/1.0.0'), { recursive: true })
     await expect(f.manager.rollback({ confirmed: true })).rejects.toMatchObject({ code: 'no_previous' })
+  })
+})
+
+describe('版本指针写不进去（Windows 上 current.json 被占着）', () => {
+  async function held(f: Awaited<ReturnType<typeof setup>>, blocked: (pointer: Current) => boolean) {
+    return createManager({
+      home: f.home,
+      bundled: '1.0.0',
+      supervisor: f.supervisor,
+      log: f.log,
+      writeCurrent: async (home, pointer) => {
+        if (blocked(pointer)) throw Object.assign(new Error('held'), { code: 'EPERM', syscall: 'rename' })
+        await writeCurrent(home, pointer)
+      },
+    })
+  }
+  it('切换时一直写不进去：库换回备份，照旧起旧版本', async () => {
+    const f = await setup('sqlite', true)
+    const manager = await held(f, () => true)
+    await manager.prepareLocal('1.1.0')
+    const result = await manager.apply('1.1.0')
+    expect(result).toMatchObject({ result: 'rolled-back', step: 9, reason: contains('（EPERM rename）') })
+    expect(result.reason).not.toContain('版本指针没能')
+    expect(await readFile(join(f.home, 'data/db.sqlite'), 'utf8')).toBe('original')
+    expect(f.supervisor.running).toBe(true)
+    expect(manager.status().current).toBe('1.0.0')
+  })
+  it('新版本没起来、指针写不回去：仍起旧版本，提示改回指针', async () => {
+    const f = await setup()
+    f.behavior['1.1.0']!.health = 503
+    await f.configure()
+    const manager = await held(f, (pointer) => pointer.current !== '1.1.0')
+    await manager.prepareLocal('1.1.0')
+    const result = await manager.apply('1.1.0')
+    expect(result).toMatchObject({ result: 'rolled-back', step: 10, reason: contains('改成指向 1.0.0') })
+    expect(f.supervisor.running).toBe(true)
+    expect(manager.status().current).toBe('1.0.0')
+    expect((await readCurrent(f.home))?.current).toBe('1.1.0')
+  })
+  it('写回失败后记失败版本时补写成功，就不再提示', async () => {
+    const f = await setup()
+    f.behavior['1.1.0']!.health = 503
+    await f.configure()
+    let blocked = 1
+    const manager = await held(f, (pointer) => pointer.current === '1.0.0' && blocked-- > 0)
+    await manager.prepareLocal('1.1.0')
+    const result = await manager.apply('1.1.0')
+    expect(result.result).toBe('rolled-back')
+    expect(result.reason).not.toContain('版本指针没能')
+    expect(await readCurrent(f.home)).toMatchObject({ current: '1.0.0', failed: ['1.1.0'] })
+  })
+  it('外部库已迁移、指针一直写不进去：仍起新程序，提示把指针改成新版本', async () => {
+    const f = await setup('postgres', true)
+    f.behavior['1.1.0']!.health = 503
+    await f.configure()
+    const manager = await held(f, () => true)
+    await manager.prepareLocal('1.1.0')
+    const result = await manager.apply('1.1.0', { backupConfirmed: true })
+    expect(result).toMatchObject({ result: 'failed', reason: contains('改成指向 1.1.0') })
+    expect(result.reason).toContain('新版本保留运行')
+    expect(manager.status().current).toBe('1.1.0')
+    expect((await readCurrent(f.home))?.current).toBe('1.0.0')
+  })
+  it('回滚时一直写不进去：照旧起当前版本', async () => {
+    const f = await setup()
+    await f.manager.prepareLocal('1.1.0')
+    expect((await f.manager.apply('1.1.0')).result).toBe('success')
+    const manager = await held(f, () => true)
+    expect(await manager.rollback()).toMatchObject({ result: 'rolled-back', step: 9 })
+    expect(f.supervisor.running).toBe(true)
+    expect((await readCurrent(f.home))?.current).toBe('1.1.0')
+  })
+  it('回滚目标没起来、指针写不回去：仍起当前版本，提示改回指针', async () => {
+    const f = await setup()
+    await f.manager.prepareLocal('1.1.0')
+    expect((await f.manager.apply('1.1.0')).result).toBe('success')
+    f.behavior['1.0.0']!.health = 503
+    await f.configure()
+    const manager = await held(f, (pointer) => pointer.current === '1.1.0')
+    const result = await manager.rollback()
+    expect(result).toMatchObject({ result: 'rolled-back', step: 10, reason: contains('改成指向 1.1.0') })
+    expect(f.supervisor.running).toBe(true)
+    expect(manager.status().current).toBe('1.1.0')
+    expect((await readCurrent(f.home))?.current).toBe('1.0.0')
   })
 })
 
