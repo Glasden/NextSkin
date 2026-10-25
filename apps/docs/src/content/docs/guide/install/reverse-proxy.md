@@ -73,7 +73,7 @@ location /_next/static/ {
 
 - **Rocket Loader**、**邮箱地址混淆**（Scrape Shield 里的 Email Address Obfuscation）：关掉。它们改写页面里的脚本，不带 nonce，浏览器不执行；改写过的 HTML 还可能和页面的脚本对不上，按钮、表单失灵。
 - **Bot Fight Mode**（JavaScript Detections）：可以开。Cloudflare 会读响应头里的 CSP，给它插的脚本带上同一个 nonce（实测）。
-- **Web Analytics** 的自动注入：可以开。插进来的 beacon 脚本同样带上这次请求的 nonce，统计照常上报（实测）。
+- **Web Analytics** 的自动注入：可以开。插进来的 beacon 脚本同样带上这次请求的 nonce，统计照常上报（实测）。别的统计和广告代码贴进后台的页头代码，见[自定义代码](/guide/custom-code/)。
 
 三家验证码在这个 CSP 下实测可用：Turnstile、hCaptcha，以及 reCAPTCHA 的复选框和隐形两种密钥。Turnstile 的挂件会在浏览器控制台报一条 `connect-src` 拦下 `data:` 的错误，那是 Cloudflare 自己的 iframe 的 CSP，和站点无关，不影响验证；reCAPTCHA 偶尔报一条 `frame-ancestors` 的 report-only 违规，同样是 Google 自己的策略，只记录不拦截。
 
