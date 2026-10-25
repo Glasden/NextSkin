@@ -36,9 +36,9 @@ function totp(secret: string): string {
   return String((hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, '0')
 }
 
-/** 页头的用户菜单以昵称为名，注册时昵称就是角色名 */
+/** 页头的用户菜单以昵称为名，注册时昵称就是角色名。登录以后是整页跳转（ADR-0063），等菜单的按钮水合了再点 */
 async function signOut(page: Page, nickname: string) {
-  await page.getByRole('button', { name: nickname }).click()
+  await clickHydrated(page.getByRole('button', { name: nickname }))
   await page.getByRole('menuitem', { name: t('user.menu.signOut') }).click()
   await expect(page).toHaveURL('/sign-in')
 }
