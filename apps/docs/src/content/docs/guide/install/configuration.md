@@ -44,7 +44,7 @@ NEXTSKIN_DATABASE_URL=postgres://用户:密码@主机:5432/库名
 
 `node nextskin.mjs start` 启动的是管理进程：它按 `releases/current.json` 拉起那个版本的启动器并监管它；启动器再拉起核心（网站本身）和 plugin host（运行插件），核心崩溃时按退避重启。不需要 pm2。
 
-- **停止**：给 `start` 发 SIGTERM 或 SIGINT（Windows 上是 Ctrl+C）。它经 IPC 让启动器按顺序停下：核心先收尾正在处理的请求和后台任务，最多 30 秒后被强杀；启动器 35 秒还没退出就被强杀。面板、systemd、Docker 的停止超时要设到 40 秒。整棵进程树一起收到 SIGTERM 也没问题；管理进程被强杀时，启动器发现 IPC 断了也会自己停下。
+- **停止**：给 `start` 发 SIGTERM 或 SIGINT（Windows 上是 Ctrl+C）。它经 IPC 让启动器按顺序停下：核心先收尾正在处理的请求和后台任务，最多 30 秒后被强杀（日志里记一条“强制结束”）；启动器 35 秒还没退出就被强杀。面板、systemd、Docker 的停止超时要设到 40 秒。整棵进程树一起收到 SIGTERM 也没问题；管理进程被强杀时，启动器发现 IPC 断了也会自己停下。
 - **重启**：停止后立即启动就行。同一个实例目录同时只能运行一个 `start`，上一个还在退出时，新的最多等它 40 秒。
 - **不要管理进程**：设 `NEXTSKIN_MANAGER=off`，入口在本进程里直接运行当前版本的启动器。这样只检测新版本、不能一键升级。Docker 镜像里设了它。
 

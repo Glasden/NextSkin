@@ -74,7 +74,7 @@ description: 在后台一键升级 NextSkin、回到上一个版本，用命令�
 
 ## 命令行
 
-在实例目录里，用运行管理进程的用户执行（宝塔是 `www`，systemd 是 root，1Panel 在容器里）：
+在实例目录里，用运行管理进程的用户执行（宝塔是 `www`，systemd 是 root，1Panel 在容器里，Windows 的服务在以管理员身份打开的 PowerShell 里）：
 
 | 命令 | 用途 |
 | --- | --- |
