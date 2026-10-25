@@ -34,6 +34,7 @@ export {
   type MenuRadioGroupProps,
   type MenuRadioItemProps,
 } from './menu/menu.tsx'
+export { MultiCombobox, type MultiComboboxProps } from './multi-combobox/multi-combobox.tsx'
 export { NameTag, type NameTagProps } from './name-tag/name-tag.tsx'
 export { Nav, NavItem, type NavItemProps, type NavProps } from './nav/nav.tsx'
 export { Notice, type NoticeProps } from './notice/notice.tsx'
