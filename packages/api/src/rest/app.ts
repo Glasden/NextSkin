@@ -92,15 +92,15 @@ export function createRestApp(
         return limit(c, next)
       }
       if (c.req.method !== 'POST' || !/\/textures\/?$/.test(c.req.path)) {
-        // 设置里的公告和内容政策各能写 20000 个字，按 UTF-8 最多 4 字节一个字算（ADR-0028）
+        // 设置里的长文本加起来能写 164000 个字：公告、内容政策各 20000，页头代码 20000，自定义 CSS、ads.txt 各 50000，
+        // 页脚、维护说明各 2000（ADR-0028、0063）。按 UTF-8 最多 4 字节一个字算，一次全填满也不超过 1 MiB
         const maxSize =
-          c.req.method === 'POST' && /\/(?:setup|admin)\/import\/runs\/?$/.test(c.req.path)
+          (c.req.method === 'POST' && /\/(?:setup|admin)\/import\/runs\/?$/.test(c.req.path)) ||
+          (c.req.method === 'PATCH' && /\/admin\/settings\/?$/.test(c.req.path))
             ? 1024 * 1024
-            : c.req.method === 'PATCH' && /\/admin\/settings\/?$/.test(c.req.path)
-              ? 192 * 1024
-              : c.req.method === 'POST' && /\/admin\/notifications\/?$/.test(c.req.path)
-                ? 32 * 1024
-                : 16 * 1024
+            : c.req.method === 'POST' && /\/admin\/notifications\/?$/.test(c.req.path)
+              ? 32 * 1024
+              : 16 * 1024
         if (maxSize === 1024 * 1024) {
           if (Number(c.req.header('content-length')) > maxSize) throw new DomainError('request_too_large')
           const headers = new Headers(c.req.raw.headers)

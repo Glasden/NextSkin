@@ -139,6 +139,11 @@ test.each<[string, Omit<HeadCodeError, 'line'>]>([
   ['<script src="//example.test/a.js">run()</script>', { reason: 'script_src_and_code', tag: 'script' }],
   // 渲染出来以后，浏览器会跳过脚本自己的结束标签，把后面的页面也当成脚本
   ['<script><!--<script>', { reason: 'script_code', tag: 'script' }],
+  // React 按 src 去重 async 的外部脚本，第二个会被丢掉
+  [
+    '<script async src="https://example.test/a.js" data-id="1"></script><script async src=" https://example.test/a.js " data-id="2"></script>',
+    { reason: 'script_duplicate', tag: 'script', attribute: 'src', value: 'https://example.test/a.js' },
+  ],
   [
     '<script type=" ImportMap ">{}</script>',
     { reason: 'script_type', tag: 'script', attribute: 'type', value: ' ImportMap ' },
@@ -163,6 +168,13 @@ test.each<[string, Omit<HeadCodeError, 'line'>]>([
     ok: false,
     error: { ...error, line: 3 },
   })
+})
+
+test('同一个 src 不带 async 时可以写两遍，React 不去重', () => {
+  const result = parseHeadCode(
+    '<script async src="https://example.test/a.js"></script>\n<script defer src="https://example.test/a.js"></script>',
+  )
+  expect(result.ok && result.elements).toHaveLength(2)
 })
 
 test('空白、注释和 noscript 不输出；第一处错误按文档顺序返回', () => {

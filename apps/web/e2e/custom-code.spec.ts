@@ -2,6 +2,7 @@ import { createTranslator } from '@nextskin/i18n'
 import type { BrowserContext, Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import { nextskin } from './nextskin-cli'
+import { clickHydrated } from './oauth-client'
 
 // 自定义代码（ADR-0063）。页头代码、自定义 CSS 对站点上的每个页面生效，手动维护开着时别人用不了站点，
 // 所以跑在单并发的 plugins 服务上（playwright.config.ts），每个用例最后用命令行和接口清掉。
@@ -75,6 +76,12 @@ const probe = (page: Page) =>
     return { e2eInline, e2eCollected, e2eAsync, e2eNavigations }
   })
 
+/** 在当前文档上做个记号：整页加载以后记号就没了 */
+const markDocument = () => {
+  ;(window as unknown as { e2eSameDocument?: boolean }).e2eSameDocument = true
+}
+const sameDocument = () => (window as unknown as { e2eSameDocument?: boolean }).e2eSameDocument === true
+
 test('页头代码：访客的页面执行脚本、带上 meta，客户端跳转派发事件；管理员登录后整页加载、不再运行', async ({
   page,
   browser,
@@ -122,17 +129,23 @@ test('页头代码：访客的页面执行脚本、带上 meta，客户端跳转
     expect((await probe(page)).e2eInline).toBeUndefined()
     await expect(page.locator('head meta[name="google-site-verification"]')).toHaveCount(0)
 
-    // 访客在同一个标签页里登录成管理员：整页跳转，之前的脚本不再运行
+    // 访客在同一个标签页里登录成管理员：整页跳转，之前的脚本不再运行；
+    // 另一个标签页共用 Cookie，跑着页头代码的那个也整页重新加载
+    const other = await visitorContext.newPage()
+    await other.goto('/skinlib')
+    expect((await probe(other)).e2eInline).toBe(1)
     await visitor.goto('/sign-in')
-    await visitor.evaluate(() => ((window as unknown as { e2eSameDocument: boolean }).e2eSameDocument = true))
+    for (const tab of [visitor, other]) await tab.evaluate(markDocument)
     await visitor.getByLabel(t('auth.email')).fill(email)
     await visitor.getByLabel(t('auth.password')).fill(password)
-    await visitor.getByRole('button', { name: t('auth.signIn.submit'), exact: true }).click()
+    // 没水合时点提交会走不带脚本的表单 POST，那样本来就是整页跳转，测不出 goToNext
+    await clickHydrated(visitor.getByRole('button', { name: t('auth.signIn.submit'), exact: true }))
     await visitor.waitForURL((url) => url.pathname !== '/sign-in')
-    await expect
-      .poll(() => visitor.evaluate(() => (window as unknown as { e2eSameDocument?: boolean }).e2eSameDocument))
-      .toBeUndefined()
-    expect((await probe(visitor)).e2eInline).toBeUndefined()
+    for (const tab of [visitor, other]) {
+      await expect.poll(() => tab.evaluate(sameDocument)).toBe(false)
+      await tab.waitForLoadState()
+      expect((await probe(tab)).e2eInline).toBeUndefined()
+    }
   } finally {
     await clear(page)
     await visitorContext.close()
@@ -195,7 +208,7 @@ test('自定义 CSS 在前台生效，后台不套用：从前台客户端跳进
 
     await page.goto('/user')
     expect(await marker(page)).toBe('applied')
-    await page.getByRole('button', { name: `CustomCss${suffix}` }).click()
+    await clickHydrated(page.getByRole('button', { name: `CustomCss${suffix}` }))
     await page.getByRole('menuitem', { name: t('user.menu.admin') }).click()
     await page.waitForURL('**/admin')
     await expect.poll(() => marker(page)).toBe('')
