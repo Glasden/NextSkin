@@ -44,6 +44,7 @@ sidebar:
 | [`set-password`](#set-password) | 重设密码、收回账号 |
 | [`disable-2fa`](#disable-2fa) | 关闭用户的两步验证 |
 | [`disable-captcha`](#disable-captcha) | 关闭站点验证码 |
+| [`disable-custom-code`](#disable-custom-code) | 清空页头代码和自定义 CSS |
 | [`maintenance`](#maintenance) | 查看或开关维护模式 |
 | [`plugin`](#plugin) | 列出、安装、启用、停用、卸载插件 |
 | [`import blessing-skin`](#import-blessing-skin) | 从 Blessing Skin v6 导入 |
@@ -134,6 +135,14 @@ node nextskin.mjs disable-captcha
 ```
 
 把验证码服务商设为 `none`。验证码服务故障、密钥配错、管理员登录不了时用。之后注册、密码登录和找回密码都不再要验证码，恢复时在后台设置里重新选服务商。
+
+## disable-custom-code
+
+```bash
+node nextskin.mjs disable-custom-code
+```
+
+清空后台“自定义代码”里的页头代码和自定义 CSS，ads.txt 不动。贴进去的代码把页面弄坏、后台也用不了时用。原来的内容记在审计日志里，改好以后再贴回去，见[自定义代码](/guide/custom-code/#页面被弄坏了)。
 
 ## maintenance
 

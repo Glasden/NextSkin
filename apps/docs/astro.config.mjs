@@ -57,6 +57,7 @@ export default defineConfig({
               ],
             },
             { label: '升级与回退', link: '/guide/upgrade/' },
+            { label: '自定义代码', link: '/guide/custom-code/' },
             { label: '命令行', link: '/guide/commands/' },
             { label: '常见问题', link: '/guide/faq/' },
           ],
