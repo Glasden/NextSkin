@@ -122,6 +122,7 @@ script-src 'nonce-{nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none';
     - 已有的亮暗模式、带 Tabs 的页面、验证码的假挂件（由 `captcha.tsx` 创建的脚本）照常通过，也没有违规；
     - `connect.spec.ts` 里"别的页面不加"的断言改成全站都有 `frame-ancestors 'none'`。
   - 手动核对：三家验证码各用官方的测试密钥走一遍；在挂在 Cloudflare 后面、开着 Bot Fight Mode 的部署上看控制台，没有 CSP 报错。结果写进提交说明。
+    - 落地补充：官方测试密钥过不了 ADR-0038 的主机名核对，三家验证码改用真实密钥核对，都没有 CSP 违规。Turnstile 的挂件在控制台报 `connect-src` 拦下 `data:`，来自它自己 iframe 的 CSP，和站点无关。在 Cloudflare for SaaS 的自定义主机名后面开着 Bot Fight Mode：Cloudflare 往页面末尾插的内联脚本带着响应头里的 nonce，它再加载的 `/cdn-cgi/challenge-platform/…/jsd/main.js` 由 `'strict-dynamic'` 放行，检测请求照常发出，没有违规。同一个主机名开着 Web Analytics 的自动注入：插进来的 `beacon.min.js` 也带着这次请求的 nonce，统计照常上报。Cloudflare 只给 `Accept` 里有 `text/html` 的请求注入，用 curl 核对时要带上这个头。
 - `PROGRESS.md`："还没做"里的"站点的 CSP"挪进已做。采纳时，ADR-0011、0037、0038、0042 的状态行和 README 的索引行注明由本 ADR 补充或取代。
 
 ## 考虑过的其他方案
