@@ -123,12 +123,14 @@ export function createPluginSettings(db: Kysely<CoreDatabase>, secretKey: string
         else merged[key] = value
       }
       const verdict = await validate(merged)
-      if (!verdict.ok)
-        throw new DomainError(
-          'invalid_request',
-          undefined,
-          verdict.fields.length ? verdict.fields : [...changes.keys()],
-        )
+      if (!verdict.ok) {
+        // 清除可以让设置变得不完整（例如清掉必填的密钥），和还没填过一样，只是不算设置完整（complete）：
+        // 有清除的请求不因为没填的项失败。只保存不清除时照旧要求填全，填了的项不合法也照旧报错
+        const clearing = [...changes.values()].includes(null)
+        const fields = clearing ? verdict.fields.filter((key) => key in merged) : verdict.fields
+        if (fields.length || !verdict.fields.length)
+          throw new DomainError('invalid_request', undefined, fields.length ? fields : [...changes.keys()])
+      }
       return changes
     },
     /** 写入 prepare 过的改动，返回审计要记的项，机密项不带值（ADR-0028）。值没变的项跳过 */

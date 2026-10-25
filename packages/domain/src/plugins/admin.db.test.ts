@@ -280,6 +280,40 @@ test('设置不变不写审计，null 删除行并恢复默认值', async () => 
   expect(await audits()).toHaveLength(4)
 })
 
+test('清除没有默认值的必填项：设置变得不完整；只保存不清除时照旧要求填全，改坏的项照旧报错', async () => {
+  await env.boot([
+    official(
+      'a',
+      definePlugin({
+        capabilities: [],
+        settings: z.object({ clientId: z.string().refine((value) => value !== 'forbidden'), clientSecret: secret() }),
+      }),
+    ),
+  ])
+  const actor = await env.actor()
+  const admin = env.core.plugins.admin
+  await expect(admin.updateSettings(actor, 'a', { clientId: 'id' })).rejects.toMatchObject({
+    code: 'invalid_request',
+    fields: ['clientSecret'],
+  })
+  await admin.updateSettings(actor, 'a', { clientId: 'id', clientSecret: 'secret' })
+  await expect(admin.updateSettings(actor, 'a', { clientId: 'forbidden', clientSecret: null })).rejects.toMatchObject({
+    code: 'invalid_request',
+    fields: ['clientId'],
+  })
+  expect(await admin.updateSettings(actor, 'a', { clientSecret: null })).toEqual({ updated: ['clientSecret'] })
+  expect(await admin.settings(actor, 'a')).toMatchObject([
+    { key: 'clientId', value: 'id' },
+    { key: 'clientSecret', isSet: false },
+  ])
+  await expect(admin.updateSettings(actor, 'a', { clientId: 'other' })).rejects.toMatchObject({
+    code: 'invalid_request',
+    fields: ['clientSecret'],
+  })
+  expect(await admin.updateSettings(actor, 'a', { clientId: null })).toEqual({ updated: ['clientId'] })
+  expect(await countRows(env.db.selectFrom('settings').where('namespace', '=', 'plugin:a'))).toBe(0)
+})
+
 test('存储中的设置不合法时以 settings_invalid 失败且处理函数不执行', async () => {
   const seen: unknown[] = []
   await env.boot([settingsPlugin(seen)])
