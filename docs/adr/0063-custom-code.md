@@ -114,7 +114,8 @@ ADR-0053 列出的那几种写法（`document.write` 插入的脚本、`eval`，
 ### 设置表单
 
 - 新的控件 `code`，带 `language`（`html`、`css`、`text`），按 `contentMediaType` 是 `text/html`、`text/css`、`text/plain` 生成。和站点图片一样只认核心的设置项（ADR-0042）：插件的设置带同样的媒体类型照旧是单行文本，插件 API 不变。
-- 控件是等宽字的 Textarea：不检查拼写，不自动换行，右下角显示字数。`packages/ui` 的 Textarea 加 `mono` 变体，配上 story 和截图基线，DESIGN.md 的组件清单补上。
+- 控件是等宽字的 Textarea：不检查拼写，右下角显示字数。`packages/ui` 的 Textarea 加 `code` 属性，配上 story 和截图基线，DESIGN.md 的组件清单补上。
+  - 落地补充：长行照样折行。不折的话，横向滚动条压在右下角的字数上。
 - 审计（ADR-0027）照普通设置项记下改前改后的全文，不像 Markdown 那样只记长度：要查得出是谁、什么时候加了哪段脚本，`disable-custom-code` 清掉的内容也能从审计里找回来。三项都不是机密，页头代码和 CSS 本来就发给每个访客。审计页上多行的值折叠显示。
 
 ### 命令行
@@ -150,7 +151,8 @@ ADR-0053 列出的那几种写法（`document.write` 插入的脚本、`eval`，
   - `packages/domain`：设置注册表的分区和三个设置项；页头代码的解析；`clearCustomCodeAsSystem`；`settingControl` 加 `code`；错误码 `custom_head_invalid`。
   - `packages/api`：`GET /ads.txt`；维护期间的分类；新错误码的状态和字段（`statuses`、`fieldNames`）。
   - `apps/web`：根布局渲染页头代码、跳转事件和自定义 CSS 的组件；`proxy.ts` 的 `HONO_PATHS` 和 `next.config.ts` 的 rewrite；`goToNext` 和退出登录改成整页跳转；设置表单的代码控件；审计页的多行值。
-  - `packages/ui`：Textarea 的 `mono` 变体、story、截图基线；DESIGN.md 的组件清单。
+  - `packages/ui`：Textarea 的 `code` 属性、story、截图基线；DESIGN.md 的组件清单。
+  - `packages/db`（落地补充）：迁移把 `audit_logs.details` 在 MySQL 上从 `text` 改成 `longtext`。`text` 最多 65 535 字节，放不下两份五万字的全文，严格模式下整次保存失败。
   - `packages/i18n`：分区名，三个设置项的标签和说明，`custom_head_invalid` 的各种原因（`zh-CN`、`en`）。
   - `packages/launcher`：`disable-custom-code` 和帮助；`apps/docs` 的命令行页；AGENTS.md 的命令表。
   - `apps/docs`：新增"自定义代码"一页：几家常见服务的贴法（百度统计连同跳转事件、GA4、Umami、51.la、Cloudflare Web Analytics、AdSense 自动广告和 ads.txt、搜索引擎验证），会被拦的写法，CSS 的稳定钩子，管理员看不到，弄坏了怎么恢复。
@@ -168,7 +170,7 @@ ADR-0053 列出的那几种写法（`document.write` 插入的脚本、`eval`，
     - `/ads.txt` 有内容时 200、没有时 404，手动维护期间照常；
     - 页头代码不合法时，表单在这一项下面显示原因；
     - `disable-custom-code` 清空两项，审计记录的操作者是 system。
-  - 截图回归：Textarea 的 `mono`。
+  - 截图回归：Textarea 的 `code`。
 - 采纳时，`PROGRESS.md` 的"统计和广告脚本、自定义 CSS"一条指向本 ADR，落地后删掉；ADR-0042、0053 的状态行和 README 的索引行注明由本 ADR 补充。
 
 ## 考虑过的其他方案

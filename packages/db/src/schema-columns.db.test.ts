@@ -1,11 +1,12 @@
 import { sql, type Generated, type Kysely } from 'kysely'
 import { afterAll, beforeAll, expect, expectTypeOf, test } from 'vitest'
-import { createTable, longTextType, switchColumn, type SwitchValue } from './index.ts'
+import { alterToLongTextColumn, createTable, longTextType, switchColumn, type SwitchValue } from './index.ts'
 import { createTestDatabase, type TestDatabase } from './testing.ts'
 
 interface Schema {
   switches: { is_on: Generated<SwitchValue>; is_off: Generated<SwitchValue>; required: SwitchValue }
   payloads: { value: string }
+  widened: { value: string }
 }
 let database: TestDatabase<Schema>
 let db: Kysely<Schema>
@@ -42,4 +43,18 @@ test('长文本列无损存取七万字节的字符串', async () => {
   expect(Buffer.byteLength(value)).toBe(70_000)
   await db.insertInto('payloads').values({ value }).execute()
   expect((await db.selectFrom('payloads').selectAll().executeTakeFirstOrThrow()).value).toBe(value)
+})
+
+test('text 列放宽成长文本以后，保留已有的值和非空约束，存得下七万字节', async () => {
+  await createTable(db, 'widened')
+    .addColumn('value', 'text', (c) => c.notNull())
+    .execute()
+  await db.insertInto('widened').values({ value: '旧' }).execute()
+  await alterToLongTextColumn(db, 'widened', 'value')
+  const value = '汉'.repeat(23_333) + '!'
+  await db.insertInto('widened').values({ value }).execute()
+  expect((await db.selectFrom('widened').select('value').execute()).map((row) => row.value).sort()).toEqual(
+    [value, '旧'].sort(),
+  )
+  await expect(sql`insert into widened (value) values (null)`.execute(db)).rejects.toThrow()
 })

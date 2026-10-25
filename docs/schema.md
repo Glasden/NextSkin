@@ -311,7 +311,7 @@ SDK 的 `adjustScore` 要求"原子地增减积分并记流水"。
 | action | varchar(64) | 非空 | 例如 `report.resolve`，取值见领域层导出的动作清单（ADR-0027、ADR-0036） |
 | subject_type | varchar(32) | 非空 | 例如 `user`、`texture`、`report`、`setting` |
 | subject_id | integer | 非空，不建外键 | 站点设置没有整数 id，记 0，键名在 `details` 里（ADR-0028） |
-| details | text | 非空 | JSON：操作时的快照，例如材质名、角色的新旧值 |
+| details | 长文本 | 非空 | JSON：操作时的快照，例如材质名、角色的新旧值。页头代码、自定义 CSS 记改前改后的全文，一条可能超过 64 KB（ADR-0063，迁移 0048 把 MySQL 上原来的 `text` 放宽） |
 | ip | varchar(45) | 可空 | 用 `clientIp()` 解析；脚本和系统操作为空 |
 | created_at | 时间 | 非空 | |
 

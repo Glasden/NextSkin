@@ -126,6 +126,19 @@ test('自定义代码审计记全文；system 清空页头和 CSS，保留 ads.t
   ])
 })
 
+test('上限长度的中文 CSS 改两次，审计照样记下改前改后的全文', async () => {
+  const before = '汉'.repeat(50_000)
+  const after = '字'.repeat(50_000)
+  await env.core.admin.updateSettings(actor(), { 'custom.css': before })
+  await env.core.admin.updateSettings(actor(), { 'custom.css': after })
+  expect((await audits()).map((entry) => entry.details)).toEqual([
+    { key: 'custom.css', from: '', to: before },
+    { key: 'custom.css', from: before, to: after },
+  ])
+  expect(await env.core.settings.read(['custom.css'])).toEqual({ 'custom.css': after })
+  await env.core.admin.updateSettings(actor(), { 'custom.css': '' })
+})
+
 test('写入按注册表顺序，schema 输出归一化，恢复默认值删行；相同值和空提交不写审计', async () => {
   expect(
     await env.core.admin.updateSettings(actor(), {
