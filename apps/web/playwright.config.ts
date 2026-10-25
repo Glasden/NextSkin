@@ -84,6 +84,7 @@ export default defineConfig<{ pluginHost: boolean }>({
         'captcha.spec.ts',
         'maintenance.spec.ts',
         'themes.spec.ts',
+        'custom-code.spec.ts',
         'manager.spec.ts',
       ],
     },
