@@ -62,6 +62,9 @@ pnpm dev
 | [`docs/DESIGN.md`](docs/DESIGN.md) | 视觉与界面规范 |
 | [`docs/PROGRESS.md`](docs/PROGRESS.md) | 还没做完的部分 |
 
+# 注意
+- 本项目处于快速迭代的阶段，可能有破坏性更新，以及欢迎提出意见和贡献代码喵
+
 ## 许可证
 
 [MIT](LICENSE)
