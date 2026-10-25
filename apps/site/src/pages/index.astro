@@ -37,11 +37,11 @@ const stack = ['TypeScript', 'Next.js', 'Hono', 'Kysely']
     <meta property="og:url" content="https://nextskin.org/" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <!-- 亮暗跟随系统（DESIGN.md §10）：theme.css 认 <html> 上的 data-theme，要在首次绘制前设好 -->
+    <!-- 亮暗跟随系统（DESIGN.md §10）：theme.css 认 <html> 上的 data-mode，要在首次绘制前设好 -->
     <script is:inline>
       {
         const query = matchMedia('(prefers-color-scheme: dark)')
-        const apply = () => (document.documentElement.dataset.theme = query.matches ? 'dark' : 'light')
+        const apply = () => (document.documentElement.dataset.mode = query.matches ? 'dark' : 'light')
         apply()
         query.addEventListener('change', apply)
       }

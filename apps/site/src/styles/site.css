@@ -66,7 +66,7 @@
   --color-accent-subtle: #e5eafc;
   --color-focus: #2a52e5;
 }
-[data-theme='dark'] [data-palette='cobalt'] {
+[data-mode='dark'] [data-palette='cobalt'] {
   --color-accent: #86a2ff;
   --color-accent-fg: #0e1013;
   --color-accent-subtle: #282f41;
@@ -78,7 +78,7 @@
   --color-accent-subtle: #f8e3ed;
   --color-focus: #c2186b;
 }
-[data-theme='dark'] [data-palette='magenta'] {
+[data-mode='dark'] [data-palette='magenta'] {
   --color-accent: #ff7ab8;
   --color-accent-fg: #0e1013;
   --color-accent-subtle: #3b2936;
@@ -112,7 +112,7 @@
   --radius-sm: 0;
   --radius-md: 0;
 }
-[data-theme='dark'] [data-palette='contrast'] {
+[data-mode='dark'] [data-palette='contrast'] {
   --color-bg: #000000;
   --color-surface: #0b0b0b;
   --color-surface-raised: #161616;
