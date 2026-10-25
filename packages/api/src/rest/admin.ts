@@ -173,7 +173,11 @@ const testCaptcha = createRoute({
       description: '验证码核对结果',
       content: {
         'application/json': {
-          schema: z.object({ result: z.enum(['passed', 'failed', 'unavailable']), errorCodes: z.array(z.string()) }),
+          schema: z.object({
+            result: z.enum(['passed', 'failed', 'unavailable']),
+            errorCodes: z.array(z.string()),
+            hostname: z.object({ expected: z.string(), received: z.string().nullable() }).optional(),
+          }),
         },
       },
     },

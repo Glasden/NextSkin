@@ -1,3 +1,4 @@
+import { isIP } from 'node:net'
 import { getLogger } from '@nextskin/logging'
 import { DomainError } from '../errors.ts'
 import type { createSettingQueries } from '../settings/queries.ts'
@@ -18,6 +19,8 @@ export interface CaptchaInput {
 export interface CaptchaResult {
   result: 'passed' | 'failed' | 'unavailable'
   errorCodes: string[]
+  /** 服务商判定通过、主机名对不上时给后台测试看：站点地址的主机名和服务商报的那个 */
+  hostname?: { expected: string; received: string | null }
 }
 
 interface CaptchaConfig extends CaptchaPublicConfig {
@@ -44,6 +47,22 @@ const configurationErrors = {
     'not-using-dummy-passcode',
   ],
   recaptcha: ['missing-input-secret', 'invalid-input-secret'],
+}
+
+/**
+ * 服务商报的主机名对不对得上站点地址（ADR-0038"核对"）。hCaptcha 报的是注册域名（在 skin.example.com 上解出来的
+ * 报 example.com），流量大时还会报 "not-provided"，它的文档也说这个字段来自浏览器、只作统计：只要求不是别的注册域名。
+ * 比较前去掉末尾表示根域的点；顶级域名（去掉之后不带点）不算上级域名，站点地址是 IP 时不认上级
+ */
+function hostnameMatches(provider: CaptchaConfig['provider'], received: string | null, expected: string): boolean {
+  const host = received?.toLowerCase()
+  if (host === expected) return true
+  if (provider !== 'hcaptcha' || !host) return false
+  if (host === 'not-provided') return true
+  const site = expected.replace(/\.$/, '')
+  const parent = host.replace(/\.$/, '')
+  if (isIP(site.replace(/^\[(.*)\]$/, '$1')) || !parent.includes('.')) return false
+  return site === parent || site.endsWith(`.${parent}`)
 }
 
 /** 只返回核对结果；后台测试也走这一条路径，日志不含请求或完整响应。 */
@@ -102,11 +121,13 @@ export async function verifyCaptcha(
     )
   )
     return unavailable('provider_error', errorCodes)
-  const hostname = 'hostname' in data && typeof data.hostname === 'string' ? data.hostname : null
-  const passed =
-    data.success === true &&
-    (!config.siteUrl || hostname?.toLowerCase() === new URL(config.siteUrl).hostname.toLowerCase())
-  return { result: passed ? 'passed' : 'failed', errorCodes }
+  if (data.success !== true) return { result: 'failed', errorCodes }
+  if (!config.siteUrl) return { result: 'passed', errorCodes }
+  const received = 'hostname' in data && typeof data.hostname === 'string' ? data.hostname : null
+  const expected = new URL(config.siteUrl).hostname.toLowerCase()
+  if (hostnameMatches(config.provider, received, expected)) return { result: 'passed', errorCodes }
+  getLogger('captcha').warn('hostname_mismatch', { provider: config.provider, expected, received })
+  return { result: 'failed', errorCodes, hostname: { expected, received } }
 }
 
 export function createCaptcha(settings: ReturnType<typeof createSettingQueries>, fetcher?: typeof fetch) {

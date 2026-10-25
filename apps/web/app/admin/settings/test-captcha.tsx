@@ -7,7 +7,11 @@ import { apiError, sendJson } from '../../../lib/api-client'
 import { CAPTCHA_HEADER, useCaptcha, type CaptchaConfig } from '../../../lib/captcha'
 
 type Outcome =
-  | { result: 'passed' | 'failed' | 'unavailable'; errorCodes: string[] }
+  | {
+      result: 'passed' | 'failed' | 'unavailable'
+      errorCodes: string[]
+      hostname?: { expected: string; received: string | null }
+    }
   | { result: 'error'; message: string }
   | { result: 'incomplete' }
 
@@ -109,6 +113,13 @@ function OutcomeAlert({ outcome }: { outcome: Outcome }) {
       return (
         <Alert tone={outcome.result === 'failed' ? 'warning' : 'danger'} title={t(outcome.result)}>
           {t(`${outcome.result}Hint`)}
+          {outcome.hostname && (
+            <span className="mt-2 block">
+              {outcome.hostname.received === null
+                ? t('hostnameMissing', { expected: outcome.hostname.expected })
+                : t('hostname', { expected: outcome.hostname.expected, received: outcome.hostname.received })}
+            </span>
+          )}
           {outcome.errorCodes.length > 0 && (
             <span className="mt-2 block font-mono">{t('errorCodes', { codes: outcome.errorCodes.join(', ') })}</span>
           )}

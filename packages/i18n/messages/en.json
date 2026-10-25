@@ -1668,6 +1668,8 @@
         "failedHint": "The provider rejected this attempt. Try again; if it keeps failing, check that this site’s domain is allowed for the site key.",
         "unavailable": "Couldn't verify",
         "unavailableHint": "The server couldn't complete the check: the secret key is wrong or the provider is unreachable. Until this is fixed nobody can sign in or sign up, so fix it or set the provider to “Disabled”.",
+        "hostname": "The provider reported the hostname {received}, which doesn't match the site address hostname {expected}. Check the site address, or whether the site key belongs to another website.",
+        "hostnameMissing": "The provider didn't report a hostname. The site address hostname is {expected}.",
         "errorCodes": "Error codes from the provider: {codes}"
       },
       "fields": {

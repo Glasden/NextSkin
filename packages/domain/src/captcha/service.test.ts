@@ -82,6 +82,57 @@ test.each(providers)('%s 不通过、主机名不符或缺失均拒绝；未设�
   expect((fetcher.mock.calls.at(-1)![1]!.body as URLSearchParams).has('remoteip')).toBe(false)
 })
 
+test.each(providers)(
+  '%s 主机名对不上时后台测试给出两个主机名并记警告；只有 hCaptcha 认上级域名和 not-provided',
+  async (provider) => {
+    const { captcha, fetcher } = setup(provider)
+    const hcaptcha = provider === 'hcaptcha'
+    for (const [hostname, passed] of [
+      ['Example.test', hcaptcha],
+      ['not-provided', hcaptcha],
+      ['ample.test', false],
+      ['test', false],
+      ['other.test', false],
+      ['skin.example.test.other.test', false],
+    ] as const) {
+      fetcher.mockResolvedValueOnce(Response.json({ success: true, hostname }))
+      expect(await captcha.test(input)).toEqual(
+        passed
+          ? { result: 'passed', errorCodes: [] }
+          : { result: 'failed', errorCodes: [], hostname: { expected: 'skin.example.test', received: hostname } },
+      )
+    }
+    fetcher.mockResolvedValueOnce(Response.json({ success: true }))
+    expect(await captcha.test(input)).toEqual({
+      result: 'failed',
+      errorCodes: [],
+      hostname: { expected: 'skin.example.test', received: null },
+    })
+    const warnings = logs.records.filter((record) => record.msg === 'hostname_mismatch')
+    expect(warnings.length).toBe(hcaptcha ? 5 : 7)
+    expect(warnings.at(-1)).toMatchObject({ level: 'warn', provider, expected: 'skin.example.test', received: null })
+    expect(JSON.stringify(logs.records)).not.toMatch(/TOKEN_CANARY|SECRET_CANARY/)
+  },
+)
+
+test('hCaptcha 比较上级域名前去掉末尾的根域点，顶级域名不算；站点地址是 IP 时不认上级', async () => {
+  const { captcha, values, fetcher } = setup('hcaptcha')
+  for (const [site, hostname, passed] of [
+    ['https://skin.example.test./', 'example.test', true],
+    ['https://skin.example.test./', 'example.test.', true],
+    ['https://skin.example.test/', 'example.test.', true],
+    ['https://skin.example.test./', 'test.', false],
+    ['https://skin.example.test/', 'test.', false],
+    ['https://1.2.3.4/', '2.3.4', false],
+    ['https://1.2.3.4/', '1.2.3.4', true],
+    ['https://[2001:db8::1]/', 'db8::1]', false],
+  ] as const) {
+    values['site.url'] = site
+    fetcher.mockResolvedValueOnce(Response.json({ success: true, hostname }))
+    expect((await captcha.test(input)).result, `${site} ${hostname}`).toBe(passed ? 'passed' : 'failed')
+  }
+})
+
 test.each(providers)('%s 密钥错误记 error，服务商故障记 warn，令牌错误是 failed', async (provider) => {
   const { captcha, fetcher } = setup(provider)
   const configCodes = [
