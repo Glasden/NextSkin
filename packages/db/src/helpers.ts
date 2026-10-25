@@ -442,6 +442,13 @@ export function longTextType<DB>(db: Kysely<DB>) {
   return dialectOf(db) === 'mysql' ? sql`longtext` : sql`text`
 }
 
+/** 把建表时写成 `text` 的非空列放宽成 `longTextType`：只有 MySQL 的 text 限长（65 535 字节），另外两种库不用改 */
+export async function alterToLongTextColumn<DB>(db: Kysely<DB>, table: string, column: string): Promise<void> {
+  if (dialectOf(db) !== 'mysql') return
+  // MODIFY COLUMN 会重写整列的定义，NOT NULL 要重新写上
+  await sql`alter table ${sql.id(table)} modify column ${sql.id(column)} longtext not null`.execute(db)
+}
+
 export async function addForeignKeyColumn<DB>(
   db: Kysely<DB>,
   options: {

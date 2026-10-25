@@ -11,6 +11,7 @@ export {
   isoTimestampColumn,
   switchColumn,
   longTextType,
+  alterToLongTextColumn,
   addForeignKeyColumn,
   authDateType,
   authBooleanType,

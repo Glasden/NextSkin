@@ -58,6 +58,8 @@ import * as createNotifications from './0046_create_notifications.ts'
 
 import * as addUsersTheme from './0047_add_users_theme.ts'
 
+import * as alterAuditLogsDetailsLongText from './0048_alter_audit_logs_details_long_text.ts'
+
 export const coreMigrations: Record<string, Migration> = {
   '0001_create_users': createUsers,
   '0002_create_texture_files': createTextureFiles,
@@ -106,4 +108,5 @@ export const coreMigrations: Record<string, Migration> = {
   '0045_add_score_transactions_plugin_columns': addScoreTransactionsPluginColumns,
   '0046_create_notifications': createNotifications,
   '0047_add_users_theme': addUsersTheme,
+  '0048_alter_audit_logs_details_long_text': alterAuditLogsDetailsLongText,
 }

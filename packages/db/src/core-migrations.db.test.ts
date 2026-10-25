@@ -166,6 +166,7 @@ test('核心迁移按顺序执行一次，重复执行返回空数组', async ()
     '0045_add_score_transactions_plugin_columns',
     '0046_create_notifications',
     '0047_add_users_theme',
+    '0048_alter_audit_logs_details_long_text',
   ])
   expect(await migrateToLatest(db, coreMigrations)).toEqual([])
 })
@@ -1143,7 +1144,9 @@ test('0047 为已有和新用户保留空主题，可存主题 id 并清空', as
       updated_at: writeAuthDate(upgrade.db, timestamp),
     }
     const existing = await insertReturningId(upgrade.db, 'users', values)
-    expect(await migrateToLatest(upgrade.db, coreMigrations)).toEqual(['0047_add_users_theme'])
+    expect(await migrateToLatest(upgrade.db, coreMigrations)).toEqual(
+      Object.keys(coreMigrations).filter((name) => name >= '0047'),
+    )
     const added = await insertReturningId(upgrade.db, 'users', { ...values, email: 'theme-after@example.test' })
     expect(await upgrade.db.selectFrom('users').select('theme').where('id', 'in', [existing, added]).execute()).toEqual(
       [{ theme: null }, { theme: null }],
@@ -1156,6 +1159,40 @@ test('0047 为已有和新用户保留空主题，可存主题 id 并清空', as
     expect(
       await upgrade.db.selectFrom('users').select('theme').where('id', '=', existing).executeTakeFirstOrThrow(),
     ).toEqual({ theme: null })
+  } finally {
+    await upgrade.cleanup()
+  }
+})
+
+test('0048 以后审计详情存得下两份五万字的全文，已有的记录不变', async () => {
+  const upgrade = await createTestDatabase<CoreDatabase>()
+  try {
+    await migrateToLatest(
+      upgrade.db,
+      Object.fromEntries(Object.entries(coreMigrations).filter(([name]) => name < '0048')),
+    )
+    const row = {
+      actor_type: 'system' as const,
+      actor_user_id: null,
+      actor_plugin_id: null,
+      action: 'setting.update',
+      subject_type: 'setting',
+      subject_id: 0,
+      details: JSON.stringify({ key: 'custom.css', from: '', to: 'body {}' }),
+      ip: null,
+      created_at: timestamp,
+    }
+    const existing = await insertReturningId(upgrade.db, 'audit_logs', row)
+    expect(await migrateToLatest(upgrade.db, coreMigrations)).toEqual(
+      Object.keys(coreMigrations).filter((name) => name >= '0048'),
+    )
+    const details = JSON.stringify({ key: 'custom.css', from: '汉'.repeat(50_000), to: '字'.repeat(50_000) })
+    expect(Buffer.byteLength(details)).toBeGreaterThan(300_000)
+    const added = await insertReturningId(upgrade.db, 'audit_logs', { ...row, details })
+    expect(await upgrade.db.selectFrom('audit_logs').select(['id', 'details']).orderBy('id').execute()).toEqual([
+      { id: existing, details: row.details },
+      { id: added, details },
+    ])
   } finally {
     await upgrade.cleanup()
   }
