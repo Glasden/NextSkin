@@ -15,11 +15,13 @@ import { pngGate } from './png-gate.tsx'
 import { players } from './players.tsx'
 import { protocols } from './protocols.tsx'
 import { raster } from './raster.tsx'
+import { upgrade } from './upgrade.tsx'
 
 /** 页的顺序（ADR-0055 的页表）：前半是服主和玩家看得见的部分，分界页以后讲底下的做法 */
 export const pages: readonly Page[] = [
   hero,
   deploy,
+  upgrade,
   protocols,
   importer,
   databases,

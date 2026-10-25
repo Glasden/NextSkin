@@ -103,7 +103,7 @@ export function Player() {
     }
   }, [])
 
-  // 首屏播完以后在空闲时预取 3D 预览的库（第 7 页用），翻到那一页时就不用等
+  // 首屏播完以后在空闲时预取 3D 预览的库（玩家页用），翻到那一页时就不用等
   useEffect(() => {
     const id = setTimeout(() => void import('skinview3d'), 4000)
     return () => clearTimeout(id)

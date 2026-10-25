@@ -2,7 +2,7 @@ import { cx, stageGrid } from '@nextskin/ui'
 import type { CSSProperties, ReactNode } from 'react'
 
 // 场景用的排版原语。画面按 1280×720 排版，尺寸写在内联样式里；颜色只用 theme.css 的 token 类（不变量 10），
-// 亮暗模式和第 7 页的换主题都只换 CSS 变量
+// 亮暗模式和玩家页（players）的换主题都只换 CSS 变量
 
 /** 文字颜色 */
 export type Tone =

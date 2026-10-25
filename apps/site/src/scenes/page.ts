@@ -6,7 +6,7 @@ export interface Chapter {
   en: string
 }
 
-/** 第 7 页依次换上的主题（DESIGN.md 附录），取值在 site.css */
+/** 玩家页（players）依次换上的主题（DESIGN.md 附录），取值在 site.css */
 export type Palette = 'cobalt' | 'magenta' | 'contrast'
 
 /** 一页：一个场景加上它的文字（ADR-0055） */

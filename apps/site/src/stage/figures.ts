@@ -20,6 +20,6 @@ export type PoseImageName = (typeof poseImages)[number]['name']
 
 /** 光栅化的过程分几步画完，每步一张图 */
 export const RASTER_STEPS = 16
-/** 光栅化过程的大图和深度缓冲的小图（第 11 页的四列流水线，一列 270 宽） */
+/** 光栅化过程的大图和深度缓冲的小图（出图页 raster 的四列流水线，一列 270 宽） */
 export const RASTER_DENSITY = 8
 export const DEPTH_DENSITY = 2
