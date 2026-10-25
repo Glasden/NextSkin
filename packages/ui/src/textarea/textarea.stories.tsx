@@ -50,6 +50,35 @@ export const AtLimit: Story = {
   },
 }
 
+/** 写代码：等宽字，不检查拼写，后台“自定义代码”里的几项用它 */
+export const Code: Story = {
+  render: () => (
+    <Field label="页头代码" description="贴统计、广告服务商或搜索引擎给的代码">
+      <Textarea
+        code
+        rows={9}
+        maxLength={20000}
+        defaultValue={[
+          '<!-- 百度统计 -->',
+          '<script>',
+          '  var _hmt = _hmt || [];',
+          '  (function () {',
+          '    var hm = document.createElement("script");',
+          '    hm.src = "https://hm.baidu.com/hm.js?0123456789abcdef";',
+          '  })();',
+          '</script>',
+          '<meta name="google-site-verification" content="abcDEF123">',
+        ].join('\n')}
+      />
+    </Field>
+  ),
+  play: async ({ canvas }) => {
+    const textarea = canvas.getByRole('textbox', { name: '页头代码' })
+    await expect(textarea).toHaveAttribute('spellcheck', 'false')
+    await expect(textarea).toHaveAttribute('autocapitalize', 'off')
+  },
+}
+
 export const States: Story = {
   render: () => (
     <div className="flex flex-col gap-4">

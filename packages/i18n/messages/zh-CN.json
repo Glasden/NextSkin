@@ -230,7 +230,9 @@
     "update_preflight_failed": "升级预检失败。",
     "update_download_failed": "升级文件下载失败，请稍后重试。",
     "update_internal": "升级管理进程发生内部错误。",
-    "update_invalid_request": "升级请求参数无效。"
+    "update_invalid_request": "升级请求参数无效。",
+    "custom_head_invalid": "第 {line} 行：{reason, select, text {直接写的 JavaScript 要放进 '<script>' 标签。} tag {页头代码只收 '<script>'、'<meta>'、'<noscript>'，不能使用 '<'{tag}'>'；CSS 写进自定义 CSS。} attribute {'<'{tag}'>' 不能带 {attribute} 属性。} event_handler {'<'{tag}'>' 不能带 {attribute} 属性，事件属性不会执行。} script_src {'<'{tag}'>' 的 src 必须以 https://、http:// 或 // 开头。} script_src_and_code {'<'{tag}'>' 有 src 时不能再写内联代码。} script_code {'<'{tag}'>' 里的代码没有正常结束：缺了结束标签，或者有没配对的 '<'!--。} script_type {'<'{tag}'>' 不支持 type 值「{value}」。} meta {'<'{tag}'>' 必须有 content，且 name 和 property 只能选一个。} meta_reserved {'<'{tag}'>' 的「{value}」由站点输出，不能重复设置。} other {页头代码不符合规则。}}",
+    "custom_css_invalid": "CSS 里不能出现 '</style'。"
   },
   "score": {
     "reasons": {
@@ -1561,7 +1563,11 @@
           "generated": "已重新生成",
           "length": "{from, number} 字 → {to, number} 字",
           "unreadable": "（读不出来）",
-          "empty": "（空）"
+          "empty": "（空）",
+          "view": "查看改动",
+          "before": "改之前",
+          "after": "改之后",
+          "close": "关闭"
         },
         "pluginVersion": "版本 {version}",
         "pluginSetting": "{label}：{change}",
@@ -1620,6 +1626,7 @@
         "mail": "邮件",
         "yggdrasil": "Yggdrasil",
         "maintenance": "维护",
+        "custom": "自定义代码",
         "advanced": "高级"
       },
       "save": "保存",
@@ -2046,6 +2053,20 @@
           "check": {
             "label": "检测更新",
             "help": "每天向 dl.nextskin.org 读取一次版本清单，不发送站点的任何信息。"
+          }
+        },
+        "custom": {
+          "head": {
+            "label": "页头代码",
+            "help": "贴统计、广告服务商或搜索引擎给的代码，只收 script 和 meta 标签，noscript 收下但不输出。这些代码和站点自己的代码权限一样，看得到页面上输入的密码，只贴信得过的服务商的。管理员登录后不加载，核对时用无痕窗口；用 document.write 插入的脚本、内联事件属性和 eval 不会执行。保存后刷新页面生效。"
+          },
+          "css": {
+            "label": "自定义 CSS",
+            "help": "后台不套用。跨版本保证不变的只有 token 变量和 html 上的 data-mode、data-theme，类名每个版本都可能变。改颜色优先用配色主题。"
+          },
+          "adsTxt": {
+            "label": "ads.txt",
+            "help": "广告联盟要求放在站点根路径的文件。填了就在 /ads.txt 提供，空着时那里是 404。"
           }
         }
       }

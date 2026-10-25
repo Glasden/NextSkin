@@ -18,6 +18,7 @@ import { TEXTURE_SWEEP_JOB, createTextureSweep } from './textures/sweep.ts'
 import { SITE_IMAGE_SWEEP_JOB, createSiteImageSweep } from './site-images/sweep.ts'
 import { createMemorySiteImageStorage, isSiteImageFile, type SiteImageStorage } from './site-images/storage.ts'
 import { createThemes } from './themes/service.ts'
+import { createCustomCode } from './custom-code/service.ts'
 import { createAdmin } from './admin/service.ts'
 import { createCloset } from './closet/service.ts'
 import { createReports } from './reports/service.ts'
@@ -309,6 +310,7 @@ export function createCore(options: CoreOptions) {
     }),
     updates,
     themes: createThemes({ db: options.db, settings, plugins, secretKey: options.secretKey, now }),
+    customCode: createCustomCode(settings),
     home: createHomeQueries(options.db, settings, now),
     players,
     setup: createSetup({

@@ -10,8 +10,14 @@ import { coreSettingsRegistry, type CoreSettingKey } from './registry.ts'
 // 映射控件的规则和插件设置共用，构建命令也要用，所以放在 plugin-host（ADR-0035）
 export type { JsonSchema } from '@nextskin/plugin-host'
 
-/** 核心设置项的控件：插件设置的那几种，加上站点图片（ADR-0042）。图片带上边长的范围，表单写进提示里 */
-export type SettingControl = PluginSettingControl | { kind: 'image'; minSide: number; maxSide: number }
+/**
+ * 核心设置项的控件：插件设置的那几种，加上站点图片（ADR-0042）和代码（ADR-0063）。图片带上边长的范围，表单写进提示里；
+ * 代码按语言区分，表单用等宽字的文本框
+ */
+export type SettingControl =
+  | PluginSettingControl
+  | { kind: 'image'; minSide: number; maxSide: number }
+  | { kind: 'code'; language: 'html' | 'css' | 'text'; maxLength: number | null }
 
 /**
  * 站点图片只认核心的设置项：值是存储里的 hash，可以为 null。插件的设置走 plugin-host 的规则，
@@ -25,6 +31,17 @@ export function settingControl(schema: JsonSchema): SettingControl | null {
     schema.anyOf.some((branch) => branch.type === 'string')
   )
     return { kind: 'image', minSide: SITE_IMAGE_MIN_SIDE, maxSide: SITE_IMAGE_MAX_SIDE }
+  if (schema.type === 'string') {
+    const language =
+      schema.contentMediaType === 'text/html'
+        ? 'html'
+        : schema.contentMediaType === 'text/css'
+          ? 'css'
+          : schema.contentMediaType === 'text/plain'
+            ? 'text'
+            : null
+    if (language) return { kind: 'code', language, maxLength: schema.maxLength ?? null }
+  }
   return pluginSettingControl(schema)
 }
 

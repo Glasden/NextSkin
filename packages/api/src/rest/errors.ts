@@ -16,6 +16,8 @@ import type { AppEnv } from '../env.ts'
 
 type ErrorCode = keyof Messages['errors']
 const statuses = {
+  custom_head_invalid: 400,
+  custom_css_invalid: 400,
   update_unreachable: 503,
   update_invalid_request: 400,
   update_unauthorized: 500,
@@ -180,6 +182,8 @@ const statuses = {
 } as const satisfies Partial<Record<ErrorCode, number>>
 type ResponseCode = keyof typeof statuses
 const fieldNames: Partial<Record<ResponseCode, string>> = {
+  custom_head_invalid: 'custom.head',
+  custom_css_invalid: 'custom.css',
   setup_code_invalid: 'code',
   import_timezone_invalid: 'timeZone',
   import_password_method_invalid: 'passwordMethod',

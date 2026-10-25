@@ -97,13 +97,14 @@ export default defineConfig<{ pluginHost: boolean }>({
       workers: 1,
       use: { ...devices['Desktop Chrome'], baseURL: pluginsSite },
       // 验证码（captcha.spec.ts）启用后登录和注册都要过挂件，维护模式（maintenance.spec.ts）开着时别人用不了站点，
-      // 同样不能和别的用例并行
+      // 页头代码和自定义 CSS（custom-code.spec.ts）对每个页面生效，同样不能和别的用例并行
       testMatch: [
         'plugins.spec.ts',
         'external-login.spec.ts',
         'captcha.spec.ts',
         'maintenance.spec.ts',
         'themes.spec.ts',
+        'custom-code.spec.ts',
       ],
     },
     {

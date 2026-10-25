@@ -240,6 +240,7 @@ test('维护分支不读设置；协议返回纯文本，REST 返回本地化 JS
     '/api/yggdrasil/authserver/authenticate',
     '/textures/abc',
     '/render/abc',
+    '/ads.txt',
     '/api/user',
   ]) {
     const response = await env.request('GET', path, undefined, '', { 'accept-language': 'en' })

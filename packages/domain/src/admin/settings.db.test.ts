@@ -51,6 +51,81 @@ async function audits() {
   return rows.map((row) => ({ ...row, details: JSON.parse(row.details) as Record<string, unknown> }))
 }
 
+test('页头代码先报具体原因和字段，CSS 拒绝结束标签；超长仍报通用错误且整次保存不写入', async () => {
+  await expect(
+    env.core.admin.updateSettings(actor(), {
+      'custom.head': '<!-- code -->\n\n<script onload="run()"></script>',
+      'custom.css': '</style>',
+      'site.url': 'invalid',
+    }),
+  ).rejects.toMatchObject({
+    code: 'custom_head_invalid',
+    params: { reason: 'event_handler', line: 3, tag: 'script', attribute: 'onload' },
+    fields: ['custom.head'],
+  })
+  await expect(env.core.admin.updateSettings(actor(), { 'custom.head': 'bare()' })).rejects.toMatchObject({
+    code: 'custom_head_invalid',
+    params: { reason: 'text', line: 1 },
+    fields: ['custom.head'],
+  })
+  await expect(
+    env.core.admin.updateSettings(actor(), { 'custom.head': '<script type="importmap">{}</script>' }),
+  ).rejects.toMatchObject({
+    code: 'custom_head_invalid',
+    params: { reason: 'script_type', line: 1, tag: 'script', attribute: 'type', value: 'importmap' },
+    fields: ['custom.head'],
+  })
+  await expect(env.core.admin.updateSettings(actor(), { 'custom.css': 'body {}\n</STYLE>' })).rejects.toMatchObject({
+    code: 'custom_css_invalid',
+    params: undefined,
+    fields: ['custom.css'],
+  })
+  for (const [key, length] of [
+    ['custom.head', 20001],
+    ['custom.css', 50001],
+    ['custom.adsTxt', 50001],
+  ] as const)
+    await expect(env.core.admin.updateSettings(actor(), { [key]: 'x'.repeat(length) })).rejects.toMatchObject({
+      code: 'invalid_request',
+      fields: [key],
+    })
+  expect(await env.core.settings.read(['custom.head', 'custom.css'])).toEqual({ 'custom.head': '', 'custom.css': '' })
+  expect(await audits()).toEqual([])
+  await env.db().updateTable('users').set({ role: 'admin' }).where('id', '=', env.actor.uid).execute()
+  await expect(env.core.admin.updateSettings(actor(), { 'custom.head': 'bare()' })).rejects.toMatchObject({
+    code: 'permission_denied',
+  })
+})
+
+test('自定义代码审计记全文；system 清空页头和 CSS，保留 ads.txt，重复调用没有改动', async () => {
+  const head = '<script>window.test = "original";</script>\n<meta name="verify" content="test">'
+  const css = 'body {\n  font-size: 1rem;\n}'
+  const adsTxt = 'example.com, pub-test, DIRECT\n'
+  await env.core.admin.updateSettings(actor(), { 'custom.head': head, 'custom.css': css, 'custom.adsTxt': adsTxt })
+  expect((await audits()).map((entry) => entry.details)).toEqual([
+    { key: 'custom.head', from: '', to: head },
+    { key: 'custom.css', from: '', to: css },
+    { key: 'custom.adsTxt', from: '', to: adsTxt },
+  ])
+  expect(await env.core.customCode.page()).toMatchObject({ head: [{ kind: 'script' }, { kind: 'meta' }], css })
+  expect(await env.core.admin.clearCustomCodeAsSystem()).toEqual({ changed: true })
+  expect(await env.core.admin.clearCustomCodeAsSystem()).toEqual({ changed: false })
+  expect(await env.core.settings.read(['custom.head', 'custom.css', 'custom.adsTxt'])).toEqual({
+    'custom.head': '',
+    'custom.css': '',
+    'custom.adsTxt': adsTxt,
+  })
+  expect(await env.core.customCode.page()).toEqual({ head: [], css: '' })
+  const entries = await audits()
+  expect(entries).toHaveLength(5)
+  expect(
+    entries.slice(3).map(({ actor_type, actor_user_id, ip, details }) => ({ actor_type, actor_user_id, ip, details })),
+  ).toEqual([
+    { actor_type: 'system', actor_user_id: null, ip: null, details: { key: 'custom.head', from: head, to: '' } },
+    { actor_type: 'system', actor_user_id: null, ip: null, details: { key: 'custom.css', from: css, to: '' } },
+  ])
+})
+
 test('写入按注册表顺序，schema 输出归一化，恢复默认值删行；相同值和空提交不写审计', async () => {
   expect(
     await env.core.admin.updateSettings(actor(), {

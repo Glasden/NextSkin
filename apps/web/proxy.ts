@@ -17,6 +17,8 @@ const HONO_PATHS = [
   /^\/textures\/[^/]+$/,
   /^\/render(?:\/.*)?$/,
   /^\/site-images\/[^/]+$/,
+  // 广告联盟的文件（ADR-0063）
+  /^\/ads\.txt$/,
   /^\/plugins\/[^/]+(?:\/.*)?$/,
 ]
 

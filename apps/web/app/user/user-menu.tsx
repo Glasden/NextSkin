@@ -3,16 +3,18 @@
 import { Button, Menu, MenuItem, MenuLinkItem, MenuSeparator, useToast } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import NextLink from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Logout } from 'pixelarticons/react/Logout.js'
 import { Tools } from 'pixelarticons/react/Tools.js'
 import { useState } from 'react'
 import { postJson } from '../../lib/api-client'
 import { visibleUserNavItems } from './user-nav'
 
+/**
+ * 退出以后整页跳到登录页：页头代码按登录的身份加载（ADR-0063），管理员退出后根布局在客户端重新渲染出的脚本不一定执行，
+ * 统计只装上一半
+ */
 function useSignOut() {
   const t = useTranslations('user.menu')
-  const router = useRouter()
   const toast = useToast()
   return async () => {
     const { status } = await postJson('/api/auth/sign-out', {})
@@ -20,8 +22,7 @@ function useSignOut() {
       toast.show({ tone: 'danger', title: t('signOutFailed') })
       return
     }
-    router.replace('/sign-in')
-    router.refresh()
+    window.location.replace('/sign-in')
   }
 }
 

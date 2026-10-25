@@ -1,15 +1,19 @@
+import { hasAdminAccess } from '@nextskin/domain'
 import { CspProvider, ValidationMessagesProvider } from '@nextskin/ui'
 import type { Metadata } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { cookies, headers } from 'next/headers'
-import type { ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import { COLOR_MODE_COOKIE, colorModeScript, parseColorMode } from '../lib/color-mode'
 import { NONCE_HEADER } from '../lib/csp'
 import { getServer } from '../lib/server'
 import { getSessionUser } from '../lib/session'
 import { iconsMetadata, siteIconHash } from '../lib/site-icons'
 import { ColorModeProvider } from './color-mode-menu'
+import { CustomCss } from './custom-css'
+import { CustomHead } from './custom-head'
+import { NavigationEvent } from './navigation-event'
 import './globals.css'
 
 // 每一页都读站点设置和 Cookie，没有能预渲染的页面。不声明的话，构建时 Next 会逐页试着预渲染，
@@ -43,7 +47,9 @@ export async function generateMetadata(): Promise<Metadata> {
 // 水合时和页面对不上，所以 <html> 不报水合不一致。
 // 内联脚本要带 proxy.ts 生成的 nonce 才会执行（ADR-0053），Base UI 插的脚本和样式经 CspProvider 拿到它。
 // 配色主题（ADR-0057）：data-theme 写在 <html> 上，不是钻石青时输出这一套的 CSS（样式不受 CSP 约束，不用 nonce）。
-// 导入期间不查会话，用站点默认（同 i18n/request.ts）
+// 自定义代码（ADR-0063）：页头代码排在主题的样式后面，有管理权限的用户登录后不加载，有页头代码的页面在客户端跳转时
+// 派发 nextskin:navigate；自定义 CSS 放在 <body> 开头，后台不套用。
+// 导入期间不查会话，用站点默认（同 i18n/request.ts），也不读自定义代码
 export default async function RootLayout({ children }: { readonly children: ReactNode }) {
   const [locale, cookieStore, headerList, { core, importer }, t] = await Promise.all([
     getLocale(),
@@ -54,15 +60,21 @@ export default async function RootLayout({ children }: { readonly children: Reac
   ])
   const nonce = headerList.get(NONCE_HEADER) ?? undefined
   const user = importer.maintenance() ? null : await getSessionUser()
-  const theme = await core.themes.current(user?.uid ?? null)
+  const [theme, custom] = await Promise.all([
+    core.themes.current(user?.uid ?? null),
+    importer.maintenance() ? null : core.customCode.page(),
+  ])
+  const head = custom && !(user && hasAdminAccess(user.role)) ? custom.head : []
   return (
     <html lang={locale} data-theme={theme.id} suppressHydrationWarning>
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: colorModeScript }} />
         {/* 主题 id 和色值都校验过格式（packages/theme 的 themeCss），拼不出别的东西 */}
         {theme.css && <style dangerouslySetInnerHTML={{ __html: theme.css }} />}
+        <CustomHead elements={head} nonce={nonce} />
       </head>
       <body className="min-h-dvh bg-bg font-sans text-text">
+        {custom?.css && <CustomCss css={custom.css} />}
         <CspProvider nonce={nonce}>
           <NextIntlClientProvider>
             {/* 控件没填就提交时的提示跟随站点语言，不用浏览器给的消息（它跟随浏览器语言） */}
@@ -80,6 +92,11 @@ export default async function RootLayout({ children }: { readonly children: Reac
             </ValidationMessagesProvider>
           </NextIntlClientProvider>
         </CspProvider>
+        {head.length > 0 && (
+          <Suspense fallback={null}>
+            <NavigationEvent />
+          </Suspense>
+        )}
       </body>
     </html>
   )

@@ -10,6 +10,7 @@ import { Link, Table } from '@nextskin/ui'
 import { getFormatter, getLocale, getMessages, getTranslations } from 'next-intl/server'
 import NextLink from 'next/link'
 import { pluginName } from '../../lib/plugins'
+import { CodeChange } from './code-change'
 import { getServer } from '../../lib/server'
 import { jobKey } from './failed-jobs/job-text'
 import { auditHref } from './params'
@@ -469,14 +470,48 @@ export async function AuditTable({
       }),
   }
 
+  /** 代码类的设置记的是全文（ADR-0063）：表格里写长度，全文在侧边栏里看 */
+  function codeChange(details: AuditEntry['details']) {
+    const key = settingKey(details.key)
+    if (!key || details.secret === true || 'toLength' in details) return null
+    if (settingControl(settingJsonSchema(key))?.kind !== 'code') return null
+    const from = details.unreadable === true ? null : typeof details.from === 'string' ? details.from : ''
+    const to = typeof details.to === 'string' ? details.to : ''
+    return (
+      <CodeChange
+        summary={
+          from === null
+            ? t('details.settingUpdate.value', {
+                from: t('details.settingUpdate.unreadable'),
+                to: format.number([...to].length),
+              })
+            : t('details.settingUpdate.length', { from: [...from].length, to: [...to].length })
+        }
+        title={settingText(settingFields, key).label}
+        from={from}
+        to={to}
+        texts={{
+          view: t('details.settingUpdate.view'),
+          close: t('details.settingUpdate.close'),
+          before: t('details.settingUpdate.before'),
+          after: t('details.settingUpdate.after'),
+          empty: t('details.settingUpdate.empty'),
+          unreadable: t('details.settingUpdate.unreadable'),
+        }}
+      />
+    )
+  }
+
   function details(entry: AuditEntry) {
     const via =
       typeof entry.details.reportId === 'number' ? t('details.viaReport', { id: entry.details.reportId }) : null
-    const summary = isAuditAction(entry.action) ? summaries[entry.action](entry.details) : null
+    const code = entry.action === 'setting.update' ? codeChange(entry.details) : null
+    const summary = !code && isAuditAction(entry.action) ? summaries[entry.action](entry.details) : null
     // 改积分的备注只进审计记录（ADR-0036"改积分"）
     const note = entry.action === 'user.adjustScore' ? text(entry.details.note) : null
     return (
       <span className="flex flex-col">
+        {code}
         {summary && <span>{summary}</span>}
         {note && <span className="text-xs break-all text-text-muted">{t('details.note', { note })}</span>}
         {via && <span className="text-xs text-text-muted">{via}</span>}

@@ -28,6 +28,7 @@ const pages: Record<MaintenanceClass, string[]> = {
 }
 const endpoints: Record<MaintenanceClass, string[]> = {
   open: [
+    '/ads.txt',
     '/api/health',
     '/site-images/hash.png',
     '/render',
@@ -63,6 +64,8 @@ const endpoints: Record<MaintenanceClass, string[]> = {
     '/api/user/device/approve',
   ],
   restricted: [
+    '/ads.txt/extra',
+    '/ads-txt',
     '/',
     '/api/user',
     '/api/players',

@@ -79,6 +79,9 @@ const expected = {
   'maintenance.enabled': boolean,
   'maintenance.blockProtocols': boolean,
   'maintenance.message': { kind: 'markdown', maxLength: 2000 },
+  'custom.head': { kind: 'code', language: 'html', maxLength: 20000 },
+  'custom.css': { kind: 'code', language: 'css', maxLength: 50000 },
+  'custom.adsTxt': { kind: 'code', language: 'text', maxLength: 50000 },
   'network.trustedProxies': lines,
   'cache.publicMaxAge': integer(0),
   'audit.retentionDays': integer(0, 3650),
@@ -146,4 +149,16 @@ test('插件的设置没有图片控件', () => {
   const schema: JsonSchema = { anyOf: [{ type: 'string' }, { type: 'null' }], contentMediaType: 'image/png' }
   expect(pluginSettingControl(schema)).toBeNull()
   expect(settingControl({ type: 'string', contentMediaType: 'image/png' })).toEqual(text)
+})
+
+test.each([
+  ['text/html', 'html'],
+  ['text/css', 'css'],
+  ['text/plain', 'text'],
+] as const)('代码控件只给核心的字符串设置：%s', (contentMediaType, language) => {
+  const schema: JsonSchema = { type: 'string', contentMediaType, maxLength: 123 }
+  expect(settingControl(schema)).toEqual({ kind: 'code', language, maxLength: 123 })
+  expect(settingControl({ type: 'string', contentMediaType })).toEqual({ kind: 'code', language, maxLength: null })
+  expect(pluginSettingControl(schema)).toEqual({ ...text, maxLength: 123 })
+  expect(settingControl({ type: 'number', contentMediaType })?.kind).toBe('number')
 })

@@ -16,6 +16,7 @@ export const settingSections = [
   'mail',
   'yggdrasil',
   'maintenance',
+  'custom',
   'advanced',
 ] as const
 export type SettingSection = (typeof settingSections)[number]
@@ -219,6 +220,24 @@ export const coreSettingsRegistry = {
     schema: z.string().max(2000).meta({ contentMediaType: 'text/markdown' }),
     default: '',
     section: 'maintenance',
+    secret: false,
+  },
+  'custom.head': {
+    schema: z.string().max(20000).meta({ contentMediaType: 'text/html' }),
+    default: '',
+    section: 'custom',
+    secret: false,
+  },
+  'custom.css': {
+    schema: z.string().max(50000).meta({ contentMediaType: 'text/css' }),
+    default: '',
+    section: 'custom',
+    secret: false,
+  },
+  'custom.adsTxt': {
+    schema: z.string().max(50000).meta({ contentMediaType: 'text/plain' }),
+    default: '',
+    section: 'custom',
     secret: false,
   },
   // 默认信任回环地址，让同机的 nginx 等反向代理开箱可用（ADR-0018）。
