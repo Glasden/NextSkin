@@ -143,7 +143,7 @@ export interface AdminPlayerUpdate {
   skin?: number | null
   cape?: number | null
 }
-/** 转让时按 uid 或邮箱查新主人；没有 users.ban 时 email 为 null（ADR-0036"接口"） */
+/** 转让时按 uid 或邮箱查新主人（ADR-0036"接口"），发通知时搜索收件人；没有 users.ban 时 email 为 null */
 export interface AdminUserLookup {
   uid: number
   nickname: string

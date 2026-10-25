@@ -118,6 +118,32 @@ const send = createRoute({
   },
   responses: { 201: jsonResponse(z.object({ id: z.int() }), '通知已发送'), ...errors },
 })
+const recipients = createRoute({
+  method: 'get',
+  path: '/admin/notifications/recipients',
+  request: {
+    // 编号精确匹配、昵称包含；有 users.ban 时邮箱也按包含匹配
+    query: z.object({ q: z.string().max(255) }),
+  },
+  responses: {
+    200: jsonResponse(
+      z.object({
+        items: z.array(
+          z.object({
+            uid: z.int(),
+            nickname: z.string(),
+            // 没有 users.ban 时为 null
+            email: z.string().nullable(),
+            role: z.enum(['banned', 'user', 'admin', 'superadmin']),
+            avatar: z.object({ hash: z.string(), scale: z.number() }).nullable(),
+          }),
+        ),
+      }),
+      '匹配的用户，最多 10 个，编号正好相等的在最前',
+    ),
+    ...errors,
+  },
+})
 const recall = createRoute({
   method: 'post',
   path: '/admin/notifications/{id}/recall',
@@ -161,6 +187,9 @@ export function registerAdminNotifications(app: OpenAPIHono<AppEnv>, core: Core)
     c.json(await core.admin.listNotificationBroadcasts(await actor(c), c.req.valid('query')), 200),
   )
   app.openapi(send, async (c) => c.json(await core.admin.sendNotification(await actor(c), c.req.valid('json')), 201))
+  app.openapi(recipients, async (c) =>
+    c.json({ items: await core.admin.searchNotificationRecipients(c.get('user')!.uid, c.req.valid('query').q) }, 200),
+  )
   app.openapi(recall, async (c) => {
     await core.admin.recallNotification(await actor(c), c.req.valid('param').id)
     return c.json({ ok: true as const }, 200)

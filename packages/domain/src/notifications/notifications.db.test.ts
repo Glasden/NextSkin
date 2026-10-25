@@ -12,7 +12,8 @@ import {
 } from '@nextskin/db'
 import { createTestDatabase, type TestDatabase } from '@nextskin/db/testing'
 import type { KyselyPlugin } from 'kysely'
-import { afterAll, afterEach, beforeAll, beforeEach, expect, test } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest'
+import { can } from '../access/permissions.ts'
 import { createCore, type Core } from '../core.ts'
 import { createNotifications } from './service.ts'
 import { notify, notifyPendingReport } from './write.ts'
@@ -23,6 +24,8 @@ import {
   NOTIFICATION_SWEEP_JOB,
 } from './jobs.ts'
 
+vi.mock('../access/permissions.ts', { spy: true })
+const permissions = await vi.importActual<typeof import('../access/permissions.ts')>('../access/permissions.ts')
 let database: TestDatabase<CoreDatabase>
 let core: Core
 let timestamp: Date
@@ -87,6 +90,7 @@ beforeAll(async () => {
 afterAll(async () => database?.cleanup())
 afterEach(async () => core?.shutdown())
 beforeEach(async () => {
+  vi.mocked(can).mockImplementation(permissions.can)
   for (const table of [
     'notifications',
     'notification_broadcasts',
@@ -436,6 +440,48 @@ test('发送记录分页和发送人删除后的空值', async () => {
   expect(
     (await core.admin.listNotificationBroadcasts(other, { page: 1 })).items.every((row) => row.sender === null),
   ).toBe(true)
+})
+
+test('搜索收件人：编号精确匹配排最前，昵称和邮箱不分大小写包含，封禁用户也在，最多 10 个', async () => {
+  const named = (nickname: string, email: string, role: UserRole = 'user') =>
+    insertReturningId(db(), 'users', { ...userRow(role), nickname, email })
+  const steve = await named('Steve', 'steve@example.test')
+  const alt = await named('steve_alt', 'alt@example.test', 'banned')
+  const creeper = await named('Creeper', 'CREEPER@example.test')
+  const fan = await named(`fan${steve}`, 'fan@example.test')
+  const search = (q: string) => core.admin.searchNotificationRecipients(admin.uid, q)
+  expect(await search(' STEVE ')).toEqual([
+    { uid: alt, nickname: 'steve_alt', email: 'alt@example.test', role: 'banned', avatar: null },
+    { uid: steve, nickname: 'Steve', email: 'steve@example.test', role: 'user', avatar: null },
+  ])
+  expect((await search('creeper@')).map((row) => row.uid)).toEqual([creeper])
+  // 编号正好相等的排在新注册、昵称里带这串数字的用户前面
+  expect((await search(String(steve))).map((row) => row.uid)).toEqual([steve, fan])
+  for (const q of ['', '   ', 'nobody', String(2147483648)]) expect(await search(q)).toEqual([])
+  await bulkUsers(12, 'user')
+  expect(await search('用户')).toHaveLength(10)
+  expect((await search(String(admin.uid)))[0]!.uid).toBe(admin.uid)
+})
+
+test('搜索收件人要有发通知的权限；没有封禁权限时邮箱不参与匹配、也不返回', async () => {
+  const normal = await user()
+  await expect(core.admin.searchNotificationRecipients(normal, 'x')).rejects.toMatchObject({
+    code: 'permission_denied',
+  })
+  const target = await insertReturningId(db(), 'users', {
+    ...userRow(),
+    nickname: 'Steve',
+    email: 'creeper@example.test',
+  })
+  vi.mocked(can).mockImplementation((r, p) => p !== 'users.ban' && permissions.can(r, p))
+  expect(await core.admin.searchNotificationRecipients(admin.uid, 'creeper')).toEqual([])
+  expect(await core.admin.searchNotificationRecipients(admin.uid, 'steve')).toEqual([
+    { uid: target, nickname: 'Steve', email: null, role: 'user', avatar: null },
+  ])
+  vi.mocked(can).mockImplementation((r, p) => p !== 'notifications.send' && permissions.can(r, p))
+  await expect(core.admin.searchNotificationRecipients(admin.uid, 'steve')).rejects.toMatchObject({
+    code: 'permission_denied',
+  })
 })
 
 test('两个展开任务竞争同一批时不重复，撤回与下一批竞争后不再写入', async () => {
