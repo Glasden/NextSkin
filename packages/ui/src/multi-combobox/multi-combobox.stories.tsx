@@ -211,7 +211,8 @@ export const Search: Story = {
     await userEvent.click(input)
     await expect(await screen.findByText('输入 uid、昵称或邮箱')).toBeVisible()
     await userEvent.type(input, 'seth')
-    await expect(await screen.findByText('正在搜索')).toBeVisible()
+    // "正在搜索"只挂 300ms：找到和断言放在同一次检查里，CI 慢的时候中间的空档会错过它
+    await waitFor(() => expect(screen.getByText('正在搜索')).toBeVisible())
     await userEvent.click(await screen.findByRole('option', { name: /SethBling/ }))
     await expect(args.onValueChange).toHaveBeenLastCalledWith([seth])
     await userEvent.type(input, 'nobody')
