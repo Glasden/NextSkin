@@ -388,13 +388,15 @@ export async function createControl(options: {
   }
 }
 
+/** 连不上算管理进程没在运行；没有权限连接时不能这么算，命令行会以为可以自己动手（升级、导入） */
 export async function connectControl(
   home: string,
 ): Promise<((method: ControlMethod, params: Record<string, unknown>) => Promise<unknown>) | null> {
   let token: string
   try {
     token = (await readFile(join(home, 'releases/manager.token'), 'utf8')).trim()
-  } catch {
+  } catch (error) {
+    if (denied(error)) throw unauthorized()
     return null
   }
   const call = (method: ControlMethod, params: Record<string, unknown>) =>
@@ -402,10 +404,18 @@ export async function connectControl(
   try {
     await call('status', {})
     return call
-  } catch {
+  } catch (error) {
+    if (error instanceof ManagerError && error.code === 'unauthorized') throw error
     return null
   }
 }
+const denied = (error: unknown) => ['EACCES', 'EPERM'].includes((error as NodeJS.ErrnoException | null)?.code ?? '')
+// Windows 上命名管道默认只让创建者、SYSTEM 和提升了的管理员连接：没提升的 PowerShell 连 LocalSystem 的服务会被拒
+const unauthorized = () =>
+  new ManagerError(
+    '没有权限连接管理进程：用运行服务的用户运行命令行（Windows 上服务以 LocalSystem 运行时，用管理员身份打开 PowerShell）',
+    'unauthorized',
+  )
 export function controlRequest(
   address: string,
   token: string,
@@ -439,8 +449,8 @@ export function controlRequest(
         }
       }
     })
-    socket.once('error', () => {
-      error = new ManagerError('无法连接管理进程')
+    socket.once('error', (cause) => {
+      error = denied(cause) ? unauthorized() : new ManagerError('无法连接管理进程')
     })
     socket.once('close', () => {
       clearTimeout(timer)
