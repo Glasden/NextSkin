@@ -48,13 +48,15 @@ export function supervise(options: SupervisorOptions): Promise<number> {
       disposeStop?.()
       resolve(0)
     }
-    const force = () => {
-      if (child) child.kill('SIGKILL')
-      else finish()
+    // 强制结束要留一条记录：核心自己的收尾日志到这里就断了，不说明的话看起来像核心崩了
+    const force = (why: string) => {
+      if (!child) return finish()
+      log.warn(why)
+      child.kill('SIGKILL')
     }
     const stop = (signal: NodeJS.Signals) => {
       if (stopping) {
-        if (signal === 'SIGINT') force()
+        if (signal === 'SIGINT') force('又按了一次 Ctrl+C，强制结束核心')
         return
       }
       stopping = true
@@ -70,7 +72,7 @@ export function supervise(options: SupervisorOptions): Promise<number> {
           /* 通道已经关闭时，仍然等退出或超时。 */
         }
       }
-      deadline = setTimeout(force, shutdownTimeout)
+      deadline = setTimeout(() => force(`核心 ${shutdownTimeout / 1000} 秒内没有退出，强制结束`), shutdownTimeout)
     }
     const launch = () => {
       readyAt = undefined

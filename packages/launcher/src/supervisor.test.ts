@@ -101,6 +101,9 @@ test('无视 shutdown 时到时强杀；停止中的第二次 SIGINT 立即强�
     expect(await exit).toEqual([0, null])
     if (!twice) expect(Date.now() - start).toBeGreaterThanOrEqual(95)
     expect(await readFile(state + '.events', 'utf8')).toBe('shutdown\n')
+    const forced = messages.find((m) => m.log.includes('强制结束'))
+    expect(forced?.log).toBe(twice ? '又按了一次 Ctrl+C，强制结束核心' : '核心 0.1 秒内没有退出，强制结束')
+    expect(forced?.record?.level).toBe('warn')
   }
 })
 
