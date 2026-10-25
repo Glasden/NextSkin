@@ -75,6 +75,8 @@ location /_next/static/ {
 - **Bot Fight Mode**（JavaScript Detections）：可以开。Cloudflare 会读响应头里的 CSP，给它插的脚本带上同一个 nonce。
 - **Web Analytics** 的自动注入：未实测。
 
+三家验证码在这个 CSP 下实测可用：Turnstile、hCaptcha，以及 reCAPTCHA 的复选框和隐形两种密钥。Turnstile 的挂件会在浏览器控制台报一条 `connect-src` 拦下 `data:` 的错误，那是 Cloudflare 自己的 iframe 的 CSP，和站点无关，不影响验证。
+
 ## 防火墙
 
 - 只给反向代理用的端口绑 `127.0.0.1`（发行包设 `NEXTSKIN_HOST=127.0.0.1`，Docker 发布成 `127.0.0.1:3000:3000`）。Docker 发布的端口绕过 ufw、firewalld。

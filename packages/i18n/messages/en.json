@@ -1690,11 +1690,11 @@
           },
           "secretKey": {
             "label": "Secret key",
-            "help": "Used only on the server to verify captcha tokens. Never sent back to the browser."
+            "help": "Used only on the server to verify captcha tokens. Never sent back to the browser. For reCAPTCHA, the Google Cloud console calls it the legacy secret key: open the key → Integration → Use legacy key."
           },
           "recaptchaInvisible": {
             "label": "Invisible reCAPTCHA",
-            "help": "Applies only to reCAPTCHA and must match the key type: v2 checkbox and invisible widgets use different keys."
+            "help": "Applies only to reCAPTCHA and must match the key type: v2 checkbox and invisible widgets use different keys. The Google Cloud console only creates checkbox keys; create invisible keys with gcloud: gcloud recaptcha keys create --web --integration-type=invisible."
           }
         },
         "site": {

@@ -61,7 +61,7 @@ sudo cat /opt/nextskin/data/setup-code
 不想让 root 常驻：去掉 `Environment=NEXTSKIN_RUN_AS=…`，加上 `User=nextskin`、`Group=nextskin`。这时管理进程写不了 `releases/`，后台只检测新版本、不能一键升级，升级照下面的“手动升级”。
 
 :::note
-权限分离（管理进程 uid 0，启动器和核心降到 `nextskin`、附加组清空，控制通道的 socket 只有 root 和 `nextskin` 能连）在容器里以 root 实测过；这份单元文件下的开机自启和一键升级的全过程还没有实测。
+权限分离（管理进程 uid 0，启动器和核心降到 `nextskin`、附加组清空，控制通道的 socket 只有 root 和 `nextskin` 能连）在容器里以 root 实测过；这份单元文件下的一键升级和回滚实测过（0.6.0 和 0.7.1 之间来回，三层进程的用户、`data/` 的属主都对，重启服务后换上了新的管理进程），开机自启还没有实测。
 :::
 
 ## 命令行
@@ -71,6 +71,8 @@ sudo cat /opt/nextskin/data/setup-code
 ```bash
 sudo -u nextskin node /opt/nextskin/nextskin.mjs doctor
 ```
+
+一键升级之后、重启服务之前，这样运行的命令会先打一行“没有换上新管理进程，继续使用旧版：EACCES”。新的管理进程放在 `manager.next/`，要等服务下次以 root 启动时换上，服务用户换不了。命令照常执行，`sudo systemctl restart nextskin` 一次之后就不再出现。
 
 `update`、`rollback` 要读 root 的令牌、写 `releases/`，用 root 运行。服务停着时它们自己跑迁移，单元文件里的环境变量带不过来，要自己给上：
 

@@ -1690,11 +1690,11 @@
           },
           "secretKey": {
             "label": "私密密钥",
-            "help": "只在服务端核对验证码时使用，不回传浏览器。"
+            "help": "只在服务端核对验证码时使用，不回传浏览器。reCAPTCHA 的私密密钥在 Google Cloud 控制台叫旧版密钥：打开密钥 → 集成 → 使用旧版密钥。"
           },
           "recaptchaInvisible": {
             "label": "隐形 reCAPTCHA",
-            "help": "只对 reCAPTCHA 有效，必须和站点密钥类型一致：v2 复选框和隐形验证码使用不同的密钥。"
+            "help": "只对 reCAPTCHA 有效，必须和站点密钥类型一致：v2 复选框和隐形验证码使用不同的密钥。Google Cloud 控制台只能新建复选框密钥，隐形密钥用 gcloud 建：gcloud recaptcha keys create --web --integration-type=invisible。"
           }
         },
         "site": {
