@@ -10,7 +10,9 @@
 ## 站点
 
 - **统计和广告脚本、自定义 CSS**：ADR-0042 推迟，和 CSP 的关系由 ADR-0053 定了，做的时候另写 ADR。
-- **CSP 的实测**（ADR-0053）：三家验证码各用官方的测试密钥在真实网络上走一遍（hCaptcha 的文档没提 `'strict-dynamic'`）；在 Cloudflare 后面、开着 Bot Fight Mode 时看控制台有没有 CSP 报错；Cloudflare Web Analytics 的自动注入会不会被拦。
+- **CSP 的实测**（ADR-0053）：hCaptcha、reCAPTCHA 在真实网络上走一遍（Turnstile 已过；hCaptcha 的文档没提 `'strict-dynamic'`）。官方测试密钥返回固定的 hostname，过不了主机名校验，要用真实密钥，或者让核心认出测试密钥（未定，定了改 ADR-0053 的写法）；Turnstile 的 iframe 自己的 CSP 会在控制台报 `connect-src` 拦了 `data:`，和站点无关，部署文档提一句。在 Cloudflare 后面、开着 Bot Fight Mode 时看控制台有没有 CSP 报错；Cloudflare Web Analytics 的自动注入会不会被拦。
+- **验证码按服务商分开存密钥**（ADR-0038）：现在三家共用一对站点密钥和私密密钥，换服务商要重填。改成每家一组；私密密钥加密时绑定键名，已存的值要在核心里解密、按当前服务商转存；后台表单不能按服务商显示，三家的 7 项会全列出来，要不要给表单加条件显示另定。
+- **第三方登录插件页的回调地址**：加复制按钮，现在只能全选文字再复制。
 - **后台覆盖翻译**（ADR-0019）：运行时把数据库里的覆盖叠在打包的消息上；首页的主标题随它可改（ADR-0032）。
 - **种子数据**：`pnpm dev` 的空库要先在 `/setup` 建站。
 
