@@ -142,7 +142,8 @@ test('页头代码：访客的页面执行脚本、带上 meta，客户端跳转
     await clickHydrated(visitor.getByRole('button', { name: t('auth.signIn.submit'), exact: true }))
     await visitor.waitForURL((url) => url.pathname !== '/sign-in')
     for (const tab of [visitor, other]) {
-      await expect.poll(() => tab.evaluate(sameDocument)).toBe(false)
+      // 正赶上重新加载时 evaluate 报执行上下文没了，expect.poll 不重试抛错的回调，当成还是原来的文档
+      await expect.poll(() => tab.evaluate(sameDocument).catch(() => true)).toBe(false)
       await tab.waitForLoadState()
       expect((await probe(tab)).e2eInline).toBeUndefined()
     }
