@@ -91,7 +91,10 @@ test('停止时发送 shutdown，等待核心完成退出', async () => {
 
 test('无视 shutdown 时到时强杀；停止中的第二次 SIGINT 立即强杀', async () => {
   for (const twice of [false, true]) {
-    const { child, messages, state } = await run([{ ready: true, ignoreShutdown: true }])
+    const { child, messages, state } = await run(
+      [{ ready: true, ignoreShutdown: true }],
+      twice ? { LAUNCHER_TEST_SHUTDOWN_TIMEOUT: '30000' } : {},
+    )
     await expect.poll(() => messages.length, { timeout: 5000 }).toBe(1)
     const exit = once(child, 'exit')
     const start = Date.now()
@@ -101,9 +104,11 @@ test('无视 shutdown 时到时强杀；停止中的第二次 SIGINT 立即强�
     expect(await exit).toEqual([0, null])
     if (!twice) expect(Date.now() - start).toBeGreaterThanOrEqual(95)
     expect(await readFile(state + '.events', 'utf8')).toBe('shutdown\n')
-    const forced = messages.find((m) => m.log.includes('强制结束'))
-    expect(forced?.log).toBe(twice ? '又按了一次 Ctrl+C，强制结束核心' : '核心 0.1 秒内没有退出，强制结束')
-    expect(forced?.record?.level).toBe('warn')
+    const forced = () => messages.filter((m) => m.log.includes('强制结束'))
+    await expect
+      .poll(() => forced().map((m) => m.log))
+      .toEqual([twice ? '又按了一次 Ctrl+C，强制结束核心' : '核心 0.1 秒内没有退出，强制结束'])
+    expect(forced()[0]?.record?.level).toBe('warn')
   }
 })
 

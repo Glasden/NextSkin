@@ -21,7 +21,8 @@ process.exitCode = await supervise({
   initialDelay: 20,
   maxDelay: 80,
   stableTime: 150,
-  shutdownTimeout: 100,
+  // 测第二次 SIGINT 时拉长：CI 慢的时候 0.1 秒的超时会先到
+  shutdownTimeout: Number(process.env.LAUNCHER_TEST_SHUTDOWN_TIMEOUT ?? 100),
   output,
 })
 await output.close()
