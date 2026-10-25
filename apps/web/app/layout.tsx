@@ -49,7 +49,8 @@ export async function generateMetadata(): Promise<Metadata> {
 // 内联脚本要带 proxy.ts 生成的 nonce 才会执行（ADR-0053），Base UI 插的脚本和样式经 CspProvider 拿到它。
 // 配色主题（ADR-0057）：data-theme 写在 <html> 上，不是钻石青时输出这一套的 CSS（样式不受 CSP 约束，不用 nonce）。
 // 自定义代码（ADR-0063）：页头代码排在主题的样式后面，有管理权限的用户登录后不加载（别的标签页、同一个文档里身份变了，
-// 由 HeadCodeGuard 整页重新加载），有页头代码的页面在客户端跳转时派发 nextskin:navigate；自定义 CSS 放在 <body> 开头，后台不套用。
+// 整页重新加载：lib/session-change.ts、HeadCodeGuard），有页头代码的页面在客户端跳转时派发 nextskin:navigate；
+// 自定义 CSS 放在 <body> 开头，后台不套用。
 // 导入期间不查会话，用站点默认（同 i18n/request.ts），也不读自定义代码
 export default async function RootLayout({ children }: { readonly children: ReactNode }) {
   const [locale, cookieStore, headerList, { core, importer }, t] = await Promise.all([
@@ -94,7 +95,7 @@ export default async function RootLayout({ children }: { readonly children: Reac
             </ValidationMessagesProvider>
           </NextIntlClientProvider>
         </CspProvider>
-        {custom && custom.head.length > 0 && <HeadCodeGuard loaded={head.length > 0} admin={admin} />}
+        <HeadCodeGuard loaded={head.length > 0} admin={admin} />
         {head.length > 0 && (
           <Suspense fallback={null}>
             <NavigationEvent />
