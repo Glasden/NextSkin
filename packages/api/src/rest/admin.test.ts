@@ -62,7 +62,7 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
         .map((r) => [`${r.method} ${r.path}`, r]),
     ).values(),
   ]
-  expect(routes).toHaveLength(55)
+  expect(routes).toHaveLength(56)
   for (const route of routes) {
     const path = route.path
       .slice('/api'.length)
@@ -71,9 +71,9 @@ test('遍历所有已注册后台路由：普通用户一律 403，未登录一�
       .replace(':key', 'yggdrasil.signingKey')
       .replace(':pluginId', 'missing')
       .replace(':providerId', 'missing')
-    // 两个读接口和全部删除失败任务的查询参数是必填的
+    // 三个读接口和全部删除失败任务的查询参数是必填的
     const query =
-      path === '/admin/users/lookup'
+      path === '/admin/users/lookup' || path === '/admin/notifications/recipients'
         ? '?q=7'
         : route.method === 'GET' && path.startsWith('/admin/textures/')
           ? '?owner=8'

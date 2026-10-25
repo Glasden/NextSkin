@@ -14,9 +14,11 @@ const methods = [
   'sendNotification',
   'listNotificationBroadcasts',
   'recallNotification',
+  'searchNotificationRecipients',
 ] as const
 type Method = (typeof methods)[number]
 const input = { audience: 'specific', recipients: ['1'], title: '标题', body: '**正文**' }
+const recipient = { uid: 7, nickname: 'Steve', email: null, role: 'banned', avatar: { hash: 'a'.repeat(64), scale: 1 } }
 const endpoints = [
   {
     method: 'GET',
@@ -40,6 +42,7 @@ const endpoints = [
     args: [uid, 9],
     body: { through: 9 },
     result: 3,
+    response: { marked: 3 },
   },
   { method: 'DELETE', path: '/notifications/7', fn: 'remove', args: [uid, 7] },
   {
@@ -58,6 +61,14 @@ const endpoints = [
     result: { id: 3 },
   },
   { method: 'POST', path: '/admin/notifications/7/recall', fn: 'recallNotification', args: [actor, 7] },
+  {
+    method: 'GET',
+    path: '/admin/notifications/recipients?q=%20Steve',
+    fn: 'searchNotificationRecipients',
+    args: [uid, ' Steve'],
+    result: [recipient],
+    response: { items: [recipient] },
+  },
 ] as const satisfies readonly {
   method: string
   path: string
@@ -65,6 +76,8 @@ const endpoints = [
   args: unknown[]
   body?: unknown
   result?: unknown
+  /** 响应体和用例的返回值不一样时 */
+  response?: unknown
 }[]
 function setup() {
   const read = vi.fn((keys: readonly CoreSettingKey[]) =>
@@ -106,7 +119,7 @@ test.each(endpoints)('$method $path 只把会话 uid、对端 IP 和通过校验
   calls[endpoint.fn].mockResolvedValue(result)
   const response = await request(endpoint.method, endpoint.path, payload(endpoint))
   expect(response.status).toBe(endpoint.fn === 'sendNotification' ? 201 : 200)
-  expect(await response.json()).toEqual(endpoint.fn === 'markAllRead' ? { marked: 3 } : (result ?? { ok: true }))
+  expect(await response.json()).toEqual('response' in endpoint ? endpoint.response : (result ?? { ok: true }))
   expect(calls[endpoint.fn]).toHaveBeenCalledExactlyOnceWith(...endpoint.args)
   expect(getSessionUser).toHaveBeenCalledTimes(1)
 })
@@ -130,15 +143,17 @@ test.each(['summary', 'list', 'markRead', 'markAllRead', 'remove'] as const)(
   },
 )
 
-test.each(['sendNotification', 'listNotificationBroadcasts', 'recallNotification'] as const)(
-  '后台 %s 的权限错误返回 403',
-  async (fn) => {
-    const { calls, request } = setup()
-    calls[fn].mockRejectedValue(new DomainError('permission_denied'))
-    const endpoint = endpoints.find((endpoint) => endpoint.fn === fn)!
-    expect((await request(endpoint.method, endpoint.path, payload(endpoint))).status).toBe(403)
-  },
-)
+test.each([
+  'sendNotification',
+  'listNotificationBroadcasts',
+  'recallNotification',
+  'searchNotificationRecipients',
+] as const)('后台 %s 的权限错误返回 403', async (fn) => {
+  const { calls, request } = setup()
+  calls[fn].mockRejectedValue(new DomainError('permission_denied'))
+  const endpoint = endpoints.find((endpoint) => endpoint.fn === fn)!
+  expect((await request(endpoint.method, endpoint.path, payload(endpoint))).status).toBe(403)
+})
 
 test('默认分页和筛选', async () => {
   const { calls, request } = setup()
@@ -190,6 +205,8 @@ const invalid = [
   ['POST', '/admin/notifications', { ...input, recipients: [] }],
   ['POST', '/admin/notifications', { ...input, recipients: [7] }],
   ['POST', '/admin/notifications', { ...input, recipients: Array(51).fill('7') }],
+  ['GET', '/admin/notifications/recipients', undefined],
+  ['GET', `/admin/notifications/recipients?q=${'a'.repeat(256)}`, undefined],
 ] as const
 
 test.each(invalid)('%s %s 参数非法返回 400，不调用用例', async (method, path, body) => {

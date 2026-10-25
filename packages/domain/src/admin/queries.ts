@@ -607,6 +607,34 @@ export function createAdminQueries(
       return { uid, nickname, email: emails ? email : null, role, avatar }
     },
     /**
+     * 发通知时搜索收件人（ADR-0052）：要有 notifications.send，不限身份，被封禁的用户也能收。编号精确匹配、昵称包含；
+     * 有 users.ban 时邮箱也按包含匹配并返回，否则同 lookupUser 不返回邮箱。最多 10 个：编号正好相等的在最前，其余新注册的在前
+     */
+    async searchNotificationRecipients(viewer: number, q: string): Promise<AdminUserLookup[]> {
+      const emails = can(await authorize(viewer, 'notifications.send'), 'users.ban')
+      const query = rejectNul(q).trim()
+      if (!query) return []
+      const exact =
+        /^\d+$/.test(query) && Number(query) <= MAX_INT32
+          ? await userRows(db).where('users.id', '=', Number(query)).executeTakeFirst()
+          : undefined
+      let others = userRows(db).where((eb) =>
+        eb.or([
+          containsInsensitive('users.nickname', query),
+          ...(emails ? [containsInsensitive('users.email', query)] : []),
+        ]),
+      )
+      if (exact) others = others.where('users.id', '!=', exact.id)
+      const rows = await others
+        .orderBy('users.id', 'desc')
+        .limit(exact ? 9 : 10)
+        .execute()
+      return [...(exact ? [exact] : []), ...rows].map((row) => {
+        const { uid, nickname, email, role, avatar } = toUser(row)
+        return { uid, nickname, email: emails ? email : null, role, avatar }
+      })
+    },
+    /**
      * 按 tid 查材质、判断主人能不能用（ADR-0036"接口"）：转让和换材质、加入衣柜的 Dialog 在提交之前用。要有 players.manage
      * 或 users.manage，owner 要是自己能管理的用户。别人的私有材质在没有 textures.manage 时只给出 tid、public 和 visibleToOwner
      */
