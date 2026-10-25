@@ -481,6 +481,8 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
         }
         const entry = base()
         entry.reason = reason(error)
+        // 恢复时版本指针没写成（Windows 上 current.json 被占着）：内存里已经按恢复的结果改了，先让服务起来，最后再核对磁盘
+        let unsaved = false
         if (error instanceof MigrationError) {
           entry.error = error.detail
           backup = error.backup
@@ -515,13 +517,18 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
               dataLock?.release()
               dataLock = null
               // 若指针写入失败，仍尽力指向已迁移的程序；决不拿旧程序打开新库。
-              if (pointer?.current !== version)
-                await save({
+              if (pointer?.current !== version) {
+                const next: Current = {
                   ...(before ?? initialCurrent(version)),
                   current: version,
                   previous: kind === 'legacy' ? null : from,
                   upgrades: { [version]: { from, migrations, dialect: preflight.dialect, backup } },
+                }
+                await save(next).catch(() => {
+                  pointer = next
+                  unsaved = true
                 })
+              }
               supervisor.resume(version)
               entry.reason +=
                 partial === 'changed'
@@ -537,10 +544,18 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
                 if (!dataLock) throw new ManagerError('管理进程正在停止，数据库尚未恢复')
                 await restoreSqlite(preflight, backup)
               }
-              if (before) await save(before)
-              else {
-                await rm(join(home, 'releases/current.json'), { force: true })
-                pointer = null
+              // 指针没切过去（第 9 步之前失败，或第 9 步本身没写成）就不用写回
+              if (pointer?.current === version) {
+                try {
+                  if (before) await save(before)
+                  else {
+                    await rm(join(home, 'releases/current.json'), { force: true })
+                    pointer = null
+                  }
+                } catch {
+                  pointer = before
+                  unsaved = true
+                }
               }
               dataLock?.release()
               dataLock = null
@@ -556,7 +571,21 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
           }
         }
         if (kind === 'legacy') entry.reason += '；请照 ADR-0040 手工回退，解压旧版本的 ZIP'
-        if (migrationAttempted) await markFailed(version)
+        // 记失败版本会再写一次指针，也算补写；写不成只少一条记录，不能因此丢掉这次的结果
+        if (migrationAttempted)
+          await markFailed(version).catch(() =>
+            log.warn(`没能把 ${version} 记成失败的版本，请检查 releases/current.json`),
+          )
+        const onDisk = unsaved
+          ? await readCurrent(home).then(
+              (value) => value?.current ?? null,
+              () => undefined,
+            )
+          : null
+        if (unsaved && onDisk !== (pointer?.current ?? null))
+          entry.reason += pointer
+            ? `；版本指针没能写入，重启服务之前把 releases/current.json 改成指向 ${pointer.current}`
+            : '；版本指针没能删除，重启服务之前删掉 releases/current.json'
         await record(entry)
         if (stopped) prepared = null
         return entry
@@ -673,7 +702,13 @@ export async function createManager(options: ManagerOptions): Promise<Manager> {
           await supervisor.stop()
           // SQLite 在换回备份之前失败时库和指针都没动，可以照旧起当前版本；外部库已经由管理员恢复，不能再起要求新 schema 的程序
           if (!databaseRestored && (!upgrade?.migrations || (!switched && !external))) {
-            await save(latest)
+            // 指针写不回去（Windows 上 current.json 被占着）也要先把原来的版本起来，不能让站点一直停着
+            if (switched)
+              await save(latest).catch(() => {
+                pointer = structuredClone(latest)
+                entry.reason += `；版本指针没能改回 ${from}，重启服务之前把 releases/current.json 改成指向 ${from}`
+              })
+            else pointer = structuredClone(latest)
             dataLock?.release()
             dataLock = null
             if (await restartOld(from)) entry.result = 'rolled-back'
