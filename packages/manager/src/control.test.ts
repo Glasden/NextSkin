@@ -1,13 +1,13 @@
 import { createMemoryLogger } from '@nextskin/logging'
 import { ManagerError } from './types.ts'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { access, mkdir, readFile, rm, stat, writeFile, type chown } from 'node:fs/promises'
+import { access, chmod, mkdir, readFile, rm, stat, writeFile, type chown } from 'node:fs/promises'
 import { createConnection, Socket } from 'node:net'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { MANAGER_PROTOCOL } from '@nextskin/updates'
-import { controlAddress, controlRequest, createControl, managerStatus, redactPaths } from './control.ts'
+import { connectControl, controlAddress, controlRequest, createControl, managerStatus, redactPaths } from './control.ts'
 import { createManager } from './pipeline.ts'
 import { contains, fixture } from './fixtures.ts'
 import { initialCurrent, writeCurrent } from './state.ts'
@@ -125,6 +125,27 @@ describe('控制通道的信任边界', () => {
       expect(records).toMatchObject([{ level: 'warn', msg: '实例路径过长，控制 socket 改用临时目录' }])
     }
   })
+  // Windows 上没提升的 PowerShell 连 LocalSystem 服务的命名管道会被拒；这里用文件权限造同样的 EACCES
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+    '没有权限连接或读令牌时报出来，不当作管理进程没在运行',
+    async () => {
+      const f = await setup()
+      const token = join(f.home, 'releases/manager.token')
+      await chmod(f.service.address, 0)
+      await expect(connectControl(f.home)).rejects.toMatchObject({
+        code: 'unauthorized',
+        message: contains('用管理员身份打开 PowerShell'),
+      })
+      await chmod(f.service.address, 0o600)
+      await chmod(token, 0)
+      await expect(connectControl(f.home)).rejects.toMatchObject({ code: 'unauthorized' })
+      await chmod(token, 0o600)
+      expect(await connectControl(f.home)).toBeTypeOf('function')
+      await f.service.close()
+      disposers.pop()
+      expect(await connectControl(f.home)).toBeNull()
+    },
+  )
 })
 
 describe('线上状态与同步拒绝', () => {
