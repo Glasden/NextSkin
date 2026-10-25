@@ -19,7 +19,8 @@ type Column = 'title' | 'audience' | 'sender' | 'status' | 'time' | 'actions'
 const statusTones = { sending: 'warning', sent: 'success', recalled: 'neutral' } as const
 
 /**
- * 后台发通知（ADR-0052）：上面写、下面是发送记录，最新的在前。从用户详情页进来时（`?to=5`）收件人已经填好。
+ * 后台发通知（ADR-0052）：上面写、下面是发送记录，最新的在前。从用户详情页进来时（`?to=5`）收件人已经选好；
+ * 这个用户不在了就从群发开始。
  * 送达人数是群发展开到现在写出的条数，发送中的会继续涨
  */
 export default async function AdminNotificationsPage({
@@ -30,8 +31,13 @@ export default async function AdminNotificationsPage({
   const params = parseNotificationParams(await searchParams)
   const viewer = await requireAdmin(notificationsHref(params.page), 'notifications.send')
   const { core } = await getServer()
-  const [{ items, total }, t, admin, format] = await Promise.all([
+  const [{ items, total }, to, t, admin, format] = await Promise.all([
     core.admin.listNotificationBroadcasts({ uid: viewer.uid, ip: null }, { page: params.page }),
+    params.to === null
+      ? null
+      : core.admin
+          .searchNotificationRecipients(viewer.uid, String(params.to))
+          .then((users) => users.find((user) => user.uid === params.to) ?? null),
     getTranslations('admin.notifications'),
     getTranslations('admin'),
     getFormatter(),
@@ -51,7 +57,7 @@ export default async function AdminNotificationsPage({
         <h2 id="compose-heading" className="font-pixel text-pixel-1 text-text">
           {t('compose')}
         </h2>
-        <NotificationComposer to={params.to} />
+        <NotificationComposer to={to} />
       </section>
 
       <section aria-labelledby="history-heading" className="flex flex-col gap-4">

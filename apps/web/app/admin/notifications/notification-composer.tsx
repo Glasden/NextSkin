@@ -1,8 +1,9 @@
 'use client'
 
-import type { SendNotificationInput } from '@nextskin/domain'
+import type { AdminUserLookup, SendNotificationInput } from '@nextskin/domain'
 import {
   Alert,
+  Badge,
   Button,
   Dialog,
   DialogClose,
@@ -10,31 +11,67 @@ import {
   Form,
   Input,
   Markdown,
+  MultiCombobox,
   NotificationItem,
   Panel,
+  PlayerHead,
   Select,
   Textarea,
   useToast,
 } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { apiError, formErrors, postJson } from '../../../lib/api-client'
+import { useEffect, useState } from 'react'
+import { apiError, formErrors, getJson, postJson } from '../../../lib/api-client'
+import { headSrc } from '../../../lib/textures'
+import { roleTones } from '../users/role-changes'
 
 type Audience = SendNotificationInput['audience']
 
 const AUDIENCES = ['all', 'users', 'admins', 'specific'] as const satisfies readonly Audience[]
+/** 和领域用例的上限相同 */
+const MAX_RECIPIENTS = 50
 
-/** 一行一个 uid 或邮箱：去掉空行和首尾空白，重复的只留一个 */
-function recipientLines(text: string): string[] {
-  return [...new Set(text.split('\n').map((line) => line.trim()))].filter(Boolean)
+/** 搜收件人：停止输入 200ms 后再查，只显示输入框里现在这串文字的结果 */
+function useRecipientSearch() {
+  const [query, setQuery] = useState('')
+  const [result, setResult] = useState<{ query: string; items: AdminUserLookup[]; failed: boolean }>({
+    query: '',
+    items: [],
+    failed: false,
+  })
+  useEffect(() => {
+    const q = query.trim()
+    if (!q) return
+    let stale = false
+    async function search() {
+      const { status, data } = await getJson(`/api/admin/notifications/recipients?q=${encodeURIComponent(q)}`)
+      if (stale) return
+      if (status === 200) setResult({ query, items: (data as { items: AdminUserLookup[] }).items, failed: false })
+      else setResult({ query, items: [], failed: true })
+    }
+    const timer = setTimeout(() => void search(), 200)
+    return () => {
+      stale = true
+      clearTimeout(timer)
+    }
+  }, [query])
+  // 新结果到之前不留上一次的：两次搜的可能毫不相干，回车会选中旧列表里的人
+  const current = query.trim() !== '' && result.query === query
+  return {
+    query,
+    setQuery,
+    items: current ? result.items : [],
+    loading: query.trim() !== '' && !current,
+    failed: current && result.failed,
+  }
 }
 
 /**
  * 发通知的表单（ADR-0052）。右边是收件人在通知列表里看到的样子，边写边变。
- * 群发先确认一次：发出去就到了每个人的列表里，发错了只能撤回。指定用户直接发
+ * 群发先确认一次：发出去就到了每个人的列表里，发错了只能撤回。指定用户直接发，收件人按 uid、昵称或邮箱搜出来选
  */
-export function NotificationComposer({ to }: { to: number | null }) {
+export function NotificationComposer({ to }: { to: AdminUserLookup | null }) {
   const t = useTranslations('admin.notifications')
   const admin = useTranslations('admin')
   const common = useTranslations('common')
@@ -42,7 +79,8 @@ export function NotificationComposer({ to }: { to: number | null }) {
   const router = useRouter()
   const toast = useToast()
   const [audience, setAudience] = useState<Audience>(to === null ? 'all' : 'specific')
-  const [recipients, setRecipients] = useState(to === null ? '' : String(to))
+  const [recipients, setRecipients] = useState<readonly AdminUserLookup[]>(to === null ? [] : [to])
+  const search = useRecipientSearch()
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [confirming, setConfirming] = useState(false)
@@ -54,8 +92,7 @@ export function NotificationComposer({ to }: { to: number | null }) {
     setError(null)
     setErrors({})
     if (audience === 'specific') {
-      const count = recipientLines(recipients).length
-      if (count > 50) setErrors({ recipients: t('recipientsTooMany', { count }) })
+      if (recipients.length === 0) setErrors({ recipients: t('recipientsRequired') })
       else void send()
     } else setConfirming(true)
   }
@@ -64,7 +101,7 @@ export function NotificationComposer({ to }: { to: number | null }) {
     setPending(true)
     const { status, data } = await postJson('/api/admin/notifications', {
       audience,
-      ...(audience === 'specific' ? { recipients: recipientLines(recipients) } : {}),
+      ...(audience === 'specific' ? { recipients: recipients.map((user) => String(user.uid)) } : {}),
       title,
       body,
     })
@@ -74,7 +111,7 @@ export function NotificationComposer({ to }: { to: number | null }) {
       toast.show({ tone: 'success', title: t('sent', { audience }) })
       setTitle('')
       setBody('')
-      setRecipients('')
+      setRecipients([])
       router.refresh()
       return
     }
@@ -96,7 +133,37 @@ export function NotificationComposer({ to }: { to: number | null }) {
         </Field>
         {audience === 'specific' && (
           <Field label={t('recipients')} name="recipients" description={t('recipientsHint')}>
-            <Textarea rows={3} value={recipients} onValueChange={setRecipients} required />
+            <MultiCombobox
+              value={recipients}
+              onValueChange={setRecipients}
+              items={search.items}
+              inputValue={search.query}
+              onInputValueChange={search.setQuery}
+              loading={search.loading}
+              itemKey={(user) => String(user.uid)}
+              itemLabel={(user) => user.nickname}
+              renderItem={(user) => (
+                <>
+                  <PlayerHead src={user.avatar ? headSrc(user.avatar.hash) : undefined} size={24} alt="" />
+                  <span className="min-w-0 truncate">{user.nickname}</span>
+                  {user.role !== 'user' && <Badge tone={roleTones[user.role]}>{admin(`roles.${user.role}`)}</Badge>}
+                  <span className="min-w-0 flex-1 truncate text-sm text-text-muted">{user.email}</span>
+                  <span className="shrink-0 font-mono text-sm text-text-muted">{user.uid}</span>
+                </>
+              )}
+              renderChip={(user) => (
+                <>
+                  <PlayerHead src={user.avatar ? headSrc(user.avatar.hash) : undefined} size={24} alt="" />
+                  <span className="min-w-0 truncate">{user.nickname}</span>
+                </>
+              )}
+              placeholder={t('recipientsPlaceholder')}
+              hintLabel={t('recipientsPrompt')}
+              loadingLabel={t('recipientsSearching')}
+              emptyLabel={search.failed ? t('recipientsSearchFailed') : t('recipientsEmpty')}
+              removeLabel={(name) => t('recipientsRemove', { name })}
+              max={MAX_RECIPIENTS}
+            />
           </Field>
         )}
         <Field label={t('titleLabel')} name="title" description={t('titleHint')}>
