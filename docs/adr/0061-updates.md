@@ -107,7 +107,7 @@ nextskin/                 实例目录，环境变量 NEXTSKIN_HOME
 - 核心一侧是新的领域用例：只有超级管理员能调，每次 `prepare`、`apply`、`rollback` 写审计日志，记下操作者、目标版本和是否确认了备份（ADR-0027）。
 - 落地补充：
   - 协议是一次连接一个请求、一行 JSON，`prepare`、`apply`、`rollback` 校验完就回 `accepted`，在后台执行，进度从 `status` 读；`apply`、`rollback` 等响应写完、连接关上才开始停站。`check` 没有做成控制请求：核心自己每天检查，命令行的 `update --check` 在本进程里读清单。格式见 `packages/manager/README.md` 和核心的 `packages/domain/src/updates/manager-client.ts`。
-  - socket 的路径超过 100 字节时改放 `os.tmpdir()/nextskin-<hash>.sock`。Windows 的命名管道 Node 设不了访问控制，只靠令牌。
+  - socket 的路径超过 100 字节时改放 `os.tmpdir()/nextskin-<hash>.sock`。Windows 的命名管道 Node 设不了访问控制，用的是系统的默认 DACL（实测见下面 2026-10-26 的补充），再加上令牌。
   - 管理进程的错误码在核心里加 `update_` 前缀再交给前端，免得 `busy`、`internal` 这类名字占掉全局的错误文案；中文界面优先显示管理进程给的那句说明，别的语言用自己的文案。
   - 状态和错误说明经核心交给浏览器，里面的本机绝对路径换成 `<路径>`；完整的说明在 `update-log.jsonl` 和管理进程的日志里。
 
@@ -282,6 +282,13 @@ nextskin/                 实例目录，环境变量 NEXTSKIN_HOME
 - **管理进程的内存**：刚启动时 RSS 约 65 MB（启动器约 58 MB，空闲的核心约 206 MB；宝塔的 `npm run start` 外壳另占约 79 MB）。做过几次准备、升级以后涨到 150–160 MB（1Panel 升级一次后 148 MB），不回落，重启服务后回到 65 MB 左右。文档写明了这个范围。
 
   原因（本机 Node 24.21、glibc 2.39 复现）：不是泄漏，是 glibc 主堆还不回去。下载的分块、解压时每 16 KB 的读缓冲和 fflate 的输出拷贝都是短命的 ArrayBuffer，V8 攒到几十 MB（实测峰值约 66 MB）才回收，主堆被撑到 90–110 MB；回收后这些块都 free 了，可堆顶被少量长期分配占着，只能留在进程里（`mallinfo2`：堆 94 MB、在用 8 MB；手动 `malloc_trim(0)` 后 RSS 降约 70 MB）。增量有上限，连做四次停在约 +90 MB；准备时本来就要涨到这么多，所以不改代码。以后要压：解压时每个条目复用输入、输出缓冲（fflate `inflateSync` 的 `out`），实测解压的留存从约 75 MB 降到 15–30 MB；彻底的办法是把下载、解压放进短命的子进程。换 `node:zlib`、调 `MALLOC_ARENA_MAX` 和 mmap 阈值都没用，放进 worker 线程更糟（每个线程另开 malloc 区）。）
+
+（落地时补充，2026-10-26，Windows 11 上用控制台和 NSSM 2.24 实测，Node 26.12.0：
+
+- **停止顺序**：挂在控制台上的只有管理进程和启动器；核心由启动器以 `windowsHide` 加管道 stdio 拉起，不在控制台上，收不到 Ctrl+C，只经 IPC 停。libuv 把非 detached 的子进程放进"父进程退出就结束"的 job object，所以不会留下孤儿核心。Ctrl+C 约 0.1 秒全部退出；核心卡住时启动器 30 秒强制结束，第二次 Ctrl+C 立即强制结束。关窗口时系统逐个进程发 CTRL_CLOSE_EVENT，每个约 5 秒后被结束。`nssm stop` 发的是同一种 Ctrl+C，命令本身约 3 秒就返回 SERVICE_STOP_PENDING，服务照样停完。
+- **命名管道的访问控制**：默认 DACL 让 SYSTEM、提升了的管理员和创建者读写，其余账户只读，连不上。服务以 LocalSystem 运行时，没提升的命令行连接得到 EACCES；原先当成"管理进程没在运行"，`import` 会照常导入，改成报"没有权限连接管理进程"。
+- **杀毒软件**：卡巴斯基会占着刚解压的发行包，把它改名进 `releases/` 时 EPERM 持续 0.1 秒到 5 秒多，原先 10 次、约 4.5 秒的重试用完过；这一处改成最多约 55 秒。占着 `current.json` 超过重试时，原先切换失败后的恢复也写不了指针、抛出去，旧版本不再启动，站点一直停着；改成指针写不回去也先把原来的版本起来，结果里写明要把指针改成哪个版本。
+- **后台的切换**：回滚的结果记的是开始时间，页面却拿浏览器的时钟比，Windows 的钟慢一秒多时一直停在"正在回到…"。改成看结果和开始前的不一样。）
 
 ## 后果
 

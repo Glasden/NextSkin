@@ -88,11 +88,11 @@ pnpm exec eslint packages/manager
 pnpm exec prettier --check packages/manager
 ```
 
-发行目录组装由后续任务完成。Windows 改名重试、删除部分失败的恢复由注入故障覆盖，实际 Windows 命名管道、控制台、NSSM 和杀毒软件占用仍需要在对应系统实测。
+发行目录组装由后续任务完成。Windows 改名重试、删除部分失败的恢复由注入故障覆盖；Windows 的命名管道、控制台、NSSM 和杀毒软件占用的实测见 ADR-0061 2026-10-26 的补充。
 
 ## 控制通道
 
-`src/control.ts` 提供服务、命令行客户端及 `managerStatus` 转换。调用方先持有 `manager.lock`。POSIX 地址是实例目录下的 `releases/manager.sock`；绝对路径超过 100 字节时改用 `os.tmpdir()/nextskin-<hash>.sock` 并打印说明。hash 是实例绝对路径的 SHA-256 前 16 位。Windows 地址是 `\\.\pipe\nextskin-<hash>`。Node 无法给命名管道设置 ACL，Windows 安全只靠随机令牌。
+`src/control.ts` 提供服务、命令行客户端及 `managerStatus` 转换。调用方先持有 `manager.lock`。POSIX 地址是实例目录下的 `releases/manager.sock`；绝对路径超过 100 字节时改用 `os.tmpdir()/nextskin-<hash>.sock` 并打印说明。hash 是实例绝对路径的 SHA-256 前 16 位。Windows 地址是 `\\.\pipe\nextskin-<hash>`。Node 无法给命名管道设置 ACL，用系统默认的 DACL（SYSTEM、提升了的管理员和创建者能读写），再加上随机令牌。没有权限连接（EACCES、EPERM，读不了令牌也算）时 `connectControl` 抛 `unauthorized`，不当作管理进程没在运行。
 
 每次启动生成 32 字节随机令牌，十六进制写入 `releases/manager.token`，先写临时文件再改名。POSIX 令牌和 socket 均为 0600。启动前删除残留 socket，正常退出、启动失败及收到停止信号时关闭服务并删除 socket 和令牌。SIGKILL 等不可捕获的退出留下的文件在下次启动时替换。只读模式不开控制通道、不写令牌。
 
@@ -130,7 +130,7 @@ pnpm exec prettier --check packages/manager
 
 参数经 `node:util.parseArgs` 严格解析。成功和只读查询退出 0；用法错误、升级失败、自动回滚或取消退出 1；损坏指针、实例目录不可写和锁文件无法创建等配置错误退出 78。此处“不做健康检查”只针对停服命令，在线切换仍等待健康检查。
 
-测试只用临时实例、注入的清单和下载、本机 socket / HTTP 及假启动器。TTY 确认通过注入输入验证；真实终端的 Ctrl+C、EOF、Windows 控制台和命名管道尚未实测。
+测试只用临时实例、注入的清单和下载、本机 socket / HTTP 及假启动器。TTY 确认通过注入输入验证；真实终端的 EOF 尚未实测，Windows 控制台的 Ctrl+C 和命名管道见 ADR-0061 2026-10-26 的补充。
 
 ## 权限分离（POSIX，可选）
 
@@ -164,4 +164,4 @@ sudo -u nextskin node /opt/nextskin/nextskin.mjs set-role <邮箱> <身份>
 
 NEXTSKIN_MANAGER=off 会在管理进程内直接加载启动器，无法保留 root 管理进程再单独降权。因此需要切换 uid 的 NEXTSKIN_RUN_AS 与 off 同用时拒绝启动（78）；目标就是当前用户时不受此限制。
 
-权限测试注入 getuid、id、chown 和 stat，子进程选项测试在捕获 uid/gid 后仍以测试用户运行假启动器，不使用 sudo。真实 root 下的降权、附加组清除、socket 跨用户连接与拒绝、令牌 root 所有权以及恢复文件的真实归属，需要另在具备相应能力的 root 环境验证；LDAP/NSS 远端账号也未实测。Windows 命名管道、控制台和真实交互输入的未实测项与上文相同。
+权限测试注入 getuid、id、chown 和 stat，子进程选项测试在捕获 uid/gid 后仍以测试用户运行假启动器，不使用 sudo。真实 root 下的降权、附加组清除、socket 跨用户连接与拒绝、令牌 root 所有权以及恢复文件的真实归属，需要另在具备相应能力的 root 环境验证；LDAP/NSS 远端账号也未实测。真实交互输入的未实测项与上文相同。
