@@ -19,7 +19,12 @@ const ROLLBACK_COMMAND = 'node nextskin.mjs rollback --yes'
 const ROLLBACK_GUIDE = 'https://docs.nextskin.org/guide/commands/#rollback'
 
 type Managed = ManagerStatus & { available: true }
-type Switching = { kind: 'apply' | 'rollback'; version: string; since: number }
+/**
+ * since 是页面的时钟，只用来算等了多久；判断切换结束看 after：管理进程报出的结果和开始前的不一样了。
+ * 不拿结果的时间和 since 比：服务器的钟和浏览器的可能差一两秒，回滚的结果记的又是开始时间
+ */
+type Switching = { kind: 'apply' | 'rollback'; version: string; since: number; after: string | null }
+const resultKey = (result: ManagerStatus['lastResult']) => (result ? JSON.stringify(result) : null)
 
 function isStatus(value: unknown): value is UpdateStatus {
   return typeof value === 'object' && value !== null && 'manager' in value && 'deployment' in value
@@ -45,8 +50,9 @@ export function OneClickUpgrade({ initial }: { initial: UpdateStatus & { manager
   }
   const [switching, setSwitching] = useState<Switching | null>(() => {
     const operation = initial.manager.operation
+    // 打开页面时操作已经在进行，现有的结果是之前的，操作结束后报出的就是这次的
     return operation && operation.kind !== 'prepare'
-      ? { kind: operation.kind, version: operation.version ?? '', since: Date.parse(operation.startedAt) }
+      ? { kind: operation.kind, version: operation.version ?? '', since: Date.parse(operation.startedAt), after: null }
       : null
   })
   const [lost, setLost] = useState(false)
@@ -90,7 +96,7 @@ export function OneClickUpgrade({ initial }: { initial: UpdateStatus & { manager
       if (stopped) return
       if (code === 200 && isStatus(data) && data.manager.available) {
         const { operation, lastResult } = data.manager
-        if (!operation && lastResult && Date.parse(lastResult.at) >= switching!.since - 1000) {
+        if (!operation && lastResult && resultKey(lastResult) !== switching!.after) {
           setStatus((current) => ({ ...current, ...data }) as typeof current)
           setSwitching(null)
           refresh.current()
@@ -128,13 +134,14 @@ export function OneClickUpgrade({ initial }: { initial: UpdateStatus & { manager
   /** apply 和 rollback 被接受后不等结果：管理进程接着就停掉了这个核心 */
   async function start(kind: Switching['kind'], version: string, body: object): Promise<boolean> {
     const since = Date.now()
+    const after = resultKey(manager?.lastResult ?? null)
     const { status: code, data } = await sendJson('POST', `/api/admin/updates/${kind}`, body)
     if (code !== 200) {
       toast.show({ tone: 'danger', title: apiError(data)?.message ?? admin('failed') })
       return false
     }
     setLost(false)
-    setSwitching({ kind, version, since })
+    setSwitching({ kind, version, since, after })
     return true
   }
 
