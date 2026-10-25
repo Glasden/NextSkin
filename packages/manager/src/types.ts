@@ -147,9 +147,13 @@ export const strings = (value: unknown): value is string[] =>
 export const dialect = (value: unknown): value is Dialect =>
   value === 'sqlite' || value === 'mysql' || value === 'mariadb' || value === 'postgres'
 
-/** 子进程的约定消息可以保留；意外异常只报固定诊断，避免把连接串带进日志。 */
+/** 子进程的约定消息可以保留；意外异常只报固定诊断和系统错误码，避免把连接串、路径带进日志。 */
 export function reason(error: unknown): string {
-  return error instanceof ManagerError || error instanceof ConfigError
-    ? error.message
-    : '管理操作失败，请检查目录权限和发行目录'
+  if (error instanceof ManagerError || error instanceof ConfigError) return error.message
+  const { code, syscall } = (typeof error === 'object' && error !== null ? error : {}) as Record<string, unknown>
+  // 只认像 EPERM、rename 这样的标识符：EPERM 和 ENOSPC 要管理员做的事不一样
+  const detail = [code, syscall]
+    .filter((value) => typeof value === 'string' && /^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(value))
+    .join(' ')
+  return `管理操作失败${detail ? `（${detail}）` : ''}，请检查目录权限和发行目录`
 }

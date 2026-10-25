@@ -86,19 +86,25 @@ export async function readCurrent(home: string): Promise<Current | null> {
 }
 
 export const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+/**
+ * Windows 上杀毒软件、资源管理器会短暂占着文件，改名报 EPERM/EBUSY。默认试 10 次、约 4.5 秒；
+ * 刚解压的目录要扫完整个发行包，Windows 上实测会占好几秒，调用方可以给更多次数（间隔最多 1 秒）。
+ */
 export async function renameRetry(
   from: string,
   to: string,
-  options: { rename?: typeof rename; sleep?: typeof sleep } = {},
+  options: { rename?: typeof rename; sleep?: typeof sleep; attempts?: number; signal?: AbortSignal } = {},
 ): Promise<void> {
-  for (let attempt = 0; ; attempt++) {
+  const attempts = options.attempts ?? 10
+  for (let attempt = 1; ; attempt++) {
     try {
       await (options.rename ?? rename)(from, to)
       return
     } catch (error) {
-      if (attempt >= 9 || !['EPERM', 'EBUSY', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? ''))
+      if (attempt >= attempts || !['EPERM', 'EBUSY', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? ''))
         throw error
-      await (options.sleep ?? sleep)((attempt + 1) * 100)
+      await (options.sleep ?? sleep)(Math.min(attempt * 100, 1000))
+      options.signal?.throwIfAborted()
     }
   }
 }

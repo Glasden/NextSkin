@@ -134,6 +134,35 @@ describe('指针', () => {
     await expect(renameRetry('a', 'b', { rename: other })).rejects.toEqual({ code: 'ENOENT' })
     expect(other).toHaveBeenCalledTimes(1)
   })
+  it('默认试 10 次；给了次数时间隔最多 1 秒，取消后不再试', async () => {
+    const delays: number[] = []
+    const sleep = (ms: number) => {
+      delays.push(ms)
+      return Promise.resolve()
+    }
+    const held = vi.fn().mockRejectedValue({ code: 'EPERM' })
+    await expect(renameRetry('a', 'b', { rename: held, sleep })).rejects.toEqual({ code: 'EPERM' })
+    expect(held).toHaveBeenCalledTimes(10)
+    expect(delays.reduce((sum, ms) => sum + ms, 0)).toBe(4500)
+    delays.length = 0
+    held.mockClear()
+    await expect(renameRetry('a', 'b', { rename: held, sleep, attempts: 14 })).rejects.toEqual({ code: 'EPERM' })
+    expect(held).toHaveBeenCalledTimes(14)
+    expect(delays.slice(8)).toEqual([900, 1000, 1000, 1000, 1000])
+    const controller = new AbortController()
+    held.mockClear()
+    const cancelled = renameRetry('a', 'b', {
+      rename: held,
+      sleep: () => {
+        controller.abort()
+        return Promise.resolve()
+      },
+      attempts: 60,
+      signal: controller.signal,
+    })
+    await expect(cancelled).rejects.toMatchObject({ name: 'AbortError' })
+    expect(held).toHaveBeenCalledTimes(1)
+  })
 })
 
 it('递归删除旧管理进程中途失败，仍从完整副本恢复', async () => {
