@@ -21,7 +21,7 @@ import {
 } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { apiError, formErrors, getJson, postJson } from '../../../lib/api-client'
 import { headSrc } from '../../../lib/textures'
 import { roleTones } from '../users/role-changes'
@@ -87,6 +87,13 @@ export function NotificationComposer({ to }: { to: AdminUserLookup | null }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // 发出去以后换一个 key，让 Form 重新挂载：Base UI 的表单提交过一次，之后字段一变就重新校验，
+  // 清空标题会立刻报"必填"，而它没有把这个状态清掉的办法。重新挂载后焦点放回"发送"，不掉到页面开头
+  const [sent, setSent] = useState(0)
+  const sendButton = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (sent > 0) sendButton.current?.focus()
+  }, [sent])
 
   function submit() {
     setError(null)
@@ -112,6 +119,7 @@ export function NotificationComposer({ to }: { to: AdminUserLookup | null }) {
       setTitle('')
       setBody('')
       setRecipients([])
+      setSent((count) => count + 1)
       router.refresh()
       return
     }
@@ -122,7 +130,7 @@ export function NotificationComposer({ to }: { to: AdminUserLookup | null }) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <Form errors={errors} onFormSubmit={submit}>
+      <Form key={sent} errors={errors} onFormSubmit={submit}>
         {error && <Alert tone="danger">{error}</Alert>}
         <Field label={t('audience')} name="audience" nativeLabel={false} description={t(`audienceHints.${audience}`)}>
           <Select
@@ -173,7 +181,7 @@ export function NotificationComposer({ to }: { to: AdminUserLookup | null }) {
           <Textarea rows={8} maxLength={5000} value={body} onValueChange={setBody} />
         </Field>
         <div>
-          <Button type="submit" variant="primary" loading={pending && !confirming}>
+          <Button ref={sendButton} type="submit" variant="primary" loading={pending && !confirming}>
             {t('send')}
           </Button>
         </div>
