@@ -29,7 +29,7 @@ import type { SettingItem, SettingText } from './setting-text'
 
 /** 表单里的值：数字和多行列表先按输入的原文保存，提交时再转换 */
 type Draft = string | boolean | { readonly [name: string]: Draft }
-type Leaf = Exclude<SettingControl, { kind: 'object' | 'secret' | 'image' }>
+type Leaf = Exclude<SettingControl, { kind: 'object' | 'secret' | 'image' | 'code' }>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -228,6 +228,21 @@ function Setting({
     return (
       <MarkdownSetting name={key} text={text} max={control.maxLength} draft={draft} error={error} onChange={onChange} />
     )
+  if (control.kind === 'code') {
+    const value = typeof draft === 'string' ? draft : ''
+    return (
+      <Field label={text.label} name={key} description={text.help} error={error}>
+        {/* 高度跟着内容长，最少 6 行、最多 16 行，再长就在框里滚动 */}
+        <Textarea
+          code
+          rows={Math.min(Math.max(value.split('\n').length + 1, 6), 16)}
+          maxLength={control.maxLength ?? undefined}
+          value={value}
+          onValueChange={(next) => onChange(next)}
+        />
+      </Field>
+    )
+  }
   if (control.kind === 'object') {
     const values = isRecord(draft) ? draft : {}
     return (

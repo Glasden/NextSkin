@@ -20,6 +20,11 @@ export interface TextareaProps {
    * 按 UTF-16 计数，比服务端按码位计数更严，不会出现页面放行、服务端拒绝的情况
    */
   maxLength?: number
+  /**
+   * 写代码（HTML、CSS、配置文件）：等宽字，不检查拼写，手机键盘不自动大写和纠正。宽屏上字号小一号，一行放得下更多代码；
+   * 窄屏保持 16px，iOS 聚焦到小于 16px 的输入框会放大页面。长行照样折行：不折的话横向滚动条会压在右下角的计数上
+   */
+  code?: boolean
   /** 不放在 Field 里时必须提供 */
   'aria-label'?: string
 }
@@ -31,6 +36,7 @@ export function Textarea({
   onValueChange,
   rows = 4,
   maxLength,
+  code = false,
   'aria-label': ariaLabel,
   ...props
 }: TextareaProps) {
@@ -47,10 +53,17 @@ export function Textarea({
           if (value === undefined) setUncontrolled(next)
           onValueChange?.(next)
         }}
-        render={<textarea rows={rows} maxLength={maxLength} />}
+        render={
+          <textarea
+            rows={rows}
+            maxLength={maxLength}
+            {...(code ? { spellCheck: false, autoCapitalize: 'off', autoCorrect: 'off' } : {})}
+          />
+        }
         // 禁用可能来自外层的 Field，所以按 Base UI 设的 data-disabled 取样式，不看 props
         className={cx(
-          'w-full min-w-0 resize-y rounded-sm border border-border-strong bg-surface px-3 py-2 font-sans text-base text-text placeholder:text-text-muted',
+          'w-full min-w-0 resize-y rounded-sm border border-border-strong bg-surface px-3 py-2 text-text placeholder:text-text-muted',
+          code ? 'font-mono text-base sm:text-sm' : 'font-sans text-base',
           'data-invalid:border-danger',
           'data-disabled:cursor-not-allowed data-disabled:resize-none data-disabled:border-border data-disabled:bg-surface-sunken data-disabled:text-text-muted',
           focusRing,

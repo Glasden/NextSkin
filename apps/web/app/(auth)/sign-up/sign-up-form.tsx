@@ -2,7 +2,6 @@
 
 import { Alert, Button, Field, Form, Input } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { apiError, formErrors, sendJson } from '../../../lib/api-client'
 import { CAPTCHA_HEADER, useCaptcha, type CaptchaConfig } from '../../../lib/captcha'
@@ -62,7 +61,6 @@ export function SignUpForm({
   const errorText = useTranslations('errors')
   const common = useTranslations('common')
   const captcha = useCaptcha(captchaConfig)
-  const router = useRouter()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -116,7 +114,7 @@ export function SignUpForm({
       // 会话没建成（极少见）时去登录页，账号已经注册好了
       const signedIn = (data as { signedIn?: unknown } | null)?.signedIn === true
       const target = external?.next ?? next
-      goToNext(router, signedIn ? target : `/sign-in?next=${encodeURIComponent(target)}`)
+      goToNext(signedIn ? target : `/sign-in?next=${encodeURIComponent(target)}`)
       return
     }
     const failure = apiError(data)

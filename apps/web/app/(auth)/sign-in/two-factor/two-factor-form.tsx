@@ -2,7 +2,6 @@
 
 import { Alert, Button, Checkbox, Field, Form, Input } from '@nextskin/ui'
 import { useTranslations } from 'next-intl'
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { authErrorCode, postJson } from '../../../../lib/api-client'
 import { goToNext } from '../../../../lib/navigation'
@@ -15,7 +14,6 @@ const RESTART = new Set(['INVALID_TWO_FACTOR_COOKIE', 'TOO_MANY_ATTEMPTS_REQUEST
 
 export function TwoFactorForm({ next }: { next: string }) {
   const t = useTranslations('auth.twoFactor')
-  const router = useRouter()
   const [method, setMethod] = useState<Method>('totp')
   const [trust, setTrust] = useState(false)
   const [pending, setPending] = useState(false)
@@ -29,7 +27,7 @@ export function TwoFactorForm({ next }: { next: string }) {
     const path = method === 'totp' ? '/api/auth/two-factor/verify-totp' : '/api/auth/two-factor/verify-backup-code'
     const { status, data } = await postJson(path, { code: values.code?.trim(), trustDevice: trust })
     if (status === 200) {
-      goToNext(router, next)
+      goToNext(next)
       return
     }
     setPending(false)

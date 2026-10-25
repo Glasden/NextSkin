@@ -155,6 +155,14 @@ export type { ThemeChange, UserThemeView, AdminThemeView } from './themes/servic
 export type { ThemeSettings } from './themes/settings.ts'
 export { DIAMOND, type ThemeIssue } from '@nextskin/theme'
 
+export {
+  parseHeadCode,
+  checkCustomCss,
+  type HeadElement,
+  type HeadCodeError,
+  type ScriptAttributes,
+} from './custom-code/head.ts'
+
 export type { UpdateStatus, CoreRelease, UpdateCheckOptions } from './updates/service.ts'
 
 export {

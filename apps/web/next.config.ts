@@ -18,6 +18,8 @@ const protocolRewrites = [
   '/render/:path*',
   // 站点图片（ADR-0042）
   '/site-images/:file',
+  // 广告联盟的文件（ADR-0063）
+  '/ads.txt',
   // 插件的路由（ADR-0033）
   '/plugins/:id/:path*',
 ]

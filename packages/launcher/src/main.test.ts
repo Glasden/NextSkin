@@ -1,5 +1,6 @@
 import { coreMigrations, createDatabase, migrateToLatest } from '@nextskin/db'
 import { coreConfigFromEnv } from '@nextskin/domain/config'
+import * as domain from '@nextskin/domain'
 import { execFile } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -13,6 +14,7 @@ import { expect, test, vi } from 'vitest'
 import metadata from '../package.json' with { type: 'json' }
 import { run as disable2fa } from './commands/disable-2fa.ts'
 import { run as disableCaptcha } from './commands/disable-captcha.ts'
+import { run as disableCustomCode } from './commands/disable-custom-code.ts'
 import { run as maintenance } from './commands/maintenance.ts'
 import { checkConfig, run as doctor } from './commands/doctor.ts'
 import { run as importBlessingSkin } from './commands/import.ts'
@@ -66,6 +68,7 @@ test('version 和 help 不需要配置或数据库，兼容 pnpm 的 --', async 
     expect(result.code).toBe(0)
     expect(result.output).toContain('pnpm nextskin <命令>')
     expect(result.output).toContain('maintenance [on|off]')
+    expect(result.output).toContain('disable-custom-code')
   }
 })
 
@@ -80,6 +83,7 @@ test('命令先检查参数、处理 --help，再读配置', async () => {
     () => setPassword([], read),
     () => disable2fa([], read),
     () => disableCaptcha(['extra'], read),
+    () => disableCustomCode(['extra'], read),
     () => maintenance(['extra'], read),
     () => maintenance(['on', 'off'], read),
   ]) {
@@ -184,6 +188,43 @@ test.each(['unset', 'same', 'different'] as const)(
 
 test('maintenance 命令已登记，错误参数给出专用用法', async () => {
   expect(await run('maintenance', 'invalid')).toEqual({ code: 1, output: '用法：nextskin maintenance [on|off]\n' })
+})
+
+test('disable-custom-code 已登记，错误参数给出专用用法', async () => {
+  expect(await run('disable-custom-code', 'invalid')).toEqual({
+    code: 1,
+    output: '用法：nextskin disable-custom-code\n',
+  })
+})
+
+test.each([false, true])('disable-custom-code 调用系统清空，报告是否改动并关闭核心：%s', async (changed) => {
+  const clearCustomCodeAsSystem = vi.fn().mockResolvedValue({ changed })
+  const close = vi.fn().mockResolvedValue(undefined)
+  const open = vi.spyOn(domain, 'openCore').mockResolvedValue({
+    core: { admin: { clearCustomCodeAsSystem } },
+    close,
+  } as unknown as Awaited<ReturnType<typeof domain.openCore>>)
+  const config = coreConfigFromEnv({}, { cwd: process.cwd(), production: false })
+  const read = vi.fn<ReadCommandContext>().mockResolvedValue({ config } as Awaited<ReturnType<ReadCommandContext>>)
+  try {
+    expect(await capture(() => disableCustomCode(['--'], read))).toEqual({
+      code: 0,
+      output: changed
+        ? '页头代码和自定义 CSS 已清空，原来的内容记在审计日志里。'
+        : '页头代码和自定义 CSS 本来就是空的，没有改动。',
+    })
+    expect(open).toHaveBeenCalledWith(config, { startJobs: false })
+    expect(clearCustomCodeAsSystem).toHaveBeenCalledOnce()
+    expect(close).toHaveBeenCalledOnce()
+    clearCustomCodeAsSystem.mockRejectedValue(new Error('<script>SECRET_CANARY</script>'))
+    expect(await capture(() => disableCustomCode([], read))).toEqual({
+      code: 1,
+      output: '清空自定义代码失败，请检查环境变量和数据库是否可用。',
+    })
+    expect(close).toHaveBeenCalledTimes(2)
+  } finally {
+    open.mockRestore()
+  }
 })
 
 test('migrate --json 的日志只写 stderr，格式在读取命令配置后确定', async () => {

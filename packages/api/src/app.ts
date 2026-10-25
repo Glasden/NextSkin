@@ -14,6 +14,7 @@ import { registerYggdrasil, yggdrasilError } from './protocol/yggdrasil.ts'
 import { registerPluginRoutes } from './plugins.ts'
 import { registerRender } from './render.ts'
 import { registerSiteImages } from './site-images.ts'
+import { registerAdsTxt } from './ads-txt.ts'
 import { createRestApp } from './rest/app.ts'
 import { allowedDuringMaintenance } from './maintenance.ts'
 import { createMemoryRateLimiter } from './rest/rate-limit.ts'
@@ -97,6 +98,8 @@ export function createApp(options: { core: Core; importer?: ImportGateway; versi
   registerTextures(app, core)
   registerLegacy(app, core)
   registerUsm(app, core)
+  // CSL 的根路径通配会接住单段地址，专用的 ads.txt 要先登记（ADR-0063）。
+  registerAdsTxt(app, core)
   registerCsl(app, core)
   registerRender(app, core)
   registerSiteImages(app, core)

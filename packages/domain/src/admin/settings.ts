@@ -5,6 +5,7 @@ import type { Kysely, Transaction } from 'kysely'
 import { can, type CorePermission } from '../access/permissions.ts'
 import { audit } from '../audit/write.ts'
 import { DomainError } from '../errors.ts'
+import { parseHeadCode, checkCustomCss } from '../custom-code/head.ts'
 import type { CaptchaInput, CaptchaService } from '../captcha/service.ts'
 import type { MailService } from '../mail/service.ts'
 import { encodeSettingValue } from '../settings/codec.ts'
@@ -69,6 +70,16 @@ export function createAdminSettings(options: {
     }
     return transactionWithRetry(db, async (tx) => {
       const eventActor: Actor = actor ? await authorize(tx, actor, 'settings.manage') : { kind: 'system' }
+      for (const key of ['custom.head', 'custom.css'] as const) {
+        if (!Object.hasOwn(values, key) || typeof values[key] !== 'string') continue
+        // 超长的值仍然报通用格式错误，不解析整段输入。
+        if (!coreSettingsRegistry[key].schema.safeParse(values[key]).success)
+          throw new DomainError('invalid_request', undefined, [key])
+        if (key === 'custom.head') {
+          const result = parseHeadCode(values[key])
+          if (!result.ok) throw new DomainError('custom_head_invalid', { ...result.error }, [key])
+        } else if (!checkCustomCss(values[key])) throw new DomainError('custom_css_invalid', undefined, [key])
+      }
       if (Object.keys(values).some((key) => !visibleKey(key))) throw new DomainError('invalid_request')
       const parsed = new Map<CoreSettingKey, CoreSettingValue<CoreSettingKey>>()
       const fields: string[] = []
@@ -178,6 +189,10 @@ export function createAdminSettings(options: {
     },
     async disableCaptchaAsSystem(): Promise<{ changed: boolean }> {
       const { updated } = await update(null, { 'captcha.provider': 'none' })
+      return { changed: updated.length > 0 }
+    },
+    async clearCustomCodeAsSystem(): Promise<{ changed: boolean }> {
+      const { updated } = await update(null, { 'custom.head': '', 'custom.css': '' })
       return { changed: updated.length > 0 }
     },
     async setMaintenanceAsSystem(enabled: boolean): Promise<{ changed: boolean }> {

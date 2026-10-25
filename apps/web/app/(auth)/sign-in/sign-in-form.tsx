@@ -34,7 +34,7 @@ export function SignInForm({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [remember, setRemember] = useState(true)
-  const signedIn = useCallback(() => goToNext(router, next), [router, next])
+  const signedIn = useCallback(() => goToNext(next), [next])
   const passkey = usePasskeySignIn(signedIn)
 
   async function submit(values: { email?: string; password?: string }) {

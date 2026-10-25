@@ -230,7 +230,9 @@
     "update_preflight_failed": "The update preflight check failed.",
     "update_download_failed": "The update download failed. Please try again later.",
     "update_internal": "An internal error occurred in the update manager.",
-    "update_invalid_request": "The update request is invalid."
+    "update_invalid_request": "The update request is invalid.",
+    "custom_head_invalid": "Line {line}: {reason, select, text {Wrap bare JavaScript in a '<script>' tag.} tag {Head code only accepts '<script>', '<meta>' and '<noscript>', not '<'{tag}'>'; put CSS in Custom CSS.} attribute {'<'{tag}'>' cannot have the {attribute} attribute.} event_handler {'<'{tag}'>' cannot have the {attribute} attribute; event handlers cannot run.} script_src {The src on '<'{tag}'>' must start with https://, http:// or //.} script_src_and_code {'<'{tag}'>' cannot contain inline code when src is present.} script_code {The code in '<'{tag}'>' does not end cleanly: the closing tag is missing, or there is an unmatched '<'!--.} script_type {'<'{tag}'>' does not support the type value “{value}”.} meta {'<'{tag}'>' requires content and exactly one of name or property.} meta_reserved {The site already outputs “{value}” on '<'{tag}'>'; do not set it again.} other {Head code does not follow the allowed format.}}",
+    "custom_css_invalid": "CSS cannot contain '</style'."
   },
   "score": {
     "reasons": {
@@ -1561,7 +1563,11 @@
           "generated": "Regenerated",
           "length": "{from, number} → {to, number} characters",
           "unreadable": "(unreadable)",
-          "empty": "(empty)"
+          "empty": "(empty)",
+          "view": "View change",
+          "before": "Before",
+          "after": "After",
+          "close": "Close"
         },
         "pluginVersion": "Version {version}",
         "pluginSetting": "{label}: {change}",
@@ -1620,6 +1626,7 @@
         "mail": "Email",
         "yggdrasil": "Yggdrasil",
         "maintenance": "Maintenance",
+        "custom": "Custom code",
         "advanced": "Advanced"
       },
       "save": "Save",
@@ -2046,6 +2053,20 @@
           "check": {
             "label": "Check for updates",
             "help": "Read the release manifest from dl.nextskin.org once a day. No site information is sent."
+          }
+        },
+        "custom": {
+          "head": {
+            "label": "Head code",
+            "help": "Paste the code your analytics provider, ad network or search engine gives you. Only script and meta tags are accepted; noscript is accepted but not rendered. This code has the same access as the site's own code, including passwords typed on the page, so only paste code from providers you trust. It is not loaded for signed-in administrators, so check it in a private window. Scripts inserted with document.write, inline event handlers and eval do not run. Reload the page after saving."
+          },
+          "css": {
+            "label": "Custom CSS",
+            "help": "Not applied to admin pages. Only the token variables and data-mode and data-theme on html are guaranteed across versions; class names can change in any release. To change colors, prefer a color theme."
+          },
+          "adsTxt": {
+            "label": "ads.txt",
+            "help": "The file ad networks look for at the site root. When filled in it is served at /ads.txt; when empty, /ads.txt returns 404."
           }
         }
       }

@@ -12,6 +12,7 @@ export function classifyMaintenance(surface: 'page' | 'endpoint', path: string):
   }
   if (
     path === '/api/health' ||
+    path === '/ads.txt' ||
     /^\/(?:site-images|render)(?:\/.*)?$/.test(path) ||
     /^\/api\/(?:setup|import\/run)(?:\/.*)?$/.test(path) ||
     /^\/api\/auth\/(?:sign-in\/email|two-factor\/verify-(?:totp|backup-code)|passkey\/(?:generate-authenticate-options|verify-authentication)|sign-out)$/.test(
